@@ -1,0 +1,66 @@
+[
+  {
+    "case": "instant_message-pre_user",
+    "original_tokens": 22832,
+    "counterfactual_deltas": {
+      "read_bodies": {
+        "diagnostic_modified_tokens": 11292,
+        "isolated_delta_tokens": 11540,
+        "not_a_valid_dispatch_arm": true
+      },
+      "decision_inventories": {
+        "diagnostic_modified_tokens": 22160,
+        "isolated_delta_tokens": 672,
+        "not_a_valid_dispatch_arm": true
+      },
+      "revision_draft": {
+        "diagnostic_modified_tokens": 22832,
+        "isolated_delta_tokens": 0,
+        "not_a_valid_dispatch_arm": true
+      },
+      "all_tool_history": {
+        "diagnostic_modified_tokens": 6383,
+        "isolated_delta_tokens": 16449,
+        "not_a_valid_dispatch_arm": true
+      },
+      "schemas": {
+        "diagnostic_modified_tokens": 21635,
+        "isolated_delta_tokens": 1197,
+        "not_a_valid_dispatch_arm": true
+      }
+    },
+    "deltas_are_not_additive": true
+  },
+  {
+    "case": "single_text-system",
+    "original_tokens": 23452,
+    "counterfactual_deltas": {
+      "read_bodies": {
+        "diagnostic_modified_tokens": 11887,
+        "isolated_delta_tokens": 11565,
+        "not_a_valid_dispatch_arm": true
+      },
+      "decision_inventories": {
+        "diagnostic_modified_tokens": 22772,
+        "isolated_delta_tokens": 680,
+        "not_a_valid_dispatch_arm": true
+      },
+      "revision_draft": {
+        "diagnostic_modified_tokens": 22817,
+        "isolated_delta_tokens": 635,
+        "not_a_valid_dispatch_arm": true
+      },
+      "all_tool_history": {
+        "diagnostic_modified_tokens": 5749,
+        "isolated_delta_tokens": 17703,
+        "not_a_valid_dispatch_arm": true
+      },
+      "schemas": {
+        "diagnostic_modified_tokens": 23452,
+        "isolated_delta_tokens": 0,
+        "not_a_valid_dispatch_arm": true
+      }
+    },
+    "deltas_are_not_additive": true
+  }
+]

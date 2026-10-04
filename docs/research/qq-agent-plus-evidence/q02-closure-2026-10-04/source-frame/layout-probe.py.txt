@@ -1,0 +1,64 @@
+"""Two missing layout checks; reuse the completed third-turn frame, no new T3."""
+import asyncio,copy,hashlib,json,sys,time
+from pathlib import Path
+ROOT=Path('/tmp/cw2-q02-source-frame-v11-eval')
+STAGE=Path('/tmp/cw2-q02-source-frame-layout-control-20261004')
+INPUT=Path('/tmp/cw2-q02-source-frame-frozen-control-20261004-r2')
+sys.path[:0]=[str(ROOT/'services/runtime/src'),str(ROOT/'packages/protocol-python/src'),'/tmp/cw2-q02-eval-deps']
+import httpx2
+from chatwaifu_runtime.agent.source_answer_frame import FrameSource,SourceAnswerGap,SourceAnswerFrameError,decode_source_answer_frame,source_answer_frame_schema,source_answer_frame_prompt
+from chatwaifu_runtime.providers.input_estimation import count_reference_tokens
+assert not (STAGE/'admission.json').exists(), 'Inspect existing invocation before retry'
+STAGE.mkdir(mode=0o700,exist_ok=True)
+key=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+results={r['sample']:r for r in (json.loads(x) for x in (INPUT/'results.jsonl').read_text().splitlines())}
+wires=[json.loads(x) for x in (INPUT/'actual-provider-payloads.jsonl').read_text().splitlines()]
+src=json.loads(Path('/tmp/cw2-q02-closure-candidate-one-20261004/frozen-sources.json').read_text())['airchina']
+sources=(FrameSource(src['url'],src['body_sha256']),)
+def save(name,row):
+ text=json.dumps(row,ensure_ascii=False,default=str);assert key not in text
+ with (STAGE/name).open('a') as f:f.write(text+'\n')
+save('admission.json',{'model':'gemini-3.8-flash-high','endpoint':'https://mubai.website:8318/v1','http_limit':2,'scope':'same two T4 payloads and genuine T3 frames; serialization only declares list-item kinds','prototype_version':'1.1','production_changed':False,'input_budget':21370,'output_cap':8192,'q02_approved':False})
+async def main():
+ for original in (w for w in wires if w['sample'].endswith(':t4')):
+  old=original['payload'];payload=copy.deepcopy(old)
+  prior_row=results[original['sample'].replace(':t4',':t3')]
+  assert prior_row['schema_valid'] and prior_row['finish_reason']=='stop'
+  prior=tuple(SourceAnswerGap(g['gap_id'],tuple(g['source_keys']),g['statement']) for g in prior_row['gaps'])
+  prompt=source_answer_frame_prompt(sources,prior);policy,data=prompt.split('[SOURCE ANSWER FRAME DATA]\n',1)
+  assert payload['messages'][-3]['role']=='system'
+  assert json.loads(payload['messages'][-2]['content'].split('\n',1)[1])==json.loads(data)
+  payload['messages'][-3]['content']=policy
+  payload['response_format']['json_schema']['schema']=source_answer_frame_schema(1)
+  assert payload['messages'][:-3]==old['messages'][:-3] and payload['messages'][-2:]==old['messages'][-2:]
+  projection={k:v for k,v in payload.items() if k in ['messages','tools','tool_choice','response_format']}
+  reference=count_reference_tokens(json.dumps(projection,ensure_ascii=False,separators=(',',':')))+16*len(payload['messages'])
+  assert reference<=21370
+  sample=original['sample'].replace('frame_control','layout_control')
+  save('actual-provider-payloads.jsonl',{'sample':sample,'payload':payload,'original_payload_sha256':original['payload_sha256'],'payload_sha256':hashlib.sha256(json.dumps(payload,ensure_ascii=False,sort_keys=True).encode()).hexdigest(),'reference_input_tokens':reference,'reference_estimator':'cl100k_chat_json_v1_plus_response_format','omitted_contents':[],'controlled_changes':['messages[-3]:serialization policy','response_format:version+block kind'],'t3_reused':True})
+  before=time.monotonic();row={'sample':sample,'raw_frame':'','published_reply':None,'terminal_received':False,'finish_reason':None,'usage':None,'http_status':None,'schema_valid':False,'reported_model_ids':[],'prior_gaps':prior_row['gaps']}
+  try:
+   async with httpx2.AsyncClient(timeout=180) as client:
+    async with client.stream('POST','https://mubai.website:8318/v1/chat/completions',headers={'Authorization':f'Bearer {key}'},json=payload) as response:
+     row['http_status']=response.status_code;response.raise_for_status()
+     async for line in response.aiter_lines():
+      if not line.startswith('data:'):continue
+      data=line[5:].strip()
+      if data=='[DONE]':continue
+      packet=json.loads(data)
+      if packet.get('usage') is not None:row['usage']=packet['usage']
+      if packet.get('model') and packet['model'] not in row['reported_model_ids']:row['reported_model_ids'].append(packet['model'])
+      for choice in packet.get('choices',[]):
+       row['raw_frame']+=choice.get('delta',{}).get('content') or ''
+       if choice.get('finish_reason') is not None:row['finish_reason']=choice['finish_reason'];row['terminal_received']=True
+       assert not choice.get('delta',{}).get('tool_calls'), 'No tools permitted'
+   if not row['terminal_received'] or row['finish_reason']!='stop':raise RuntimeError('Nonterminal frame')
+   frame=decode_source_answer_frame(row['raw_frame'],sources=sources,prior_gaps=prior,frame_id=sample)
+   row['schema_valid']=True;row['published_reply']=frame.text;row['gaps']=[{'gap_id':g.gap_id,'source_keys':g.source_keys,'statement':g.statement} for g in frame.gaps]
+  except Exception as error:
+   row['error_type']=type(error).__name__
+   if isinstance(error,SourceAnswerFrameError):row['error_code']=error.code
+  row['latency_ms']=round((time.monotonic()-before)*1000);save('results.jsonl',row)
+  print(json.dumps({k:row.get(k) for k in ['sample','http_status','finish_reason','schema_valid','error_type','error_code','latency_ms']}),flush=True)
+ save('exit.json',{'terminal':True,'actual_http_attempts':2})
+asyncio.run(main())

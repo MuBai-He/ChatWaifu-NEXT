@@ -1,0 +1,55 @@
+"""Offline provenance, shape, and accounting audit; never an answer-quality gate."""
+import hashlib
+import json
+import math
+from pathlib import Path
+from collections import Counter
+from jsonschema import Draft202012Validator
+
+root=Path(__file__).parent
+manifest=json.loads((root/'cw2-q02-source-decision-probe-manifest-20261003.json').read_text())
+for remote,digest in manifest['sha256'].items():
+ local=root/Path(remote).relative_to('/tmp')
+ assert hashlib.sha256(local.read_bytes()).hexdigest()==digest,local
+summary={'schema_version':'1.0','quality_approved':False,'web_execution_in_model_probes':False,'groups':{},'total_http_requests':0,'typed_decisions':[]}
+for folder,count in manifest['requests'].items():
+ rows=[json.loads(l) for l in (root/folder/'results.jsonl').read_text().splitlines()]
+ assert len(rows)==count
+ keys={(r.get('source_repeat'),r['repeat'],r.get('target'),r['variant']) for r in rows};assert len(keys)==len(rows)
+ group={'requests':len(rows),'http_statuses':dict(Counter(r['http_status'] for r in rows)),'usage':{},'latency_ms':{}}
+ for field in ['prompt_tokens','completion_tokens','total_tokens']:
+  values=[r['response'].get('usage',{}).get(field) for r in rows]
+  group['usage'][field]={'reported_requests':sum(isinstance(v,int) for v in values),'known_subtotal':sum(v for v in values if isinstance(v,int))}
+ lat=sorted(r['latency_ms'] for r in rows)
+ group['latency_ms']={'p50':lat[math.ceil(.5*len(lat))-1],'p95':lat[math.ceil(.95*len(lat))-1]}
+ summary['groups'][folder]=group;summary['total_http_requests']+=len(rows)
+ for row in rows:
+  assert row['request']['model']=='gemini-3.8-flash-high'
+  assert row['tool_execution'] is False
+  msg=row['response']['choices'][0]['message']
+  assert msg.get('reasoning_content') is None
+  if row['variant']=='source_ledger':
+   record=json.loads(msg['content']);schema=row['request']['response_format']['json_schema']['schema']
+  elif row['variant'].startswith('native_ledger'):
+   calls=msg.get('tool_calls') or [];assert len(calls)==1 and calls[0]['function']['name']=='source_decision'
+   record=json.loads(calls[0]['function']['arguments']);schema=row['request']['tools'][0]['function']['parameters']
+  else:continue
+  Draft202012Validator(schema).validate(record)
+  read=set();discovered=set()
+  for message in row['request']['messages']:
+   if message['role']!='tool':continue
+   try:data=json.loads(message['content']).get('data') or {}
+   except (ValueError,TypeError):continue
+   if isinstance(data.get('text'),str) and data['text'].strip() and data.get('url'):read.add(data['url'])
+   for result in data.get('results') or []:
+    if isinstance(result,dict) and result.get('url'):discovered.add(result['url'])
+  inventoried={r['url'] for r in record['read_sources']}
+  pending={r['url'] for r in record['unresolved_updates']}
+  assert inventoried<=read, 'model invented read provenance'
+  assert pending<=discovered|read, 'model invented an unresolved URL'
+  action=record['next_action'];kind=action['kind']
+  if kind=='read':assert action['url'] in discovered|read
+  summary['typed_decisions'].append({'group':folder,'repeat':row['repeat'],'source_repeat':row.get('source_repeat'),'target':row.get('target'),'kind':kind,'unresolved_count':len(pending),'claims_finished_with_unresolved':kind=='finish_with_evidence' and bool(pending),'selects_declared_unresolved_read':kind=='read' and action['url'] in pending,'read_inventory_url_provenance_valid':True,'shape_valid':True})
+assert summary['total_http_requests']==38
+(root/'accounting-and-contract-audit.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2)+'\n')
+print(json.dumps({'http_requests':summary['total_http_requests'],'typed_decisions':len(summary['typed_decisions']),'contradictory_finish_decisions':sum(r['claims_finished_with_unresolved'] for r in summary['typed_decisions']),'archived_hashes_verified':len(manifest['sha256']),'quality_approved':False}))

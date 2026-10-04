@@ -1,0 +1,13 @@
+import hashlib,json,os,subprocess,sys,tarfile
+from pathlib import Path
+stage=Path('/tmp/cw2-q02-v27-budget-guard-20261004');root=Path('/tmp/cw2-q02-budget-guard-v27-eval')
+assert not (stage/'server-tests-exit.json').exists()
+with tarfile.open(stage/'overlay.tar.gz') as archive:archive.extractall(root,filter='data')
+m=json.loads((stage/'overlay.json').read_text())['sha256'];assert all(hashlib.sha256((root/n).read_bytes()).hexdigest()==h for n,h in m.items())
+env=os.environ.copy();env['PYTHONPATH']=os.pathsep.join([str(root/'services/runtime/src'),str(root/'packages/protocol-python/src'),str(root/'packages/model-worker-sdk-python/src'),'/tmp/cw2-q02-backport-test-deps','/tmp/cw2-q02-eval-deps',str(root)])
+tests=['services/runtime/tests/test_character_kernel.py','services/runtime/tests/test_llm_input_budget.py','services/runtime/tests/test_tool_calling_agent.py','services/runtime/tests/test_runtime_source_evaluation.py','services/runtime/tests/test_conversation_local_content.py','services/runtime/tests/conversation/test_vision.py','tools/tests/test_evaluate_character_scenarios.py','tools/tests/test_source_decision_evaluation.py']
+with (stage/'server-tests.log').open('w') as log:
+    rc=subprocess.run([sys.executable,'-m','pytest','-q',*tests],cwd=root,env=env,stdout=log,stderr=subprocess.STDOUT).returncode
+assert all(hashlib.sha256((root/n).read_bytes()).hexdigest()==h for n,h in m.items())
+(stage/'server-tests-exit.json').write_text(json.dumps({'exit_code':rc,'overlay_files_verified':len(m),'production_touched':False})+'\n')
+print(json.dumps({'server_test_exit_code':rc}));sys.exit(rc)

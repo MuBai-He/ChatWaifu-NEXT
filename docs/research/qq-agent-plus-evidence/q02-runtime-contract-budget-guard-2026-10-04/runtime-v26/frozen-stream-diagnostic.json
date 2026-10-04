@@ -1,0 +1,18 @@
+{
+  "probe": "one frozen failed first-turn payload; diagnostic only",
+  "at_utc": "2026-10-03T17:08:33.772214+00:00",
+  "requested_model": "gemini-3.8-flash-high",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 41,
+    "total_tokens": 2411,
+    "prompt_tokens": 1824,
+    "completion_tokens_details": {
+      "reasoning_tokens": 546
+    }
+  },
+  "sse_chunks": 4,
+  "reported_models": [
+    "gemini-3.8-flash"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "files": {
+    "exit.json": "84dc8ec76b44e1f2400cc4343ab8d68afbe0f361c747a86f5bbea5f0a57ab72b",
+    "admission.json": "0ea18102e9c4b6c339e63715f4cab3dabff307d1a123a5408edf4abe764cd5d4",
+    "results.jsonl": "b2cdc0ed33be69ad404d64be5eb601a458108b5dbbeb2f20b05bb6c468fe830b",
+    "provider-rounds.jsonl": "81b7618098079636559191408917563c6c62502b596697b6b4bd0a9b015ae235",
+    "actual-provider-payloads.jsonl": "1b0c020426710bb3f510a0c38c42e21934b5da06750938a91cd2f7906eb365ec"
+  },
+  "secret_scan_pass": true
+}

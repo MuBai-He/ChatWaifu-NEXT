@@ -1,0 +1,37 @@
+{
+  "version": "v43",
+  "q02_approval": false,
+  "fidelity_approved_32768": false,
+  "fidelity_approved_65536": false,
+  "production_window_changed": false,
+  "production_runtime_deployed": false,
+  "agy_used": false,
+  "new_prompt_rules": 0,
+  "new_model_http": 23,
+  "cumulative_model_http": 255,
+  "old_unknown_usage_calls": 19,
+  "completed": [
+    "v41 exact 15-wire offline replay",
+    "late source overhead whole-result reproject repair",
+    "local/server 523 tests",
+    "actual four turns: 3 model/1 source fallback",
+    "two affected rounds per frozen-budget arm"
+  ],
+  "remaining": [
+    "R2 latest own answer displaced by older receipt bodies",
+    "R2 complete-original estimate metadata",
+    "S1 actual authority body coverage",
+    "A1/A2 complete-input fidelity",
+    "directed role then original 864-reply full A/B"
+  ],
+  "acceptance_not_inferred_from": [
+    "tests",
+    "HTTP 200",
+    "keywords",
+    "runtime self report",
+    "single successful answer",
+    "configured 64K window"
+  ],
+  "historical_runtime_error_root_cause": "unknown; no model/provider/DNS attribution",
+  "next_dependency": "deterministic history priority and original-estimate repair; unchanged window/prompts; offline first"
+}

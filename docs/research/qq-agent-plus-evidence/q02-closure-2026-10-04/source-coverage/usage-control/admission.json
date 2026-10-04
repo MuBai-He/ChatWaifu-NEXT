@@ -1,0 +1,14 @@
+{
+  "changed_wire_fields": [
+    "stream_options.include_usage"
+  ],
+  "http_limit": 2,
+  "logical_limit": 2,
+  "model": "gemini-3.8-flash-high",
+  "public_read_calls": 0,
+  "quality_replacement": false,
+  "targets": [
+    "frozen_icao:r1:t4",
+    "frozen_airchina:r1:t4"
+  ]
+}

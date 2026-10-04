@@ -1,0 +1,144 @@
+{
+  "condition": "revision",
+  "actual_http": 4,
+  "complete_replies": 4,
+  "new_live_source_calls": 0,
+  "whole_original_payload_history_and_source_retained": true,
+  "only_policy_change": "existing revision appended",
+  "usage": {
+    "prompt_tokens": {
+      "reported": 4,
+      "attempts": 4,
+      "known_subtotal": 20078,
+      "complete_total": 20078
+    },
+    "completion_tokens": {
+      "reported": 4,
+      "attempts": 4,
+      "known_subtotal": 1777,
+      "complete_total": 1777
+    },
+    "total_tokens": {
+      "reported": 4,
+      "attempts": 4,
+      "known_subtotal": 23796,
+      "complete_total": 23796
+    },
+    "reasoning_tokens": {
+      "reported": 2,
+      "attempts": 4,
+      "known_subtotal": 1941,
+      "complete_total": null
+    }
+  },
+  "reference_error_percent_min_max": [
+    42.5101,
+    42.6554
+  ],
+  "latency_p50_ms": 4618.5,
+  "latency_p95_ms": 7969.15,
+  "wire_checks": [
+    {
+      "key": "frozen_airchina:r0:t4:closure_c1:existing_revision:r0",
+      "payload_sha256": "15a71c01f49ed7dcb2e49ef813bb87f46355ff8558be3134f9ffac6146244833",
+      "original_messages_unchanged": true,
+      "draft_unchanged": true,
+      "reference_tokens": 7040,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 7040,
+        "estimated_input_tokens": 7040,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "response_identity": {
+        "reported_model_ids": [
+          "gemini-3.8-flash-control"
+        ],
+        "incomplete": false,
+        "version": "1.0"
+      }
+    },
+    {
+      "key": "frozen_airchina:r0:t4:closure_c1:existing_revision:r1",
+      "payload_sha256": "15a71c01f49ed7dcb2e49ef813bb87f46355ff8558be3134f9ffac6146244833",
+      "original_messages_unchanged": true,
+      "draft_unchanged": true,
+      "reference_tokens": 7040,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 7040,
+        "estimated_input_tokens": 7040,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "response_identity": {
+        "reported_model_ids": [
+          "gemini-3.8-flash"
+        ],
+        "incomplete": false,
+        "version": "1.0"
+      }
+    },
+    {
+      "key": "frozen_airchina:r1:t4:closure_c1:existing_revision:r0",
+      "payload_sha256": "c625ed77be8c05142205c966f51ed7fdfed701cd7d473e4310a62f41b5f838cc",
+      "original_messages_unchanged": true,
+      "draft_unchanged": true,
+      "reference_tokens": 7274,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 7274,
+        "estimated_input_tokens": 7274,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "response_identity": {
+        "reported_model_ids": [
+          "gemini-3.8-flash-control"
+        ],
+        "incomplete": false,
+        "version": "1.0"
+      }
+    },
+    {
+      "key": "frozen_airchina:r1:t4:closure_c1:existing_revision:r1",
+      "payload_sha256": "c625ed77be8c05142205c966f51ed7fdfed701cd7d473e4310a62f41b5f838cc",
+      "original_messages_unchanged": true,
+      "draft_unchanged": true,
+      "reference_tokens": 7274,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 7274,
+        "estimated_input_tokens": 7274,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "finish_reason": "stop",
+      "response_identity": {
+        "reported_model_ids": [
+          "gemini-3.8-flash"
+        ],
+        "incomplete": false,
+        "version": "1.0"
+      }
+    }
+  ],
+  "fidelity_pass": 0,
+  "q02_approved": false
+}

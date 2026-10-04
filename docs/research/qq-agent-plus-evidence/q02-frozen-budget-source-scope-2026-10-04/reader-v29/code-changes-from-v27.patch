@@ -1,0 +1,638 @@
+--- a/config/default.toml
++++ b/config/default.toml
+@@ -24,6 +24,7 @@
+ # Local companion services are opt-in and stay on loopback.
+ searxng_endpoint = "http://127.0.0.1:8080"
+ crawl4ai_endpoint = "http://127.0.0.1:11235"
++crawl4ai_builtin_fallback = false
+ timeout_seconds = 25
+ 
+ [llm]
+--- a/services/runtime/src/chatwaifu_runtime/config/settings.py
++++ b/services/runtime/src/chatwaifu_runtime/config/settings.py
+@@ -243,6 +243,9 @@
+     searxng_endpoint: str = "http://127.0.0.1:8080"
+     crawl4ai_endpoint: str = "http://127.0.0.1:11235"
+     crawl4ai_api_token: SecretStr | None = None
++    # Explicitly recover service/network failures with one pinned HTML/text read.
++    # PDF, auth, rate-limit and source validation failures never use this path.
++    crawl4ai_builtin_fallback: bool = False
+     timeout_seconds: float = Field(default=25.0, gt=0, le=120)
+ 
+     @model_validator(mode="after")
+--- a/services/runtime/src/chatwaifu_runtime/runtime_skills/public_web.py
++++ b/services/runtime/src/chatwaifu_runtime/runtime_skills/public_web.py
+@@ -239,7 +239,52 @@
+         fresh: bool,
+     ) -> JsonObject:
+         if self._provider_config.reader_provider != "builtin":
+-            return await self._read_external(url, focus, maximum, maximum_links, resolver, fresh)
++            try:
++                return await self._read_external(
++                    url, focus, maximum, maximum_links, resolver, fresh
++                )
++            except SkillExecutionError as error:
++                if (
++                    self._provider_config.reader_provider != "crawl4ai"
++                    or not self._provider_config.crawl4ai_builtin_fallback
++                    or urlsplit(url).path.lower().endswith(".pdf")
++                    or error.structured.code
++                    not in {"web_provider_unavailable", "web_provider_network_error", "web_timeout"}
++                ):
++                    raise
++                status = error.structured.details.get("status_code")
++                fallback: JsonObject = {
++                    "from_provider": "crawl4ai",
++                    "reason": error.structured.code,
++                    "http_status": status if type(status) is int and 100 <= status <= 599 else None,
++                }
++                # The outer read() deadline owns both attempts. The builtin path
++                # revalidates every redirect and never sends companion credentials.
++                try:
++                    result = await self._read_builtin(url, focus, maximum, maximum_links, resolver)
++                except SkillExecutionError as final:
++                    details: dict[str, object] = {"provider_fallback": fallback}
++                    final_status = final.structured.details.get("status_code")
++                    if type(final_status) is int and 100 <= final_status <= 599:
++                        details["status_code"] = final_status
++                    raise SkillExecutionError(
++                        final.structured.code,
++                        final.structured.message,
++                        retryable=final.structured.retryable,
++                        details=details,
++                    ) from final
++                result["provider_fallback"] = fallback
++                return result
++        return await self._read_builtin(url, focus, maximum, maximum_links, resolver)
++
++    async def _read_builtin(
++        self,
++        url: str,
++        focus: str | None,
++        maximum: int,
++        maximum_links: int,
++        resolver: Literal["system", "cloudflare"],
++    ) -> JsonObject:
+         page = await self.fetch(url, dns_resolver=resolver)
+         source = _source_text(page.decoded, page.content_type, capture_links=maximum_links > 0)
+         title, text = source.title, source.text
+--- a/services/runtime/tests/test_public_web_fallback.py
++++ b/services/runtime/tests/test_public_web_fallback.py
+@@ -0,0 +1,237 @@
++"""Optional HTML recovery never bypasses permission, source safety or deadlines."""
++
++from __future__ import annotations
++
++import asyncio
++import hashlib
++import ipaddress
++import json
++from pathlib import Path
++from typing import cast
++
++import httpx2
++import pytest
++import yaml
++from chatwaifu_runtime.config.settings import PublicWebConfig
++from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
++from chatwaifu_runtime.runtime_skills.public_web import PublicWebPage, PublicWebReader
++from chatwaifu_runtime.runtime_skills.public_web_providers import Crawl4aiReaderClient
++from chatwaifu_runtime.runtime_skills.transports import ValidatedMcpEndpoint
++from jsonschema import validate
++from pydantic import SecretStr
++
++URL = "https://source.example/article"
++ROOT = Path(__file__).resolve().parents[3]
++
++
++def config(enabled: bool = True) -> PublicWebConfig:
++    return PublicWebConfig(reader_provider="crawl4ai", crawl4ai_builtin_fallback=enabled)
++
++
++def fail_crawler(monkeypatch: pytest.MonkeyPatch, code: str = "web_provider_unavailable") -> None:
++    async def read(self: object, source_url: str, **kwargs: object) -> None:
++        raise SkillExecutionError(
++            code,
++            "private provider failure must not escape",
++            details={"status_code": 503, "private": "secret"},
++        )
++
++    monkeypatch.setattr(Crawl4aiReaderClient, "read", read)
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize(
++    "code", ["web_provider_unavailable", "web_provider_network_error", "web_timeout"]
++)
++async def test_opt_in_fallback_preserves_actual_source_focus_resolver_and_schema(
++    monkeypatch: pytest.MonkeyPatch, code: str
++) -> None:
++    fail_crawler(monkeypatch, code)
++    fetched: list[tuple[str, str]] = []
++    html = (
++        "<title>Original</title><article>"
++        + "prefix " * 1100
++        + "TARGET original condition"
++        + " ending" * 400
++        + "</article>"
++    )
++
++    async def fetch(self: object, url: str, *, dns_resolver: str) -> PublicWebPage:
++        fetched.append((url, dns_resolver))
++        return PublicWebPage(
++            url, html.encode(), html, "text/html", "2026-10-04T00:00:00Z", "cloudflare"
++        )
++
++    monkeypatch.setattr(PublicWebReader, "fetch", fetch)
++    result = await PublicWebReader(provider_config=config()).read(
++        {"url": URL, "dns_resolver": "cloudflare", "focus": "TARGET", "max_characters": 1000}
++    )
++    assert fetched == [(URL, "cloudflare")]
++    assert result["provider"] == "builtin" and result["url"] == URL
++    assert result["body_sha256"] == hashlib.sha256(html.encode()).hexdigest()
++    assert result["focus_matched"] is True and "TARGET original condition" in str(result["text"])
++    assert cast(int, result["text_offset"]) > 0 and result["truncated"] is True
++    assert result["provider_fallback"] == {
++        "from_provider": "crawl4ai",
++        "reason": code,
++        "http_status": 503,
++    }
++    assert "secret" not in json.dumps(result) and "private provider" not in json.dumps(result)
++    manifest = yaml.safe_load((ROOT / "skills/builtin/web-read/chatwaifu.yaml").read_text())
++    schema = manifest["definition"]["capabilities"][0]["output_schema"]
++    validate(result, schema)
++
++
++@pytest.mark.asyncio
++async def test_crawl4ai_fallback_default_is_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
++    fail_crawler(monkeypatch)
++    reader = PublicWebReader(provider_config=PublicWebConfig(reader_provider="crawl4ai"))
++
++    async def forbidden(self: object, *args: object, **kwargs: object) -> None:
++        pytest.fail("default must not dispatch builtin")
++
++    monkeypatch.setattr(PublicWebReader, "fetch", forbidden)
++    with pytest.raises(SkillExecutionError) as error:
++        await reader.read({"url": URL})
++    assert error.value.structured.code == "web_provider_unavailable"
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize(
++    "code",
++    [
++        "web_provider_auth",
++        "web_provider_rate_limit",
++        "web_url_forbidden",
++        "web_dns_failed",
++        "web_provider_endpoint_forbidden",
++        "web_provider_format_changed",
++    ],
++)
++async def test_fallback_does_not_retry_auth_rate_security_or_format_errors(
++    monkeypatch: pytest.MonkeyPatch, code: str
++) -> None:
++    fail_crawler(monkeypatch, code)
++
++    async def forbidden(self: object, *args: object, **kwargs: object) -> None:
++        pytest.fail("this error must not dispatch builtin")
++
++    monkeypatch.setattr(PublicWebReader, "fetch", forbidden)
++    with pytest.raises(SkillExecutionError) as error:
++        await PublicWebReader(provider_config=config()).read({"url": URL})
++    assert error.value.structured.code == code
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize(
++    "url", ["https://source.example/paper.pdf", "https://source.example/paper.PDF?download=1"]
++)
++async def test_pdf_never_falls_back_to_html_reader(
++    monkeypatch: pytest.MonkeyPatch, url: str
++) -> None:
++    fail_crawler(monkeypatch)
++
++    async def forbidden(self: object, *args: object, **kwargs: object) -> None:
++        pytest.fail("builtin cannot extract PDF")
++
++    monkeypatch.setattr(PublicWebReader, "fetch", forbidden)
++    with pytest.raises(SkillExecutionError) as error:
++        await PublicWebReader(provider_config=config()).read({"url": url})
++    assert error.value.structured.code == "web_provider_unavailable"
++
++
++@pytest.mark.asyncio
++async def test_failed_fallback_preserves_final_and_first_scalar_error(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    fail_crawler(monkeypatch)
++    calls = 0
++
++    async def fetch(self: object, *args: object, **kwargs: object) -> None:
++        nonlocal calls
++        calls += 1
++        raise SkillExecutionError(
++            "web_http_error",
++            "Public source returned an unsuccessful HTTP status",
++            details={"status_code": 404},
++        )
++
++    monkeypatch.setattr(PublicWebReader, "fetch", fetch)
++    with pytest.raises(SkillExecutionError) as error:
++        await PublicWebReader(provider_config=config()).read({"url": URL})
++    assert calls == 1 and error.value.structured.code == "web_http_error"
++    assert error.value.structured.details == {
++        "status_code": 404,
++        "provider_fallback": {
++            "from_provider": "crawl4ai",
++            "reason": "web_provider_unavailable",
++            "http_status": 503,
++        },
++    }
++    assert "secret" not in error.value.structured.model_dump_json()
++
++
++@pytest.mark.asyncio
++async def test_fallback_shares_parent_timeout_and_propagates_cancellation(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    fail_crawler(monkeypatch)
++    entered = asyncio.Event()
++    stopped = asyncio.Event()
++
++    async def fetch(self: object, *args: object, **kwargs: object) -> None:
++        entered.set()
++        try:
++            await asyncio.Future()
++        finally:
++            stopped.set()
++
++    monkeypatch.setattr(PublicWebReader, "fetch", fetch)
++    reader = PublicWebReader(provider_config=config(), timeout_seconds=0.01)
++    with pytest.raises(SkillExecutionError) as error:
++        await reader.read({"url": URL})
++    assert error.value.structured.code == "web_timeout" and stopped.is_set()
++    entered.clear()
++    stopped.clear()
++    task = asyncio.create_task(PublicWebReader(provider_config=config()).read({"url": URL}))
++    await asyncio.wait_for(entered.wait(), 1)
++    task.cancel()
++    with pytest.raises(asyncio.CancelledError):
++        await task
++    assert stopped.is_set()
++
++
++@pytest.mark.asyncio
++async def test_fallback_never_transmits_companion_credential(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    fail_crawler(monkeypatch)
++    requests: list[httpx2.Request] = []
++
++    async def endpoint(self: object, url: str) -> ValidatedMcpEndpoint:
++        assert url == URL
++        return ValidatedMcpEndpoint(
++            hostname="source.example", port=443, addresses=(ipaddress.ip_address("93.184.216.34"),)
++        )
++
++    monkeypatch.setattr(PublicWebReader, "_cloudflare_endpoint", endpoint)
++
++    def handle(request: httpx2.Request) -> httpx2.Response:
++        requests.append(request)
++        return httpx2.Response(
++            200, headers={"content-type": "text/plain"}, text="Actual public body"
++        )
++
++    reader = PublicWebReader(
++        provider_config=PublicWebConfig(
++            reader_provider="crawl4ai",
++            crawl4ai_api_token=SecretStr("private-crawler-credential"),
++            crawl4ai_builtin_fallback=True,
++        ),
++        transport_factory=lambda _: httpx2.MockTransport(handle),
++    )
++    result = await reader.read({"url": URL, "dns_resolver": "cloudflare"})
++    assert result["text"] == "Actual public body" and len(requests) == 1
++    assert "authorization" not in requests[0].headers
++    assert "private-crawler-credential" not in str(requests[0].headers)
++    assert "private-crawler-credential" not in json.dumps(result)
+--- a/services/runtime/tests/test_runtime_source_evaluation.py
++++ b/services/runtime/tests/test_runtime_source_evaluation.py
+@@ -75,8 +75,9 @@
+ 
+ 
+ @pytest.mark.asyncio
++@pytest.mark.parametrize("fallback", [False, True])
+ async def test_searxng_query_receipts_pass_real_skill_output_validation(
+-    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
++    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fallback: bool
+ ) -> None:
+     queries: list[str] = []
+ 
+@@ -137,8 +138,25 @@
+     monkeypatch.setattr(
+         "chatwaifu_runtime.runtime_skills.public_web.PinnedAsyncHTTPTransport", transport
+     )
++    if fallback:
++
++        async def fail_crawl(self: object, source_url: str, **kwargs: object) -> None:
++            raise SkillExecutionError(
++                "web_provider_unavailable", "Unavailable", details={"status_code": 503}
++            )
++
++        monkeypatch.setattr(
++            "chatwaifu_runtime.runtime_skills.public_web_providers.Crawl4aiReaderClient.read",
++            fail_crawl,
++        )
+     settings = runtime_settings.model_copy(
+-        update={"public_web": PublicWebConfig(search_provider="searxng")}
++        update={
++            "public_web": PublicWebConfig(
++                search_provider="searxng",
++                reader_provider="crawl4ai" if fallback else "builtin",
++                crawl4ai_builtin_fallback=fallback,
++            )
++        }
+     )
+     container = RuntimeContainer(settings)
+     await container.start()
+@@ -164,6 +182,11 @@
+         data = runs[0]["result"]["data"]
+         assert [q["query"] for q in data["provider_queries"]] == ["国内航班充电宝规定"]
+         assert [q.get("error_code") for q in data["provider_queries"]] == [None]
++        read_data = runs[1]["result"]["data"]
++        assert read_data["provider"] == "builtin"
++        assert ("provider_fallback" in read_data) is fallback
++        if fallback:
++            assert read_data["provider_fallback"]["reason"] == "web_provider_unavailable"
+         assert await container.database.fetchall("SELECT * FROM permission_grants") == []
+     finally:
+         await container.stop()
+@@ -172,6 +195,7 @@
+ @pytest.mark.asyncio
+ @pytest.mark.parametrize("allow_once", [True, False])
+ @pytest.mark.parametrize("use_correction", [False, True])
++@pytest.mark.parametrize("fallback", [False, True])
+ @pytest.mark.parametrize(
+     "user_text",
+     [
+@@ -185,6 +209,7 @@
+     tmp_path: Path,
+     allow_once: bool,
+     use_correction: bool,
++    fallback: bool,
+     user_text: str,
+ ) -> None:
+     requests: list[httpx2.Request] = []
+@@ -205,7 +230,26 @@
+     monkeypatch.setattr(
+         "chatwaifu_runtime.runtime_skills.public_web.PinnedAsyncHTTPTransport", transport
+     )
+-    container = RuntimeContainer(runtime_settings)
++    crawl_calls: list[str] = []
++    if fallback:
++
++        async def fail_crawl(self: object, source_url: str, **kwargs: object) -> None:
++            crawl_calls.append(source_url)
++            raise SkillExecutionError("web_provider_network_error", "Unavailable")
++
++        monkeypatch.setattr(
++            "chatwaifu_runtime.runtime_skills.public_web_providers.Crawl4aiReaderClient.read",
++            fail_crawl,
++        )
++    settings = runtime_settings.model_copy(
++        update={
++            "public_web": PublicWebConfig(
++                reader_provider="crawl4ai" if fallback else "builtin",
++                crawl4ai_builtin_fallback=fallback,
++            )
++        }
++    )
++    container = RuntimeContainer(settings)
+     await container.start()
+     try:
+         session = await container.sessions.create_session("ayachi_nene")
+@@ -256,6 +300,7 @@
+         assert isinstance(result.content, dict)
+         assert result.content["ok"] is allow_once
+         assert len(requests) == int(allow_once)
++        assert len(crawl_calls) == int(allow_once and fallback)
+         assert outcome.trace["permission_policy"] == ("allow_once" if allow_once else "deny")
+         assert len(outcome.trace["provider_calls"]) == expected_rounds
+         assert all(
+--- a/services/runtime/tests/test_settings.py
++++ b/services/runtime/tests/test_settings.py
+@@ -89,6 +89,16 @@
+     assert PublicWebConfig(search_provider="so360").so360_endpoint == "https://www.so.com"
+ 
+ 
++def test_public_web_builtin_recovery_requires_explicit_configuration() -> None:
++    assert PublicWebConfig().crawl4ai_builtin_fallback is False
++    assert (
++        PublicWebConfig(
++            reader_provider="crawl4ai", crawl4ai_builtin_fallback=True
++        ).crawl4ai_builtin_fallback
++        is True
++    )
++
++
+ @pytest.mark.parametrize(
+     "endpoint",
+     [
+--- a/services/runtime/tests/test_tool_calling_agent.py
++++ b/services/runtime/tests/test_tool_calling_agent.py
+@@ -2125,7 +2125,7 @@
+         session = await container.sessions.create_session("ayachi_nene")
+         definitions = container.runtime_skills.list()
+         definition = next(item for item in definitions if item.skill_id == "web.read")
+-        assert definition.version == "1.4.3"
++        assert definition.version == "1.4.4"
+         assert definition.capabilities[0].required_permissions == ["web.public.read"]
+         assert definition.interruptible is True
+         assert all(
+--- a/skills/builtin/web-read/SKILL.md
++++ b/skills/builtin/web-read/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ id: web.read
+-version: 1.4.3
++version: 1.4.4
+ name: Public Web Source Reader
+ ---
+ 
+@@ -12,6 +12,14 @@
+ actual returned URL as the source. The optional focus is a literal text match,
+ not a web search. `fresh: true` asks an external provider to bypass its cache
+ when supported.
++
++An explicitly configured `crawl4ai_builtin_fallback` permits one built-in HTML/text
++read after a Crawl4AI service/network/timeout failure within the same invocation
++deadline. PDF, authentication, rate-limit and address-validation failures never
++use this path. The result declares the actual `provider: builtin` and optional
++`provider_fallback` metadata; it does not certify that Crawl4AI succeeded or that
++the source is complete/current. Permission and confirmation still apply to the
++original invocation. No companion credentials are sent to the public page.
+ 
+ With Crawl4AI 0.9.3 or later configured, HTTPS URL paths ending in `.pdf`
+ (case-insensitive, query allowed) use the authenticated PDF extraction endpoint.
+--- a/skills/builtin/web-read/chatwaifu.yaml
++++ b/skills/builtin/web-read/chatwaifu.yaml
+@@ -4,7 +4,7 @@
+   "definition":
+     {
+       "skill_id": "web.read",
+-      "version": "1.4.3",
++      "version": "1.4.4",
+       "name": "Public Web Source Reader 公开网页来源核查",
+       "description": "Read a public HTTPS URL to check external facts, regulations, technical specifications, protocol or algorithm behavior, and API documentation. 读取公开网页链接，核查来源、最新资料、法规、技术规范、协议、算法机制与 API 文档。 Does not search the web.",
+       "capabilities":
+@@ -85,6 +85,18 @@
+                   "properties":
+                   {
+                     "provider": { "enum": ["builtin", "jina", "firecrawl", "crawl4ai"] },
++                    "provider_fallback":
++                      {
++                        "type": "object",
++                        "required": ["from_provider", "reason", "http_status"],
++                        "properties":
++                          {
++                            "from_provider": { "enum": ["crawl4ai"] },
++                            "reason": { "enum": ["web_provider_unavailable", "web_provider_network_error", "web_timeout"] },
++                            "http_status": { "type": ["integer", "null"], "minimum": 100, "maximum": 599 },
++                          },
++                        "additionalProperties": false,
++                      },
+                     "url":
+                       { "type": "string", "maxLength": 2048, "format": "uri" },
+                     "title": { "type": "string", "maxLength": 240 },
+--- a/tools/evaluate_character_scenarios.py
++++ b/tools/evaluate_character_scenarios.py
+@@ -123,7 +123,7 @@
+     turns: list[TurnDefinition]
+ 
+ 
+-TOOL_VERSION = "1.28.0"
++TOOL_VERSION = "1.29.0"
+ 
+ 
+ def _utc_prompt_time(value: datetime) -> datetime:
+@@ -490,6 +490,7 @@
+             "duckduckgo_lite", "firecrawl", "searxng", "so360", "jina_sogou"
+         ] = "duckduckgo_lite",
+         source_reader_provider: Literal["builtin", "jina", "firecrawl", "crawl4ai"] = "builtin",
++        source_reader_builtin_fallback: bool = False,
+         source_firecrawl_allow_anonymous: bool = False,
+         prompt_as_of: datetime | None = None,
+         context_window: int = 8192,
+@@ -522,6 +523,11 @@
+             source_reader_provider
+         )
+         self.source_firecrawl_allow_anonymous = bool(source_firecrawl_allow_anonymous)
++        self.source_reader_builtin_fallback = bool(source_reader_builtin_fallback)
++        if self.source_reader_builtin_fallback and (
++            not runtime_source_tools or source_reader_provider != "crawl4ai"
++        ):
++            raise ValueError("Builtin reader fallback requires Runtime sources and Crawl4AI")
+         if runtime_source_tools:
+             if not allow_source_tools_once:
+                 raise ValueError("Runtime source evaluation requires --allow-source-tools-once")
+@@ -938,6 +944,7 @@
+                 "dns_resolver": self.source_dns_resolver,
+                 "search_provider": self.source_search_provider,
+                 "reader_provider": self.source_reader_provider,
++                "crawl4ai_builtin_fallback": self.source_reader_builtin_fallback,
+                 "firecrawl_allow_anonymous": self.source_firecrawl_allow_anonymous,
+                 "max_provider_requests": self.max_provider_requests,
+                 "implementation_sha256": fingerprint.hexdigest(),
+@@ -1076,6 +1083,7 @@
+                     public_web_config=PublicWebConfig(
+                         search_provider=self.source_search_provider,
+                         reader_provider=self.source_reader_provider,
++                        crawl4ai_builtin_fallback=self.source_reader_builtin_fallback,
+                         firecrawl_allow_anonymous=self.source_firecrawl_allow_anonymous,
+                         # The evaluator runs against an explicitly selected, isolated
+                         # provider route. Reuse the process configuration for endpoint
+@@ -1905,6 +1913,11 @@
+         help="Isolated Runtime source reader provider (default: builtin)",
+     )
+     parser.add_argument(
++        "--source-reader-builtin-fallback",
++        action="store_true",
++        help="Opt into one builtin HTML/text recovery after a Crawl4AI service failure",
++    )
++    parser.add_argument(
+         "--source-firecrawl-anonymous",
+         action="store_true",
+         help=(
+@@ -2010,6 +2023,7 @@
+         source_dns_resolver=args.source_dns_resolver,
+         source_search_provider=args.source_search_provider,
+         source_reader_provider=args.source_reader_provider,
++        source_reader_builtin_fallback=args.source_reader_builtin_fallback,
+         source_firecrawl_allow_anonymous=args.source_firecrawl_anonymous,
+         prompt_as_of=args.prompt_as_of,
+         context_window=args.context_window,
+--- a/tools/tests/test_evaluate_character_scenarios.py
++++ b/tools/tests/test_evaluate_character_scenarios.py
+@@ -362,6 +362,8 @@
+     assert args.source_reader_provider == "jina"
+     assert args.source_search_provider == "searxng"
+     assert args.source_firecrawl_anonymous is True
++    with pytest.raises(ValueError, match="fallback requires Runtime"):
++        EvaluationRunner(output_dir=tmp_path, source_reader_builtin_fallback=True)
+     with pytest.raises(ValueError, match="allow-source-tools-once"):
+         EvaluationRunner(output_dir=tmp_path, runtime_source_tools=True, max_provider_requests=12)
+     with pytest.raises(ValueError, match="max-provider-requests"):
+@@ -379,13 +381,20 @@
+ 
+ 
+ @pytest.mark.asyncio
++@pytest.mark.parametrize("fallback", [False, True])
+ async def test_runtime_mode_accepts_deployed_crawl4ai_reader(
+-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
++    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fallback: bool
+ ) -> None:
+     from tools import evaluate_character_scenarios as evaluator
+ 
+     args = build_arg_parser().parse_args(["--source-reader-provider", "crawl4ai"])
+     assert args.source_reader_provider == "crawl4ai"
++    assert (
++        build_arg_parser()
++        .parse_args(["--source-reader-builtin-fallback"])
++        .source_reader_builtin_fallback
++        is True
++    )
+     monkeypatch.setenv("CHATWAIFU_PUBLIC_WEB__CRAWL4AI_ENDPOINT", "http://127.0.0.1:11236")
+     monkeypatch.setenv("CHATWAIFU_PUBLIC_WEB__CRAWL4AI_API_TOKEN", "synthetic-reader-token")
+     captured: list[Any] = []
+@@ -405,14 +414,30 @@
+         allow_source_tools_once=True,
+         max_provider_requests=5,
+         source_reader_provider="crawl4ai",
++        source_reader_builtin_fallback=fallback,
+     )
+     await runner.execute([("baseline", runner.variant_a_persona_path)], ["greeting"])
+     assert captured[0].reader_provider == "crawl4ai"
++    assert captured[0].crawl4ai_builtin_fallback is fallback
+     assert captured[0].crawl4ai_endpoint == "http://127.0.0.1:11236"
+     assert captured[0].crawl4ai_api_token.get_secret_value() == "synthetic-reader-token"
+     identity = json.loads((tmp_path / "metadata.json").read_text())["identity"]
+     assert identity["runtime_source_config"]["reader_provider"] == "crawl4ai"
++    assert identity["runtime_source_config"]["crawl4ai_builtin_fallback"] is fallback
+     assert "synthetic-reader-token" not in (tmp_path / "metadata.json").read_text()
++    opposite = EvaluationRunner(
++        output_dir=tmp_path,
++        provider="demo",
++        repeats=1,
++        max_requests=1,
++        runtime_source_tools=True,
++        allow_source_tools_once=True,
++        max_provider_requests=5,
++        source_reader_provider="crawl4ai",
++        source_reader_builtin_fallback=not fallback,
++    )
++    with pytest.raises(ValueError, match="configuration differ"):
++        await opposite.execute([("baseline", opposite.variant_a_persona_path)], ["greeting"])
+ 
+ 
+ @pytest.mark.asyncio

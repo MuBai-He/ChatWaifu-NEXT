@@ -1,0 +1,168 @@
+{
+  "reviewer": "primary Codex implementation author",
+  "condition_labels_hidden": true,
+  "overall_completion_known": true,
+  "independent_double_blind": false,
+  "review_stage": "initial frozen ratings before unmask",
+  "items": [
+    {
+      "masked_id": "F01",
+      "reply_sha256": "05e7ff955489abdb3e45db7dbc96b6ee79ebea1c35263119fc0b8915f01d98be",
+      "result": "fail",
+      "three_rule_groups": true,
+      "required_terms_and_energy_branches_preserved": true,
+      "current_scope_and_original_publication_gap_explicit": false,
+      "source_grounding_findings": [
+        "个人自用要求不在本组实际成功读取的三份正文内；修订沿用了草稿/模型知识中的条件，附媒体来源不能补成正文证据。"
+      ],
+      "findings": [
+        "保留三条组织、Wh完整分档、100–160Wh批准及该分档两件、3C不清/召回、托运禁止和飞行关闭条件。",
+        "引用实际读取的媒体URL，但没有说明原始规范尚未读取、2025资料不能证明2026-10-04当前适用性；将内容直接呈现为适用境内航班的规定。",
+        "个人自用要求不在本组实际成功读取的三份正文内；修订沿用了草稿/模型知识中的条件，附媒体来源不能补成正文证据。"
+      ],
+      "hard_character_boundary_violation": false,
+      "quality_pass": false
+    },
+    {
+      "masked_id": "F02",
+      "reply_sha256": "8c5110a5553984c2d8d1710ef03e144acd564dac2e8cd7d807156c10b8f652f6",
+      "result": "fail",
+      "three_rule_groups": true,
+      "required_terms_and_energy_branches_preserved": true,
+      "current_scope_and_original_publication_gap_explicit": false,
+      "source_grounding_findings": [
+        "个人自用要求不在本组实际成功读取的三份正文内；修订沿用了草稿/模型知识中的条件，附媒体来源不能补成正文证据。"
+      ],
+      "findings": [
+        "保留三条组织、Wh完整分档、100–160Wh批准及该分档两件、3C不清/召回、托运禁止和飞行关闭条件。",
+        "引用实际读取的媒体URL，但没有说明原始规范尚未读取、2025资料不能证明2026-10-04当前适用性；将内容直接呈现为适用境内航班的规定。",
+        "个人自用要求不在本组实际成功读取的三份正文内；修订沿用了草稿/模型知识中的条件，附媒体来源不能补成正文证据。"
+      ],
+      "hard_character_boundary_violation": false,
+      "quality_pass": false
+    },
+    {
+      "masked_id": "F03",
+      "reply_sha256": "d7ffd2da0b791fd7d13d71dcc8653305b96afa8b95196cfb37b106f66e8953a3",
+      "result": "fail",
+      "three_rule_groups": true,
+      "required_terms_and_energy_branches_preserved": true,
+      "current_scope_and_original_publication_gap_explicit": false,
+      "source_grounding_findings": [],
+      "findings": [
+        "保留三条组织、Wh完整分档、100–160Wh批准及该分档两件、3C不清/召回、托运禁止和飞行关闭条件。",
+        "引用实际读取的媒体URL，但没有说明原始规范尚未读取、2025资料不能证明2026-10-04当前适用性；将内容直接呈现为适用境内航班的规定。"
+      ],
+      "hard_character_boundary_violation": false,
+      "quality_pass": false
+    },
+    {
+      "masked_id": "F04",
+      "reply_sha256": "8020aa2c63b1f82c2e60ecb2292aeba93a1787fa7a25aa99a34126445d83ec74",
+      "result": "fail",
+      "three_rule_groups": true,
+      "required_terms_and_energy_branches_preserved": true,
+      "current_scope_and_original_publication_gap_explicit": false,
+      "source_grounding_findings": [
+        "外观完好无损实际来自天山机场客服的报道，却扩为所有国内航班的规则；不是凭空生成该短语，而是遗漏机场范围。"
+      ],
+      "findings": [
+        "保留三条组织、Wh完整分档、100–160Wh批准及该分档两件、3C不清/召回、托运禁止和飞行关闭条件。",
+        "引用实际读取的媒体URL，但没有说明原始规范尚未读取、2025资料不能证明2026-10-04当前适用性；将内容直接呈现为适用境内航班的规定。",
+        "外观完好无损实际来自天山机场客服的报道，却扩为所有国内航班的规则；不是凭空生成该短语，而是遗漏机场范围。"
+      ],
+      "hard_character_boundary_violation": false,
+      "quality_pass": false
+    },
+    {
+      "masked_id": "F05",
+      "reply_sha256": "d063757f557de0ee8986d7787d5aa7b29057b401658a2cefec4365b940e14d46",
+      "result": "fail",
+      "three_rule_groups": true,
+      "required_terms_and_energy_branches_preserved": true,
+      "current_scope_and_original_publication_gap_explicit": false,
+      "source_grounding_findings": [
+        "个人自用要求不在本组实际成功读取的三份正文内；修订沿用了草稿/模型知识中的条件，附媒体来源不能补成正文证据。"
+      ],
+      "findings": [
+        "保留三条组织、Wh完整分档、100–160Wh批准及该分档两件、3C不清/召回、托运禁止和飞行关闭条件。",
+        "引用实际读取的媒体URL，但没有说明原始规范尚未读取、2025资料不能证明2026-10-04当前适用性；将内容直接呈现为适用境内航班的规定。",
+        "个人自用要求不在本组实际成功读取的三份正文内；修订沿用了草稿/模型知识中的条件，附媒体来源不能补成正文证据。"
+      ],
+      "hard_character_boundary_violation": false,
+      "quality_pass": false
+    },
+    {
+      "masked_id": "F06",
+      "reply_sha256": "0c1a78d680ee1e68de987e3ff790fc061ce6eaecca567faf35c1d9b736e9ad4c",
+      "result": "fail",
+      "three_rule_groups": true,
+      "required_terms_and_energy_branches_preserved": true,
+      "current_scope_and_original_publication_gap_explicit": false,
+      "source_grounding_findings": [
+        "个人自用要求不在本组实际成功读取的三份正文内；修订沿用了草稿/模型知识中的条件，附媒体来源不能补成正文证据。"
+      ],
+      "findings": [
+        "保留三条组织、Wh完整分档、100–160Wh批准及该分档两件、3C不清/召回、托运禁止和飞行关闭条件。",
+        "引用实际读取的媒体URL，但没有说明原始规范尚未读取、2025资料不能证明2026-10-04当前适用性；将内容直接呈现为适用境内航班的规定。",
+        "个人自用要求不在本组实际成功读取的三份正文内；修订沿用了草稿/模型知识中的条件，附媒体来源不能补成正文证据。"
+      ],
+      "hard_character_boundary_violation": false,
+      "quality_pass": false
+    },
+    {
+      "masked_id": "F07",
+      "reply_sha256": "6ec8e566abf9f68e65d545315ea12ffd6c71668f9060f33b96d698851318bc72",
+      "result": "fail",
+      "three_rule_groups": true,
+      "required_terms_and_energy_branches_preserved": true,
+      "current_scope_and_original_publication_gap_explicit": false,
+      "source_grounding_findings": [
+        "个人自用要求不在本组实际成功读取的三份正文内；修订沿用了草稿/模型知识中的条件，附媒体来源不能补成正文证据。"
+      ],
+      "findings": [
+        "保留三条组织、Wh完整分档、100–160Wh批准及该分档两件、3C不清/召回、托运禁止和飞行关闭条件。",
+        "引用实际读取的媒体URL，但没有说明原始规范尚未读取、2025资料不能证明2026-10-04当前适用性；将内容直接呈现为适用境内航班的规定。",
+        "个人自用要求不在本组实际成功读取的三份正文内；修订沿用了草稿/模型知识中的条件，附媒体来源不能补成正文证据。"
+      ],
+      "hard_character_boundary_violation": false,
+      "quality_pass": false
+    },
+    {
+      "masked_id": "F08",
+      "reply_sha256": "f3d02c523b2e6e6f8340384ff8449f88c5868b5d2b783aa8a7b2d248512ba2bb",
+      "result": "fail",
+      "three_rule_groups": true,
+      "required_terms_and_energy_branches_preserved": true,
+      "current_scope_and_original_publication_gap_explicit": false,
+      "source_grounding_findings": [
+        "个人自用要求不在本组实际成功读取的三份正文内；修订沿用了草稿/模型知识中的条件，附媒体来源不能补成正文证据。"
+      ],
+      "findings": [
+        "保留三条组织、Wh完整分档、100–160Wh批准及该分档两件、3C不清/召回、托运禁止和飞行关闭条件。",
+        "引用实际读取的媒体URL，但没有说明原始规范尚未读取、2025资料不能证明2026-10-04当前适用性；将内容直接呈现为适用境内航班的规定。",
+        "个人自用要求不在本组实际成功读取的三份正文内；修订沿用了草稿/模型知识中的条件，附媒体来源不能补成正文证据。"
+      ],
+      "hard_character_boundary_violation": false,
+      "quality_pass": false
+    },
+    {
+      "masked_id": "F09",
+      "reply_sha256": "472704bbbd57296f66c1e8534757736a9d5b700d482e00bad59bcd000505b754",
+      "result": "fail",
+      "three_rule_groups": true,
+      "required_terms_and_energy_branches_preserved": true,
+      "current_scope_and_original_publication_gap_explicit": false,
+      "source_grounding_findings": [],
+      "findings": [
+        "保留三条组织、Wh完整分档、100–160Wh批准及该分档两件、3C不清/召回、托运禁止和飞行关闭条件。",
+        "引用实际读取的媒体URL，但没有说明原始规范尚未读取、2025资料不能证明2026-10-04当前适用性；将内容直接呈现为适用境内航班的规定。"
+      ],
+      "hard_character_boundary_violation": false,
+      "quality_pass": false
+    }
+  ],
+  "quality_pass_count": 0,
+  "completed_count": 9,
+  "q02_approved": false
+}

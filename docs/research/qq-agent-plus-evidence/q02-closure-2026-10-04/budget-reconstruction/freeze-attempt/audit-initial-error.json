@@ -1,0 +1,7 @@
+{
+  "error_type": "FileNotFoundError",
+  "path_suffix": "natural-provided-review/files",
+  "cause": "v40 manifest has a files mapping; the new auditor initially assumed every previous manifest is flat",
+  "product_error": false,
+  "prior_artifacts_modified": false
+}

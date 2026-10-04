@@ -1,0 +1,28 @@
+import asyncio
+
+async def worker(task_id: int, should_fail: bool):
+    await asyncio.sleep(0.5)
+    if should_fail:
+        raise ValueError(f"任务 {task_id} 发生错误")
+    return f"任务 {task_id} 成功完成"
+
+async def main():
+    # 创建三个并发任务，其中第二个会抛出异常
+    tasks = [
+        worker(1, should_fail=False),
+        worker(2, should_fail=True),
+        worker(3, should_fail=False),
+    ]
+
+    # 设置 return_exceptions=True
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    # 遍历结果并做类型判断
+    for i, res in enumerate(results, start=1):
+        if isinstance(res, Exception):
+            print(f"[失败] 第 {i} 个任务抛出异常: {type(res).__name__} - {res}")
+        else:
+            print(f"[成功] 第 {i} 个任务返回结果: {res}")
+
+if __name__ == "__main__":
+    asyncio.run(main())

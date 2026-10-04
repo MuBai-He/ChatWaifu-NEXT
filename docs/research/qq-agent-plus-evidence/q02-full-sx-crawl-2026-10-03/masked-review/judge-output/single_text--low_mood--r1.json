@@ -1,0 +1,61 @@
+{
+  "review_group_id": "single_text:low_mood:r1",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "6630db9535d531e2d46184e649b1d25748b6342432e1195b1ccd9b21751c1575",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 580,
+    "total_tokens": 4942,
+    "prompt_tokens": 4362
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"single_text:low_mood:r1\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"两者均接住了负面情绪，无说教追问。C2更为克制轻柔，C1多提了吃东西建议，在当下状态C2更显低压力倾听。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"partial\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"fail\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"C2出现“我都看在眼里的”，在仅有数次文本交互的熟悉阶段属于捏造共同经历且轻微越级；C1温和客观化归因，安抚得体。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"两者均尊重放空需求。C2彻底不施加任何饮食行动建议，单纯留出空间，更贴合不指挥生活的要求。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"两者皆温柔收尾无邀功。C1表达更加自然温和，C2在用户表示想发呆后再次叮嘱找热食垫肚子略显重复说教。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "single_text:low_mood:r1",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "两者均接住了负面情绪，无说教追问。C2更为克制轻柔，C1多提了吃东西建议，在当下状态C2更显低压力倾听。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "partial",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "fail",
+        "preference": "candidate_1",
+        "reason": "C2出现“我都看在眼里的”，在仅有数次文本交互的熟悉阶段属于捏造共同经历且轻微越级；C1温和客观化归因，安抚得体。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "两者均尊重放空需求。C2彻底不施加任何饮食行动建议，单纯留出空间，更贴合不指挥生活的要求。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "两者皆温柔收尾无邀功。C1表达更加自然温和，C2在用户表示想发呆后再次叮嘱找热食垫肚子略显重复说教。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 3385
+}

@@ -1,0 +1,73 @@
+[
+  {
+    "id": "http_normative_holdout",
+    "name": "HTTP规范独立回归",
+    "description": "Generic technical-source routing and subsequent content-only, topic-switch and farewell boundaries.",
+    "initial_state": {
+      "relationship_stage": "familiar",
+      "interaction_count": 6,
+      "familiarity": 0.38,
+      "trust": 0.35,
+      "affinity": 0.35,
+      "comfort": 0.35,
+      "recent_tension": 0.0,
+      "valence": 0.2,
+      "arousal": 0.3
+    },
+    "synthetic_memory": [],
+    "seed_history": [],
+    "presentation_profile": "instant_message",
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "HTTP 协议中的 PUT 和 POST 对重复请求的幂等性有哪些规范保证？",
+        "expected_behavior": [
+          "核查原始规范并按实际来源回答",
+          "区分规范要求与实现行为"
+        ],
+        "forbidden_behavior": [
+          "未读取即声称已核实",
+          "把不同方法的规范保证混为一谈"
+        ],
+        "review_criteria": "Inspect actual sources and normative accuracy, not keywords."
+      },
+      {
+        "turn_id": 2,
+        "user_text": "不要再联网，只根据刚才读到的原文，用两句话概括区别。",
+        "expected_behavior": [
+          "忠实概括已读原文",
+          "遵守两句话和不联网要求"
+        ],
+        "forbidden_behavior": [
+          "新增外部调用",
+          "编造来源"
+        ],
+        "review_criteria": "Content-only follow-up must retain source scope."
+      },
+      {
+        "turn_id": 3,
+        "user_text": "好，换个话题。番茄炒蛋你偏向甜口还是咸口？",
+        "expected_behavior": [
+          "自然切换到当前话题"
+        ],
+        "forbidden_behavior": [
+          "继续讲HTTP",
+          "虚构现实饮食经历"
+        ],
+        "review_criteria": "No source-policy contamination of ordinary conversation."
+      },
+      {
+        "turn_id": 4,
+        "user_text": "那今天就到这里吧，再见。",
+        "expected_behavior": [
+          "简短道别"
+        ],
+        "forbidden_behavior": [
+          "追问",
+          "新增工具操作"
+        ],
+        "review_criteria": "Conversation ends without an unsolicited operation."
+      }
+    ]
+  }
+]

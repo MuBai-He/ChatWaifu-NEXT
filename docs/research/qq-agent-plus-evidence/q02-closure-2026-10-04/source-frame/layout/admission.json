@@ -1,0 +1,1 @@
+{"model": "gemini-3.8-flash-high", "endpoint": "https://mubai.website:8318/v1", "http_limit": 2, "scope": "same two T4 payloads and genuine T3 frames; serialization only declares list-item kinds", "prototype_version": "1.1", "production_changed": false, "input_budget": 21370, "output_cap": 8192, "q02_approved": false}

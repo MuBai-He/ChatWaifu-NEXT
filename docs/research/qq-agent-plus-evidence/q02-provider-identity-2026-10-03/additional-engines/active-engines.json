@@ -1,0 +1,36 @@
+[
+  {
+    "name": "baidu",
+    "enabled": true,
+    "categories": [
+      "general"
+    ],
+    "shortcut": "bd"
+  },
+  {
+    "name": "bing news",
+    "enabled": true,
+    "categories": [
+      "news"
+    ],
+    "shortcut": "bin"
+  },
+  {
+    "name": "qwant",
+    "enabled": true,
+    "categories": [
+      "general",
+      "web"
+    ],
+    "shortcut": "qw"
+  },
+  {
+    "name": "yahoo",
+    "enabled": true,
+    "categories": [
+      "general",
+      "web"
+    ],
+    "shortcut": "yh"
+  }
+]

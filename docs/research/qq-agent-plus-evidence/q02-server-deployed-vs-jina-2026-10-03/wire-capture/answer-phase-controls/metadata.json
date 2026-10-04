@@ -1,0 +1,15 @@
+{
+  "scope": "Same actual final source request; identical system/history/source bodies unless listed; tools never execute in this control",
+  "arms": {
+    "native_auto": "original request",
+    "no_schema": "remove tools/schema and tool_choice only",
+    "closed_phase": "no_schema plus existing Runtime final-phase instruction"
+  },
+  "repeats": 3,
+  "maximum_provider_rounds": 9,
+  "source_exchanges_sha256": "6f96632f759b5b0a9f89faa4d64b2ec581400cf11d2e42b2b62a59189af74d50",
+  "source_capture_sha256": "b60895ab8b9a8dae6990e99aa51f1323f1ce4caea691ebdb1ab64fa7f441ff6b",
+  "model": "gemini-3.8-flash-high",
+  "source_tools_executed": 0,
+  "release_approved": false
+}

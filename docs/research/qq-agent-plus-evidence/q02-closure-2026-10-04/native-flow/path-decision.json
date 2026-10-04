@@ -1,0 +1,9 @@
+{
+  "code_root": "/tmp/cw2-q02-source-companion-v35-eval",
+  "code_changes_since_v35": false,
+  "source_decision_contract": false,
+  "purpose": "Run the existing production Agent path; optional experimental validator rejections retained separately",
+  "quality_thresholds_changed": false,
+  "max_logical_turns": 4,
+  "max_http_attempts": 20
+}

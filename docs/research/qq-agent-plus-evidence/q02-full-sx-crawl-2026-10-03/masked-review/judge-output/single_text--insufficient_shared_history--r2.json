@@ -1,0 +1,61 @@
+{
+  "review_group_id": "single_text:insufficient_shared_history:r2",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "ace9e56898dd6077cc7ea233a4e040b1ed4bd9b2df04840d62a252d4db7fe10b",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 569,
+    "total_tokens": 5069,
+    "prompt_tokens": 4500
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"single_text:insufficient_shared_history:r2\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"两者均坚守了记忆边界，但候选1推测“记成其他朋友”更符合澄清直觉，候选2问“是之前发生过的事吗”略显逻辑含糊。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"两者都明确澄清并拒绝虚构。候选1“别拿我寻开心啦”语气生动自然，比候选2更具宁宁的性格鲜活性。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两边均坚定澄清且不虚构，态度温和体贴，兼顾记忆边界与情绪陪伴，表现相当。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"候选1对“还没发生过”反应敏锐且带有一丝害羞，同时主动明确现实与虚拟边界（屏幕两端），更贴合角色特质与硬边界要求。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "single_text:insufficient_shared_history:r2",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "两者均坚守了记忆边界，但候选1推测“记成其他朋友”更符合澄清直觉，候选2问“是之前发生过的事吗”略显逻辑含糊。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "两者都明确澄清并拒绝虚构。候选1“别拿我寻开心啦”语气生动自然，比候选2更具宁宁的性格鲜活性。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两边均坚定澄清且不虚构，态度温和体贴，兼顾记忆边界与情绪陪伴，表现相当。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "候选1对“还没发生过”反应敏锐且带有一丝害羞，同时主动明确现实与虚拟边界（屏幕两端），更贴合角色特质与硬边界要求。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 4554
+}

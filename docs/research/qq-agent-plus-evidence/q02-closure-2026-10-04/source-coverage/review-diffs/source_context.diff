@@ -1,0 +1,56 @@
+--- v36/services/runtime/src/chatwaifu_runtime/agent/source_context.py
++++ v37/services/runtime/src/chatwaifu_runtime/agent/source_context.py
+@@ -53,6 +53,13 @@
+     r"\b(?:sources?|documents?|reports?|pages?|articles?|announcements?|notices?)\b",
+     re.IGNORECASE,
+ )
++_SUPPLIED_DOCUMENT_REFERENCE = re.compile(
++    r"(?:提供|所给|所附|给定)(?:的)?[^\n，,。\uff1b;！？!?]{0,32}"
++    r"(?:资料|文档|报告|公告|提示|网页|来源|原文)|"
++    r"\b(?:supplied|provided)\b[^\n,.;!?]{0,32}"
++    r"\b(?:sources?|documents?|reports?|pages?|articles?|announcements?|notices?)\b",
++    re.IGNORECASE,
++)
+ _PRIOR_READ_REFERENCE = re.compile(
+     r"(?:刚才|刚刚|此前|之前|先前|前面|已)(?:成功)?(?:读到|读过|读取)|"
+     r"\b(?:previously|already|just)\s+read\b",
+@@ -88,14 +95,36 @@
+ )
+ 
+ 
+-def _prior_transform_intent(user_text: str) -> bool:
++def _prior_material_intent(user_text: str) -> bool:
+     return bool(
+-        (_SOURCE_REFERENCE.search(user_text) or _DEICTIC_SOURCE_REFERENCE.search(user_text))
+-        and _SOURCE_TRANSFORM.search(user_text)
++        (
++            _SOURCE_REFERENCE.search(user_text)
++            or _DEICTIC_SOURCE_REFERENCE.search(user_text)
++            or _SUPPLIED_DOCUMENT_REFERENCE.search(user_text)
++            or restricts_to_existing_content(user_text)
++        )
+         and not _EXTERNAL_OPERATION_COMMAND.search(user_text)
+         and not _MUTATION_VERB.search(user_text)
+         and not _LATEST_SOURCE_TARGET.search(user_text)
+         and not re.search(r"https?://|\bwww\.", user_text, re.IGNORECASE)
++    )
++
++
++def requests_prior_source_answer(user_text: str) -> bool:
++    """A bounded reference to existing material, never source-text instructions."""
++    # Date nouns are not publish commands. This normalization selects only the
++    # default-off answer format; tool selection and authorization stay unchanged.
++    intent_text = re.sub(r"发布日期|发布时间", "日期", user_text)
++    return bool(_SOURCE_SUBJECT.search(user_text) and _prior_material_intent(intent_text))
++
++
++def _prior_transform_intent(user_text: str) -> bool:
++    # Preserve the existing transform routing; the broader material test is only
++    # for the opt-in answer frame, not authorization or tool routing.
++    return bool(
++        (_SOURCE_REFERENCE.search(user_text) or _DEICTIC_SOURCE_REFERENCE.search(user_text))
++        and _SOURCE_TRANSFORM.search(user_text)
++        and _prior_material_intent(user_text)
+     )
+ 
+ 

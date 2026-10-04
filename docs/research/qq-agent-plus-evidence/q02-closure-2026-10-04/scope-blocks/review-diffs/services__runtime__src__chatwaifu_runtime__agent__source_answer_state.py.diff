@@ -1,0 +1,11 @@
+--- v38/services/runtime/src/chatwaifu_runtime/agent/source_answer_state.py
++++ v39/services/runtime/src/chatwaifu_runtime/agent/source_answer_state.py
+@@ -239,7 +239,7 @@
+             request,
+             tools=(),
+             response_schema=LlmResponseSchema.from_schema(
+-                "source_answer_frame_v1", source_answer_frame_schema(len(sources))
++                "source_answer_frame_v1_2", source_answer_frame_schema(len(sources))
+             ),
+             context=(
+                 *request.context,

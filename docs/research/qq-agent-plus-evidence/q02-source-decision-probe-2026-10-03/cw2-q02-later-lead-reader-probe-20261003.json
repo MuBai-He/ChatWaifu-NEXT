@@ -1,0 +1,32 @@
+{
+  "arguments": {
+    "url": "https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html",
+    "dns_resolver": "cloudflare",
+    "max_links": 12
+  },
+  "ok": true,
+  "result": {
+    "url": "https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html",
+    "provider": "crawl4ai",
+    "title": "",
+    "text": "用微信扫描二维码 用QQ扫描二维码\n[ 视觉重庆 ](https://www.cqrb.cn/channel/list_10.html) [ 乡村振兴 ](https://www.cqrb.cn/channel/list_9.html)\n[ 清廉重庆 ](https://www.cqrb.cn/channel/list_5.html)\n重庆日报网 > 正文\n关于旅客携带充电宝乘机的新规定\n新重庆-重庆日报精选\n2026-08-15 09:36\n**充电宝乘机有新规， 即日起施行 **\n为切实保障航空运行安全\n根据最新规定\n每人**随身携带具有3C标识** 的充电宝\n**总量不超过2个**\n乘机时**不能放置在行李架上**\n**飞行途中禁止使用**\n其余相关规定不变\n**充电宝携带标准具体如下**\n只能随身携带，禁止托运\n**数量限制**\n每位旅客限带2块充电宝。\n****\n必须标有清晰的3C标识。3C标识不清晰、被召回型号或批次的充电宝禁止携带乘坐境内航班。\n**额定能量限制**\n1.标识全面清晰且额定能量≤100Wh：可直接随身携带\n2.100Wh＜额定能量≤160Wh：必须经航空公司批准后携带\n3.＞160Wh：严禁携带\n**机上放置要求**\n**旅客应将其随身携带，放置在随身行李或座椅后存放位置**\n严禁将充电宝放置在机舱头顶行李架中，飞行途中禁止为设备充电\n来源： 重庆飞Fly\n编辑： 黄乔 审核： 张珺  主编：罗静雯\n版权声明：\n凡注明来源重庆日报的作品，版权均属重庆日报所有，未经授权不得转载、摘编或利用其它方式使用上述作品。已经本网授权使用作品的，应在授权范围内使用，并注明“来源：重庆日报网”。违反上述声明者，本网将追究其相关法律责任。\n除来源署名为重庆日报稿件外，其他所转载内容之原创性、真实性、完整性、及时性本站不作任何保证或承诺，请读者仅作参考并自行核实。\n相关新闻\n友情链接\n[ 新华网 ](https://www.xinhuanet.com/) [ 人民网 ](https://www.people.com.cn/) [ 央视网 ](https://www.cntv.cn/) [ 中新网 ](https://www.chinanews.com/) [ 中国日报网 ](https://www.chinadaily.com.cn/) [ 中国青年网 ](https://www.youth.cn/) [ 中国经济网 ](https://www.ce.cn/) [ 光明网 ](https://www.gmw.cn/) [ 中国政府网 ](https://www.gov.cn/) [ 国新办 ](https://www.scio.gov.cn/) [ 求是理论网 ](https://www.qstheory.cn/)\n[ 大渡口 ](http://www.ddknews.gov.cn)\nCopyright © 2000-2022 CQNEWS Corporation, All Rights Reserved.\n重庆日报版权所有 未经书面授权 不得复制或建立镜像\n地址：重庆市两江新区同茂大道416号 邮编：401120 广告招商：023-63907707 传真：023-63907104 [ 违法和不良信息举报中心热线：12377](http://www.12377.cn)\n互联网新闻信息服务许可证编号50120180001 互联网出版许可证号：（署）网出证（渝）字002号 [ 渝ICP备17015920号](http://beian.miit.gov.cn)\n渝公网安备 50011202500747号",
+    "retrieved_at": "2026-10-03T11:45:42.891347+00:00",
+    "content_type": "text/plain",
+    "body_sha256": "c666e6619cf0241c652f8633836f96f04996021b01207d5fed8c0f6ff6538ad2",
+    "total_characters": 1531,
+    "text_offset": 0,
+    "truncated": false,
+    "focus_matched": null,
+    "dns_resolver": "cloudflare",
+    "extraction_method": "plain_text",
+    "document_characters": 1531,
+    "links": [],
+    "links_requested": true,
+    "links_truncated": true,
+    "links_scope": "selected_source",
+    "read_url_schemes": [
+      "https"
+    ]
+  },
+  "latency_ms": 3306
+}

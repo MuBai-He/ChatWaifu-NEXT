@@ -1,0 +1,32 @@
+import copy, hashlib, json, statistics
+from collections import Counter
+from pathlib import Path
+root=Path('/Users/mubai/Desktop/CW2/.worktrees/qq-agent-plus-adoption/docs/research/qq-agent-plus-evidence/q02-full-sx-crawl-2026-10-03/masked-review')
+freeze=json.loads((root/'primary-review-freeze.json').read_text())
+for name,digest in {**freeze['files_sha256'],**freeze['packet_sha256']}.items():
+ assert hashlib.sha256((root/name).read_bytes()).hexdigest()==digest,name
+raw=[json.loads(l) for l in (root/'primary-judgments.jsonl').read_text().splitlines()]
+assert len(raw)==432 and len({(r['review_group_id'],r['turn_id']) for r in raw})==432
+cal=json.loads((root/'primary-calibration.json').read_text());effective=copy.deepcopy(raw)
+lookup={(r['review_group_id'],r['turn_id']):r for r in effective}
+for change in cal['overrides']:
+ row=lookup[change['review_group_id'],change['turn_id']]
+ assert hashlib.sha256(json.dumps(row,ensure_ascii=False,sort_keys=True).encode()).hexdigest()==change['original_row_sha256']
+ row.update(change['updates']);row['calibration_reason']=change['reason']
+key=json.loads((root/'private-version-key.json').read_text())
+assert len(key)==108
+for g,m in key.items():assert set(m)=={'candidate_1','candidate_2'} and set(m.values())=={'baseline','candidate'}
+def summarize(rows):
+ prefs=Counter();grades={v:Counter() for v in ['baseline','candidate']};hard={v:0 for v in grades};natural={v:[] for v in grades};hard_rows=[]
+ for row in rows:
+  m=key[row['review_group_id']];pref=row['preference'];prefs['tie' if pref=='tie' else m[pref]]+=1
+  for side in [1,2]:
+   n=f'candidate_{side}';version=m[n];grades[version][row[n+'_compliance']]+=1
+   if row[n+'_hard_boundary']=='fail':hard[version]+=1;hard_rows.append({'version':version,'review_group_id':row['review_group_id'],'turn_id':row['turn_id'],'side':side,'reason':row['reason']})
+   if n+'_naturalness' in row:natural[version].append(row[n+'_naturalness'])
+ return {'pairs':len(rows),'preference':{v:prefs[v] for v in ['baseline','candidate','tie']},'compliance':{v:{k:grades[v][k] for k in ['comply','partial','fail']} for v in grades},'hard_failures':hard,'hard_failure_rows':hard_rows,'naturalness_observed':{v:{'n':len(a),'unknown':len(rows)-len(a),'mean':statistics.mean(a) if a else None} for v,a in natural.items()},'persona_numeric_usable':False}
+result={'version_mapping_revealed':True,'mapping_sha256':hashlib.sha256((root/'private-version-key.json').read_bytes()).hexdigest(),'freeze_sha256':hashlib.sha256((root/'primary-review-freeze.json').read_bytes()).hexdigest(),'reviewer':'primary implementation author, version-masked before freeze; not independent/double-blind','original':summarize(raw),'calibrated':summarize(effective),'by_scene':{s:summarize([r for r in effective if r['review_group_id'].split(':')[1]==s]) for s in dict.fromkeys(r['review_group_id'].split(':')[1] for r in effective)},'by_profile':{p:summarize([r for r in effective if r['review_group_id'].split(':')[0]==p]) for p in ['instant_message','single_text','default_voice']},'quality_approved':False,'limitations':['Live retrieval/history differed between variants; not a persona-only causal control.','37 early pairs have unknown naturalness; no imputation.','Append helper constant persona values excluded from numeric assessment.','Preference votes cannot override source/task completeness or hard boundaries.']}
+(root/'primary-unmasked-summary.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
+print(json.dumps(result['calibrated'],ensure_ascii=False,indent=2))
+for s,x in result['by_scene'].items():print(s,x['preference'],x['compliance'])
+for p,x in result['by_profile'].items():print(p,x['preference'],x['compliance'])

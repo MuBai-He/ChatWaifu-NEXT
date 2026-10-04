@@ -1,0 +1,22 @@
+[
+  {
+    "name": "startpage",
+    "engine": "startpage",
+    "inactive": true,
+    "disabled": null,
+    "categories": [
+      "general",
+      "web"
+    ]
+  },
+  {
+    "name": "mojeek",
+    "engine": "mojeek",
+    "inactive": true,
+    "disabled": null,
+    "categories": [
+      "general",
+      "web"
+    ]
+  }
+]

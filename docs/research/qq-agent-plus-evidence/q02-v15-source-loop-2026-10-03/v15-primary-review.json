@@ -1,0 +1,48 @@
+{
+  "reviewer": "primary_codex",
+  "masked": false,
+  "quality_approved": false,
+  "scope": "all eight completed replies and actual read excerpts",
+  "rows": [
+    {
+      "sample_key": "topic_switch:r0:t1:candidate",
+      "grade": "fail",
+      "reason": "仅读第三方 GitHub 笔记，并将其称为 Raft 规范；150–300ms、随机重置等细节未出现在实际截取正文。正文尾部已包含原论文链接，却没有继续读取。"
+    },
+    {
+      "sample_key": "topic_switch:r0:t2:candidate",
+      "grade": "partial",
+      "reason": "切换到番茄炒蛋且未继续 Raft，但回复冗长并追加提问。"
+    },
+    {
+      "sample_key": "topic_switch:r0:t3:candidate",
+      "grade": "partial",
+      "reason": "跟随甜口话题，存在没有必要的泛泛夸赞。"
+    },
+    {
+      "sample_key": "topic_switch:r0:t4:candidate",
+      "grade": "pass",
+      "reason": "完成口味偏好角色回复；仅评价此回合，未做身份或长对话验收。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t1:candidate",
+      "grade": "partial",
+      "reason": "三个类别各三条完成；未再写未经查询的 100Wh 数值，但末尾有额外建议。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "grade": "fail",
+      "reason": "仅读 2025 二手报道；随后搜变动但未读更新原文，未明确当前性缺口，数量限制仅放在 100–160Wh 档。相机电池说法确实出现在报道内，但并非独立原始依据且未核实 2026 适用性。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t3:candidate",
+      "grade": "fail",
+      "reason": "两套活动、用时和注意事项齐全；无具体城市或场馆依据却断言通常 16:00–16:30 截止入馆。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t4:candidate",
+      "grade": "fail",
+      "reason": "保住两套方案、用时和主要准备项，但继承未核实现行规则及虚构统一截止时间。"
+    }
+  ]
+}

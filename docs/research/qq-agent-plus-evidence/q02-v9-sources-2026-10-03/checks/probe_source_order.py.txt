@@ -1,0 +1,29 @@
+"""Frozen-input source-planning comparison; never execute the returned tools."""
+import copy, hashlib, json, time
+from pathlib import Path
+import requests
+src=Path('/tmp/cw2-q02-v10-source-smoke-20261003/results')
+wires=[json.loads(l) for l in (src/'actual-provider-payloads.jsonl').read_text().splitlines()]
+original=next(w['payload'] for w in wires if hashlib.sha256(w['payload']['messages'][0]['content'].encode()).hexdigest()=='10d33238fc6919cca4ebe37f28bfa4520686911e4306f115b8d2e22b32e65048' and len([m for m in w['payload']['messages'] if m['role']=='tool'])==3)
+assert original['model']=='gemini-3.8-flash-high'
+policy='''\n<source_coverage_checkpoint>\nBefore delivering this source-dependent answer, check whether the acquired original pages establish applicability at the trusted Runtime date. Reading a base rule is not a check for subsequent amendments. If no subsequent-change search has been performed after those readings, use an available search function with concise, differently worded terms for later changes and applicable operator or standards-body notices; then read any relevant original. Do not put remembered thresholds or certification conditions into that update query. Stay within the provided tools and do not invent a URL. If the evidence still cannot establish currency, state that specific gap instead of calling the rules current. Return a native tool call when more source work is needed, not a promise to search.\n</source_coverage_checkpoint>'''
+out=Path('/tmp/cw2-q02-source-order-probe-20261003');out.mkdir(exist_ok=True)
+(out/'policy.txt').write_text(policy)
+key=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+for repeat in range(3):
+ for variant in ['trailing_system']:
+  if (out/'results.jsonl').exists() and any(json.loads(l)['variant']==variant and json.loads(l)['repeat']==repeat for l in (out/'results.jsonl').read_text().splitlines()): continue
+  payload=copy.deepcopy(original);payload['stream']=False;payload.pop('stream_options',None)
+  if variant=='named_search':
+   search_name=next(t['function']['name'] for t in payload['tools'] if 'Search' in t['function']['description'])
+   payload['tool_choice']={'type':'function','function':{'name':search_name}}
+   payload['messages'][0]['content']+=policy
+  else:
+   role={'trailing_system':'system','trailing_developer':'developer','trailing_user_control':'user'}[variant]
+   payload['messages'].append({'role':role,'content':policy})
+  start=time.monotonic();r=requests.post('https://mubai.website:8318/v1/chat/completions',headers={'Authorization':'Bearer '+key},json=payload,timeout=180)
+  row={'variant':variant,'repeat':repeat,'latency_ms':round((time.monotonic()-start)*1000),'http_status':r.status_code,'request':payload,'response':r.json()}
+  assert key not in json.dumps(row)
+  with (out/'results.jsonl').open('a') as f:f.write(json.dumps(row,ensure_ascii=False)+'\n')
+  answer=row['response'].get('choices',[{}])[0].get('message',{})
+  print(json.dumps({'variant':variant,'repeat':repeat,'status':r.status_code,'latency_ms':row['latency_ms'],'tool_calls':answer.get('tool_calls'),'text':(answer.get('content') or '')[:220],'usage':row['response'].get('usage')},ensure_ascii=False),flush=True)

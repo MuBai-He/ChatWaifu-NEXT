@@ -4,14 +4,14 @@
   "definition":
     {
       "skill_id": "web.search",
-      "version": "1.0.1",
+      "version": "1.3.6",
       "name": "Public Source Search 公开来源搜索",
-      "description": "Search public source URLs to verify current information, documentation and regulations. 搜索公开来源，核查最新资料、文档、法规；搜索片段须用 web.read 读取原文后核实。",
+      "description": "Search public source URLs to verify information, regulations, technical specifications, protocol or algorithm behavior, and API documentation. 搜索公开来源，核查最新资料、法规、技术规范、协议、算法机制与 API 文档；搜索片段须用 web.read 读取原文后核实。",
       "capabilities":
         [
           {
             "name": "search",
-            "description": "Discover actual HTTPS source URLs through DuckDuckGo Lite. Query is sent externally after confirmation; challenges and failures are reported honestly. 联网查找来源，片段不是事实证明。",
+                    "description": "Discover actual HTTPS source URLs through the configured provider. DuckDuckGo Lite remains the default; SearXNG is an explicitly configured local discovery service, Firecrawl is an optional external provider, So360 is a keyless Chinese discovery provider, and Jina Sogou is a keyless Chinese provider using Jina's bounded Markdown projection. Query is sent externally after confirmation; challenges and failures are reported honestly. 联网查找来源，片段不是事实证明。",
             "input_schema":
               {
                 "type": "object",
@@ -23,7 +23,7 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 256,
-                        "description": "Public topic query sent to DuckDuckGo. For current or time-sensitive facts, include applicable updates or effective changes and the responsible authority; do not search only remembered historical thresholds or limit discovery to the current year. Use trusted Runtime time when a date qualifier is needed. Omit secrets and private user data.",
+                        "description": "Public topic query sent to the configured search provider. For current rules, search concise topic plus latest changes first, then read official sources. After reading a base rule, search subsequent changes with different wording; do not seed that update query with remembered thresholds or certification conditions. Do not limit initial discovery to one institution or only the current year unless the user requires it. Use trusted Runtime time when a date qualifier is needed. Omit secrets and private user data.",
                       },
                     "domains":
                       {
@@ -36,7 +36,7 @@
                             "minLength": 3,
                             "maxLength": 253,
                           },
-                        "description": "Optional public DNS names used for site queries and filtering actual result hosts.",
+                        "description": "Optional public DNS names used for site queries and filtering actual result hosts. Omit for initial current-update discovery unless the user restricts sources; use to verify original publications after discovery.",
                       },
                     "max_results":
                       {
@@ -61,6 +61,7 @@
                   [
                     "provider",
                     "query",
+                    "effective_query",
                     "search_url",
                     "retrieved_at",
                     "body_sha256",
@@ -73,8 +74,27 @@
                   ],
                 "properties":
                   {
-                    "provider": { "const": "duckduckgo_lite" },
+                    "provider": { "enum": ["duckduckgo_lite", "firecrawl", "searxng", "so360", "jina_sogou"] },
                     "query": { "type": "string", "maxLength": 256 },
+                    "effective_query": { "type": "string", "maxLength": 256 },
+                    "provider_queries":
+                      {
+                        "type": "array",
+                        "maxItems": 3,
+                        "items":
+                          {
+                            "type": "object",
+                            "required": ["query"],
+                            "properties":
+                              {
+                                "query": { "type": "string", "maxLength": 2048 },
+                                "body_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+                                "error_code": { "type": "string", "maxLength": 128 },
+                              },
+                            "oneOf": [{ "required": ["body_sha256"] }, { "required": ["error_code"] }],
+                            "additionalProperties": false,
+                          },
+                      },
                     "search_url":
                       { "type": "string", "maxLength": 2048, "format": "uri" },
                     "retrieved_at": { "type": "string", "format": "date-time" },

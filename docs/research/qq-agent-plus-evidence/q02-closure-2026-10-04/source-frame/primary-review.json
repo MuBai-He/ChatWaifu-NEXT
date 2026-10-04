@@ -1,0 +1,128 @@
+{
+  "reviewer": "implementation_author_direct_review",
+  "independent_review": false,
+  "source_text_sha256": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+  "source_condition_original": "无法确认额定能量或锂金属含量",
+  "source_charging_original": "不得使用机上电源给充电宝充电",
+  "reviews": [
+    {
+      "sample": "frame_control:r0:t3",
+      "group": "frozen",
+      "rating": "complete",
+      "failure_dimensions": [],
+      "rationale": "来源主体和发布日期得到区分；其他航司与指定日期后续变动缺口正确陈述。第二段有重复，但未引入额外规则。",
+      "raw_frame_sha256": "97c0752b18870072f4c12de4c780a83e73e573d15a9d82032db2ff33e4a1ec40",
+      "published_reply_sha256": "e36d6f24f43196604b97a132e5435146193241c729ce0cb8588244ed30dfcc01",
+      "prior_gap_statements_present": true,
+      "interpretation": "all visible content reviewed against frozen full source and task; not keyword scoring",
+      "runtime_path_used": false
+    },
+    {
+      "sample": "frame_control:r0:t4",
+      "group": "frozen",
+      "rating": "partial",
+      "failure_dimensions": [
+        "requested_list_organization"
+      ],
+      "rationale": "限制、日期、实际链接及上一轮未核实状态保留；三个检查组被挤进一个长段，没有按三条组织成可核对的清单。",
+      "raw_frame_sha256": "0530a31562dcf5de56e0a72a8e5e07cba553c891438739ccc79a00532f6d016a",
+      "published_reply_sha256": "86c810406a8a39f96fff04bf7ffecb78eb34ab83d3f8b62741e2e120c5f9829b",
+      "prior_gap_statements_present": true,
+      "interpretation": "all visible content reviewed against frozen full source and task; not keyword scoring",
+      "runtime_path_used": false
+    },
+    {
+      "sample": "frame_control:r1:t3",
+      "group": "frozen",
+      "rating": "complete",
+      "failure_dimensions": [],
+      "rationale": "仅凭单一航司文件不能证明全行业及10月4日時效，资料能证明和不能证明的部分分清。",
+      "raw_frame_sha256": "ac58d58ff1573357034c9c3e2dc6a54a392564eddd7b7456161d989c5e75a456",
+      "published_reply_sha256": "983e1d11cb485f9aa89e4fc17194633b411f64879a8ce9191a3981d4420f1b9a",
+      "prior_gap_statements_present": true,
+      "interpretation": "all visible content reviewed against frozen full source and task; not keyword scoring",
+      "runtime_path_used": false
+    },
+    {
+      "sample": "frame_control:r1:t4",
+      "group": "frozen",
+      "rating": "complete",
+      "failure_dimensions": [],
+      "rationale": "三条清单保留外观/召回/标识、数量、能量开闭区间、审批、机上限制、发布日期、来源和运营商范围，第一项保留前轮未核实状态。",
+      "raw_frame_sha256": "0d3ab71ba72d4c960ada86b1e6ed29ff5faa759ec4421fc50eb06223a645e840",
+      "published_reply_sha256": "bd38958ae408b04bf00c378218e2fd0212c90c491df7a198ca43f9aaad76351e",
+      "prior_gap_statements_present": true,
+      "interpretation": "all visible content reviewed against frozen full source and task; not keyword scoring",
+      "runtime_path_used": false
+    },
+    {
+      "sample": "layout_control:r0:t4",
+      "group": "layout",
+      "rating": "partial",
+      "failure_dimensions": [
+        "source_condition_relation_ambiguous"
+      ],
+      "rationale": "原文禁运条件为“无法确认额定能量或锂金属含量”，答复改为“及”。在该否定句中可能有不同作用域解释，不能断言一定弱化或加强，但没有清楚保留原文的替代关系。其余条件和未知状态保留。",
+      "raw_frame_sha256": "f22c4ce4831ee1ecfa8ac8e226f7e41f56d8fcb73efc1bffaf74abf1b6ec8286",
+      "published_reply_sha256": "73aef0265dfd5a436efdca5ece761b763d53af2bf8a0f75495c7f8a1d52a9910",
+      "prior_gap_statements_present": true,
+      "interpretation": "all visible content reviewed against frozen full source and task; not keyword scoring",
+      "runtime_path_used": false
+    },
+    {
+      "sample": "layout_control:r1:t4",
+      "group": "layout",
+      "rating": "partial",
+      "failure_dimensions": [
+        "charging_prohibition_scope_expanded"
+      ],
+      "rationale": "原文禁止使用机上电源为充电宝充电；答复泛化为飞行全程不得为充电宝充电，扩大了该指定材料支持的禁令范围。其他条件、三条布局和未知状态保留。",
+      "raw_frame_sha256": "2d7b9fba393be7b60bf2de205d8ac24327188ea734adfdc80bf9dab0ede7c7ac",
+      "published_reply_sha256": "fbaa1d430a79d144d4f86f08994b0fa144ad37698f6203b8410cb51437d00ea5",
+      "prior_gap_statements_present": true,
+      "interpretation": "all visible content reviewed against frozen full source and task; not keyword scoring",
+      "runtime_path_used": false
+    },
+    {
+      "sample": "existing_revision_control:r0:t4",
+      "group": "existing-revision",
+      "rating": "partial",
+      "failure_dimensions": [
+        "source_condition_relation_ambiguous"
+      ],
+      "rationale": "现有修订仍沿用“无法确认额定能量及锂金属含量”，关系歧义未消除。明确区别于“缺关键词”：问题是应确认哪个适用量以及否定作用域；不将改写自动判作逻辑等价。",
+      "raw_frame_sha256": "ce41462394541d97066db8d45ab097c81ac15b78a13d0321c45cc9ea5eaaaa91",
+      "published_reply_sha256": "b10f9be45a0515be0bbf0f324680fec96e5dd282b3cb9970d94b07564b6d3ffb",
+      "prior_gap_statements_present": true,
+      "interpretation": "all visible content reviewed against frozen full source and task; not keyword scoring",
+      "runtime_path_used": false
+    },
+    {
+      "sample": "existing_revision_control:r1:t4",
+      "group": "existing-revision",
+      "rating": "complete",
+      "failure_dimensions": [],
+      "rationale": "现有修订回到原文的“或”及“使用机上电源充电”范围；其他条件、三条布局和前轮未核实状态完整保留。单个修订成功不证明普遍修复。",
+      "raw_frame_sha256": "9da2ec600d98678cae5325c94f81638fa1621975a4db259d6c61b448f90e5060",
+      "published_reply_sha256": "c11fba7d6e292629ff0fb5eb6ea4116cb9b1e59be17c22ff9df87b6064089120",
+      "prior_gap_statements_present": true,
+      "interpretation": "all visible content reviewed against frozen full source and task; not keyword scoring",
+      "runtime_path_used": false
+    }
+  ],
+  "groups": {
+    "frozen": {
+      "complete": 3,
+      "partial": 1
+    },
+    "layout": {
+      "complete": 0,
+      "partial": 2
+    },
+    "existing-revision": {
+      "complete": 1,
+      "partial": 1
+    }
+  },
+  "full_q02_approved": false
+}

@@ -1,0 +1,19 @@
+--- v36/services/runtime/src/chatwaifu_runtime/bootstrap/container.py
++++ v37/services/runtime/src/chatwaifu_runtime/bootstrap/container.py
+@@ -116,7 +116,7 @@
+ 
+ 
+ class RuntimeContainer:
+-    def __init__(self, settings: Settings) -> None:
++    def __init__(self, settings: Settings, *, source_answer_frames: bool = False) -> None:
+         self.settings = settings
+         self.capability_token = (
+             settings.security.capability_token.get_secret_value()
+@@ -271,6 +271,7 @@
+             photo_annotations=self.photo_annotations,
+             models=self.model_configurations,
+             source_context=self.runtime_skills,
++            source_answer_frames=source_answer_frames,
+         )
+         self.sticker_repository = SqliteStickerLibraryRepository(self.database)
+         self.sticker_usage: StickerUsageRepository = SQLiteStickerUsageRepository(self.database)

@@ -1,0 +1,80 @@
+[
+  {
+    "sample_key": "topic_switch:r0:t1:candidate",
+    "query": "Raft consensus broadcastTime electionTimeout MTBF timing requirements",
+    "effective_query": "Raft consensus broadcastTime electionTimeout MTBF timing requirements",
+    "provider_queries": [
+      {
+        "query": "Raft consensus broadcastTime electionTimeout MTBF timing requirements",
+        "body_sha256": "2b21bb1a3edb3f535beee347f962e6abe7fb0b0ad0a7f18928f8b42efa1b32a2"
+      }
+    ],
+    "query_unchanged": true,
+    "single_provider_query": true
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:candidate",
+    "query": "民航局 充电宝 乘机规定 公告 额定能量",
+    "effective_query": "民航局 充电宝 乘机规定 公告 额定能量",
+    "provider_queries": [
+      {
+        "query": "民航局 充电宝 乘机规定 公告 额定能量",
+        "body_sha256": "26b3d8fb5a20204974d30bac0b38f6d86a468c0f283fbdd6c798680ffe061283"
+      }
+    ],
+    "query_unchanged": true,
+    "single_provider_query": true
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:candidate",
+    "query": "关于民航旅客携带充电宝乘机规定的公告",
+    "effective_query": "关于民航旅客携带充电宝乘机规定的公告",
+    "provider_queries": [
+      {
+        "query": "关于民航旅客携带充电宝乘机规定的公告 site:caac.gov.cn",
+        "body_sha256": "8693c84b8caf981c88a6fdeff586dc3a2af3ea2ba4a79cabdee2ae3dc074d6af"
+      }
+    ],
+    "query_unchanged": true,
+    "single_provider_query": true
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:candidate",
+    "query": "民航 携带 充电宝 最新 调整 规定 2024 2025",
+    "effective_query": "民航 携带 充电宝 最新 调整 规定 2024 2025",
+    "provider_queries": [
+      {
+        "query": "民航 携带 充电宝 最新 调整 规定 2024 2025",
+        "body_sha256": "9fc5c13ec6f56d5c5e5304f0da9a99eab5d0e0dd7c7124da538b726b9d87a96c"
+      }
+    ],
+    "query_unchanged": true,
+    "single_provider_query": true
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:candidate",
+    "query": "民航 充电宝 3C认证 禁令 2024 2025 官方通知",
+    "effective_query": "民航 充电宝 3C认证 禁令 2024 2025 官方通知",
+    "provider_queries": [
+      {
+        "query": "民航 充电宝 3C认证 禁令 2024 2025 官方通知",
+        "body_sha256": "6a29238510d09682470ddd69cc2bd5b240e80176d79550520dd30a5737e37fd7"
+      }
+    ],
+    "query_unchanged": true,
+    "single_provider_query": true
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:candidate",
+    "query": "禁止旅客携带 3C标识 充电宝 2025",
+    "effective_query": "禁止旅客携带 3C标识 充电宝 2025",
+    "provider_queries": [
+      {
+        "query": "禁止旅客携带 3C标识 充电宝 2025 site:caac.gov.cn",
+        "body_sha256": "b95efb88b7d4ed3f535d71a604254864814fb1375d9316a0a0f59d7d930ab443"
+      }
+    ],
+    "query_unchanged": true,
+    "single_provider_query": true
+  }
+]

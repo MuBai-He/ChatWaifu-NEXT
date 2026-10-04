@@ -1,0 +1,30 @@
+{
+  "python_full": {
+    "passed": 2217,
+    "skipped": 46,
+    "scope": "Final behavior version before annotation-only correction"
+  },
+  "final_annotation_regression": {
+    "local_passed": 15,
+    "server_passed": 15
+  },
+  "server_final_behavior_passed": 375,
+  "pyright_errors": 0,
+  "ruff_passed": true,
+  "format_check_passed": true,
+  "diff_check_passed": true,
+  "ui_builds": [
+    "web",
+    "desktop UI"
+  ],
+  "actual_model_http": 34,
+  "model": "gemini-3.8-flash-high",
+  "model_execution_host": "server",
+  "agy_used": false,
+  "jina_used": false,
+  "production_configuration_changed": false,
+  "real_channel_or_tts_operations": false,
+  "q02_approved": false,
+  "model_batches_remain_frozen": true,
+  "independent_double_blind": false
+}

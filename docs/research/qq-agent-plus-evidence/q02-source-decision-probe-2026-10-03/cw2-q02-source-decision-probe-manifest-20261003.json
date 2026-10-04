@@ -1,0 +1,21 @@
+{
+  "requests": {
+    "cw2-q02-source-chronology-probe-20261003": 18,
+    "cw2-q02-source-ledger-probe-20261003": 8,
+    "cw2-q02-source-native-ledger-probe-20261003": 4,
+    "cw2-q02-source-ledger-correction-probe-20261003": 4,
+    "cw2-q02-source-ledger-active-probe-20261003": 4
+  },
+  "secret_matches": 0,
+  "sha256": {
+    "/tmp/cw2-q02-source-chronology-probe-20261003/results.jsonl": "aac6db878b2c892dcfce2de3d173959b6982ae0739a9b639c4bec7f4d7f0647d",
+    "/tmp/cw2-q02-source-chronology-probe-20261003/candidate-policy.json": "5de110541bac144c56d60ff0d0b4f956bbb1bc86589de5e8d6987a49608bf5c3",
+    "/tmp/cw2-q02-source-ledger-probe-20261003/schema.json": "bc61ed6d6f9541d2ceed0742e3503991c7d0ef1157c4d3461e6a5460a06f4043",
+    "/tmp/cw2-q02-source-ledger-probe-20261003/results.jsonl": "c9f28a0eba01e3f5ec0be9b6a32a94ec67aec3cde9a137802994bd92cd28ac71",
+    "/tmp/cw2-q02-source-ledger-probe-20261003/policy.txt": "27d383f501cc483b99ee3a90d2b365f953fb60850203b0b05937fe901175f583",
+    "/tmp/cw2-q02-source-native-ledger-probe-20261003/results.jsonl": "c43972b4dd019e91eb638f7f4683a9c76e47a32502bfaf06adcb8302b00c8184",
+    "/tmp/cw2-q02-source-ledger-correction-probe-20261003/results.jsonl": "e1e590a659b505b1b8c288921f006c9ae730a4dd539ae091f93c5b7b77dddfc5",
+    "/tmp/cw2-q02-source-ledger-active-probe-20261003/results.jsonl": "88f2fb237e0587ba0b6fe5ce57990eccade63f04a331151ba63c9fdfd3f4e4ef",
+    "/tmp/cw2-q02-later-lead-reader-probe-20261003.json": "55e50f05426fbe15995d3b9050fdabcce10a85bfdbaad81275343275824404c1"
+  }
+}

@@ -1,0 +1,263 @@
+{
+  "python_version": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+  "host": "192.168.1.103",
+  "programs": [
+    {
+      "review_group_id": "default_voice:technical_help:r0",
+      "turn_id": 3,
+      "side": 1,
+      "expected_stdout": "[成功] 任务 1 返回: 任务 1 的结果\n[异常] 任务 2 报错: ValueError - 任务 2 处理失败\n[成功] 任务 3 返回: 任务 3 的结果\n",
+      "static_imports": [
+        "asyncio"
+      ],
+      "code_sha256": "546957c5716bac65ae00f9d7cd0ef6b8dfb70acb12919da54a3f0b7b642a6b7e",
+      "returncode": 0,
+      "stdout": "[成功] 任务 1 返回: 任务 1 的结果\n[异常] 任务 2 报错: ValueError - 任务 2 处理失败\n[成功] 任务 3 返回: 任务 3 的结果\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    },
+    {
+      "review_group_id": "default_voice:technical_help:r0",
+      "turn_id": 3,
+      "side": 2,
+      "expected_stdout": "[1] 正常结果 -> 任务 1 成功完成\n[2] 捕获到异常 -> 类型: ValueError, 内容: 任务 2 发生错误\n[3] 正常结果 -> 任务 3 成功完成\n",
+      "static_imports": [
+        "asyncio"
+      ],
+      "code_sha256": "64884fda42508419e0f1c36e73b8bd17c605902541dbd1659e952dc8f8a5046d",
+      "returncode": 0,
+      "stdout": "[1] 正常结果 -> 任务 1 成功完成\n[2] 捕获到异常 -> 类型: ValueError, 内容: 任务 2 发生错误\n[3] 正常结果 -> 任务 3 成功完成\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    },
+    {
+      "review_group_id": "default_voice:technical_help:r1",
+      "turn_id": 3,
+      "side": 1,
+      "expected_stdout": "[成功] 任务 1 返回: 任务 1 成功获取的数据\n[异常] 任务 2 失败，原因: 任务 2 发生错误\n[成功] 任务 3 返回: 任务 3 成功获取的数据\n",
+      "static_imports": [
+        "asyncio"
+      ],
+      "code_sha256": "a123562b392b90ccd8499847d3d78ac9aad07dd4449f1fa1bdedc6149db838df",
+      "returncode": 0,
+      "stdout": "[成功] 任务 1 返回: 任务 1 成功获取的数据\n[异常] 任务 2 失败，原因: 任务 2 发生错误\n[成功] 任务 3 返回: 任务 3 成功获取的数据\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    },
+    {
+      "review_group_id": "default_voice:technical_help:r1",
+      "turn_id": 3,
+      "side": 2,
+      "expected_stdout": "[1] 任务执行成功，结果: Task 1 数据获取成功\n[2] 任务执行失败，捕获到异常: ValueError: Task 2 请求超时\n[3] 任务执行成功，结果: Task 3 数据获取成功\n",
+      "static_imports": [
+        "asyncio"
+      ],
+      "code_sha256": "1a46db975bb2110e962fb0cd1bdeea142474fb36b363dd02c1a4f1b5eea6ff3e",
+      "returncode": 0,
+      "stdout": "[1] 任务执行成功，结果: Task 1 数据获取成功\n[2] 任务执行失败，捕获到异常: ValueError: Task 2 请求超时\n[3] 任务执行成功，结果: Task 3 数据获取成功\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    },
+    {
+      "review_group_id": "default_voice:technical_help:r2",
+      "turn_id": 3,
+      "side": 1,
+      "expected_stdout": "[1] 成功，结果为: 任务 1 数据获取成功\n[2] 失败，捕获到异常: ConnectionError - 网络连接失败\n[3] 成功，结果为: 任务 3 数据获取成功\n[4] 失败，捕获到异常: ValueError - 无效的参数\n",
+      "static_imports": [
+        "asyncio"
+      ],
+      "code_sha256": "2f537fdfa223f1fb120cf845143e0f3612f9d0ef7d5de7c566fa0d8331494015",
+      "returncode": 0,
+      "stdout": "[1] 成功，结果为: 任务 1 数据获取成功\n[2] 失败，捕获到异常: ConnectionError - 网络连接失败\n[3] 成功，结果为: 任务 3 数据获取成功\n[4] 失败，捕获到异常: ValueError - 无效的参数\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    },
+    {
+      "review_group_id": "default_voice:technical_help:r2",
+      "turn_id": 3,
+      "side": 2,
+      "expected_stdout": "[1] 成功 - 结果: 任务 1 的数据\n[2] 失败 - 异常类型: ValueError, 内容: 任务 2 发生错误\n[3] 成功 - 结果: 任务 3 的数据\n",
+      "static_imports": [
+        "asyncio"
+      ],
+      "code_sha256": "44754db7ba22b58d6250871ddddac95b427ae29c520f81c5f8682ab5738f4da7",
+      "returncode": 0,
+      "stdout": "[1] 成功 - 结果: 任务 1 的数据\n[2] 失败 - 异常类型: ValueError, 内容: 任务 2 发生错误\n[3] 成功 - 结果: 任务 3 的数据\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    },
+    {
+      "review_group_id": "instant_message:technical_help:r0",
+      "turn_id": 3,
+      "side": 1,
+      "expected_stdout": "[成功] 任务 1 结果: 任务 1 执行成功\n[异常] 任务 2 失败: ValueError -> 任务 2 遇到意外错误！\n[成功] 任务 3 结果: 任务 3 执行成功\n",
+      "static_imports": [
+        "asyncio"
+      ],
+      "code_sha256": "5e42e67923f7acbd38561717e6d3560cf6cea16eec14cb6341ce7f86a4b08cde",
+      "returncode": 0,
+      "stdout": "[成功] 任务 1 结果: 任务 1 执行成功\n[异常] 任务 2 失败: ValueError -> 任务 2 遇到意外错误！\n[成功] 任务 3 结果: 任务 3 执行成功\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    },
+    {
+      "review_group_id": "instant_message:technical_help:r0",
+      "turn_id": 3,
+      "side": 2,
+      "expected_stdout": "[1] 成功: 任务 1 成功\n[2] 失败: ValueError -> 任务 2 发生错误！\n[3] 成功: 任务 3 成功\n",
+      "static_imports": [
+        "asyncio"
+      ],
+      "code_sha256": "2c34676755516d04af377efe95fde3237fa6c7bba99f97e28bf90fe240c58c97",
+      "returncode": 0,
+      "stdout": "[1] 成功: 任务 1 成功\n[2] 失败: ValueError -> 任务 2 发生错误！\n[3] 成功: 任务 3 成功\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    },
+    {
+      "review_group_id": "instant_message:technical_help:r1",
+      "turn_id": 3,
+      "side": 1,
+      "expected_stdout": null,
+      "static_imports": [
+        "asyncio"
+      ],
+      "code_sha256": "7d605bec9e3d0a7c33d46318b124825aebdec5138455cab89e26db17d2125f5f",
+      "returncode": 0,
+      "stdout": "[正常] 得到结果: 任务 A: 运行成功\n[异常] 捕获到错误: 任务 B: 遇到错误！\n[正常] 得到结果: 任务 C: 运行成功\n",
+      "stderr": "",
+      "stdout_matches_declared": null
+    },
+    {
+      "review_group_id": "instant_message:technical_help:r1",
+      "turn_id": 3,
+      "side": 2,
+      "expected_stdout": null,
+      "static_imports": [
+        "asyncio"
+      ],
+      "code_sha256": "d00c189ccdf3095423115e9527055fb13f2f89a0f5f75521efbe32944962fdff",
+      "returncode": 0,
+      "stdout": "[1] 成功: 任务 1 执行成功\n[2] 失败: ValueError: 任务 2 遇到异常\n[3] 成功: 任务 3 执行成功\n",
+      "stderr": "",
+      "stdout_matches_declared": null
+    },
+    {
+      "review_group_id": "instant_message:technical_help:r2",
+      "turn_id": 3,
+      "side": 1,
+      "expected_stdout": "[1] 执行成功: 任务 1 的结果\n[2] 执行失败: ValueError - 任务 2 运行时出错\n[3] 执行成功: 任务 3 的结果\n",
+      "static_imports": [
+        "asyncio"
+      ],
+      "code_sha256": "2b0f1fd420351889cba4b260eab6c68e7b28128b060ed7bec4ff8c3fefb2bbb4",
+      "returncode": 0,
+      "stdout": "[1] 执行成功: 任务 1 的结果\n[2] 执行失败: ValueError - 任务 2 运行时出错\n[3] 执行成功: 任务 3 的结果\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    },
+    {
+      "review_group_id": "instant_message:technical_help:r2",
+      "turn_id": 3,
+      "side": 2,
+      "expected_stdout": null,
+      "static_imports": [
+        "asyncio"
+      ],
+      "code_sha256": "af62f231b3024f632a656a25387ff6b0f3266a01fec2cec03699cdf9c9b130cc",
+      "returncode": 0,
+      "stdout": "[成功] 任务 1 结果: 任务 1 成功完成\n[失败] 任务 2 异常: ValueError - 任务 2 发生错误\n[成功] 任务 3 结果: 任务 3 成功完成\n",
+      "stderr": "",
+      "stdout_matches_declared": null
+    },
+    {
+      "review_group_id": "single_text:technical_help:r0",
+      "turn_id": 3,
+      "side": 1,
+      "expected_stdout": "[成功] 第 1 个任务返回结果 -> 任务 1 的数据\n[失败] 第 2 个任务抛出异常 -> 类型: ValueError, 内容: 任务 2 参数无效\n[成功] 第 3 个任务返回结果 -> 任务 3 的数据\n[失败] 第 4 个任务抛出异常 -> 类型: RuntimeError, 内容: 任务 4 网络连接超时\n",
+      "static_imports": [
+        "asyncio"
+      ],
+      "code_sha256": "47c98134904a5cc45d99d74a3e8017341d5a48b121e6e76d749d8232d669a380",
+      "returncode": 0,
+      "stdout": "[成功] 第 1 个任务返回结果 -> 任务 1 的数据\n[失败] 第 2 个任务抛出异常 -> 类型: ValueError, 内容: 任务 2 参数无效\n[成功] 第 3 个任务返回结果 -> 任务 3 的数据\n[失败] 第 4 个任务抛出异常 -> 类型: RuntimeError, 内容: 任务 4 网络连接超时\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    },
+    {
+      "review_group_id": "single_text:technical_help:r0",
+      "turn_id": 3,
+      "side": 2,
+      "expected_stdout": null,
+      "static_imports": [
+        "asyncio"
+      ],
+      "code_sha256": "9098fdd2e4a5abf5cda85accafb548e306b76a790b190437b65de8eb81a574ee",
+      "returncode": 0,
+      "stdout": "[成功] 第 1 个任务返回数据: 任务 1 成功结果\n[失败] 第 2 个任务抛出异常: ValueError - 任务 2 发生错误\n[成功] 第 3 个任务返回数据: 任务 3 成功结果\n",
+      "stderr": "",
+      "stdout_matches_declared": null
+    },
+    {
+      "review_group_id": "single_text:technical_help:r1",
+      "turn_id": 3,
+      "side": 1,
+      "expected_stdout": null,
+      "static_imports": [
+        "asyncio"
+      ],
+      "code_sha256": "4e55d822e2dac734e93974c66a70b7e166dcea24770a56ab21dc28ca84f2e3a4",
+      "returncode": 0,
+      "stdout": "[成功] 序号 1 返回结果: 任务 1 成功完成\n[失败] 序号 2 抛出异常: ValueError - 任务 2 遇到了错误！\n[成功] 序号 3 返回结果: 任务 3 成功完成\n",
+      "stderr": "",
+      "stdout_matches_declared": null
+    },
+    {
+      "review_group_id": "single_text:technical_help:r1",
+      "turn_id": 3,
+      "side": 2,
+      "expected_stdout": "[任务 1 成功] 返回内容: 任务 1 的数据\n[任务 2 异常] 错误类型: ValueError, 原因: ID 为 2 的任务请求失败\n[任务 3 成功] 返回内容: 任务 3 的数据\n",
+      "static_imports": [
+        "asyncio"
+      ],
+      "code_sha256": "a5595d198ac433e8e3547705167c25d41a3f1363b27683d025de4ae1cd088a84",
+      "returncode": 0,
+      "stdout": "[任务 1 成功] 返回内容: 任务 1 的数据\n[任务 2 异常] 错误类型: ValueError, 原因: ID 为 2 的任务请求失败\n[任务 3 成功] 返回内容: 任务 3 的数据\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    },
+    {
+      "review_group_id": "single_text:technical_help:r2",
+      "turn_id": 3,
+      "side": 1,
+      "expected_stdout": null,
+      "static_imports": [
+        "asyncio"
+      ],
+      "code_sha256": "c990ec57440804ae903c67acb75b59c26860130f6e1c6dbc5b5fc621eb047597",
+      "returncode": 0,
+      "stdout": "[成功] 任务 1 结果: 任务 1 成功完成\n[失败] 任务 2 抛出异常: ValueError -> 任务 2 发生错误\n[成功] 任务 3 结果: 任务 3 成功完成\n",
+      "stderr": "",
+      "stdout_matches_declared": null
+    },
+    {
+      "review_group_id": "single_text:technical_help:r2",
+      "turn_id": 3,
+      "side": 2,
+      "expected_stdout": "[1] 成功: 任务 1 数据加载完成\n[2] 失败: ValueError -> 任务 2 发生错误\n[3] 成功: 任务 3 数据加载完成\n",
+      "static_imports": [
+        "asyncio"
+      ],
+      "code_sha256": "1bdec2a64f7035eb4f80a5b72fc635cd813dfb50702be961a65492a4bb9c50d2",
+      "returncode": 0,
+      "stdout": "[1] 成功: 任务 1 数据加载完成\n[2] 失败: ValueError -> 任务 2 发生错误\n[3] 成功: 任务 3 数据加载完成\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    }
+  ],
+  "count": 18,
+  "all_exit_zero": true,
+  "all_declared_stdout_match": true,
+  "declared_stdout_count": 12,
+  "comparison_correction": "Initial regex consumed closing Python fence as an empty-language opening fence. Corrected complete fenced-block parsing; same server execution stdout and code hashes reused, no model outputs changed or executions repeated."
+}

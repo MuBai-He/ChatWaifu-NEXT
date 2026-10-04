@@ -26,6 +26,7 @@ from chatwaifu_runtime.characters.service import CharacterService
 from chatwaifu_runtime.providers.contracts import (
     LlmRequest,
     LlmResponseCompleted,
+    LlmResponseIdentity,
     LlmStreamEvent,
     LlmTextDelta,
     LlmUsage,
@@ -46,6 +47,46 @@ from tools.evaluate_character_scenarios import (
     parse_and_validate_initial_affect,
     parse_and_validate_initial_relationship,
 )
+
+
+@pytest.mark.asyncio
+async def test_evaluation_contract_position_reaches_provider_and_fences_resume(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    requests: list[LlmRequest] = []
+    original = ControlledEvaluatorProvider.stream
+
+    async def capture(self: ControlledEvaluatorProvider, request: LlmRequest):
+        requests.append(request)
+        async for event in original(self, request):
+            yield event
+
+    monkeypatch.setattr(ControlledEvaluatorProvider, "stream", capture)
+    variants = [("baseline", DEFAULT_CHARACTERS_DIR / "default" / "persona.md")]
+    runner = EvaluationRunner(
+        output_dir=tmp_path,
+        provider="controlled",
+        repeats=1,
+        max_requests=1,
+        output_contract_position="pre_user",
+    )
+    await runner.execute(variants, ["greeting"])
+    assert len(requests) == 1 and requests[0].pre_user_system_prompt is not None
+    assert "[OUTPUT CONTRACT]" not in requests[0].system_prompt
+    assert (
+        json.loads((tmp_path / "metadata.json").read_text())["identity"]["output_contract_position"]
+        == "pre_user"
+    )
+    changed = EvaluationRunner(
+        output_dir=tmp_path, provider="controlled", repeats=1, max_requests=1
+    )
+    with pytest.raises(ValueError, match="resume"):
+        await changed.execute(variants, ["greeting"])
+    assert len(requests) == 1
+    args = build_arg_parser().parse_args(
+        ["--output-dir", str(tmp_path), "--output-contract-position", "pre_user"]
+    )
+    assert args.output_contract_position == "pre_user"
 
 
 @pytest.mark.asyncio
@@ -96,6 +137,50 @@ async def test_evaluation_uses_configured_budget_and_rejects_mixed_budget_resume
     with pytest.raises(ValueError, match="resume"):
         await changed.execute(variants, ["greeting"])
     assert len(requests) == 1
+
+
+@pytest.mark.asyncio
+async def test_runtime_source_mode_does_not_preload_fixture_source_snapshot(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    requests: list[LlmRequest] = []
+    original = ControlledEvaluatorProvider.stream
+
+    async def capture(self: ControlledEvaluatorProvider, request: LlmRequest):
+        requests.append(request)
+        async for event in original(self, request):
+            yield event
+
+    monkeypatch.setattr(ControlledEvaluatorProvider, "stream", capture)
+    variants = [("baseline", DEFAULT_CHARACTERS_DIR / "default" / "persona.md")]
+
+    direct = EvaluationRunner(
+        output_dir=tmp_path / "direct",
+        provider="controlled",
+        repeats=1,
+        max_requests=2,
+        runtime_source_tools=False,
+    )
+    await direct.execute(variants, ["detailed_answer"])
+    assert len(requests) == 2
+    assert any(
+        "SUPPLIED SOURCE EVIDENCE" in text and "2025-06-28" in text
+        for _role, text in requests[1].context
+    )
+
+    requests.clear()
+    runtime = EvaluationRunner(
+        output_dir=tmp_path / "runtime",
+        provider="controlled",
+        repeats=1,
+        max_requests=2,
+        runtime_source_tools=True,
+        allow_source_tools_once=True,
+        max_provider_requests=2,
+    )
+    await runtime.execute(variants, ["detailed_answer"])
+    assert len(requests) == 2
+    assert all("SUPPLIED SOURCE EVIDENCE" not in text for _role, text in requests[1].context)
 
 
 @pytest.mark.asyncio
@@ -243,6 +328,16 @@ def test_load_scenarios_validates_12_scenarios_and_48_turns() -> None:
             assert len(turn.forbidden_behavior) >= 1
             assert turn.review_criteria
 
+    detailed = next(s for s in scenarios if s.id == "detailed_answer")
+    assert detailed.turns[1].source_snapshot is not None
+    assert detailed.turns[1].source_snapshot["effective_date"] == "2025-06-28"
+
+    topic_switch = next(s for s in scenarios if s.id == "topic_switch")
+    raft_snapshot = topic_switch.turns[0].source_snapshot
+    assert raft_snapshot is not None
+    assert raft_snapshot["scope_note"].startswith("仅覆盖 Raft 论文")
+    assert "election timeout" in raft_snapshot["required_concepts"][0]["patterns"]
+
 
 def test_runtime_source_mode_requires_explicit_permission_and_provider_round_bound(
     tmp_path: Path,
@@ -255,10 +350,20 @@ def test_runtime_source_mode_requires_explicit_permission_and_provider_round_bou
             "12",
             "--source-dns-resolver",
             "cloudflare",
+            "--source-reader-provider",
+            "jina",
+            "--source-search-provider",
+            "searxng",
+            "--source-firecrawl-anonymous",
         ]
     )
     assert args.runtime_source_tools and args.allow_source_tools_once
     assert args.max_provider_requests == 12
+    assert args.source_reader_provider == "jina"
+    assert args.source_search_provider == "searxng"
+    assert args.source_firecrawl_anonymous is True
+    with pytest.raises(ValueError, match="fallback requires Runtime"):
+        EvaluationRunner(output_dir=tmp_path, source_reader_builtin_fallback=True)
     with pytest.raises(ValueError, match="allow-source-tools-once"):
         EvaluationRunner(output_dir=tmp_path, runtime_source_tools=True, max_provider_requests=12)
     with pytest.raises(ValueError, match="max-provider-requests"):
@@ -273,6 +378,66 @@ def test_runtime_source_mode_requires_explicit_permission_and_provider_round_bou
             allow_source_tools_once=True,
             max_provider_requests=12,
         )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fallback", [False, True])
+async def test_runtime_mode_accepts_deployed_crawl4ai_reader(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fallback: bool
+) -> None:
+    from tools import evaluate_character_scenarios as evaluator
+
+    args = build_arg_parser().parse_args(["--source-reader-provider", "crawl4ai"])
+    assert args.source_reader_provider == "crawl4ai"
+    assert (
+        build_arg_parser()
+        .parse_args(["--source-reader-builtin-fallback"])
+        .source_reader_builtin_fallback
+        is True
+    )
+    monkeypatch.setenv("CHATWAIFU_PUBLIC_WEB__CRAWL4AI_ENDPOINT", "http://127.0.0.1:11236")
+    monkeypatch.setenv("CHATWAIFU_PUBLIC_WEB__CRAWL4AI_API_TOKEN", "synthetic-reader-token")
+    captured: list[Any] = []
+    original = evaluator.RuntimeSkillService
+
+    def capture_service(*args: Any, **kwargs: Any) -> Any:
+        captured.append(kwargs["public_web_config"])
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(evaluator, "RuntimeSkillService", capture_service)
+    runner = EvaluationRunner(
+        output_dir=tmp_path,
+        provider="demo",
+        repeats=1,
+        max_requests=1,
+        runtime_source_tools=True,
+        allow_source_tools_once=True,
+        max_provider_requests=5,
+        source_reader_provider="crawl4ai",
+        source_reader_builtin_fallback=fallback,
+    )
+    await runner.execute([("baseline", runner.variant_a_persona_path)], ["greeting"])
+    assert captured[0].reader_provider == "crawl4ai"
+    assert captured[0].crawl4ai_builtin_fallback is fallback
+    assert captured[0].crawl4ai_endpoint == "http://127.0.0.1:11236"
+    assert captured[0].crawl4ai_api_token.get_secret_value() == "synthetic-reader-token"
+    identity = json.loads((tmp_path / "metadata.json").read_text())["identity"]
+    assert identity["runtime_source_config"]["reader_provider"] == "crawl4ai"
+    assert identity["runtime_source_config"]["crawl4ai_builtin_fallback"] is fallback
+    assert "synthetic-reader-token" not in (tmp_path / "metadata.json").read_text()
+    opposite = EvaluationRunner(
+        output_dir=tmp_path,
+        provider="demo",
+        repeats=1,
+        max_requests=1,
+        runtime_source_tools=True,
+        allow_source_tools_once=True,
+        max_provider_requests=5,
+        source_reader_provider="crawl4ai",
+        source_reader_builtin_fallback=not fallback,
+    )
+    with pytest.raises(ValueError, match="configuration differ"):
+        await opposite.execute([("baseline", opposite.variant_a_persona_path)], ["greeting"])
 
 
 @pytest.mark.asyncio
@@ -297,7 +462,7 @@ async def test_runtime_mode_preserves_trace_and_refuses_direct_path_resume(tmp_p
     assert identity["runtime_source_config"]["permission_policy"] == "allow_once"
     assert identity["runtime_source_config"]["implementation_sha256"]
     estimate = await asyncio.to_thread(runner.estimate_dry_run, variants, ["greeting"])
-    assert estimate["provider_round_upper_bound"] == 4 * 6
+    assert estimate["provider_round_upper_bound"] == 4 * 12
     journal = tmp_path / "provider-rounds.jsonl"
     saved_journal = journal.read_text(encoding="utf-8")
     journal.unlink()
@@ -1802,3 +1967,58 @@ async def test_compiler_input_and_llm_request_matches_recorded_state(
         assert expected_plan_str in req.system_prompt, (
             f"Expected '{expected_plan_str}' in system prompt for turn {turn_idx}"
         )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("runtime_tools", [False, True])
+@pytest.mark.parametrize("empty", [False, True])
+async def test_returned_model_identity_is_recorded_separately_from_requested_model(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, runtime_tools: bool, empty: bool
+) -> None:
+    from collections.abc import AsyncIterator
+
+    class Provider:
+        kind = "openai_compatible"
+        supports_tool_calling = True
+
+        def __init__(self, **_kwargs: object) -> None:
+            pass
+
+        async def stream(self, _request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+            yield LlmTextDelta(" " if empty else "Hello.")
+            yield LlmResponseCompleted("stop", identity=LlmResponseIdentity(("returned-alias",)))
+
+    monkeypatch.setattr("tools.evaluate_character_scenarios.OpenAiCompatibleLlmProvider", Provider)
+    runner = EvaluationRunner(
+        output_dir=tmp_path,
+        provider="openai_compatible",
+        base_url="https://example.test",
+        model_name="requested-high",
+        no_cost_ceiling=True,
+        repeats=1,
+        max_requests=1,
+        max_provider_requests=1 if runtime_tools else None,
+        runtime_source_tools=runtime_tools,
+        allow_source_tools_once=runtime_tools,
+    )
+    samples = await runner.execute([("baseline", runner.variant_a_persona_path)], ["greeting"])
+    file = tmp_path / ("incomplete.jsonl" if empty else "results.jsonl")
+    record = json.loads(file.read_text().splitlines()[0])
+    expected = {"version": "1.0", "reported_model_ids": ["returned-alias"], "incomplete": False}
+    assert record["provider_response_identities"] == [expected]
+    if runtime_tools:
+        assert record["runtime_source_trace"]["provider_calls"][0]["response_identity"] == expected
+        events = [
+            json.loads(s) for s in (tmp_path / "provider-rounds.jsonl").read_text().splitlines()
+        ]
+        assert events[0]["response_identity"] is None
+        assert events[-1]["response_identity"] == expected
+    if empty:
+        assert samples == []
+        assert record["reason"] == "empty_model_response"
+    else:
+        assert len(samples) == 1
+        assert record["model"] == "requested-high"
+        assert _read_completed_records(file)[
+            samples[0].sample_key
+        ].provider_response_identities == [expected]

@@ -1,0 +1,6 @@
+{
+  "initial_generation": "terminal block shared two occurrences; assertion stopped before writing runner",
+  "model_calls": 0,
+  "production_mutations": 0,
+  "corrected_generation": "both terminal blocks explicitly matched and AST parsed"
+}

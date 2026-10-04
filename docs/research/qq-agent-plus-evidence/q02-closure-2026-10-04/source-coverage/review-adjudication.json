@@ -1,0 +1,19 @@
+{
+  "adjudications": [
+    {
+      "final_grade": "complete",
+      "previous_grade": "partial",
+      "previous_reason": "核心“不足以证明所有国内航班实施”的结论正确；但在“公告能够直接证明”的段落里写“并将该增补内容分发给全部193个成员国”，未清楚保留原文“will be provided”的未来安排，证据强度表述偏强。问题是计划与既成事实边界不清，不据此断言真实分发未发生。",
+      "reason": "全文同时使用“并将”“仅说明将补篇提供”，并明确区分文件安排与成员国已实施；不能把“将”单句读作完成态。撤销计划/既成事实误判，原材料范围与指定时点仍保留。没有修改模型原始或发布答复。",
+      "sample_key": "frozen_icao:r1:t3"
+    }
+  ],
+  "candidate_approval": false,
+  "criteria_lowered": false,
+  "final_complete": 14,
+  "final_partial": 2,
+  "new_paid_calls": 0,
+  "original_review_preserved": true,
+  "original_review_sha256": "813e0869063ce4cb81f8dad0f74863e0b82bb2da1b522c614df046f37e085269",
+  "raw_replies_modified": false
+}

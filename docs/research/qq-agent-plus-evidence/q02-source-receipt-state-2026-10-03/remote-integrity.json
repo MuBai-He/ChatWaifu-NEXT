@@ -1,0 +1,61 @@
+{
+  "configured_credentials_absent": true,
+  "files": {
+    "runtime-v24/metadata.json": {
+      "sha256": "fbdae66bd4a090a9bdda4da55c408ecc3610d0efb4c62558bbaeeb4f5330514f",
+      "bytes": 1583
+    },
+    "runtime-v24/results.jsonl": {
+      "sha256": "b6b13b8cc3c1158dd549ffa5dec6487505a4df9b36e7166f9c5ee36d06643b32",
+      "bytes": 290585
+    },
+    "runtime-v24/provider-rounds.jsonl": {
+      "sha256": "885dc6599be2f376cc4bbea4214b2c06085f93378443465bd01d05474261eb84",
+      "bytes": 390746
+    },
+    "runtime-v24/actual-provider-payloads.jsonl": {
+      "sha256": "07195b28a06ce05b84e1b7845a50dfb93d5f14b9f203d6a34ef68c337c1f7b15",
+      "bytes": 540649
+    },
+    "runtime-v24/changes.json": {
+      "sha256": "28f5853f33928a467fdb43d3bd0348a63649c8cecce458d2fa04c505609dca38",
+      "bytes": 484
+    },
+    "runtime-v24/command.json": {
+      "sha256": "f16554b2587bc2754461aa34385d22a4659cd04cef26722f1896b3edd249f284",
+      "bytes": 1078
+    },
+    "runtime-v24/fixtures.json": {
+      "sha256": "89d99c08ddd9a7b59b8e4118d2abae3052bc5c7c070bf37fb80a4913dc0afd97",
+      "bytes": 11535
+    },
+    "runtime-v24/exit-code.json": {
+      "sha256": "e89df0eae5ec7db81135aed16463968955c578bcc4f2ec43172eff351f080c17",
+      "bytes": 17
+    },
+    "runtime-v24/targeted-tests.txt": {
+      "sha256": "2da8231d609157d94c0cfda8035c4df7b58ecf62e2cf838b8e558d9d7f32b242",
+      "bytes": 649
+    },
+    "runtime-v24/launch.py.txt": {
+      "sha256": "2dcb07736355d288192cac4ba57cab36705818482699142d29007b210feec3ef",
+      "bytes": 2154
+    },
+    "runtime-v24/execute.py.txt": {
+      "sha256": "3ca66faa84a4ce67b260d549a417896ad98ace785debb2c4c8f65bd9daed42ba",
+      "bytes": 464
+    },
+    "runtime-v24/source_decision_evaluation.py.txt": {
+      "sha256": "9973fa443b60e8d97b352bd32112ba28a871337354048fa05560418b0e92f068",
+      "bytes": 25308
+    },
+    "runtime-v24/evaluate_character_scenarios.py.txt": {
+      "sha256": "f60e0fa1ca81f5442ee29017f580b94ab747f536b0c67ea4faf1b295597df7f6",
+      "bytes": 96249
+    },
+    "runtime-v24/test_source_decision_evaluation.py.txt": {
+      "sha256": "4398d1eb2fec55e6517c3047be281a1518c06a5f79cb8fb0beb8115b922185a9",
+      "bytes": 24647
+    }
+  }
+}

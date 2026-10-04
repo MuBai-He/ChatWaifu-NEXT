@@ -1,0 +1,65 @@
+{
+  "checked_at_utc": "2026-10-04T03:28:59.051031+00:00",
+  "dry_admission": {
+    "actual_conversation": true,
+    "context_window": 32768,
+    "dry_run": true,
+    "endpoint": "https://mubai.website:8318/v1",
+    "http_limit": 40,
+    "logical_limit": 32,
+    "model": "gemini-3.8-flash-high",
+    "model_budget": {
+      "estimate_margin_ratio": 0.15,
+      "history_turn_limit": 16,
+      "input_token_limit": null,
+      "max_output_tokens": 8192,
+      "memory_candidate_limit": 12,
+      "output_reserve_tokens": 8192,
+      "output_token_limit": null,
+      "section_policy": "scaled",
+      "tool_result_max_bytes": 131072,
+      "version": "1.0"
+    },
+    "new_persona_rules": false,
+    "new_source_rules": false,
+    "persona": "closure-c1",
+    "persona_sha256": "204644ee525210c1cb253688d7db218a2a2bc3fe6e91bfb3f5d135e9c5e47959",
+    "pipeline_version": "v38",
+    "production_changed": false,
+    "prompt_as_of": "2026-10-04T03:30:00+08:00",
+    "public_read_dns_resolver": "cloudflare",
+    "q02_approval": false,
+    "reader_provider": "crawl4ai",
+    "same_persona_and_frame": true,
+    "search_provider": "searxng",
+    "source_answer_frames": true,
+    "source_calls": 0,
+    "source_origin": "provided",
+    "started_at_utc": "2026-10-04T02:58:25.017585+00:00",
+    "usage_requested": true
+  },
+  "dry_exit": {
+    "actual_http_attempts": 32,
+    "exit_code": 0,
+    "logical_requests": 32
+  },
+  "live_exit": {
+    "actual_http_attempts": 32,
+    "exit_code": 0,
+    "logical_requests": 32
+  },
+  "new_model_calls": 0,
+  "pending_q02_processes": [],
+  "production_changed": false,
+  "transport_inspection": {
+    "async_stream_builds_request": true,
+    "async_stream_closes_response": true,
+    "async_stream_sends_streaming": true,
+    "model_id_literals_in_module": false,
+    "module_path": "/home/mubai/chatwaifu-server/source/.venv/lib/python3.12/site-packages/httpx2/__init__.py",
+    "module_sha256": "b5843ba043e53b93fc23cb7380f45a133da09c1b6be09cf0f3185814c558e593",
+    "no_model_identity_proven_by_transport_inspection": true,
+    "package_version": "2.12.0",
+    "python_executable": "/home/mubai/chatwaifu-server/source/.venv/bin/python"
+  }
+}

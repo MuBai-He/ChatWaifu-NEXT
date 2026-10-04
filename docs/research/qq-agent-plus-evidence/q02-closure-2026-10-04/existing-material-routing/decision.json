@@ -1,0 +1,20 @@
+{
+  "version": "v42 existing-material routing + v41 evaluator1.33.0 + unchanged closure-c1",
+  "software_status": "422 local and422 server passed, independently inspected actual increment, policy unchanged",
+  "real_model_calls": 0,
+  "q02_approval": false,
+  "post_fix_actual_four_turn_flow": "not executed",
+  "new_prompt_or_persona_rules": false,
+  "budget_changed": false,
+  "production_deployed": false,
+  "large_full_ab_started": false,
+  "previous_failures_unchanged": true,
+  "dependencies": [
+    "R2 offline budget reconstruction and unsent guard evidence",
+    "same frozen real-material four turns",
+    "A1/A2 condition and cross-turn fidelity",
+    "S1 current original scope coverage",
+    "role directed stable candidate then original864 full A/B/presentations"
+  ],
+  "not_adopted_as_full_candidate": true
+}

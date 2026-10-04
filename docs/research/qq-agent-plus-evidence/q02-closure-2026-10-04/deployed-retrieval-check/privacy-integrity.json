@@ -1,0 +1,10 @@
+{
+  "actual_read_calls": 1,
+  "actual_search_calls": 3,
+  "credential_leaks": 0,
+  "credential_values_checked": 1,
+  "files_scanned": 9,
+  "model_calls": 0,
+  "production_config_mutations": 0,
+  "searxng_settings_unchanged": true
+}

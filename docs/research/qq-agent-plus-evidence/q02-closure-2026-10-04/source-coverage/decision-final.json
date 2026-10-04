@@ -1,0 +1,25 @@
+{
+  "actual_model_scope": "Requested gemini-3.8-flash-high at specified endpoint. /models offers it; output control/n aliases were also present historically and mapping remains unverified. No intrinsic-model capability claim",
+  "budget_scope": "All quality inputs complete, reference 4165-6729 under frozen 21370. 16 native usage records unknown because harness omitted include_usage; separate two native SSE controls do not backfill those records",
+  "candidate": "closure-c1 + opt-in source-answer coverage v37",
+  "complete_source_flows": 4,
+  "completed_replies": 16,
+  "decision_revision": "final-1",
+  "final_review": "primary-review-final.json",
+  "known_gap_retention_controls_passed": 4,
+  "later_gates": {
+    "autonomous_source_discovery": "not_run_for_this_candidate",
+    "role_directional": "not_run_for_this_candidate",
+    "three_presentation_full_ab": "not_run_for_this_candidate"
+  },
+  "new_persona_rules": false,
+  "next": "Keep the whole v37 + closure-c1 candidate frozen and default off. The remaining condition-relation and insulation-scope ambiguities are answer-quality blockers. One earlier ICAO grading error was explicitly corrected by full-text adjudication; no reply/sample was replaced. Do not add persona/format variants or run full A/B on this rejected result.",
+  "original_decision_preserved": true,
+  "previous_valid_acceptance_repeated": false,
+  "production_adopted": false,
+  "q02_approval": false,
+  "quality_complete": 14,
+  "quality_partial": 2,
+  "reliability_scope": "16 completed actual Conversation schema replies plus scoped software tests; not proof of v30 historical exception cause or universal provider reliability",
+  "source_quality_gate": "rejected"
+}

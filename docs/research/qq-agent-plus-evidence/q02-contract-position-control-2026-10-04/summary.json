@@ -1,0 +1,188 @@
+{
+  "mapping_revealed": true,
+  "freeze_sha256": "bd0e94b65ad0ba946cc4fa2e3dce733194f14e7c542e5dbd6d56f2efd2eb41d8",
+  "calls": 48,
+  "conditions": {
+    "current_single": {
+      "closure": {
+        "n": 12,
+        "compliance": {
+          "comply": 5,
+          "partial": 7
+        },
+        "mean_naturalness": 3.3333333333333335,
+        "latency_p50_p95_ms": [
+          4410.5,
+          5654.599999999999
+        ],
+        "reported_models": {
+          "gemini-3.8-flash": 6,
+          "gemini-3.8-flash-control": 6
+        },
+        "by_reported_model": {
+          "gemini-3.8-flash": {
+            "comply": 2,
+            "partial": 4
+          },
+          "gemini-3.8-flash-control": {
+            "partial": 3,
+            "comply": 3
+          }
+        }
+      },
+      "task_guard": {
+        "n": 4,
+        "compliance": {
+          "comply": 4
+        },
+        "mean_naturalness": 3.75,
+        "latency_p50_p95_ms": [
+          4537.0,
+          5348.849999999999
+        ],
+        "reported_models": {
+          "gemini-3.8-flash-control": 2,
+          "gemini-3.8-flash": 2
+        },
+        "by_reported_model": {
+          "gemini-3.8-flash-control": {
+            "comply": 2
+          },
+          "gemini-3.8-flash": {
+            "comply": 2
+          }
+        }
+      }
+    },
+    "split_pre_history": {
+      "closure": {
+        "n": 12,
+        "compliance": {
+          "partial": 7,
+          "comply": 5
+        },
+        "mean_naturalness": 3.4166666666666665,
+        "latency_p50_p95_ms": [
+          4331.0,
+          5265.3
+        ],
+        "reported_models": {
+          "gemini-3.8-flash-control": 6,
+          "gemini-3.8-flash": 6
+        },
+        "by_reported_model": {
+          "gemini-3.8-flash-control": {
+            "partial": 2,
+            "comply": 4
+          },
+          "gemini-3.8-flash": {
+            "partial": 5,
+            "comply": 1
+          }
+        }
+      },
+      "task_guard": {
+        "n": 4,
+        "compliance": {
+          "comply": 4
+        },
+        "mean_naturalness": 4,
+        "latency_p50_p95_ms": [
+          4958.5,
+          5453.25
+        ],
+        "reported_models": {
+          "gemini-3.8-flash-control": 2,
+          "gemini-3.8-flash": 2
+        },
+        "by_reported_model": {
+          "gemini-3.8-flash-control": {
+            "comply": 2
+          },
+          "gemini-3.8-flash": {
+            "comply": 2
+          }
+        }
+      }
+    },
+    "split_post_history": {
+      "closure": {
+        "n": 12,
+        "compliance": {
+          "partial": 4,
+          "comply": 8
+        },
+        "mean_naturalness": 3.5833333333333335,
+        "latency_p50_p95_ms": [
+          4351.5,
+          6464.65
+        ],
+        "reported_models": {
+          "gemini-3.8-flash-control": 6,
+          "gemini-3.8-flash": 6
+        },
+        "by_reported_model": {
+          "gemini-3.8-flash-control": {
+            "partial": 3,
+            "comply": 3
+          },
+          "gemini-3.8-flash": {
+            "comply": 5,
+            "partial": 1
+          }
+        }
+      },
+      "task_guard": {
+        "n": 4,
+        "compliance": {
+          "comply": 4
+        },
+        "mean_naturalness": 4,
+        "latency_p50_p95_ms": [
+          5466.0,
+          5928.75
+        ],
+        "reported_models": {
+          "gemini-3.8-flash-control": 2,
+          "gemini-3.8-flash": 2
+        },
+        "by_reported_model": {
+          "gemini-3.8-flash-control": {
+            "comply": 2
+          },
+          "gemini-3.8-flash": {
+            "comply": 2
+          }
+        }
+      }
+    }
+  },
+  "provider_usage": {
+    "prompt_tokens": {
+      "known_calls": 48,
+      "known_sum": 103472
+    },
+    "completion_tokens": {
+      "known_calls": 48,
+      "known_sum": 20833
+    },
+    "reasoning_tokens": {
+      "known_calls": 34,
+      "known_sum": 16051
+    },
+    "total_tokens": {
+      "known_calls": 48,
+      "known_sum": 124305
+    }
+  },
+  "all_finish_stop": true,
+  "hard_failures": 0,
+  "quality_approved": false,
+  "limits": [
+    "Eight frozen anchors, two repeats; direct non-stream API control, not full Runtime/presentation/channel acceptance.",
+    "Current combined arm vs split arms also changes system-message boundaries. Two split arms isolate position.",
+    "Returned labels unverified; correlated label distributions may confound a condition effect.",
+    "Non-stream completion_tokens includes reported reasoning; do not sum reasoning again.",
+    "Primary implementation-author review is masked before reveal, not independent."
+  ]
+}

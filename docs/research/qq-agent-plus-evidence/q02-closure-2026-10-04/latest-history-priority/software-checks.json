@@ -1,0 +1,20 @@
+{
+  "local_unit_affected": 291,
+  "local_integration_affected": 70,
+  "server_same_targets": 361,
+  "new_regressions": 5,
+  "local_before_four_failed": 4,
+  "server_before_five_failed": 5,
+  "new_final_five_passed": 5,
+  "pyright_errors": 0,
+  "ruff_passed": true,
+  "format_passed": true,
+  "model_http": 0,
+  "source_http": 0,
+  "setup_failures": [
+    "First Pyright flagged deliberate private guard test imports and lack of JsonObject narrowing; tests now explicitly annotate private usage and narrow data, errors preserved.",
+    "Initial replay reached observations but UUID evidence serialization failed; no network was admitted, corrected output serializer, original script and logs retained."
+  ],
+  "frontend_changes": false,
+  "previous_frontend_build_reused": true
+}

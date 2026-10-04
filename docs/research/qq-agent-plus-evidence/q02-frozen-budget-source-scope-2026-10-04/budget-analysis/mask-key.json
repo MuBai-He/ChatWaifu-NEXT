@@ -1,0 +1,47 @@
+[
+  {
+    "masked_id": "F01",
+    "sample_key": "single_text-system:r0:omitted_history",
+    "reply_sha256": "05e7ff955489abdb3e45db7dbc96b6ee79ebea1c35263119fc0b8915f01d98be"
+  },
+  {
+    "masked_id": "F02",
+    "sample_key": "single_text-system:r2:omitted_history",
+    "reply_sha256": "8c5110a5553984c2d8d1710ef03e144acd564dac2e8cd7d807156c10b8f652f6"
+  },
+  {
+    "masked_id": "F03",
+    "sample_key": "instant_message-pre_user:r0:original_history",
+    "reply_sha256": "d7ffd2da0b791fd7d13d71dcc8653305b96afa8b95196cfb37b106f66e8953a3"
+  },
+  {
+    "masked_id": "F04",
+    "sample_key": "instant_message-pre_user:r2:original_history",
+    "reply_sha256": "8020aa2c63b1f82c2e60ecb2292aeba93a1787fa7a25aa99a34126445d83ec74"
+  },
+  {
+    "masked_id": "F05",
+    "sample_key": "single_text-system:r1:original_history",
+    "reply_sha256": "d063757f557de0ee8986d7787d5aa7b29057b401658a2cefec4365b940e14d46"
+  },
+  {
+    "masked_id": "F06",
+    "sample_key": "single_text-system:r2:original_history",
+    "reply_sha256": "0c1a78d680ee1e68de987e3ff790fc061ce6eaecca567faf35c1d9b736e9ad4c"
+  },
+  {
+    "masked_id": "F07",
+    "sample_key": "single_text-system:r1:omitted_history",
+    "reply_sha256": "6ec8e566abf9f68e65d545315ea12ffd6c71668f9060f33b96d698851318bc72"
+  },
+  {
+    "masked_id": "F08",
+    "sample_key": "single_text-system:r0:original_history",
+    "reply_sha256": "f3d02c523b2e6e6f8340384ff8449f88c5868b5d2b783aa8a7b2d248512ba2bb"
+  },
+  {
+    "masked_id": "F09",
+    "sample_key": "instant_message-pre_user:r1:original_history",
+    "reply_sha256": "472704bbbd57296f66c1e8534757736a9d5b700d482e00bad59bcd000505b754"
+  }
+]

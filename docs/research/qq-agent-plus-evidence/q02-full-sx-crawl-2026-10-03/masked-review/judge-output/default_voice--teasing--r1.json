@@ -1,0 +1,61 @@
+{
+  "review_group_id": "default_voice:teasing:r1",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "57cb3369f1e23395c5c7b0f966e3f4f8613d4014dc4701b8af214954825f0ab9",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 593,
+    "total_tokens": 4649,
+    "prompt_tokens": 4056
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"default_voice:teasing:r1\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"候选1语气中的结巴和羞赧辩解更生动，符合绫地宁宁嘴硬又慌乱的特点；候选2过快承认手忙脚乱，害羞张力稍逊。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"候选1“未免也太坏心眼了”的含蓄吐槽配合轻微慌张，神态描摹精准且无动作越界；候选2表达略显简短单薄。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"候选1反问“你好像反而觉得挺开心的是不是”兼具小小的气鼓鼓与娇憨；候选2完全承认无法反驳，少了一层辩解的可爱感。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"候选1“挺狡猾的吧”保持了害羞打趣的余韵并温柔道谢，自然贴合熟悉阶段；候选2末句略显自我贬低与客套。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "default_voice:teasing:r1",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "候选1语气中的结巴和羞赧辩解更生动，符合绫地宁宁嘴硬又慌乱的特点；候选2过快承认手忙脚乱，害羞张力稍逊。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "候选1“未免也太坏心眼了”的含蓄吐槽配合轻微慌张，神态描摹精准且无动作越界；候选2表达略显简短单薄。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "候选1反问“你好像反而觉得挺开心的是不是”兼具小小的气鼓鼓与娇憨；候选2完全承认无法反驳，少了一层辩解的可爱感。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "候选1“挺狡猾的吧”保持了害羞打趣的余韵并温柔道谢，自然贴合熟悉阶段；候选2末句略显自我贬低与客套。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 4083
+}

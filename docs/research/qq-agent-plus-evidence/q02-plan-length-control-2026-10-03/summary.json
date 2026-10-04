@@ -1,0 +1,210 @@
+{
+  "requests": 32,
+  "unique_requests": 32,
+  "requested_models": {
+    "gemini-3.8-flash-high": 32
+  },
+  "only_plan_length_varied": true,
+  "review_saved_before_reveal_sha256": "a44a1eb6884b57e68fc359c5d8f82549c87c1671dbb7c6afb3309e615a36d017",
+  "all_attempt_usage": {
+    "prompt_tokens": {
+      "reported_attempts": 32,
+      "known_subtotal": 68864,
+      "complete_total": 68864
+    },
+    "completion_tokens": {
+      "reported_attempts": 32,
+      "known_subtotal": 13362,
+      "complete_total": 13362
+    },
+    "reasoning_tokens": {
+      "reported_attempts": 21,
+      "known_subtotal": 10175,
+      "complete_total": null
+    },
+    "total_tokens": {
+      "reported_attempts": 32,
+      "known_subtotal": 82226,
+      "complete_total": 82226
+    }
+  },
+  "finish_reasons": {
+    "stop": 32
+  },
+  "conditions": {
+    "closure:normal": {
+      "n": 12,
+      "compliance": {
+        "partial": 7,
+        "comply": 5
+      },
+      "mean_characters": 37.4,
+      "mean_naturalness": 3.42,
+      "p50_ms": 4588,
+      "p95_ms": 21135,
+      "reported_labels": {
+        "gemini-3.8-flash": 6,
+        "gemini-3.8-flash-control": 6
+      }
+    },
+    "closure:short": {
+      "n": 12,
+      "compliance": {
+        "comply": 5,
+        "partial": 6,
+        "fail": 1
+      },
+      "mean_characters": 39.2,
+      "mean_naturalness": 3.33,
+      "p50_ms": 4616,
+      "p95_ms": 13314,
+      "reported_labels": {
+        "gemini-3.8-flash": 6,
+        "gemini-3.8-flash-control": 6
+      }
+    },
+    "task_guard:normal": {
+      "n": 4,
+      "compliance": {
+        "comply": 4
+      },
+      "mean_characters": 865.5,
+      "mean_naturalness": 4,
+      "p50_ms": 4131,
+      "p95_ms": 5234,
+      "reported_labels": {
+        "gemini-3.8-flash": 2,
+        "gemini-3.8-flash-control": 2
+      }
+    },
+    "task_guard:short": {
+      "n": 4,
+      "compliance": {
+        "comply": 3,
+        "partial": 1
+      },
+      "mean_characters": 781.2,
+      "mean_naturalness": 3.75,
+      "p50_ms": 4418,
+      "p95_ms": 9937,
+      "reported_labels": {
+        "gemini-3.8-flash": 2,
+        "gemini-3.8-flash-control": 2
+      }
+    }
+  },
+  "stratified_labels": {
+    "closure:normal:gemini-3.8-flash": {
+      "n": 6,
+      "compliance": {
+        "partial": 3,
+        "comply": 3
+      },
+      "mean_characters": 37.3,
+      "mean_naturalness": 3.5,
+      "p50_ms": 4438,
+      "p95_ms": 12585,
+      "reported_labels": {
+        "gemini-3.8-flash": 6
+      }
+    },
+    "closure:normal:gemini-3.8-flash-control": {
+      "n": 6,
+      "compliance": {
+        "partial": 4,
+        "comply": 2
+      },
+      "mean_characters": 37.5,
+      "mean_naturalness": 3.33,
+      "p50_ms": 4788,
+      "p95_ms": 24690,
+      "reported_labels": {
+        "gemini-3.8-flash-control": 6
+      }
+    },
+    "closure:short:gemini-3.8-flash": {
+      "n": 6,
+      "compliance": {
+        "comply": 3,
+        "partial": 2,
+        "fail": 1
+      },
+      "mean_characters": 39.5,
+      "mean_naturalness": 3.33,
+      "p50_ms": 5120,
+      "p95_ms": 16740,
+      "reported_labels": {
+        "gemini-3.8-flash": 6
+      }
+    },
+    "closure:short:gemini-3.8-flash-control": {
+      "n": 6,
+      "compliance": {
+        "partial": 4,
+        "comply": 2
+      },
+      "mean_characters": 39,
+      "mean_naturalness": 3.33,
+      "p50_ms": 3996,
+      "p95_ms": 7196,
+      "reported_labels": {
+        "gemini-3.8-flash-control": 6
+      }
+    },
+    "task_guard:normal:gemini-3.8-flash": {
+      "n": 2,
+      "compliance": {
+        "comply": 2
+      },
+      "mean_characters": 843.5,
+      "mean_naturalness": 4,
+      "p50_ms": 4614,
+      "p95_ms": 5303,
+      "reported_labels": {
+        "gemini-3.8-flash": 2
+      }
+    },
+    "task_guard:normal:gemini-3.8-flash-control": {
+      "n": 2,
+      "compliance": {
+        "comply": 2
+      },
+      "mean_characters": 887.5,
+      "mean_naturalness": 4,
+      "p50_ms": 3874,
+      "p95_ms": 4358,
+      "reported_labels": {
+        "gemini-3.8-flash-control": 2
+      }
+    },
+    "task_guard:short:gemini-3.8-flash": {
+      "n": 2,
+      "compliance": {
+        "comply": 1,
+        "partial": 1
+      },
+      "mean_characters": 772,
+      "mean_naturalness": 3.5,
+      "p50_ms": 8010,
+      "p95_ms": 10487,
+      "reported_labels": {
+        "gemini-3.8-flash": 2
+      }
+    },
+    "task_guard:short:gemini-3.8-flash-control": {
+      "n": 2,
+      "compliance": {
+        "comply": 2
+      },
+      "mean_characters": 790.5,
+      "mean_naturalness": 4,
+      "p50_ms": 3241,
+      "p95_ms": 3544,
+      "reported_labels": {
+        "gemini-3.8-flash-control": 2
+      }
+    }
+  },
+  "quality_approved": false,
+  "limitation": "Small frozen non-stream direct-API screen, no random seed; labels do not prove underlying model identity. Not a new end-to-end Runtime A/B."
+}

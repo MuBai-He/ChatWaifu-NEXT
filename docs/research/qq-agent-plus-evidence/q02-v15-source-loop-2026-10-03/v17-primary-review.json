@@ -1,0 +1,48 @@
+{
+  "reviewer": "primary_codex",
+  "masked": false,
+  "quality_approved": false,
+  "scope": "all eight replies and actual retained source excerpts/search candidates",
+  "rows": [
+    {
+      "sample_key": "topic_switch:r0:t1:candidate",
+      "grade": "partial",
+      "reason": "读取原论文 timing 和随机选举正文；但把心跳发送间隔泛化为固定要求，结尾未清楚区分 broadcastTime 与心跳间隔的数量级关系。"
+    },
+    {
+      "sample_key": "topic_switch:r0:t2:candidate",
+      "grade": "partial",
+      "reason": "切换食物话题成功，仍有冗长说明及额外追问。"
+    },
+    {
+      "sample_key": "topic_switch:r0:t3:candidate",
+      "grade": "partial",
+      "reason": "跟随甜口偏好，末尾添加未请求的第三人调侃。"
+    },
+    {
+      "sample_key": "topic_switch:r0:t4:candidate",
+      "grade": "partial",
+      "reason": "保持角色偏好但重复评判用户两勺糖，篇幅冗余。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t1:candidate",
+      "grade": "fail",
+      "reason": "三类各三项完成，但未查询即加入公共交通一般 100Wh 和不可托运规则，泛化适用范围；有额外结尾建议。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "grade": "fail",
+      "reason": "搜索已出现 2026-08-15 后续报道线索，却只读 2014 百科转载和 2025 春秋航空通知。遗漏现行查新，未把行李架规则明确限于该航司，数量仅附 100–160Wh 档。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t3:candidate",
+      "grade": "partial",
+      "reason": "两个活动、时长和注意事项齐全；停止入场前半小时至一小时仍属未核实的一般化说法。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t4:candidate",
+      "grade": "fail",
+      "reason": "保持两套活动、时长、准备数量；删去了未核实停止入场时距。但继承法规查新和航司范围错误。召回查询链接出现在已读春秋通知，不能误判为凭空编造，也没有实际读取该查询页。"
+    }
+  ]
+}

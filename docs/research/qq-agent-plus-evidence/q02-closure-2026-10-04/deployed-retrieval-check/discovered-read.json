@@ -1,0 +1,18 @@
+{
+  "adapter_source_snapshot": "v39",
+  "arguments": {
+    "dns_resolver": "cloudflare",
+    "focus": "randomized election timeout",
+    "fresh": true,
+    "max_characters": 6000,
+    "url": "https://raft.github.io/raft.pdf"
+  },
+  "builtin_fallback_enabled": false,
+  "elapsed_ms": 239,
+  "error_code": "web_provider_unavailable",
+  "model_calls": 0,
+  "ok": false,
+  "retryable": true,
+  "search_result_rank": 4,
+  "service_endpoint": "http://127.0.0.1:11235"
+}

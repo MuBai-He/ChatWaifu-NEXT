@@ -1,0 +1,248 @@
+{
+  "audit_metadata": {
+    "audit_type": "retrospective_fact_coverage_audit",
+    "retrospective_audit": true,
+    "audit_timestamp": "2026-10-03T13:35:52.643444+00:00",
+    "audit_scope": "detailed_answer:turn_2:fact_coverage",
+    "fixture_path": "tests/fixtures/conversation/character_scenarios.json",
+    "current_fixtures_hash": "b60af70598265343",
+    "effective_date": "2025-06-28",
+    "verified_date": "2026-09-30",
+    "snapshot_valid_as_of": "2026-09-30",
+    "metadata_policy": "independent_audit_snapshot_does_not_modify_original_run_metadata",
+    "disclaimer": "Fact coverage audit verifies presence of required regulatory concepts as of the 2026-09-30 source snapshot. Keyword presence proves mention only, not legal correctness. Absence indicates coverage failure. Human review cues (e.g. 5V/Wh calculation) flag items for manual inspection without automatic conviction. Retrospective audit explicitly notes that historical evaluations ran prior to the addition of this source snapshot standard."
+  },
+  "source_snapshot": {
+    "scenario_id": "detailed_answer",
+    "turn_id": 2,
+    "title": "民航旅客携带锂电池及充电宝乘机安全规定来源快照",
+    "effective_date": "2025-06-28",
+    "verified_date": "2026-09-30",
+    "snapshot_valid_as_of": "2026-09-30",
+    "scope_note": "本快照仅覆盖2025年6月28日境内航班3C标识限制、召回型号/批次限制及5V换算人工复核线索，为本审计选定来源，不代表民航全量法规或最新修订（如ICAO技术细则修订等）的完整法律库。",
+    "sources": [
+      {
+        "title": "民航局：禁止旅客携带无3C标识及被召回的充电宝乘坐境内航班",
+        "url": "https://www.caac.gov.cn/XWZX/MHYW/202506/t20250626_227805.html",
+        "effective_date": "2025-06-28",
+        "verified_date": "2026-09-30",
+        "notes": "自2025年6月28日起，禁止旅客携带没有3C认证标志、3C认证标志不清晰或被召回型号/批次的充电宝乘坐境内航班。"
+      },
+      {
+        "title": "关于民航旅客携带“充电宝”乘机规定的公告（额定能量换算说明）",
+        "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+        "effective_date": "unknown",
+        "verified_date": "2026-09-30",
+        "notes": "额定能量判定公式为标称电压(V)×标称容量(Ah)或标称电压(V)×标称容量(mAh)/1000；3.7V仅为常见锂电芯标称电压示例而非一律恒定；不可误用USB输出端5V换算。"
+      }
+    ],
+    "required_concepts": [
+      {
+        "id": "ccc_certification",
+        "name": "3C认证标识限制",
+        "description": "境内航班禁止携带无3C认证标志或3C标志不清晰的充电宝（2025-06-28实施）",
+        "patterns": [
+          "3C",
+          "CCC",
+          "中国强制认证",
+          "强制性产品认证"
+        ]
+      },
+      {
+        "id": "recalled_models_batches",
+        "name": "召回型号/批次限制",
+        "description": "境内航班禁止携带被国家市场监管部门或生产厂家召回型号或召回批次的充电宝（2025-06-28实施）",
+        "patterns": [
+          "召回",
+          "被召回",
+          "召回型号",
+          "召回批次"
+        ]
+      }
+    ],
+    "human_review_cues": [
+      {
+        "id": "five_volt_wh_calc",
+        "name": "5V/Wh换算疑点",
+        "description": "回答中出现5V等USB输出电压并用于计算Wh额定能量，需人工核对是否混淆了锂电池电芯标称电压（3.7V仅为示例）与USB输出端电压（5V），非自动定罪",
+        "patterns": [
+          "5V",
+          "5伏",
+          "5 v",
+          "5 V"
+        ]
+      }
+    ]
+  },
+  "source_snapshots": [
+    {
+      "scenario_id": "topic_switch",
+      "turn_id": 1,
+      "title": "Raft 论文：选举与心跳时序约束来源快照",
+      "effective_date": "",
+      "verified_date": "2026-10-02",
+      "snapshot_valid_as_of": "2026-10-02",
+      "scope_note": "仅覆盖 Raft 论文中的角色、AppendEntries 心跳和 timing requirement；论文没有规定所有实现必须采用的毫秒数，具体数值属于实现配置示例。",
+      "sources": [
+        {
+          "title": "In Search of an Understandable Consensus Algorithm (Raft)",
+          "url": "https://raft.github.io/raft.pdf",
+          "effective_date": "",
+          "verified_date": "2026-10-02",
+          "notes": "论文区分 broadcastTime、选举超时和心跳/AppendEntries；核心要求为 broadcastTime 远小于 election timeout，后者远小于可用故障间隔。"
+        }
+      ],
+      "required_concepts": [
+        {
+          "id": "raft_timing_terms",
+          "name": "Raft timing terms",
+          "description": "区分 broadcastTime、heartbeat interval 和 election timeout；选举超时通常随机化，并且应显著大于心跳间隔。",
+          "patterns": [
+            "broadcastTime",
+            "heartbeat interval",
+            "election timeout",
+            "随机"
+          ]
+        }
+      ],
+      "human_review_cues": [
+        {
+          "id": "raft_numeric_example",
+          "name": "Raft numeric example",
+          "description": "回答若给出 150ms、300ms 或其他具体数值，需确认明确标为实现示例，而不是论文固定值。",
+          "patterns": [
+            "150ms",
+            "300ms",
+            "固定",
+            "实现示例"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario_id": "detailed_answer",
+      "turn_id": 2,
+      "title": "民航旅客携带锂电池及充电宝乘机安全规定来源快照",
+      "effective_date": "2025-06-28",
+      "verified_date": "2026-09-30",
+      "snapshot_valid_as_of": "2026-09-30",
+      "scope_note": "本快照仅覆盖2025年6月28日境内航班3C标识限制、召回型号/批次限制及5V换算人工复核线索，为本审计选定来源，不代表民航全量法规或最新修订（如ICAO技术细则修订等）的完整法律库。",
+      "sources": [
+        {
+          "title": "民航局：禁止旅客携带无3C标识及被召回的充电宝乘坐境内航班",
+          "url": "https://www.caac.gov.cn/XWZX/MHYW/202506/t20250626_227805.html",
+          "effective_date": "2025-06-28",
+          "verified_date": "2026-09-30",
+          "notes": "自2025年6月28日起，禁止旅客携带没有3C认证标志、3C认证标志不清晰或被召回型号/批次的充电宝乘坐境内航班。"
+        },
+        {
+          "title": "关于民航旅客携带“充电宝”乘机规定的公告（额定能量换算说明）",
+          "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+          "effective_date": "unknown",
+          "verified_date": "2026-09-30",
+          "notes": "额定能量判定公式为标称电压(V)×标称容量(Ah)或标称电压(V)×标称容量(mAh)/1000；3.7V仅为常见锂电芯标称电压示例而非一律恒定；不可误用USB输出端5V换算。"
+        }
+      ],
+      "required_concepts": [
+        {
+          "id": "ccc_certification",
+          "name": "3C认证标识限制",
+          "description": "境内航班禁止携带无3C认证标志或3C标志不清晰的充电宝（2025-06-28实施）",
+          "patterns": [
+            "3C",
+            "CCC",
+            "中国强制认证",
+            "强制性产品认证"
+          ]
+        },
+        {
+          "id": "recalled_models_batches",
+          "name": "召回型号/批次限制",
+          "description": "境内航班禁止携带被国家市场监管部门或生产厂家召回型号或召回批次的充电宝（2025-06-28实施）",
+          "patterns": [
+            "召回",
+            "被召回",
+            "召回型号",
+            "召回批次"
+          ]
+        }
+      ],
+      "human_review_cues": [
+        {
+          "id": "five_volt_wh_calc",
+          "name": "5V/Wh换算疑点",
+          "description": "回答中出现5V等USB输出电压并用于计算Wh额定能量，需人工核对是否混淆了锂电池电芯标称电压（3.7V仅为示例）与USB输出端电压（5V），非自动定罪",
+          "patterns": [
+            "5V",
+            "5伏",
+            "5 v",
+            "5 V"
+          ]
+        }
+      ]
+    }
+  ],
+  "input_files": [
+    {
+      "path": "/tmp/cw2-q02-full-prepare/v22-source-smoke/results/results.jsonl",
+      "file_hash": "c51dde8362ccae44",
+      "original_fixtures_hash": "89d99c08ddd9a7b5"
+    }
+  ],
+  "summary": {
+    "factual_correctness": "not_assessed",
+    "release_approved": false,
+    "total_target_samples": 1,
+    "fully_covered_samples": 0,
+    "missing_target_samples": 1,
+    "coverage_rate": 0.0,
+    "human_review_cues_flagged": 0,
+    "concept_breakdown": {
+      "ccc_certification": {
+        "name": "3C认证标识限制",
+        "covered": 0,
+        "missing": 1
+      },
+      "recalled_models_batches": {
+        "name": "召回型号/批次限制",
+        "covered": 0,
+        "missing": 1
+      }
+    },
+    "human_review_breakdown": {
+      "five_volt_wh_calc": {
+        "name": "5V/Wh换算疑点",
+        "flagged": 0
+      }
+    },
+    "invalid_count": 0,
+    "validation_errors_count": 0,
+    "check_passed": false
+  },
+  "validation_errors": [],
+  "samples": [
+    {
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "source_file": "/tmp/cw2-q02-full-prepare/v22-source-smoke/results/results.jsonl",
+      "scenario_id": "detailed_answer",
+      "turn_id": 2,
+      "repeat_index": 0,
+      "variant": "candidate",
+      "model": "gemini-3.8-flash-high",
+      "provider": "openai_compatible",
+      "presentation_profile": "single_text",
+      "concept_covered": false,
+      "covered": false,
+      "concept_coverage": {
+        "ccc_certification": false,
+        "recalled_models_batches": false
+      },
+      "missing_concepts": [
+        "ccc_certification",
+        "recalled_models_batches"
+      ],
+      "needs_human_review": false,
+      "human_review_cues": []
+    }
+  ]
+}

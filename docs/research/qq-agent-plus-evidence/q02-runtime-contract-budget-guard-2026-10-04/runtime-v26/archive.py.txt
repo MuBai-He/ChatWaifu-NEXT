@@ -1,0 +1,27 @@
+import hashlib, json, tarfile
+from pathlib import Path
+stage=Path('/tmp/cw2-q02-v26-contract-runtime-20261004');root=Path('/tmp/cw2-q02-contract-position-v26-eval')
+assert (stage/'continuation-exit.json').exists()
+secrets=[json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']]
+for line in Path('/home/mubai/.local/share/chatwaifu-server/config/public-web.env').read_text().splitlines():
+    if '=' in line:
+        name,value=line.split('=',1)
+        if any(marker in name for marker in ['TOKEN','API_KEY','SECRET']) and value.strip():secrets.append(value.strip().strip(chr(34)).strip(chr(39)))
+source=json.loads((stage/'snapshot.json').read_text())['sha256']
+assert all(hashlib.sha256((root/name).read_bytes()).hexdigest()==digest for name,digest in source.items())
+files=[p for p in stage.rglob('*') if p.is_file() and p.suffix in {'.json','.jsonl','.log','.py','.txt'} and 'isolated_db' not in p.parts and p.name != 'artifact-integrity.json']
+manifest={'schema_version':'1.0','configured_credentials_absent':True,'all_snapshot_hashes_match':True,'snapshot_files':len(source),'files':{}}
+for p in sorted(files):
+    raw=p.read_bytes();name=str(p.relative_to(stage))
+    assert all(secret.encode() not in raw for secret in secrets if secret), 'credential found in artifact'
+    manifest['files'][name]={'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)}
+(stage/'artifact-integrity.json').write_text(json.dumps(manifest,indent=2)+'\n')
+files.append(stage/'artifact-integrity.json')
+with tarfile.open(stage/'artifacts.tar.gz','w:gz') as archive:
+    for p in files:archive.add(p,arcname=str(p.relative_to(stage)))
+summary=[]
+for output in sorted((stage/'results').glob('*/*')):
+    rows=[json.loads(l) for l in (output/'results.jsonl').read_text().splitlines()] if (output/'results.jsonl').exists() else []
+    missing=[json.loads(l) for l in (output/'incomplete.jsonl').read_text().splitlines()] if (output/'incomplete.jsonl').exists() else []
+    summary.append({'profile':output.parent.name,'position':output.name,'completed':len(rows),'incomplete':[{'key':r['sample_key'],'reason':r['reason'],'provider_rounds':len(r.get('runtime_source_trace',{}).get('provider_calls',[]))} for r in missing]})
+print(json.dumps({'files':len(files),'rows':summary},ensure_ascii=False))

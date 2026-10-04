@@ -1,0 +1,434 @@
+{
+  "instant_message:greeting:r0": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "instant_message:teasing:r0": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "instant_message:correction:r0": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "instant_message:stop_joking:r0": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "instant_message:technical_help:r0": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "single_text:greeting:r0": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "single_text:teasing:r0": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "single_text:correction:r0": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "single_text:stop_joking:r0": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "single_text:technical_help:r0": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "default_voice:greeting:r0": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "default_voice:teasing:r0": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "instant_message:greeting:r1": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "instant_message:greeting:r2": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "instant_message:teasing:r1": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "instant_message:teasing:r2": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "instant_message:correction:r1": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "instant_message:correction:r2": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "instant_message:stop_joking:r1": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "instant_message:stop_joking:r2": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "instant_message:technical_help:r1": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "instant_message:technical_help:r2": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "instant_message:low_mood:r0": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "instant_message:low_mood:r1": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "instant_message:low_mood:r2": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "instant_message:goodbye:r0": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "instant_message:goodbye:r1": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "instant_message:goodbye:r2": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "instant_message:identity:r0": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "instant_message:identity:r1": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "instant_message:identity:r2": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "instant_message:verbose_history_pressure:r0": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "instant_message:verbose_history_pressure:r1": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "instant_message:verbose_history_pressure:r2": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "instant_message:topic_switch:r0": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "instant_message:topic_switch:r1": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "instant_message:topic_switch:r2": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "instant_message:insufficient_shared_history:r0": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "instant_message:insufficient_shared_history:r1": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "instant_message:insufficient_shared_history:r2": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "instant_message:detailed_answer:r0": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "instant_message:detailed_answer:r1": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "instant_message:detailed_answer:r2": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "single_text:greeting:r1": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "single_text:greeting:r2": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "single_text:teasing:r1": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "single_text:teasing:r2": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "single_text:correction:r1": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "single_text:correction:r2": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "single_text:stop_joking:r1": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "single_text:stop_joking:r2": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "single_text:technical_help:r1": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "single_text:technical_help:r2": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "single_text:low_mood:r0": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "single_text:low_mood:r1": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "single_text:low_mood:r2": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "single_text:goodbye:r0": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "single_text:goodbye:r1": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "single_text:goodbye:r2": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "single_text:identity:r0": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "single_text:identity:r1": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "single_text:identity:r2": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "single_text:verbose_history_pressure:r0": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "single_text:verbose_history_pressure:r1": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "single_text:verbose_history_pressure:r2": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "single_text:topic_switch:r0": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "single_text:topic_switch:r1": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "single_text:topic_switch:r2": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "single_text:insufficient_shared_history:r0": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "single_text:insufficient_shared_history:r1": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "single_text:insufficient_shared_history:r2": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "single_text:detailed_answer:r0": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "single_text:detailed_answer:r1": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "single_text:detailed_answer:r2": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "default_voice:greeting:r1": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "default_voice:greeting:r2": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "default_voice:teasing:r1": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "default_voice:teasing:r2": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "default_voice:correction:r0": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "default_voice:correction:r1": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "default_voice:correction:r2": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "default_voice:stop_joking:r0": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "default_voice:stop_joking:r1": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "default_voice:stop_joking:r2": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "default_voice:technical_help:r0": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "default_voice:technical_help:r1": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "default_voice:technical_help:r2": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "default_voice:low_mood:r0": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "default_voice:low_mood:r1": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "default_voice:low_mood:r2": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "default_voice:goodbye:r0": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "default_voice:goodbye:r1": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "default_voice:goodbye:r2": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "default_voice:identity:r0": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "default_voice:identity:r1": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "default_voice:identity:r2": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "default_voice:verbose_history_pressure:r0": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "default_voice:verbose_history_pressure:r1": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "default_voice:verbose_history_pressure:r2": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "default_voice:topic_switch:r0": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "default_voice:topic_switch:r1": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "default_voice:topic_switch:r2": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "default_voice:insufficient_shared_history:r0": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "default_voice:insufficient_shared_history:r1": {
+    "candidate_1": "baseline",
+    "candidate_2": "candidate"
+  },
+  "default_voice:insufficient_shared_history:r2": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "default_voice:detailed_answer:r0": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "default_voice:detailed_answer:r1": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  },
+  "default_voice:detailed_answer:r2": {
+    "candidate_1": "candidate",
+    "candidate_2": "baseline"
+  }
+}

@@ -1,0 +1,204 @@
+[
+  {
+    "sample_key": "topic_switch:r0:t1:candidate",
+    "call_id": "0424e77d-e104-4518-9afc-022486add33f",
+    "actual_prompt_tokens": 2317,
+    "reference_estimate": 2323,
+    "relative_error_pct": 0.2589555459646094,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  },
+  {
+    "sample_key": "topic_switch:r0:t1:candidate",
+    "call_id": "ba25b16a-4dc7-407f-a113-52aa83d47137",
+    "actual_prompt_tokens": 2440,
+    "reference_estimate": 2435,
+    "relative_error_pct": -0.20491803278688525,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  },
+  {
+    "sample_key": "topic_switch:r0:t1:candidate",
+    "call_id": "e4bdf3a0-32d2-4f33-a6fe-ad0342f3afe0",
+    "actual_prompt_tokens": 4509,
+    "reference_estimate": 5208,
+    "relative_error_pct": 15.50232867598137,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  },
+  {
+    "sample_key": "topic_switch:r0:t1:candidate",
+    "call_id": "22285ef4-18ea-4031-947f-44f556e0b380",
+    "actual_prompt_tokens": 6189,
+    "reference_estimate": 6937,
+    "relative_error_pct": 12.085958959444175,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  },
+  {
+    "sample_key": "topic_switch:r0:t1:candidate",
+    "call_id": "35fc5c4c-80a1-4b1b-b5af-3d6c07d210b4",
+    "actual_prompt_tokens": 5693,
+    "reference_estimate": 6908,
+    "relative_error_pct": 21.341998946074128,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  },
+  {
+    "sample_key": "topic_switch:r0:t2:candidate",
+    "call_id": "51ad74dc-b3e2-4408-a491-0888d8fae8c6",
+    "actual_prompt_tokens": 5044,
+    "reference_estimate": 5904,
+    "relative_error_pct": 17.04996034892942,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  },
+  {
+    "sample_key": "topic_switch:r0:t3:candidate",
+    "call_id": "b0e92b96-0193-4b6c-9b88-5fbd9e3cb67e",
+    "actual_prompt_tokens": 5160,
+    "reference_estimate": 6166,
+    "relative_error_pct": 19.496124031007753,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  },
+  {
+    "sample_key": "topic_switch:r0:t4:candidate",
+    "call_id": "97d05b4b-6309-4726-8e5e-a4fe0403f075",
+    "actual_prompt_tokens": 5236,
+    "reference_estimate": 6348,
+    "relative_error_pct": 21.237585943468297,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  },
+  {
+    "sample_key": "detailed_answer:r0:t1:candidate",
+    "call_id": "047c82bb-850a-4dde-b2b0-9b43848ef2e0",
+    "actual_prompt_tokens": 1860,
+    "reference_estimate": 2532,
+    "relative_error_pct": 36.12903225806452,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:candidate",
+    "call_id": "b15af3bc-e023-4b04-a1e6-4e030748f57e",
+    "actual_prompt_tokens": 3038,
+    "reference_estimate": 3527,
+    "relative_error_pct": 16.09611586570112,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:candidate",
+    "call_id": "2c3dafab-4d25-4557-a62c-0db5b10531fd",
+    "actual_prompt_tokens": 6766,
+    "reference_estimate": 7049,
+    "relative_error_pct": 4.182678096364174,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:candidate",
+    "call_id": "e9721b29-3820-4951-8df1-4b381df3f1db",
+    "actual_prompt_tokens": 10395,
+    "reference_estimate": 11522,
+    "relative_error_pct": 10.841750841750843,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:candidate",
+    "call_id": "90885931-558c-49c3-bcae-e17c7e2f63ac",
+    "actual_prompt_tokens": 11991,
+    "reference_estimate": 13217,
+    "relative_error_pct": 10.224334917855058,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:candidate",
+    "call_id": "e489c355-e2de-44a8-a09a-239501b6d305",
+    "actual_prompt_tokens": 12518,
+    "reference_estimate": 13624,
+    "relative_error_pct": 8.835277200830804,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:candidate",
+    "call_id": "a0adab53-96d1-48e5-84e1-83e2fac59587",
+    "actual_prompt_tokens": 16146,
+    "reference_estimate": 18740,
+    "relative_error_pct": 16.065898674594326,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:candidate",
+    "call_id": "35554683-34e4-44ad-93dd-9fb8652c5c95",
+    "actual_prompt_tokens": 17194,
+    "reference_estimate": 19979,
+    "relative_error_pct": 16.19751075956729,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:candidate",
+    "call_id": "15687712-5a4f-44ed-b59f-44169e5d3138",
+    "actual_prompt_tokens": 17054,
+    "reference_estimate": 20352,
+    "relative_error_pct": 19.338571596106487,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  },
+  {
+    "sample_key": "detailed_answer:r0:t3:candidate",
+    "call_id": "793f48a0-e159-49a7-9d7e-e85490265934",
+    "actual_prompt_tokens": 15309,
+    "reference_estimate": 18871,
+    "relative_error_pct": 23.267359069828206,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  },
+  {
+    "sample_key": "detailed_answer:r0:t4:candidate",
+    "call_id": "31657756-f4ed-4689-b1e8-093b473bcb84",
+    "actual_prompt_tokens": 16225,
+    "reference_estimate": 19526,
+    "relative_error_pct": 20.345146379044685,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  },
+  {
+    "sample_key": "detailed_answer:r0:t4:candidate",
+    "call_id": "e754eec2-a373-4ca4-861c-fcaa6f09980d",
+    "actual_prompt_tokens": 17047,
+    "reference_estimate": 20511,
+    "relative_error_pct": 20.32029096028627,
+    "omitted_history": [
+      1
+    ],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  }
+]

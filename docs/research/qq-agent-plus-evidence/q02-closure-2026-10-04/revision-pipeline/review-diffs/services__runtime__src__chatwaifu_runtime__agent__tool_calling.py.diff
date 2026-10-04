@@ -1,0 +1,110 @@
+--- v37/services/runtime/src/chatwaifu_runtime/agent/tool_calling.py
++++ v38/services/runtime/src/chatwaifu_runtime/agent/tool_calling.py
+@@ -21,6 +21,7 @@
+     fit_input_budget,
+ )
+ from chatwaifu_runtime.agent.source_answer import (
++    provided_source_answer_revision_prompt,
+     source_answer_revision_prompt,
+     source_tool_followup_prompt,
+ )
+@@ -1230,15 +1231,26 @@
+             return
+         provider = llm if llm is not None else self._llm
+         originals = answer_originals(request, source_urls) if source_answer_turn is not None else ()
+-        if originals and not source_urls:
++        if originals:
+             assert source_answer_turn is not None
+-            yield await self._render_source_frame(
+-                request, originals, source_answer_turn, ensure_current, llm=provider
+-            )
+-            return
+-        if source_urls:
++            if getattr(provider, "supports_response_schema", False) is not True:
++                raise LlmResponseSchemaUnavailableError()
++            # Preflight known schema/state overhead before paying for a draft.
++            prepared, _, _ = prepare_answer_frame(request, originals, source_answer_turn)
+             try:
+-                draft = await self._collect_tool_round(request, ensure_current, llm=provider)
++                _budgeted_request(prepared)
++            except InputBudgetExceeded:
++                ensure_current()
++                yield _runtime_fallback(SOURCE_ANSWER_FRAME_BUDGET_REPLY, source_answer_turn)
++                return
++        if source_urls or originals:
++            try:
++                draft = await self._collect_tool_round(
++                    request,
++                    ensure_current,
++                    llm=provider,
++                    max_text_bytes=MAX_FRAME_BYTES if originals else None,
++                )
+             except InputBudgetExceeded:
+                 ensure_current()
+                 yield _runtime_fallback(TOOL_RESULT_BUDGET_REPLY, source_answer_turn)
+@@ -1299,18 +1311,20 @@
+     ) -> list[str]:
+         """One bounded text-only pass; never execute tools or publish the draft."""
+         ensure_current()
++        originals = answer_originals(request, source_urls) if source_answer_turn is not None else ()
+         logger.info(
+             "agent.source_answer_revision generation=%s source_count=%d draft_characters=%d",
+             request.generation_id,
+-            len(source_urls),
++            len(originals) if originals else len(source_urls),
+             len(draft),
+         )
+-        originals = answer_originals(request, source_urls) if source_answer_turn is not None else ()
+         revision_urls = source_urls or tuple(s.url for s in originals if s.origin == "retrieved")
+         revision = replace(
+             request,
+             continuation_system_prompt=source_answer_revision_prompt(draft, revision_urls)
+             if revision_urls
++            else provided_source_answer_revision_prompt()
++            if originals
+             else request.continuation_system_prompt,
+             tools=(),
+             tool_choice="auto",
+@@ -1416,18 +1430,33 @@
+         ensure_current: Callable[[], None],
+         *,
+         llm: LlmProvider | None = None,
++        max_text_bytes: int | None = None,
+     ) -> _ToolRound:
+         provider = llm if llm is not None else self._llm
+         result = _ToolRound(text_chunks=[], calls=[])
++        received_bytes = 0
+         stream = provider.stream(request)
+         try:
+             async for event in stream:
+                 ensure_current()
++                if max_text_bytes is not None and result.terminal_received:
++                    raise SourceAnswerFrameError("nonterminal_frame")
+                 if isinstance(event, LlmTextDelta):
++                    if max_text_bytes is not None:
++                        try:
++                            received_bytes += len(event.text.encode())
++                        except UnicodeError as error:
++                            raise SourceAnswerFrameError("invalid_json") from error
++                        if received_bytes > max_text_bytes:
++                            raise SourceAnswerFrameError("frame_bound")
+                     result.text_chunks.append(event.text)
+                 elif isinstance(event, LlmToolCallRequested):
++                    if max_text_bytes is not None:
++                        raise SourceAnswerFrameError("unexpected_tool_call")
+                     result.calls.append(event.call)
+                 else:
++                    if max_text_bytes is not None and event.finish_reason != "stop":
++                        raise SourceAnswerFrameError("nonterminal_frame")
+                     result.finish_reason = event.finish_reason
+                     result.terminal_received = True
+         finally:
+@@ -1435,6 +1464,8 @@
+             # is suspended at yield; own its generator until resources close.
+             if isinstance(stream, AsyncGenerator):
+                 await stream.aclose()
++        if max_text_bytes is not None and not result.terminal_received:
++            raise SourceAnswerFrameError("nonterminal_frame")
+         return result
+ 
+     async def _execute_calls(

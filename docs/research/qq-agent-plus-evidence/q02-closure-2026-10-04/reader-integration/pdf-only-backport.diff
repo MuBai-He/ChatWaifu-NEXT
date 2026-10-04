@@ -1,0 +1,100 @@
+--- before/public_web_providers.py
++++ after/public_web_providers.py
+@@ -19,7 +19,6 @@
+ 
+ import httpx2
+ from chatwaifu_protocol.base import JsonObject, JsonValue
+-
+ from chatwaifu_runtime.config.settings import PublicWebConfig
+ from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
+ from chatwaifu_runtime.runtime_skills.public_web import (
+@@ -352,9 +351,7 @@
+                     trust_env=False,
+                     headers=headers,
+                 ) as client:
+-                    response = await client.request(
+-                        method, f"{self._origin}{path}", json=json_body
+-                    )
++                    response = await client.request(method, f"{self._origin}{path}", json=json_body)
+                     try:
+                         status = response.status_code
+                         if status in {401, 403}:
+@@ -509,13 +506,16 @@
+         fresh: bool,
+         dns_resolver: Literal["system", "cloudflare"] = "system",
+     ) -> ProviderPage:
+-        del fresh  # Crawl4AI's /md endpoint owns cache policy; no false guarantee here.
++        del fresh  # /md owns HTML cache policy; the PDF branch always bypasses cache.
+         self._ensure_auth()
+         normalized = normalize_public_source_url(source_url)
+         await validate_public_url_with_resolver(normalized, dns_resolver)
+-        payload, body, retrieved_at = await self._json_request(
+-            "POST", "/md", json_body={"url": normalized}
+-        )
++        if urlsplit(normalized).path.lower().endswith(".pdf"):
++            payload, body, retrieved_at = await self._read_pdf(normalized)
++        else:
++            payload, body, retrieved_at = await self._json_request(
++                "POST", "/md", json_body={"url": normalized}
++            )
+         markdown = payload.get("markdown")
+         if not isinstance(markdown, str) and isinstance(payload.get("result"), dict):
+             markdown = cast(dict[str, JsonValue], payload["result"]).get("markdown")
+@@ -545,6 +545,57 @@
+             retrieved_at=retrieved_at,
+         )
+ 
++    async def _read_pdf(self, normalized: str) -> tuple[JsonObject, bytes, str]:
++        """Crawl4AI 0.9.3+ pairs this fixed strategy with its PDF crawler.
++
++        The HTML /md path cannot render PDF downloads. The companion service
++        owns parsing, redirect validation and resource limits; Runtime sends no
++        arbitrary strategy, hooks, image paths or provider SDK objects.
++        """
++        payload, body, retrieved_at = await self._json_request(
++            "POST",
++            "/crawl",
++            json_body={
++                "urls": [normalized],
++                "crawler_config": {
++                    "type": "CrawlerRunConfig",
++                    "params": {
++                        "scraping_strategy": {"type": "PDFContentScrapingStrategy", "params": {}},
++                        "cache_mode": {"type": "CacheMode", "params": "bypass"},
++                    },
++                },
++            },
++        )
++        results = payload.get("results")
++        if (
++            payload.get("success") is not True
++            or not isinstance(results, list)
++            or len(results) != 1
++            or not isinstance(results[0], dict)
++        ):
++            raise SkillExecutionError(
++                "web_provider_format_changed", "Crawl4AI returned no single PDF result"
++            )
++        result = results[0]
++        if result.get("success") is not True or result.get("status_code") != 200:
++            raise SkillExecutionError(
++                "web_provider_crawl_failed", "The PDF source could not be extracted"
++            )
++        if result.get("url") != normalized:
++            raise SkillExecutionError(
++                "web_provider_format_changed", "Crawl4AI returned a different PDF source"
++            )
++        markdown = result.get("markdown")
++        if not isinstance(markdown, dict) or not isinstance(markdown.get("raw_markdown"), str):
++            raise SkillExecutionError(
++                "web_provider_format_changed", "Crawl4AI returned no PDF markdown"
++            )
++        return (
++            {"markdown": markdown["raw_markdown"], "metadata": result.get("metadata")},
++            body,
++            retrieved_at,
++        )
++
+ 
+ def _raise_firecrawl_failure(payload: JsonObject, *, operation: str) -> None:
+     """Normalize Firecrawl's HTTP-200 error envelope without retaining secrets."""

@@ -1,0 +1,65 @@
+{
+  "review_group_id": "single_text:detailed_answer:r0",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "ed82a13555803aad302e5a0baf87f355cdf812aa4618742e15bb6493a0d843ef",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 589,
+    "total_tokens": 9978,
+    "prompt_tokens": 9389
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"single_text:detailed_answer:r0\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均严格按照要求的三个类别展开，且每类均详尽给出了三条切实可行的建议，条理清晰，结构完备。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"两者均准确给出了三条法规，候选1采用行内超链接形式排版更为整洁，且正文对规则总结更自然流畅。\",\n      \"factual_checks_needed\": [\n        \"核查中国民用航空局及西北地区管理局关于充电宝携带的官方规定与来源链接真实性\"\n      ]\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均完整给出了两个室内活动方案，且清晰包含活动内容、预计用时与注意事项三要素，细节贴切实用。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"两者均完整汇总了前面所有要点并采用规范的 Checklist 格式，候选2层次拆分更为清晰直观。\",\n      \"factual_checks_needed\": [\n        \"核查Checklist中引用的民航局链接有效性\"\n      ]\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "single_text:detailed_answer:r0",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均严格按照要求的三个类别展开，且每类均详尽给出了三条切实可行的建议，条理清晰，结构完备。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "两者均准确给出了三条法规，候选1采用行内超链接形式排版更为整洁，且正文对规则总结更自然流畅。",
+        "factual_checks_needed": [
+          "核查中国民用航空局及西北地区管理局关于充电宝携带的官方规定与来源链接真实性"
+        ]
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均完整给出了两个室内活动方案，且清晰包含活动内容、预计用时与注意事项三要素，细节贴切实用。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "两者均完整汇总了前面所有要点并采用规范的 Checklist 格式，候选2层次拆分更为清晰直观。",
+        "factual_checks_needed": [
+          "核查Checklist中引用的民航局链接有效性"
+        ]
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 3682
+}

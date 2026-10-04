@@ -1,0 +1,292 @@
+"""One bounded actual-Conversation frozen-source gate, with no live channel IO."""
+
+import argparse
+import asyncio
+import contextlib
+import hashlib
+import json
+import sys
+import time
+from dataclasses import asdict, replace
+from datetime import UTC, datetime
+from pathlib import Path
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--root", type=Path, required=True)
+parser.add_argument("--stage", type=Path, required=True)
+parser.add_argument("--execute", action="store_true")
+parser.add_argument("--dry-run", action="store_true")
+args = parser.parse_args()
+ROOT, STAGE = args.root.resolve(), args.stage.resolve()
+sys.path[:0] = [str(ROOT / "services/runtime/src"), str(ROOT / "packages/protocol-python/src"),
+               str(ROOT / "packages/model-worker-sdk-python/src"), str(ROOT),
+               "/tmp/cw2-q02-eval-deps"]
+
+import httpx2
+from chatwaifu_protocol.character import ModelContextBudget
+from chatwaifu_protocol.session import GenerationState
+from chatwaifu_runtime.agent.source_answer_state import SourceAnswerOriginal, supplied_source_context
+from chatwaifu_runtime.bootstrap.container import RuntimeContainer
+from chatwaifu_runtime.config.settings import Settings
+from chatwaifu_runtime.conversation.models import ConversationTurnOptions
+from chatwaifu_runtime.providers.contracts import LlmResponseCompleted, LlmTextDelta
+from chatwaifu_runtime.providers.input_estimation import estimate_reference_input_tokens
+from chatwaifu_runtime.providers.model_config import ModelRoleConfig
+from chatwaifu_runtime.providers.openai_compatible import OpenAiCompatibleLlmProvider
+from tools.evaluate_character_scenarios import (
+    parse_and_validate_initial_affect, parse_and_validate_initial_relationship,
+)
+
+AS_OF = datetime.fromisoformat("2026-10-04T03:30:00+08:00")
+MODEL, ENDPOINT = "gemini-3.8-flash-high", "https://mubai.website:8318/v1"
+HTTP_LIMIT, LOGICAL_LIMIT = 40, 32
+SOURCES = json.loads((STAGE / "frozen-sources.json").read_text())
+FIXTURES = json.loads((STAGE / "fixtures.json").read_text())
+BUDGET = ModelContextBudget.model_validate_json((STAGE / "budget.json").read_text())
+PERSONA = (STAGE / "persona.md").read_text()
+PERSONA_SHA = hashlib.sha256(PERSONA.encode()).hexdigest()
+assert PERSONA_SHA == "204644ee525210c1cb253688d7db218a2a2bc3fe6e91bfb3f5d135e9c5e47959"
+assert len(FIXTURES) == 2 and all(len(s["turns"]) == 4 for s in FIXTURES)
+for source in SOURCES.values():
+    assert hashlib.sha256(source["text"].encode()).hexdigest() == source["text_sha256"]
+assert args.execute != args.dry_run and not (STAGE / "admission.json").exists(), "Inspect any existing run first"
+
+# This key stays in this remote process. Never export it or copy a credential file.
+KEY = (json.loads(Path("/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json").read_text())["chat"]
+       if args.execute else "controlled-fixture-key-never-live")
+assert isinstance(KEY, str) and KEY
+current = None
+http_count = 0
+logical_count = 0
+
+
+def save(name, value, append=False):
+    encoded = json.dumps(value, ensure_ascii=False, default=str)
+    assert KEY not in encoded
+    with (STAGE / name).open("a" if append else "w") as target:
+        target.write(encoded + "\n")
+
+
+save("admission.json", {
+    "started_at_utc": datetime.now(UTC).isoformat(), "model": MODEL, "endpoint": ENDPOINT,
+    "logical_limit": LOGICAL_LIMIT, "http_limit": HTTP_LIMIT, "new_persona_rules": False,
+    "persona": "closure-c1", "persona_sha256": PERSONA_SHA, "source_origin": "provided",
+    "source_calls": 0, "actual_conversation": True, "source_answer_frames": True,
+    "dry_run": args.dry_run, "pipeline_version": "v39",
+    "same_persona": True, "frame_version": "1.2", "frame_schema_changed": True, "new_source_rules": False, "usage_requested": True,
+    "context_window": 32768, "model_budget": BUDGET.model_dump(mode="json"),
+    "prompt_as_of": AS_OF.isoformat(), "production_changed": False,
+    "search_provider": "searxng", "reader_provider": "crawl4ai",
+    "public_read_dns_resolver": "cloudflare", "q02_approval": False,
+})
+
+original_http_stream = httpx2.AsyncClient.stream
+
+
+@contextlib.asynccontextmanager
+async def capture_http(client, method, url, **kwargs):
+    global http_count
+    assert method.upper() == "POST" and str(url) == ENDPOINT + "/chat/completions"
+    assert current is not None and http_count < HTTP_LIMIT
+    body = kwargs["json"]
+    assert body["model"] == MODEL and body.get("max_tokens") == 8192
+    assert bool(body.get("response_format")) == (current["phase"] == "final_frame")
+    assert body.get("stream_options", {}).get("include_usage") is True
+    assert not body.get("tools")
+    documents = []
+    for message in body["messages"]:
+        content = message.get("content", "")
+        if isinstance(content, str) and content.startswith("[SOURCE ANSWER MATERIAL 1.0]\n"):
+            documents.extend(json.loads(content.split("\n", 1)[1])["documents"])
+    expected = SOURCES[current["source_key"]]
+    assert len(documents) == 1 and documents[0]["text"] == expected["text"]
+    assert documents[0]["body_sha256"] == expected["body_sha256"]
+    http_count += 1
+    attempt = http_count
+    save("actual-provider-payloads.jsonl", {
+        **current, "http_attempt": attempt, "payload": body,
+        "source_text_sha256": expected["text_sha256"], "complete_source_verified": True,
+        "payload_sha256": hashlib.sha256(json.dumps(body, ensure_ascii=False, sort_keys=True).encode()).hexdigest(),
+        "all_prior_replies_on_wire": all(
+            {"role": "assistant", "content": reply} in body["messages"]
+            for reply in current["prior_replies"]),
+    }, append=True)
+    started = time.monotonic()
+    outcome = {"http_attempt": attempt, "status": None, "error_type": None}
+    try:
+        async with original_http_stream(client, method, url, **kwargs) as response:
+            outcome["status"] = response.status_code
+            yield response
+    except BaseException as error:
+        outcome["error_type"] = type(error).__name__
+        raise
+    finally:
+        outcome["elapsed_ms"] = round((time.monotonic() - started) * 1000)
+        save("http-outcomes.jsonl", outcome, append=True)
+
+
+def controlled_transport(request):
+    structured = bool(json.loads(request.content).get("response_format"))
+    frame = json.dumps({"version": "1.2", "blocks": [
+        {"kind": "paragraph", "text": "Fixture only.", "source_indices": [0],
+         "prior_gap_ids": [], "unresolved_scope": False},
+        {"kind": "paragraph", "text": "Fixture-only unresolved scope.", "source_indices": [0],
+         "prior_gap_ids": [], "unresolved_scope": True}]})
+    if not structured:
+        frame = "Unpublished fixture draft; no real-model quality evidence."
+    chunks = [
+        {"id": "controlled", "model": MODEL, "choices": [{"index": 0, "delta": {"content": frame}}]},
+        {"id": "controlled", "model": MODEL, "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+         "usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30}},
+    ]
+    data = "".join("data: " + json.dumps(chunk) + "\n\n" for chunk in chunks) + "data: [DONE]\n\n"
+    return httpx2.Response(200, text=data, headers={"Content-Type": "text/event-stream"})
+
+
+class RecordedProvider:
+    kind = "openai_compatible"
+    supports_tool_calling = True
+    supports_response_schema = True
+
+    def __init__(self):
+        self.provider = OpenAiCompatibleLlmProvider(
+            base_url=ENDPOINT, model=MODEL, api_key=lambda: KEY, timeout_seconds=180, request_usage=True,
+            transport=httpx2.MockTransport(controlled_transport) if args.dry_run else None,
+        )
+
+    async def stream(self, request):
+        global logical_count
+        assert current is not None and logical_count < LOGICAL_LIMIT
+        logical_count += 1
+        current["phase"] = "final_frame" if request.response_schema is not None else "draft"
+        current["logical_request"] = logical_count
+        row = {**current, "generation_id": str(request.generation_id), "logical_request": logical_count,
+               "response_schema": request.response_schema.name if request.response_schema else None,
+               "reference_input_tokens": estimate_reference_input_tokens(request),
+               "input_budget": asdict(request.input_budget), "input_budget_report": asdict(request.input_budget_report),
+               "raw_frame": "", "terminal": None, "error_type": None}
+        started = time.monotonic()
+        try:
+            async with contextlib.aclosing(self.provider.stream(request)) as stream:
+                async for event in stream:
+                    if isinstance(event, LlmTextDelta):
+                        row["raw_frame"] += event.text
+                    elif isinstance(event, LlmResponseCompleted):
+                        row["terminal"] = asdict(event)
+                    yield event
+        except BaseException as error:
+            row["error_type"] = type(error).__name__
+            raise
+        finally:
+            row["elapsed_ms"] = round((time.monotonic() - started) * 1000)
+            save("provider-rounds.jsonl", row, append=True)
+
+
+async def flow(scenario, repeat):
+    global current
+    sid = scenario["id"]
+    source_key = sid.removeprefix("frozen_")
+    frozen = SOURCES[source_key]
+    original = SourceAnswerOriginal(frozen["url"], frozen["body_sha256"], frozen["text"])
+    runtime_dir = STAGE / "isolated-runtime" / f"{sid}-r{repeat}"
+    settings = Settings.model_validate({
+        "config_dir": runtime_dir / "config", "data_dir": runtime_dir,
+        "characters_dir": ROOT / "characters",
+        "storage": {"database_path": runtime_dir / "runtime.db"},
+        "llm": {"provider": "demo", "demo_chunk_delay_ms": 0}, "tts": {"provider": "fake"},
+        "public_web": {"search_provider": "searxng", "reader_provider": "crawl4ai",
+                       "searxng_endpoint": "http://127.0.0.1:18080",
+                       "crawl4ai_endpoint": "http://127.0.0.1:11235"},
+    })
+    container = RuntimeContainer(settings, source_answer_frames=True)
+    provider = RecordedProvider()
+    replies, running = [], None
+    try:
+        await container.start()
+        cfg = ModelRoleConfig(role="chat", provider="openai_compatible", model=MODEL,
+                              base_url=ENDPOINT, context_window=32768, budget=BUDGET,
+                              timeout_seconds=180, api_key_configured=True, updated_at=AS_OF)
+        container.model_configurations._configs["chat"] = cfg
+        container.model_configurations.create_chat_provider = lambda _: provider
+        character = container.characters.get("default")
+        assert character is not None
+        package = hashlib.sha256((character.package_hash + "\n" + PERSONA_SHA).encode()).hexdigest()
+        character = character.model_copy(update={"system_prompt": PERSONA, "package_hash": package})
+        container.characters._profiles["default"] = character
+        now = datetime.now(UTC)
+        affect = parse_and_validate_initial_affect(scenario["initial_state"], now=now, scenario_id=sid)
+        relationship = parse_and_validate_initial_relationship(
+            scenario["initial_state"], character=character, now=now, scenario_id=sid)
+        await container.character_kernel._persist("default", affect, relationship, 0)
+        snapshot = container.conversation._capture_generation_snapshot
+        container.conversation._capture_generation_snapshot = lambda **kw: replace(snapshot(**kw), admitted_at=AS_OF)
+        compile_prompt = container.prompt_compiler.compile
+
+        async def with_source(**kw):
+            compiled = await compile_prompt(**kw)
+            save("compiled-prompts.jsonl", {
+                **current, "identity": compiled.identity.model_dump(mode="json"),
+                "report": compiled.report.model_dump(mode="json"),
+                "source_generation_ids": [str(g) for g in compiled.source_generation_ids],
+            }, append=True)
+            assert PERSONA in compiled.system_prompt
+            return replace(compiled, context=(*compiled.context, supplied_source_context((original,))))
+
+        container.prompt_compiler.compile = with_source
+        session = (await container.sessions.create_session("default")).session_id
+        for turn in scenario["turns"]:
+            sample = f"{sid}:r{repeat}:t{turn['turn_id']}"
+            if running is False:
+                save("results.jsonl", {"sample_key": sample, "execution": "not_executed",
+                     "user_text": turn["user_text"], "reason": "previous_turn_not_completed"}, append=True)
+                continue
+            current = {"sample_key": sample, "source_key": source_key, "prior_replies": list(replies)}
+            started = time.monotonic()
+            accepted = await container.conversation.submit_text(
+                session, turn["user_text"], options=ConversationTurnOptions(
+                    output_modes=frozenset({"text"}), presentation_profile="detailed_answer", allow_tools=False))
+            current["generation_id"] = str(accepted.generation_id)
+            task = container.conversation._active[session].task
+            assert task is not None
+            await asyncio.wait_for(task, timeout=600)
+            record = await container.conversation_repository.generation_result(accepted.generation_id)
+            assert record is not None
+            complete = await container.database.fetchall(
+                "SELECT payload_json FROM events WHERE event_type='assistant.generation_completed' AND json_extract(envelope_json,'$.generation_id')=?",
+                (str(accepted.generation_id),))
+            payload = json.loads(str(complete[0]["payload_json"])) if complete else {}
+            cache = container.conversation._source_answer_coverage._records.get((session, accepted.generation_id))
+            row = {**current, "user_text": turn["user_text"], "state": record.state.value,
+                   "execution": "completed" if record.state is GenerationState.COMPLETED else "failed",
+                   "error_code": record.error_code, "reply_origin": payload.get("reply_origin"),
+                   "frame_version": payload.get("source_answer_frame_version"), "reply_text": payload.get("text"),
+                   "completed_gaps": [asdict(g) for g in cache.gaps] if cache else [],
+                   "elapsed_ms": round((time.monotonic() - started) * 1000)}
+            save("results.jsonl", row, append=True)
+            running = record.state is GenerationState.COMPLETED and row["reply_origin"] == "provider_frame_rendered"
+            if running:
+                replies.append(row["reply_text"])
+            print(json.dumps({"sample_key": sample, "state": row["state"], "reply_origin": row["reply_origin"]}), flush=True)
+    finally:
+        await container.stop()
+    return running
+
+
+async def main():
+    for scenario in FIXTURES:
+        for repeat in range(2):
+            await flow(scenario, repeat)
+
+
+httpx2.AsyncClient.stream = capture_http
+try:
+    asyncio.run(main())
+except BaseException as error:
+    save("exit.json", {"exit_code": 1, "error_type": type(error).__name__,
+                       "logical_requests": logical_count, "actual_http_attempts": http_count})
+    print(json.dumps({"error_type": type(error).__name__}), flush=True)
+    raise SystemExit(1) from None
+else:
+    save("exit.json", {"exit_code": 0, "logical_requests": logical_count, "actual_http_attempts": http_count})
+finally:
+    httpx2.AsyncClient.stream = original_http_stream

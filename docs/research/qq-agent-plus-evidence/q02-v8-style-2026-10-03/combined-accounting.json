@@ -1,0 +1,9 @@
+{
+  "prompt_tokens": 493273,
+  "completion_tokens": 15638,
+  "total_tokens": 588341,
+  "reasoning_tokens": 79430,
+  "reasoning_reported_calls": 182,
+  "provider_calls": 216,
+  "quality_approved": false
+}

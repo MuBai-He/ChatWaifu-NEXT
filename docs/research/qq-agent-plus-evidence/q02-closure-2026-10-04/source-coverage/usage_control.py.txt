@@ -1,0 +1,91 @@
+"""Two raw-SSE usage controls; never replace the completed quality batch."""
+
+import asyncio
+import hashlib
+import json
+import sys
+import time
+from dataclasses import asdict
+from pathlib import Path
+
+ROOT = Path("/tmp/cw2-q02-source-coverage-v37-eval")
+STAGE = Path("/tmp/cw2-q02-source-coverage-20261004")
+OUTPUT = STAGE / "usage-control"
+assert not OUTPUT.exists(), "Inspect existing control before starting another"
+OUTPUT.mkdir()
+sys.path[:0] = [str(ROOT / "services/runtime/src"), str(ROOT / "packages/protocol-python/src"),
+               str(ROOT / "packages/model-worker-sdk-python/src"), "/tmp/cw2-q02-eval-deps"]
+import httpx2
+from chatwaifu_runtime.providers.openai_compatible import _parse_usage
+
+KEY = json.loads(Path("/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json").read_text())["chat"]
+TARGETS = ["frozen_icao:r1:t4", "frozen_airchina:r1:t4"]
+ROWS = {r["sample_key"]: r for r in map(json.loads, (STAGE / "actual-provider-payloads.jsonl").read_text().splitlines())}
+REFERENCES = {r["sample_key"]: r["reference_input_tokens"]
+              for r in map(json.loads, (STAGE / "provider-rounds.jsonl").read_text().splitlines())}
+
+
+def save(name, value):
+    text = json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2)
+    assert KEY not in text
+    (OUTPUT / name).write_text(text + "\n")
+
+
+save("admission.json", {"http_limit": 2, "logical_limit": 2, "quality_replacement": False,
+                       "public_read_calls": 0, "model": "gemini-3.8-flash-high",
+                       "changed_wire_fields": ["stream_options.include_usage"], "targets": TARGETS})
+
+
+async def main():
+    outcomes = []
+    for index, sample in enumerate(TARGETS):
+        original = ROWS[sample]["payload"]
+        payload = {**original, "stream_options": {"include_usage": True}}
+        assert payload["model"] == "gemini-3.8-flash-high"
+        assert {k: v for k, v in payload.items() if k != "stream_options"} == original
+        save(f"payload-{index}.json", {"source_sample": sample,
+             "original_payload_sha256": ROWS[sample]["payload_sha256"], "payload": payload})
+        started = time.monotonic()
+        row = {"sample_key": sample, "reference_input_tokens": REFERENCES[sample],
+               "status": None, "error_type": None, "raw_events": [], "usage": None}
+        try:
+            async with httpx2.AsyncClient(timeout=180) as client:
+                async with client.stream("POST", "https://mubai.website:8318/v1/chat/completions",
+                                         headers={"Authorization": "Bearer " + KEY}, json=payload) as response:
+                    row["status"] = response.status_code
+                    response.raise_for_status()
+                    received = 0
+                    async for line in response.aiter_lines():
+                        received += len(line.encode())
+                        assert received <= 131072
+                        if not line.startswith("data:"):
+                            continue
+                        value = line[5:].strip()
+                        if value == "[DONE]":
+                            row["done_received"] = True
+                            continue
+                        event = json.loads(value)
+                        # Keep wire fields relevant to usage and visible response;
+                        # omit headers, hidden reasoning and other provider data.
+                        row["raw_events"].append({
+                            **{k: event[k] for k in ("id", "model", "usage") if k in event},
+                            "choices": [{
+                                **{k: choice[k] for k in ("index", "finish_reason") if k in choice},
+                                "delta": {k: choice.get("delta", {})[k] for k in ("content", "tool_calls")
+                                          if k in choice.get("delta", {})},
+                            } for choice in event.get("choices", [])],
+                        })
+                        if isinstance(event.get("usage"), dict):
+                            usage = _parse_usage(event["usage"])
+                            row["usage"] = asdict(usage) if usage is not None else None
+        except BaseException as error:
+            row["error_type"] = type(error).__name__
+        finally:
+            row["elapsed_ms"] = round((time.monotonic() - started) * 1000)
+            save(f"response-{index}.json", row)
+            outcomes.append({k: v for k, v in row.items() if k != "raw_events"})
+    save("exit.json", {"http_attempts": len(outcomes), "outcomes": outcomes,
+                       "quality_samples_replaced": 0})
+
+
+asyncio.run(main())

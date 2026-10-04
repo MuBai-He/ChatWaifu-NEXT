@@ -1,0 +1,25 @@
+{
+  "files": {
+    "candidate-one/accounting.json": "2233a3d9c2fb6107fa087a3380d7636c7c286945ae255859212dbe2e6b02c28e",
+    "candidate-one/actual-provider-payloads.jsonl": "0e10e1110669924a5ba5c74901c3c108e3dfab34a2c09c2c87533b1aecb0b4b4",
+    "candidate-one/fixtures.json": "884178814b08ab333e125f5a91b72d48a7ab169d87316abdd47ef54129b2f644",
+    "candidate-one/frozen-sources.json": "145c39183407d27bbf302461636e6b1f8f1886a4695f265f16c76f61fc84c01d",
+    "candidate-one/persona-wire-integrity.json": "61b92d3e3529b2e7d5d308e0fee7cd77c1687948043fa863eae59e0995f7ed02",
+    "candidate-one/persona.md": "204644ee525210c1cb253688d7db218a2a2bc3fe6e91bfb3f5d135e9c5e47959",
+    "candidate-one/plan.json": "df43d64696ccac289f196daa543303c7d12a7d2e498fa72994886a5d71c4116f",
+    "candidate-one/primary-review.json": "65fa5c6b408c739082af2f84495690eb6e74dc1b4226bae89c7e38b962b19814",
+    "candidate-one/prior-history-integrity.json": "0621d10aecb7fd91fa2c859258414acadf1c7f741e716937b89ba2707cd44f1a",
+    "candidate-one/results/results.jsonl": "eea97f4a4e61e6542237eba5edb1cb3d49f37befad5efc028fa0a8e189a97c71",
+    "frozen-quality/accounting.json": "48837da611d3c7909e1b1c4ef59cf36552f45e0a826c893fa57ff4ef06ecc4c7",
+    "frozen-quality/actual-provider-payloads.jsonl": "2f3d08f2ce919d466c8f846e8d0a24f68064c7d699b1c863457a5b426c795dcb",
+    "frozen-quality/fixtures.json": "884178814b08ab333e125f5a91b72d48a7ab169d87316abdd47ef54129b2f644",
+    "frozen-quality/frozen-sources.json": "145c39183407d27bbf302461636e6b1f8f1886a4695f265f16c76f61fc84c01d",
+    "frozen-quality/primary-review.json": "cc8f9706606886c5b98f1426700164bf7b5afd224e5961f422547a02995ebe1c",
+    "frozen-quality/prior-history-integrity.json": "40c22197f7fc03025ad808d0b20c698d13c3d0d1c268e9948cd54537b770db08",
+    "frozen-quality/results/results.jsonl": "6c16b2f52178998b87e1aacf7e71ffeee62677b451d2249c61166d2536e9fc4a",
+    "scope-blocks/live/results.jsonl": "df78f21f45d5b6e37642c6d80e3c6463bbb17279c13e37434c9525027304283d",
+    "scope-blocks/primary-review.json": "48a8780f0cbfe9dacec2c2518f4bd9f08dc3f7c1dcd5f7f3f41f22b18a6513cc",
+    "scope-blocks/renderer-effect.json": "e3d6b48f10fd3bac11d38eac54af27a6e595cd945df77aa07d9fac77e885e5da",
+    "scope-blocks/scope-review.json": "30ed5ae6c1723a06554696341d6d9051510c6d5ceedb898b2863734ae1898685"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "codes": {
+    "2": 0,
+    "3": 2,
+    "4": 0,
+    "5": 0
+  },
+  "same_snapshot": true,
+  "past_failures_retained": true,
+  "budget_failed_instant_message_not_repeated": true
+}

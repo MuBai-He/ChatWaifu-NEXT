@@ -1,0 +1,23 @@
+{
+  "plan.json": "9130bcf3499f86edbb377bb2c487693c84530203e2ff1e9a74af5bf7846ac0c7",
+  "fixtures.json": "3932ccd9a63bf71411e1bedeb2ec5868ecc5a41e5fe3419b8b48c43b899ef779",
+  "persona.md": "204644ee525210c1cb253688d7db218a2a2bc3fe6e91bfb3f5d135e9c5e47959",
+  "budget.json": "07f49ce5059f086a84fe576fae76ba06371c5508e0e1074072c535e3b39d805d",
+  "run_four_turn.py.txt": "96e58f257ed3a71b706d0ef0b490aad361aa4ec45b6c40cd796572dd8ef244e5",
+  "admission.json": "66cec7e5bf2d560d26eab5f4630578c16db3e739c9dc757d755aa6d3dccb0449",
+  "exit.json": "27a57a76628f90ed787053e8c1d3681fd4472ff1ca380c00d78e58418f1de7e7",
+  "source-tree-before.json": "a947656ad3a272be061ede4ffdc6084458e36f8f10162ad3022ce4d1098e42a7",
+  "source-tree-after.json": "a947656ad3a272be061ede4ffdc6084458e36f8f10162ad3022ce4d1098e42a7",
+  "flow-observations.jsonl": "e288db83b1136d7a2eead71ae60a28bc114d3cb03d56a2db69e4c5d5590587f1",
+  "guard-observations.jsonl": "fb1449e57ead2ee7835a9004c31233390460b5452c991a7623aaeb66ca669d8d",
+  "wire-budget-observations.jsonl": "34f91dc41e78bdc4b6348f1a7d61cdf8b4be24264704db81ea9bfc15da56b48e",
+  "source-http-observations.jsonl": "420ab42b0b96362be2c92f258689357d920ced37a1fb38ff945a7c1d0394fae6",
+  "actual-provider-payloads.jsonl": "1b8a4e5498878e43bc56fa2e863e225c0157aeaba16ef9420cad7b7fdd7f592e",
+  "http-outcomes.jsonl": "dd7747770481feb6de3c03fceff1e2b040e306842c8a755c676d69d1012c7b2f",
+  "raw-searxng-responses.jsonl": "2b28d55305b90bf005cf00be0b1fb43f3033a1c1903f2db3e7cba4224a868cbd",
+  "runtime-pilot/results.jsonl": "f15ad9df2d4221ed1938a38f5fd1c642caada2057bca0eb657dc1d8049306111",
+  "runtime-pilot/metadata.json": "2c7c097981885dc499f34905faffc2182ecc90bc6919192fb21dce67bfca7b8b",
+  "runtime-pilot/provider-rounds.jsonl": "3bf7c5f1c9edbb2f8fc64d395f723846a7b7131f291f73e107a6061cf3d8dc7f",
+  "console.log": "0f8c0e96a71e6288b5f62a02ab6fc8a5483c5ade3ab0b7be809de6f4b9861556",
+  "export-check.json": "a1d1524603dd34734a8f7810243aa61bc3a68202662bfad392eeaab27ebab20b"
+}

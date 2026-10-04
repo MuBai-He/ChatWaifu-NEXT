@@ -1,0 +1,11 @@
+[
+  {
+    "group": "single_text:low_mood:r1",
+    "turn": 2,
+    "reason": "C2出现“我都看在眼里的”，在仅有数次文本交互的熟悉阶段属于捏造共同经历且轻微越级；C1温和客观化归因，安抚得体。",
+    "statuses": [
+      "pass",
+      "fail"
+    ]
+  }
+]

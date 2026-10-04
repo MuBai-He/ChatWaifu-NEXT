@@ -1,0 +1,214 @@
+"""Read-only artifact checks; --write-report creates the initial audit report.
+
+This script never calls a model, Runtime, search service or reader. It checks
+provenance and counting, not natural-language answer quality.
+"""
+
+import argparse
+import hashlib
+import json
+from pathlib import Path
+
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def load(path):
+    return json.loads(path.read_text())
+
+
+def jsonl(path):
+    return [json.loads(line) for line in path.read_text().splitlines() if line]
+
+
+def canonical_digest(value):
+    return hashlib.sha256(
+        json.dumps(value, ensure_ascii=False, sort_keys=True).encode()
+    ).hexdigest()
+
+
+def visible_message_text(message):
+    content = message.get("content", "")
+    if isinstance(content, str):
+        return content
+    return "\n".join(part.get("text", "") for part in content)
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--write-report", action="store_true")
+args = parser.parse_args()
+phase = Path(__file__).resolve().parent
+repo = phase.parents[4]
+root = phase.parent
+sources = load(phase / "frozen-sources.json")
+for source in sources.values():
+    assert hashlib.sha256(source["text"].encode()).hexdigest() == source["text_sha256"]
+
+manifest = load(phase / "candidate-sha256.json")
+for rel, expected in manifest["files"].items():
+    assert digest(repo / rel) == expected, rel
+    assert digest(phase / "candidate-code" / (rel.replace("/", "__") + ".txt")) == expected, rel
+assert digest(phase / "run_coverage.py.txt") == manifest["run_script_sha256"]
+for row in load(phase / "historical-v36/manifest.json"):
+    assert digest(phase / "historical-v36" / row["snapshot"]) == row["sha256"]
+
+previous = load(phase / "prior-manifest.json")["files"]
+unchanged = 0
+for rel, expected in previous.items():
+    if rel == "README.md":
+        assert digest(phase / "prior-documents/README.md.txt") == expected
+    else:
+        assert digest(root / rel) == expected, rel
+        unchanged += 1
+for rel, expected in load(phase / "document-sha256.json")["files"].items():
+    assert digest(repo / rel) == expected, rel
+
+replies = jsonl(phase / "results.jsonl")
+payloads = jsonl(phase / "actual-provider-payloads.jsonl")
+rounds = jsonl(phase / "provider-rounds.jsonl")
+http = jsonl(phase / "http-outcomes.jsonl")
+assert len(replies) == len(payloads) == len(rounds) == len(http) == 16
+expected_keys = {
+    f"frozen_{source}:r{repeat}:t{turn}"
+    for source in ("icao", "airchina")
+    for repeat in range(2)
+    for turn in range(1, 5)
+}
+assert {row["sample_key"] for row in replies} == expected_keys
+reply_by_key = {row["sample_key"]: row for row in replies}
+for row in replies:
+    assert row["execution"] == row["state"] == "completed"
+    assert row["reply_origin"] == "provider_frame_rendered"
+    assert row["error_code"] is None
+for row in payloads:
+    payload = row["payload"]
+    assert row["payload_sha256"] == canonical_digest(payload)
+    assert payload["model"] == "gemini-3.8-flash-high"
+    assert not payload.get("stream_options", {}).get("include_usage")
+    texts = [visible_message_text(message) for message in payload["messages"]]
+    documents = []
+    for text in texts:
+        if text.startswith("[SOURCE ANSWER MATERIAL 1.0]\n"):
+            documents.extend(json.loads(text.split("\n", 1)[1])["documents"])
+    expected = sources[row["source_key"]]
+    assert len(documents) == 1 and documents[0]["text"] == expected["text"]
+    assert documents[0]["body_sha256"] == expected["body_sha256"]
+    assert all(any(reply == text for text in texts) for reply in row["prior_replies"])
+    source, repeat, turn = row["sample_key"].split(":")
+    prior = [reply_by_key[f"{source}:{repeat}:t{index}"]["reply_text"]
+             for index in range(1, int(turn[1:]))]
+    assert row["prior_replies"] == prior
+    assert payload["response_format"]["type"] == "json_schema"
+for row in rounds:
+    assert row["terminal"]["usage"] is None
+    assert row["terminal"]["finish_reason"] == "stop"
+    assert not row["error_type"]
+    report = row["input_budget_report"]
+    assert not report["omitted_history_indices"]
+    assert not report["omitted_tool_preamble_indices"]
+    assert row["reference_input_tokens"] <= report["estimated_token_limit"] == 21370
+assert all(row["status"] == 200 and row["error_type"] is None for row in http)
+accounting = load(phase / "accounting.json")
+assert accounting["unknown_usage_calls"] == 16
+assert accounting["reported_usage_calls"] == 0
+assert accounting["supplier_total_tokens"] is None
+
+flow = load(phase / "flow-integrity.json")
+gaps = [gap for row in flow["checks"] for gap in row["gap_checks"]]
+assert len(gaps) == 4
+assert all(gap["retained_completed_gap"] and gap["statement_present_in_published_reply"]
+           and gap["prior_declared_gap_on_wire"] for gap in gaps)
+
+review = load(phase / "primary-review-final.json")
+assert review["complete"] == 14 and review["partial"] == 2
+assert len(review["items"]) == 16
+assert review["original_review_sha256"] == digest(phase / "primary-review.json")
+assert not review["independent_or_blind_review"]
+for row in review["items"]:
+    original_reply = reply_by_key[row["sample_key"]]["reply_text"]
+    assert hashlib.sha256(original_reply.encode()).hexdigest() == row["reply_sha256"]
+decision = load(phase / "decision-final.json")
+assert not decision["q02_approval"] and not decision["production_adopted"]
+assert decision["quality_complete"] == 14 and decision["quality_partial"] == 2
+assert all(status == "not_run_for_this_candidate" for status in decision["later_gates"].values())
+
+controls = load(phase / "usage-control/accounting.json")
+assert controls["http_attempts"] == controls["reported_usage_calls"] == 2
+assert not controls["original_batch_usage_backfilled"]
+for index in range(2):
+    control = load(phase / f"usage-control/payload-{index}.json")
+    response = load(phase / f"usage-control/response-{index}.json")
+    original = next(row["payload"] for row in payloads
+                    if row["sample_key"] == control["source_sample"])
+    assert control["payload"]["stream_options"] == {"include_usage": True}
+    assert {key: value for key, value in control["payload"].items()
+            if key != "stream_options"} == original
+    assert response["status"] == 200 and response["done_received"]
+    assert response["error_type"] is None and response["usage"] is not None
+assert controls["supplier_prompt_tokens"] == 9156
+assert controls["supplier_completion_tokens"] == 649
+assert controls["supplier_total_tokens"] == 11556
+
+forbidden = {"reasoning_content", "thinking", "redacted_thinking", "analysis_content"}
+
+
+def check_keys(value):
+    if isinstance(value, dict):
+        assert not (set(value) & forbidden)
+        for item in value.values():
+            check_keys(item)
+    elif isinstance(value, list):
+        for item in value:
+            check_keys(item)
+
+
+for file in phase.rglob("*"):
+    if file.suffix == ".json":
+        check_keys(load(file))
+    elif file.suffix == ".jsonl":
+        check_keys(jsonl(file))
+
+server = load(phase / "final-server-integrity-privacy.json")
+assert all(server["frozen_source_checks"].values())
+assert all(server["historical_source_checks"].values())
+assert not server["credential_leaks"] and not server["pending_q02_python_processes"]
+report = {
+    "audit_is_quality_approval": False,
+    "new_model_calls": 0,
+    "frozen_code_files": len(manifest["files"]),
+    "historical_code_snapshots": 8,
+    "previous_artifact_files": len(previous),
+    "previous_artifacts_unchanged_in_place": unchanged,
+    "previous_root_readme_preserved_in_snapshot": True,
+    "complete_conversation_flows": 4,
+    "completed_provider_replies": 16,
+    "actual_quality_http_attempts": 16,
+    "quality_usage_unknown_due_to_harness": 16,
+    "separate_usage_control_http_attempts": 2,
+    "separate_usage_control_known_calls": 2,
+    "retained_completed_gap_controls": 4,
+    "final_review_complete": 14,
+    "final_review_partial": 2,
+    "review_adjudicated_rows": 1,
+    "raw_replies_replaced": 0,
+    "candidate_rejected": True,
+    "production_adopted": False,
+    "no_pending_q02_python_processes_on_server": True,
+    "structured_hidden_reasoning_keys_found": 0,
+    "server_original_artifact_credential_scan_files": server["artifact_files_scanned"],
+    "server_credential_leaks": 0,
+    "candidate_code_unchanged_after_quality_batch": True,
+    "audit_setup_correction": "Provided material is JSON-encoded inside the message. Decode the declared block before exact-text comparison; naive raw-string lookup was an audit-script error. No source or payload changed.",
+}
+output = phase / "final-artifact-audit.json"
+if args.write_report:
+    assert not output.exists(), "Preserve an existing report"
+    output.write_text(json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2) + "\n")
+else:
+    assert load(output) == report
+    final_manifest = load(phase / "manifest.json")
+    files = {str(file.relative_to(phase)): digest(file) for file in phase.rglob("*")
+             if file.is_file() and file != phase / "manifest.json"}
+    assert files == final_manifest["files"]
+print(json.dumps(report, ensure_ascii=False, sort_keys=True))

@@ -1,0 +1,277 @@
+{
+  "v29-builtin-recovery": {
+    "logical_records": 2,
+    "provider_answer_records": 1,
+    "runtime_fallback_records": 1,
+    "incomplete_records": [
+      {
+        "sample_key": "icao_provided_source_recovery:r0:t3:baseline",
+        "reason": "SourceDecisionRejected"
+      }
+    ],
+    "unexecuted_expected_turns": [
+      4
+    ],
+    "actual_http": 9,
+    "all_attempts_accounted": true,
+    "provider_usage": {
+      "prompt_tokens": {
+        "reported": 9,
+        "attempts": 9,
+        "known_subtotal": 71402,
+        "complete_total": 71402
+      },
+      "completion_tokens": {
+        "reported": 9,
+        "attempts": 9,
+        "known_subtotal": 2835,
+        "complete_total": 2835
+      },
+      "total_tokens": {
+        "reported": 9,
+        "attempts": 9,
+        "known_subtotal": 80695,
+        "complete_total": 80695
+      },
+      "reasoning_tokens": {
+        "reported": 8,
+        "attempts": 9,
+        "known_subtotal": 6458,
+        "complete_total": null
+      }
+    },
+    "reference_error_percent_min_max": [
+      0.2118,
+      10.4404
+    ],
+    "identities": {
+      "gemini-3.8-flash": 5,
+      "gemini-3.8-flash-control": 4
+    },
+    "identity_unknown_attempts": 0,
+    "logical_record_latency_p50_ms": 21159.5,
+    "logical_record_latency_p95_ms": 34363.85,
+    "wire_checks": [
+      {
+        "http_attempt": 1,
+        "sample_key": "icao_provided_source_recovery:r0:t1:baseline",
+        "payload_sha256": "bbb48ddd8e141cd1f3a105bae4a2cfb7e408ba8cff69594846bcde7337878ba6",
+        "reference_tokens": 2366,
+        "omitted_history_indices": [],
+        "error_type": null
+      },
+      {
+        "http_attempt": 2,
+        "sample_key": "icao_provided_source_recovery:r0:t1:baseline",
+        "payload_sha256": "b38edebc5ccc4c5d9d6408c3d7caa125cfded9cf344450cc6c32a143bfdf7657",
+        "reference_tokens": 7411,
+        "omitted_history_indices": [],
+        "error_type": null
+      },
+      {
+        "http_attempt": 3,
+        "sample_key": "icao_provided_source_recovery:r0:t1:baseline",
+        "payload_sha256": "c611596ba7bca53728179e84b4e101655887225494827e8e05b2451179416319",
+        "reference_tokens": 9726,
+        "omitted_history_indices": [],
+        "error_type": null
+      },
+      {
+        "http_attempt": 4,
+        "sample_key": "icao_provided_source_recovery:r0:t1:baseline",
+        "payload_sha256": "c23a97d7f3f729193b7f245c13fe27803cee4aaf8d509d32895471887f77d40b",
+        "reference_tokens": 9947,
+        "omitted_history_indices": [],
+        "error_type": null
+      },
+      {
+        "http_attempt": 5,
+        "sample_key": "icao_provided_source_recovery:r0:t1:baseline",
+        "payload_sha256": "c23a97d7f3f729193b7f245c13fe27803cee4aaf8d509d32895471887f77d40b",
+        "reference_tokens": 9947,
+        "omitted_history_indices": [],
+        "error_type": null
+      },
+      {
+        "http_attempt": 6,
+        "sample_key": "icao_provided_source_recovery:r0:t2:baseline",
+        "payload_sha256": "b4713e570f169832017682e9db807029a4128826e6b656ec57bf405916b97af1",
+        "reference_tokens": 7172,
+        "omitted_history_indices": [],
+        "error_type": null
+      },
+      {
+        "http_attempt": 7,
+        "sample_key": "icao_provided_source_recovery:r0:t3:baseline",
+        "payload_sha256": "5ece306cfc748e1d1f6a6a3c5c9eb0bb42685d86b79530838bf6f0defde0e15d",
+        "reference_tokens": 6897,
+        "omitted_history_indices": [],
+        "error_type": null
+      },
+      {
+        "http_attempt": 8,
+        "sample_key": "icao_provided_source_recovery:r0:t3:baseline",
+        "payload_sha256": "af664158742a210b372e8fad784bae3b48496044223d0a9e9199ea3385846aea",
+        "reference_tokens": 10845,
+        "omitted_history_indices": [],
+        "error_type": null
+      },
+      {
+        "http_attempt": 9,
+        "sample_key": "icao_provided_source_recovery:r0:t3:baseline",
+        "payload_sha256": "bd2731d9343d960478791dd6e1d07e177a48815e12052de92d830b244b3a1fb5",
+        "reference_tokens": 11122,
+        "omitted_history_indices": [],
+        "error_type": null
+      }
+    ],
+    "reader_recovery_confirmed": true,
+    "two_read_excerpt_union_covers_same_extracted_document": true,
+    "no_claim_of_all_site_or_link_target_completeness": true,
+    "q02_approval": false
+  },
+  "v30-scope-receipts": {
+    "logical_records": 2,
+    "provider_answer_records": 2,
+    "runtime_fallback_records": 0,
+    "incomplete_records": [
+      {
+        "sample_key": "icao_provided_source_recovery:r0:t3:baseline",
+        "reason": "RuntimeError"
+      }
+    ],
+    "unexecuted_expected_turns": [
+      4
+    ],
+    "actual_http": 8,
+    "all_attempts_accounted": true,
+    "provider_usage": {
+      "prompt_tokens": {
+        "reported": 7,
+        "attempts": 8,
+        "known_subtotal": 51311,
+        "complete_total": null
+      },
+      "completion_tokens": {
+        "reported": 7,
+        "attempts": 8,
+        "known_subtotal": 1499,
+        "complete_total": null
+      },
+      "total_tokens": {
+        "reported": 7,
+        "attempts": 8,
+        "known_subtotal": 55432,
+        "complete_total": null
+      },
+      "reasoning_tokens": {
+        "reported": 5,
+        "attempts": 8,
+        "known_subtotal": 2622,
+        "complete_total": null
+      }
+    },
+    "reference_error_percent_min_max": [
+      0.2118,
+      14.7416
+    ],
+    "identities": {
+      "gemini-3.8-flash-control": 4,
+      "gemini-3.8-flash": 3
+    },
+    "identity_unknown_attempts": 1,
+    "logical_record_latency_p50_ms": 11134.5,
+    "logical_record_latency_p95_ms": 18035.25,
+    "wire_checks": [
+      {
+        "http_attempt": 1,
+        "sample_key": "icao_provided_source_recovery:r0:t1:baseline",
+        "payload_sha256": "bbb48ddd8e141cd1f3a105bae4a2cfb7e408ba8cff69594846bcde7337878ba6",
+        "reference_tokens": 2366,
+        "omitted_history_indices": [],
+        "error_type": null
+      },
+      {
+        "http_attempt": 2,
+        "sample_key": "icao_provided_source_recovery:r0:t1:baseline",
+        "payload_sha256": "8675e948ef84d8d79ad5bb6fc49fb736a9456d60ec3e112da9aec1db0d063e08",
+        "reference_tokens": 7411,
+        "omitted_history_indices": [],
+        "error_type": null
+      },
+      {
+        "http_attempt": 3,
+        "sample_key": "icao_provided_source_recovery:r0:t1:baseline",
+        "payload_sha256": "591b25c5c2f71ac2ec2e916256118ef921fbe56139ed43dfd0a11c6489853bd7",
+        "reference_tokens": 9741,
+        "omitted_history_indices": [],
+        "error_type": null
+      },
+      {
+        "http_attempt": 4,
+        "sample_key": "icao_provided_source_recovery:r0:t1:baseline",
+        "payload_sha256": "b0dd4060330bbf27287274c2239da949a92a067db101093609852ab0402026d4",
+        "reference_tokens": 9060,
+        "omitted_history_indices": [],
+        "error_type": null
+      },
+      {
+        "http_attempt": 5,
+        "sample_key": "icao_provided_source_recovery:r0:t2:baseline",
+        "payload_sha256": "3e7b844ae084f133e1384c50ba249535e1a7add46f2bd1cf05d95316eac8cd37",
+        "reference_tokens": 7785,
+        "omitted_history_indices": [],
+        "error_type": null
+      },
+      {
+        "http_attempt": 6,
+        "sample_key": "icao_provided_source_recovery:r0:t3:baseline",
+        "payload_sha256": "fd16dd22d8d18e997924e72e1586206741036852a815af972972c760fbb77f41",
+        "reference_tokens": 7478,
+        "omitted_history_indices": [],
+        "error_type": null
+      },
+      {
+        "http_attempt": 7,
+        "sample_key": "icao_provided_source_recovery:r0:t3:baseline",
+        "payload_sha256": "8b240ad315d70d815bd9ba302d43690c2dcd20357115f1158e4e79bace7621f2",
+        "reference_tokens": 11628,
+        "omitted_history_indices": [],
+        "error_type": null
+      },
+      {
+        "http_attempt": 8,
+        "sample_key": "icao_provided_source_recovery:r0:t3:baseline",
+        "payload_sha256": "5c619b17ed139353bc7167733dc8d1b5d9f0a9d368332e6ccb3eea486269e325",
+        "reference_tokens": 12786,
+        "omitted_history_indices": [],
+        "error_type": "RuntimeError"
+      }
+    ],
+    "reader_recovery_confirmed": true,
+    "two_read_excerpt_union_covers_same_extracted_document": true,
+    "no_claim_of_all_site_or_link_target_completeness": true,
+    "q02_approval": false
+  },
+  "exact_failed_wire_replay": {
+    "actual_http": 1,
+    "same_payload_verified": true,
+    "no_tools_executed": true,
+    "native_wire_validation_error": null,
+    "parse_error": null,
+    "usage": {
+      "prompt_tokens": 11696,
+      "completion_tokens": 253,
+      "total_tokens": 11949,
+      "reasoning_tokens": null
+    },
+    "latency_ms": 5129,
+    "original_failure_cause_unproven": true,
+    "not_recovery_of_original_scenario": true,
+    "q02_approval": false
+  },
+  "combined_http_attempts_including_v28_and_supplement": 34,
+  "combined_completed_provider_answers": 15,
+  "combined_runtime_fallback_records": 1,
+  "q02_approval": false
+}

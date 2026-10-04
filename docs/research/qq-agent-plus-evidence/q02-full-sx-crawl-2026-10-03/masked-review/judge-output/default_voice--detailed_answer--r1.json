@@ -1,0 +1,63 @@
+{
+  "review_group_id": "default_voice:detailed_answer:r1",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "84fea624b82eea47552879af12f80f5619b01d3c42794776234a50944f2781fe",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 572,
+    "total_tokens": 7602,
+    "prompt_tokens": 7030
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"default_voice:detailed_answer:r1\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均严格按要求给出了三个分类、每类三条具体实用建议，结构完整，语气体贴，符合角色设定与任务要求。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"partial\",\n      \"candidate_2_compliance\": \"partial\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两候选均诚实说明未取得覆盖关键条件的完整原文而未编造，表现出良好的真实性，但任务完成度均未满足三条明确规则的要求。\",\n      \"factual_checks_needed\": [\"中国民用航空局关于旅客携带锂电池/充电宝乘机的规定（如严禁托运、能量划分标准等）\"]\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均给出了两个详细的室内备选活动方案，且完整包含活动内容、预计用时与注意事项三要素，语气自然得体。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者都将前文的准备要点与应急建议整合为标准的复选框 Checklist 格式，分类清晰，满足全部指令要求。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "default_voice:detailed_answer:r1",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均严格按要求给出了三个分类、每类三条具体实用建议，结构完整，语气体贴，符合角色设定与任务要求。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "partial",
+        "candidate_2_compliance": "partial",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两候选均诚实说明未取得覆盖关键条件的完整原文而未编造，表现出良好的真实性，但任务完成度均未满足三条明确规则的要求。",
+        "factual_checks_needed": [
+          "中国民用航空局关于旅客携带锂电池/充电宝乘机的规定（如严禁托运、能量划分标准等）"
+        ]
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均给出了两个详细的室内备选活动方案，且完整包含活动内容、预计用时与注意事项三要素，语气自然得体。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者都将前文的准备要点与应急建议整合为标准的复选框 Checklist 格式，分类清晰，满足全部指令要求。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 3830
+}

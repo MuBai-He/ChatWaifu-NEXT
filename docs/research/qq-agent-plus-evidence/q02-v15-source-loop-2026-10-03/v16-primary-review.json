@@ -1,0 +1,48 @@
+{
+  "reviewer": "primary_codex",
+  "masked": false,
+  "quality_approved": false,
+  "scope": "all eight completed replies and actual retained source excerpts",
+  "rows": [
+    {
+      "sample_key": "topic_switch:r0:t1:candidate",
+      "grade": "partial",
+      "reason": "实际读取论文 timing 段和 5.2 随机选举段，150–300ms 与 10–500ms 有正文依据；同 URL 不同 focus 多次成功。仍将心跳间隔说成固定且非动态计算，工程实现与算法要求的范围需更审慎。"
+    },
+    {
+      "sample_key": "topic_switch:r0:t2:candidate",
+      "grade": "partial",
+      "reason": "及时切换食物话题；有不必要的开场感叹及追问。"
+    },
+    {
+      "sample_key": "topic_switch:r0:t3:candidate",
+      "grade": "pass",
+      "reason": "回应两勺糖的偏好，没有继续技术话题。"
+    },
+    {
+      "sample_key": "topic_switch:r0:t4:candidate",
+      "grade": "pass",
+      "reason": "完成角色口味偏好；本单回合不证明其他硬边界。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t1:candidate",
+      "grade": "partial",
+      "reason": "三类各三项满足；加入 10000mAh 提示容易被读成通用安检判断，实际未核验。末尾额外建议/祝愿仍存在。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "grade": "fail",
+      "reason": "原始民航短公告加 2025 二手转载，不足以说明 2026 现行全部规则；未标明后续更新缺口，数量仍仅附 100–160Wh 档。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t3:candidate",
+      "grade": "pass",
+      "reason": "两套室内活动、用时和注意事项齐全；未再出现无依据的统一入场截止时间。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t4:candidate",
+      "grade": "fail",
+      "reason": "两套独立方案、用时、准备数量和注意事项得到保留，没有虚构截止时间；但继承前轮未核实现行规则。清单内容保留改善不等于整条质量通过。"
+    }
+  ]
+}

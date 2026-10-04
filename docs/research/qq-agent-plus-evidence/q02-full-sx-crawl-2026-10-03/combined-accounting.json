@@ -1,0 +1,12 @@
+{
+  "logical_replies": 864,
+  "provider_requests": 1016,
+  "prompt_tokens": 3152701,
+  "completion_tokens": 154528,
+  "total_tokens": 3755917,
+  "reasoning_tokens_known_subtotal": 448688,
+  "reasoning_reported_calls": 922,
+  "all_wire_requests_matched": true,
+  "all_paired_inputs_match": true,
+  "quality_approved": false
+}

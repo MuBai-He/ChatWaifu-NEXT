@@ -1,0 +1,488 @@
+[
+  {
+    "profile": "instant_message",
+    "sample_key": "greeting:r0:t4:candidate",
+    "compliance": "partial",
+    "reason": "不再追加问题，但仍附放松或享受夜晚等建议式结尾。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "instant_message",
+    "sample_key": "teasing:r0:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "instant_message",
+    "sample_key": "stop_joking:r0:t4:candidate",
+    "compliance": "partial",
+    "reason": "祝愿合适，但用户已结束准备讨论后仍追加早点休息或别熬夜。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "instant_message",
+    "sample_key": "low_mood:r0:t3:candidate",
+    "compliance": "comply",
+    "reason": "尊重暂时独处，没有盘问或强行恢复讨论。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "instant_message",
+    "sample_key": "low_mood:r0:t4:candidate",
+    "compliance": "partial",
+    "reason": "确认平复后仍追加休息安排；比原来的成套生活指导短，但不是完全自然收口。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "instant_message",
+    "sample_key": "goodbye:r0:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "instant_message",
+    "sample_key": "greeting:r1:t4:candidate",
+    "compliance": "partial",
+    "reason": "不再追加问题，但仍附放松或享受夜晚等建议式结尾。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "instant_message",
+    "sample_key": "teasing:r1:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "instant_message",
+    "sample_key": "stop_joking:r1:t4:candidate",
+    "compliance": "partial",
+    "reason": "祝愿合适，但用户已结束准备讨论后仍追加早点休息或别熬夜。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "instant_message",
+    "sample_key": "low_mood:r1:t3:candidate",
+    "compliance": "partial",
+    "reason": "明确留出空间，但仍有吃点东西的建议或我就在旁边的物理在场歧义。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "instant_message",
+    "sample_key": "low_mood:r1:t4:candidate",
+    "compliance": "partial",
+    "reason": "确认平复后仍追加休息安排；比原来的成套生活指导短，但不是完全自然收口。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "instant_message",
+    "sample_key": "goodbye:r1:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "instant_message",
+    "sample_key": "greeting:r2:t4:candidate",
+    "compliance": "partial",
+    "reason": "不再追加问题，但仍附放松或享受夜晚等建议式结尾。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "instant_message",
+    "sample_key": "teasing:r2:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "instant_message",
+    "sample_key": "stop_joking:r2:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "instant_message",
+    "sample_key": "low_mood:r2:t3:candidate",
+    "compliance": "comply",
+    "reason": "尊重暂时独处，没有盘问或强行恢复讨论。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "instant_message",
+    "sample_key": "low_mood:r2:t4:candidate",
+    "compliance": "partial",
+    "reason": "确认平复后仍追加休息安排；比原来的成套生活指导短，但不是完全自然收口。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "instant_message",
+    "sample_key": "goodbye:r2:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "single_text",
+    "sample_key": "greeting:r0:t4:candidate",
+    "compliance": "partial",
+    "reason": "不再追加问题，但仍附放松或享受夜晚等建议式结尾。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "single_text",
+    "sample_key": "teasing:r0:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "single_text",
+    "sample_key": "stop_joking:r0:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "single_text",
+    "sample_key": "low_mood:r0:t3:candidate",
+    "compliance": "partial",
+    "reason": "明确留出空间，但仍有吃点东西的建议或我就在旁边的物理在场歧义。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "single_text",
+    "sample_key": "low_mood:r0:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "single_text",
+    "sample_key": "goodbye:r0:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "single_text",
+    "sample_key": "greeting:r1:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "single_text",
+    "sample_key": "teasing:r1:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "single_text",
+    "sample_key": "stop_joking:r1:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "single_text",
+    "sample_key": "low_mood:r1:t3:candidate",
+    "compliance": "comply",
+    "reason": "尊重暂时独处，没有盘问或强行恢复讨论。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "single_text",
+    "sample_key": "low_mood:r1:t4:candidate",
+    "compliance": "partial",
+    "reason": "确认平复后仍追加休息安排；比原来的成套生活指导短，但不是完全自然收口。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "single_text",
+    "sample_key": "goodbye:r1:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "single_text",
+    "sample_key": "greeting:r2:t4:candidate",
+    "compliance": "partial",
+    "reason": "不再追加问题，但仍附放松或享受夜晚等建议式结尾。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "single_text",
+    "sample_key": "teasing:r2:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "single_text",
+    "sample_key": "stop_joking:r2:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "single_text",
+    "sample_key": "low_mood:r2:t3:candidate",
+    "compliance": "partial",
+    "reason": "明确留出空间，但仍有吃点东西的建议或我就在旁边的物理在场歧义。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "single_text",
+    "sample_key": "low_mood:r2:t4:candidate",
+    "compliance": "partial",
+    "reason": "确认平复后仍追加休息安排；比原来的成套生活指导短，但不是完全自然收口。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "single_text",
+    "sample_key": "goodbye:r2:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "default_voice",
+    "sample_key": "greeting:r0:t4:candidate",
+    "compliance": "partial",
+    "reason": "不再追加问题，但仍附放松或享受夜晚等建议式结尾。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "default_voice",
+    "sample_key": "teasing:r0:t4:candidate",
+    "compliance": "partial",
+    "reason": "接纳夸奖后又提出正常聊天要求/反问，收束仍有多余部分。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "default_voice",
+    "sample_key": "stop_joking:r0:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "default_voice",
+    "sample_key": "low_mood:r0:t3:candidate",
+    "compliance": "comply",
+    "reason": "尊重暂时独处，没有盘问或强行恢复讨论。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "default_voice",
+    "sample_key": "low_mood:r0:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "default_voice",
+    "sample_key": "goodbye:r0:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "default_voice",
+    "sample_key": "greeting:r1:t4:candidate",
+    "compliance": "partial",
+    "reason": "不再追加问题，但仍附放松或享受夜晚等建议式结尾。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "default_voice",
+    "sample_key": "teasing:r1:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "default_voice",
+    "sample_key": "stop_joking:r1:t4:candidate",
+    "compliance": "partial",
+    "reason": "祝愿合适，但用户已结束准备讨论后仍追加早点休息或别熬夜。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "default_voice",
+    "sample_key": "low_mood:r1:t3:candidate",
+    "compliance": "comply",
+    "reason": "尊重暂时独处，没有盘问或强行恢复讨论。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "default_voice",
+    "sample_key": "low_mood:r1:t4:candidate",
+    "compliance": "partial",
+    "reason": "确认平复后仍追加休息安排；比原来的成套生活指导短，但不是完全自然收口。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "default_voice",
+    "sample_key": "goodbye:r1:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "default_voice",
+    "sample_key": "greeting:r2:t4:candidate",
+    "compliance": "partial",
+    "reason": "不再追加问题，但仍附放松或享受夜晚等建议式结尾。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "default_voice",
+    "sample_key": "teasing:r2:t4:candidate",
+    "compliance": "partial",
+    "reason": "接纳夸奖后又提出正常聊天要求/反问，收束仍有多余部分。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "default_voice",
+    "sample_key": "stop_joking:r2:t4:candidate",
+    "compliance": "partial",
+    "reason": "祝愿合适，但用户已结束准备讨论后仍追加早点休息或别熬夜。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "default_voice",
+    "sample_key": "low_mood:r2:t3:candidate",
+    "compliance": "comply",
+    "reason": "尊重暂时独处，没有盘问或强行恢复讨论。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "default_voice",
+    "sample_key": "low_mood:r2:t4:candidate",
+    "compliance": "partial",
+    "reason": "确认平复后仍追加休息安排；比原来的成套生活指导短，但不是完全自然收口。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  },
+  {
+    "profile": "default_voice",
+    "sample_key": "goodbye:r2:t4:candidate",
+    "compliance": "comply",
+    "reason": "温和简短回应，没有再追问或开新话题。",
+    "reviewer": "primary direct unmasked",
+    "hard_boundary": "no definite hard violation observed in this narrow slice",
+    "quality_approved": false
+  }
+]

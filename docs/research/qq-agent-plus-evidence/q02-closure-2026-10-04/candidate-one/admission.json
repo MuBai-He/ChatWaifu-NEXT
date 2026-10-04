@@ -1,0 +1,1 @@
+{"model": "gemini-3.8-flash-high", "logical_limit": 16, "http_limit": 20, "source_calls": 0, "candidate_persona": "closure-c1", "default_prompt_changed": false, "production_changed": false, "q02_approval": false, "started_at_utc": "2026-10-03T20:49:39.802933+00:00"}

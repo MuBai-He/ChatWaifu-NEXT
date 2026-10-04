@@ -1,0 +1,142 @@
+{
+  "reviewer": "Implementing primary Codex agent; complete published and withheld text against actual sent excerpts, not blind or independent model scoring",
+  "keyword_or_self_report_approval": false,
+  "entries": [
+    {
+      "sample_key": "autonomous_sources:r0:t1:closure_c1",
+      "cohort": "native-four-turn",
+      "execution": "provider",
+      "grade": "complete",
+      "primary_note": "实际两段论文摘录支持150–300为示例、时序不等式及依赖环境的10–500范围；没有把固定示例作为规范。只评取得的选段，不冒充整篇已读。",
+      "issues": [],
+      "published_reply_sha256": "ab8d809ac5a91e9d7fc536138bd7e5fe902a89639933fdf759f78735c37d282d"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t2:closure_c1",
+      "cohort": "native-four-turn",
+      "execution": "provider",
+      "grade": "complete",
+      "primary_note": "限定为刚才已取得片段未规定Follower合法心跳后必须重新抽取随机超时，区分Candidate重启随机超时。没有由未读全文推出协议全文不规定；末句由根据现有材料限定。",
+      "issues": [],
+      "published_reply_sha256": "fbc135b2f51e5429080b4f9e97a4e7688e8d270df691192ea6e2efede6424a19"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t3:closure_c1",
+      "cohort": "native-four-turn",
+      "execution": "runtime_fallback",
+      "grade": "not_graded",
+      "primary_note": "本轮读取资料后核对输入21683超过21370，实际发布Runtime预算回退，7次HTTP中最后一次仅为未公开草稿。不能当作模型完成答复或以草稿替代发布评分。",
+      "issues": [
+        {
+          "category": "runtime_configured_input_allowance",
+          "evidence": "server/guard-observations.jsonl",
+          "fitted_reference": 21683,
+          "limit": 21370,
+          "unsent_review_native_usage": null,
+          "incoming_guard_wire_reference": 23535,
+          "reported_original_high_water_reference": 24001
+        }
+      ],
+      "published_reply_sha256": "73881751cdd8a5d277ce975ff33d418193a991b9559d992c10c047e7edd748a1"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t4:closure_c1",
+      "cohort": "native-four-turn",
+      "execution": "provider",
+      "grade": "partial",
+      "primary_note": "三条清单保留已取得实质条件，华东局7月30日与新京报6月26日有可见正文依据。但指南页面没有可见发布日期，答复把URL日期写成页面标注。自己的前轮发布为Runtime回退，不能由这条清单宣称完整模型T3→T4保真。",
+      "issues": [
+        {
+          "category": "unsupported_source_date",
+          "claim": "航旅指南页面标注2015-12-14",
+          "evidence": "三个充电宝已读摘录全部送入两阶段；指南6000字符摘录无可见发布日期，URL不是正文日期。",
+          "scope": "依据不足，不宣称该日期在现实中确定错误。"
+        }
+      ],
+      "published_reply_sha256": "3155cd064ccf811639b036877be4fc970ef2c26ade24a72eb9c03fa6f467338d"
+    },
+    {
+      "sample_key": "frozen_guard:T3_review",
+      "cohort": "frozen-guard-control",
+      "execution": "provider",
+      "grade": "partial",
+      "primary_note": "原先未发送的同一wire在22341额度发送成功；三份已取得正文完整在输入，Wh/数量/个人自用/托运/机上开关限定及3C/召回保留。核对仍保留无正文依据的2014年8月、公告第2号和长期执行，并将地区新闻发布日期描述为印发通报；当前政策未全面更新核对，缺口只限原件、国际与召回。",
+      "issues": [
+        {
+          "category": "unsupported_precise_bibliography",
+          "claim": "2014年8月、民航局公告〔2014〕第2号、航旅指南长期执行",
+          "evidence": "指南摘录只有公告标题，无2014年日期或文号；另两篇也不提供。未读取2014公告原件。",
+          "scope": "未核实精确断言，非依据外部知识认定法律事实为假。"
+        },
+        {
+          "category": "unsupported_publication_action",
+          "claim": "华东局于2025年7月30日印发工作落实通报",
+          "evidence": "实际正文为7月30日地区新闻，记述6月26日部署会；没有印发动作或通报文号。"
+        },
+        {
+          "category": "current_scope_incomplete",
+          "claim": "核对到的现行规定",
+          "evidence": "实际仅旧指南、2025地区报道及媒体；没有全面核实截至本次as_of的境内后续规则变化。所列召回/国际缺口不代替一般后续更新状态。"
+        }
+      ],
+      "published_reply_sha256": "5dd8b114f9edd040a731fbb0225805bcda0ef666a35e0bccb0947756045fe855"
+    },
+    {
+      "sample_key": "frozen_guard:T4",
+      "cohort": "frozen-guard-control",
+      "execution": "provider",
+      "grade": "partial",
+      "primary_note": "自己的T3核对答复及三份充电宝摘录完整进入草稿与核对，T3三个明确缺口全部保留，并补Wh更新未知。但仍把指南URL日期称为发布时间，沿用无原文依据的2014年公告日期。外观须完整与加强查验合看有条件保留，不将其定为确定法规违反或明确遗漏。",
+      "issues": [
+        {
+          "category": "unsupported_source_date",
+          "claim": "航旅指南发布时间2015-12-14、依据2014年8月公告",
+          "evidence": "直接已读正文均无指南发布日期、2014年公告日期或文号。助手上一轮文字是普通不可信历史，不能成为已核实来源。",
+          "scope": "日期依据不足；不强迫其他有明确日期的资料使用固定字样。"
+        }
+      ],
+      "published_reply_sha256": "612af86fc931352259efc58ece269e65de4756f9979bbcf0801ddbb4371947cc"
+    }
+  ],
+  "cohort_counts": {
+    "native-four-turn": {
+      "model_complete": 2,
+      "model_partial": 1,
+      "runtime_fallback_not_graded": 1
+    },
+    "frozen-guard-control": {
+      "model_complete": 0,
+      "model_partial": 2
+    }
+  },
+  "withheld_draft_review": {
+    "sample_key": "autonomous_sources:r0:t3:closure_c1",
+    "text_sha256": "ebe07b3cd235f388dd05158bd5d552e0e062e64668f7811c00a93aa2c2a9dd1b",
+    "published": false,
+    "notes": [
+      "无资料支持的2014年月/公告第2号与通报印发动作，草稿不得代替预算回退当作已完成答复。",
+      "实质条件主要保留，USB标称参数补充在核对中删除，不作为本组主要确定失败。"
+    ]
+  },
+  "cross_turn_scope_review": {
+    "controlled_T3_to_T4_full_history_sent": true,
+    "three_actual_prior_gaps_retained": [
+      "2025全国通知原件未取得",
+      "国际/地区适用未知",
+      "动态召回目录未穷尽"
+    ],
+    "does_not_overrule_old_complete_input_scope_loss": true
+  },
+  "conditional_wording_reassessment": {
+    "first_commentary": "外观破损的禁止条件弱化成查验",
+    "final_full_sentence_assessment": "须完整的前置条件仍在，与加强查验合看不足以判定确定条件遗漏；登记表达歧义，不以此项决定部分符合。",
+    "is_definite_regulatory_violation": false
+  },
+  "conclusion": "Final v44 detailed-answer operating controls remain unapproved. Higher allowance admits the same request, but precise unsupported source assertions remain. No new prompt rules, standard reduction, full role/A-B approval or production change.",
+  "budget_metadata_reassessment": {
+    "incoming_guard_wire_reference": 23535,
+    "reported_original_high_water_reference": 24001,
+    "fitted_unsent_reference": 21683,
+    "note": "最大原始估算沿用更早阶段报告；不将高水位误称为本次原始wire计数。以上不改变模型/回退分类或全文等级。"
+  }
+}

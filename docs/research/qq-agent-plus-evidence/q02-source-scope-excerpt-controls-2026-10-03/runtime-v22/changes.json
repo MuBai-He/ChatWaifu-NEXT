@@ -1,0 +1,10 @@
+{
+  "parent_snapshot": "/tmp/cw2-q02-source-decision-v21-eval",
+  "snapshot": "/tmp/cw2-q02-source-decision-v22-eval",
+  "sha256": {
+    "tools/source_decision_evaluation.py": "6e006b62e764120f9f6695cdec5acf4672490a7c6a86ebb12e595a78d575f1eb",
+    "tools/evaluate_character_scenarios.py": "7c3848a4d38e32257176031ab45ff294e8dc6ea81f12cc7b5240d04a4f7c9018",
+    "tools/tests/test_source_decision_evaluation.py": "6b0c3b0914acc844f6bb0a7408b8451fd9ace2a193bb926ded87b74ce8d1af23",
+    "services/runtime/tests/test_runtime_source_evaluation.py": "81b1313fb6ce91952619d8f45ecbe33761435759b566566e3235aad18beff3be"
+  }
+}

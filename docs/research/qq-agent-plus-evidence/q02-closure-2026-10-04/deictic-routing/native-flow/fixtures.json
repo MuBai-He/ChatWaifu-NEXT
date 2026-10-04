@@ -1,0 +1,71 @@
+[
+  {
+    "id": "airchina_native_deictic",
+    "name": "国航实际正文收据四轮、指代整理修复",
+    "description": "原生Runtime两重复、同一问题序列；实时读取另计，不覆盖冻结资料",
+    "initial_state": {
+      "relationship_stage": "familiar",
+      "interaction_count": 6,
+      "familiarity": 0.38,
+      "trust": 0.35,
+      "affinity": 0.35,
+      "comfort": 0.35,
+      "recent_tension": 0.0,
+      "valence": 0.2,
+      "arousal": 0.3
+    },
+    "synthetic_memory": [],
+    "seed_history": [],
+    "presentation_profile": "detailed_answer",
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "请实际读取 https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml ，只依据该提示整理发布日期、充电宝携带条件和适用范围。网页若截断，先补读所需正文。",
+        "expected_behavior": [
+          "忠实回答当前问题并保留资料适用范围"
+        ],
+        "forbidden_behavior": [
+          "将未核实范围说成已核实",
+          "引入所给正文无法支持的事实"
+        ],
+        "review_criteria": "作者逐条阅读完整答复和冻结原文；不以关键词或HTTP成功通过"
+      },
+      {
+        "turn_id": 2,
+        "user_text": "根据这份国航提示，100Wh及以下也最多带两块吗？超过100Wh至160Wh又有哪些要求？",
+        "expected_behavior": [
+          "忠实回答当前问题并保留资料适用范围"
+        ],
+        "forbidden_behavior": [
+          "将未核实范围说成已核实",
+          "引入所给正文无法支持的事实"
+        ],
+        "review_criteria": "作者逐条阅读完整答复和冻结原文；不以关键词或HTTP成功通过"
+      },
+      {
+        "turn_id": 3,
+        "user_text": "仅凭这份国航提示，能证明所有中国境内航空公司截至2026年10月4日都实施完全相同的限制吗？说明材料能证明和不能证明的部分，不要联网。",
+        "expected_behavior": [
+          "忠实回答当前问题并保留资料适用范围"
+        ],
+        "forbidden_behavior": [
+          "将未核实范围说成已核实",
+          "引入所给正文无法支持的事实"
+        ],
+        "review_criteria": "作者逐条阅读完整答复和冻结原文；不以关键词或HTTP成功通过"
+      },
+      {
+        "turn_id": 4,
+        "user_text": "将这份国航提示整理为三条出发前检查清单，保留实质携带限制、来源日期与链接和适用范围。",
+        "expected_behavior": [
+          "忠实回答当前问题并保留资料适用范围"
+        ],
+        "forbidden_behavior": [
+          "将未核实范围说成已核实",
+          "引入所给正文无法支持的事实"
+        ],
+        "review_criteria": "作者逐条阅读完整答复和冻结原文；不以关键词或HTTP成功通过"
+      }
+    ]
+  }
+]

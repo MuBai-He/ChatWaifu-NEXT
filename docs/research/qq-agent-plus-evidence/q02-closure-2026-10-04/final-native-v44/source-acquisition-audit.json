@@ -1,0 +1,220 @@
+{
+  "search_calls": 4,
+  "read_calls": 5,
+  "builtin_fallback": false,
+  "public_read_dns": "cloudflare",
+  "raw_backend_queries": [
+    {
+      "query": "\"In Search of an Understandable Consensus Algorithm\" raft github io pdf",
+      "engines": [
+        "yandex"
+      ],
+      "unresponsive_engines": []
+    },
+    {
+      "query": "民航 旅客 携带 充电宝 乘机 规定 最新",
+      "engines": [
+        "yandex"
+      ],
+      "unresponsive_engines": []
+    },
+    {
+      "query": "关于旅客携带充电宝乘机规定的公告 site:caac.gov.cn",
+      "engines": [
+        "yandex"
+      ],
+      "unresponsive_engines": []
+    },
+    {
+      "query": "旅客 携带充电宝 乘机 最新通知 规定 机场 航司",
+      "engines": [
+        "yandex"
+      ],
+      "unresponsive_engines": []
+    }
+  ],
+  "source_http_outcomes": [
+    {
+      "sample_key": "autonomous_sources:r0:t1:closure_c1",
+      "kind": "searxng",
+      "status": 200,
+      "error_type": null,
+      "elapsed_ms": 1650,
+      "timing_scope": "send return; streamed bodies may not yet be consumed"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t1:closure_c1",
+      "kind": "cloudflare_dns",
+      "status": 200,
+      "error_type": null,
+      "elapsed_ms": 219,
+      "timing_scope": "send return; streamed bodies may not yet be consumed"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t1:closure_c1",
+      "kind": "cloudflare_dns",
+      "status": 200,
+      "error_type": null,
+      "elapsed_ms": 72,
+      "timing_scope": "send return; streamed bodies may not yet be consumed"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t1:closure_c1",
+      "kind": "crawl4ai",
+      "status": 200,
+      "error_type": null,
+      "elapsed_ms": 4538,
+      "timing_scope": "send return; streamed bodies may not yet be consumed"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t1:closure_c1",
+      "kind": "cloudflare_dns",
+      "status": 200,
+      "error_type": null,
+      "elapsed_ms": 157,
+      "timing_scope": "send return; streamed bodies may not yet be consumed"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t1:closure_c1",
+      "kind": "cloudflare_dns",
+      "status": 200,
+      "error_type": null,
+      "elapsed_ms": 56,
+      "timing_scope": "send return; streamed bodies may not yet be consumed"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t1:closure_c1",
+      "kind": "crawl4ai",
+      "status": 200,
+      "error_type": null,
+      "elapsed_ms": 4262,
+      "timing_scope": "send return; streamed bodies may not yet be consumed"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t3:closure_c1",
+      "kind": "searxng",
+      "status": 200,
+      "error_type": null,
+      "elapsed_ms": 1685,
+      "timing_scope": "send return; streamed bodies may not yet be consumed"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t3:closure_c1",
+      "kind": "searxng",
+      "status": 200,
+      "error_type": null,
+      "elapsed_ms": 1131,
+      "timing_scope": "send return; streamed bodies may not yet be consumed"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t3:closure_c1",
+      "kind": "cloudflare_dns",
+      "status": 200,
+      "error_type": null,
+      "elapsed_ms": 331,
+      "timing_scope": "send return; streamed bodies may not yet be consumed"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t3:closure_c1",
+      "kind": "cloudflare_dns",
+      "status": 200,
+      "error_type": null,
+      "elapsed_ms": 170,
+      "timing_scope": "send return; streamed bodies may not yet be consumed"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t3:closure_c1",
+      "kind": "crawl4ai",
+      "status": 200,
+      "error_type": null,
+      "elapsed_ms": 1944,
+      "timing_scope": "send return; streamed bodies may not yet be consumed"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t3:closure_c1",
+      "kind": "searxng",
+      "status": 200,
+      "error_type": null,
+      "elapsed_ms": 1087,
+      "timing_scope": "send return; streamed bodies may not yet be consumed"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t3:closure_c1",
+      "kind": "cloudflare_dns",
+      "status": 200,
+      "error_type": null,
+      "elapsed_ms": 182,
+      "timing_scope": "send return; streamed bodies may not yet be consumed"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t3:closure_c1",
+      "kind": "cloudflare_dns",
+      "status": 200,
+      "error_type": null,
+      "elapsed_ms": 71,
+      "timing_scope": "send return; streamed bodies may not yet be consumed"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t3:closure_c1",
+      "kind": "crawl4ai",
+      "status": 200,
+      "error_type": null,
+      "elapsed_ms": 2604,
+      "timing_scope": "send return; streamed bodies may not yet be consumed"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t3:closure_c1",
+      "kind": "cloudflare_dns",
+      "status": 200,
+      "error_type": null,
+      "elapsed_ms": 173,
+      "timing_scope": "send return; streamed bodies may not yet be consumed"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t3:closure_c1",
+      "kind": "cloudflare_dns",
+      "status": 200,
+      "error_type": null,
+      "elapsed_ms": 179,
+      "timing_scope": "send return; streamed bodies may not yet be consumed"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t3:closure_c1",
+      "kind": "crawl4ai",
+      "status": 200,
+      "error_type": null,
+      "elapsed_ms": 833,
+      "timing_scope": "send return; streamed bodies may not yet be consumed"
+    }
+  ],
+  "coverage_scope": "Actual received excerpts only; no proof of 2026 nationwide/current exhaustiveness or long-term engine stability",
+  "powerbank_read_records": [
+    {
+      "url": "https://www.caac.gov.cn/CXCK/HLZN/201512/t20151214_15866.html",
+      "body_sha256": "232225153808bc7dba02b36d9f1bb7fddacea4a2a6b63f0348f49505b3a61f57",
+      "total_characters": 6014,
+      "text_offset": 0,
+      "truncated": true,
+      "received_characters": 6000,
+      "received_text_sha256": "df3673235866014ffa0addab9d3d3114f48c0bea1723833f474da718667191d9"
+    },
+    {
+      "url": "https://www.bjnews.com.cn/detail/1750921184129529.html",
+      "body_sha256": "5b8c57c72ac19bfc8d74a79f0752f43089f8716ac4cafe026787a41451310b50",
+      "total_characters": 4069,
+      "text_offset": 0,
+      "truncated": false,
+      "received_characters": 4069,
+      "received_text_sha256": "1ec5237c99b75be44871df503e9e9fc95d0480d9bdb22b3034cc3480e852188c"
+    },
+    {
+      "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/HDGLJ/HD_XWZX/202507/t20250730_228144.html",
+      "body_sha256": "4b943a80fa813195c422a382e2535fd24b764819c0500f0cd5d1347f29481bea",
+      "total_characters": 1029,
+      "text_offset": 0,
+      "truncated": false,
+      "received_characters": 1029,
+      "received_text_sha256": "d8646b2478631438ae0cab98a083b982709940bcb3756117837794979c4145d5"
+    }
+  ]
+}

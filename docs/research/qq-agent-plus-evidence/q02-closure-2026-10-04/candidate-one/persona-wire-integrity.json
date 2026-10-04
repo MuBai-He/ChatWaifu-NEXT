@@ -1,0 +1,27 @@
+{
+  "whole_candidate_persona_on_all_16_payloads": true,
+  "requested_retention_rule_whole_on_all_payloads": true,
+  "first_turn_controls": [
+    {
+      "scenario": "frozen_icao",
+      "repeat": 0,
+      "first_payload_same_except_persona": true
+    },
+    {
+      "scenario": "frozen_airchina",
+      "repeat": 0,
+      "first_payload_same_except_persona": true
+    },
+    {
+      "scenario": "frozen_icao",
+      "repeat": 1,
+      "first_payload_same_except_persona": true
+    },
+    {
+      "scenario": "frozen_airchina",
+      "repeat": 1,
+      "first_payload_same_except_persona": true
+    }
+  ],
+  "later_histories": "Each variant retains its own complete prior output; not identical follow-up payloads."
+}

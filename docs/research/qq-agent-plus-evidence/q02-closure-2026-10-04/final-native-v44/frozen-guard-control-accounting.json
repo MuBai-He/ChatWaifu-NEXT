@@ -1,0 +1,41 @@
+{
+  "actual_http_attempts": 3,
+  "logical_provider_requests": 3,
+  "known_usage_calls": 3,
+  "unknown_usage_calls": 0,
+  "known_usage_subtotals": {
+    "prompt_tokens": 52855,
+    "completion_tokens": 3431,
+    "total_tokens": 56286
+  },
+  "reasoning_known_calls": 0,
+  "reasoning_unknown_calls": 3,
+  "reasoning_known_subtotal": 0,
+  "reference_range": [
+    21683,
+    22339
+  ],
+  "bias_percent_range": [
+    21.256039,
+    31.931853
+  ],
+  "http_status_counts": {
+    "200": 3
+  },
+  "http_error_counts": {},
+  "http_latency_p50_p95_ms": [
+    9250.0,
+    13001.2
+  ],
+  "turn_latency_p50_p95_ms": [
+    14383.5,
+    15213.75
+  ],
+  "execution_counts": {
+    "provider": 2
+  },
+  "first_visible_latency": null,
+  "usd_cost": null,
+  "native_context_maximum": null,
+  "native_output_maximum": null
+}

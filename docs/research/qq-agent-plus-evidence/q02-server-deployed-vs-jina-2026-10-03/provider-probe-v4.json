@@ -1,0 +1,212 @@
+[
+  {
+    "repeat": 0,
+    "query": "site:caac.gov.cn 民航局 充电宝 3C 召回",
+    "normalized": 6,
+    "unresponsive": [],
+    "urls": [
+      "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+      "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XWZX/XB_DQYW/202507/t20250710_227953.html",
+      "https://www.caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/DB_DQXW/202507/t20250709_227899.html",
+      "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227950.html",
+      "https://www.caac.gov.cn/"
+    ],
+    "latency_ms": 1233
+  },
+  {
+    "repeat": 0,
+    "query": "site:caac.gov.cn 民航局 充电宝 额定能量 规定",
+    "normalized": 6,
+    "unresponsive": [],
+    "urls": [
+      "https://www.caac.gov.cn/CXCK/HLZN/201512/t20151214_15866.html",
+      "https://www.caac.gov.cn/PHONE/XWZX/MHYW/201408/t20140808_13837.html",
+      "https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html",
+      "https://www.caac.gov.cn/PHONE/XWZX/MHYW/201508/t20150815_14129.html",
+      "https://app.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html"
+    ],
+    "latency_ms": 597
+  },
+  {
+    "repeat": 0,
+    "query": "site:raft.github.io Raft consensus algorithm",
+    "normalized": 6,
+    "unresponsive": [],
+    "urls": [
+      "https://raft.github.io/",
+      "https://raft.github.io/?ref=upstract.com",
+      "https://raft.github.io/?ref=openware.com",
+      "https://raft.github.io/?ref=cve.news",
+      "https://raft.github.io/?ref=8grams.tech"
+    ],
+    "latency_ms": 688
+  },
+  {
+    "repeat": 1,
+    "query": "site:caac.gov.cn 民航局 充电宝 3C 召回",
+    "normalized": 6,
+    "unresponsive": [],
+    "urls": [
+      "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+      "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XWZX/XB_DQYW/202507/t20250710_227953.html",
+      "https://www.caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/DB_DQXW/202507/t20250709_227899.html",
+      "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227950.html",
+      "https://www.caac.gov.cn/"
+    ],
+    "latency_ms": 669
+  },
+  {
+    "repeat": 1,
+    "query": "site:caac.gov.cn 民航局 充电宝 额定能量 规定",
+    "normalized": 6,
+    "unresponsive": [],
+    "urls": [
+      "https://www.caac.gov.cn/CXCK/HLZN/201512/t20151214_15866.html",
+      "https://www.caac.gov.cn/PHONE/XWZX/MHYW/201408/t20140808_13837.html",
+      "https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html",
+      "https://www.caac.gov.cn/PHONE/XWZX/MHYW/201508/t20150815_14129.html",
+      "https://app.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html"
+    ],
+    "latency_ms": 655
+  },
+  {
+    "repeat": 1,
+    "query": "site:raft.github.io Raft consensus algorithm",
+    "normalized": 6,
+    "unresponsive": [],
+    "urls": [
+      "https://raft.github.io/",
+      "https://raft.github.io/?ref=upstract.com",
+      "https://raft.github.io/?ref=openware.com",
+      "https://raft.github.io/?ref=cve.news",
+      "https://raft.github.io/?ref=8grams.tech"
+    ],
+    "latency_ms": 678
+  },
+  {
+    "repeat": 2,
+    "query": "site:caac.gov.cn 民航局 充电宝 3C 召回",
+    "normalized": 6,
+    "unresponsive": [],
+    "urls": [
+      "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+      "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XWZX/XB_DQYW/202507/t20250710_227953.html",
+      "https://www.caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/DB_DQXW/202507/t20250709_227899.html",
+      "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227950.html",
+      "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XNGLJ/XN_XXGK/XNYSSC/202601/t20260106_229694.html"
+    ],
+    "latency_ms": 634
+  },
+  {
+    "repeat": 2,
+    "query": "site:caac.gov.cn 民航局 充电宝 额定能量 规定",
+    "normalized": 6,
+    "unresponsive": [],
+    "urls": [
+      "https://www.caac.gov.cn/CXCK/HLZN/201512/t20151214_15866.html",
+      "https://www.caac.gov.cn/PHONE/XWZX/MHYW/201408/t20140808_13837.html",
+      "https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html",
+      "https://www.caac.gov.cn/PHONE/XWZX/MHYW/201508/t20150815_14129.html",
+      "https://app.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html"
+    ],
+    "latency_ms": 1125
+  },
+  {
+    "repeat": 2,
+    "query": "site:raft.github.io Raft consensus algorithm",
+    "normalized": 6,
+    "unresponsive": [],
+    "urls": [
+      "https://raft.github.io/",
+      "https://raft.github.io/?ref=upstract.com",
+      "https://raft.github.io/?ref=openware.com",
+      "https://raft.github.io/?ref=cve.news",
+      "https://raft.github.io/?ref=8grams.tech"
+    ],
+    "latency_ms": 768
+  },
+  {
+    "repeat": 3,
+    "query": "site:caac.gov.cn 民航局 充电宝 3C 召回",
+    "normalized": 6,
+    "unresponsive": [],
+    "urls": [
+      "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+      "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XWZX/XB_DQYW/202507/t20250710_227953.html",
+      "https://www.caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/DB_DQXW/202507/t20250709_227899.html",
+      "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227950.html",
+      "https://www.caac.gov.cn/"
+    ],
+    "latency_ms": 742
+  },
+  {
+    "repeat": 3,
+    "query": "site:caac.gov.cn 民航局 充电宝 额定能量 规定",
+    "normalized": 6,
+    "unresponsive": [],
+    "urls": [
+      "https://www.caac.gov.cn/CXCK/HLZN/201512/t20151214_15866.html",
+      "https://www.caac.gov.cn/PHONE/XWZX/MHYW/201408/t20140808_13837.html",
+      "https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html",
+      "https://www.caac.gov.cn/PHONE/XWZX/MHYW/201508/t20150815_14129.html",
+      "https://app.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html"
+    ],
+    "latency_ms": 676
+  },
+  {
+    "repeat": 3,
+    "query": "site:raft.github.io Raft consensus algorithm",
+    "normalized": 6,
+    "unresponsive": [],
+    "urls": [
+      "https://raft.github.io/",
+      "https://raft.github.io/?ref=upstract.com",
+      "https://raft.github.io/?ref=openware.com",
+      "https://raft.github.io/?ref=cve.news",
+      "https://raft.github.io/?ref=8grams.tech"
+    ],
+    "latency_ms": 651
+  },
+  {
+    "repeat": 4,
+    "query": "site:caac.gov.cn 民航局 充电宝 3C 召回",
+    "normalized": 6,
+    "unresponsive": [],
+    "urls": [
+      "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+      "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XWZX/XB_DQYW/202507/t20250710_227953.html",
+      "https://www.caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/DB_DQXW/202507/t20250709_227899.html",
+      "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227950.html",
+      "https://www.caac.gov.cn/"
+    ],
+    "latency_ms": 714
+  },
+  {
+    "repeat": 4,
+    "query": "site:caac.gov.cn 民航局 充电宝 额定能量 规定",
+    "normalized": 6,
+    "unresponsive": [],
+    "urls": [
+      "https://www.caac.gov.cn/CXCK/HLZN/201512/t20151214_15866.html",
+      "https://www.caac.gov.cn/PHONE/XWZX/MHYW/201408/t20140808_13837.html",
+      "https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html",
+      "https://www.caac.gov.cn/PHONE/XWZX/MHYW/201508/t20150815_14129.html",
+      "https://app.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html"
+    ],
+    "latency_ms": 758
+  },
+  {
+    "repeat": 4,
+    "query": "site:raft.github.io Raft consensus algorithm",
+    "normalized": 6,
+    "unresponsive": [],
+    "urls": [
+      "https://raft.github.io/",
+      "https://raft.github.io/?ref=upstract.com",
+      "https://raft.github.io/?ref=openware.com",
+      "https://raft.github.io/?ref=cve.news",
+      "https://raft.github.io/?ref=8grams.tech"
+    ],
+    "latency_ms": 764
+  }
+]

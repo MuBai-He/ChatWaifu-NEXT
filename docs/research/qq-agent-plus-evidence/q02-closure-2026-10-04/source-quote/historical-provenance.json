@@ -1,0 +1,8 @@
+{
+  "previous_artifacts": 195,
+  "all_previous_artifacts_unchanged_before_this_stage": true,
+  "original_runtime_v36_fingerprints_unchanged": 13,
+  "historical_adr_exact_hash_recovered_from_current_prefix": true,
+  "historical_adr_sha256": "656a31910eb9afd1ec2ad7b92d78502b8eb21233bd0ec565bbf76a3d19445cf8",
+  "new_module_not_a_production_entrypoint": true
+}

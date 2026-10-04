@@ -1,0 +1,161 @@
+"""Read-only reader integration audit; no model, retrieval or deployment calls."""
+
+import argparse
+import ast
+import hashlib
+import json
+from pathlib import Path
+
+
+def load(path):
+    return json.loads(path.read_text())
+
+
+def sha(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def text_sha(value):
+    return hashlib.sha256(value.encode()).hexdigest()
+
+
+def unchanged_ast(path):
+    tree = ast.parse(path.read_text())
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef) and node.name == "Crawl4aiReaderClient":
+            node.body = [item for item in node.body
+                         if not isinstance(item, ast.AsyncFunctionDef)
+                         or item.name not in {"read", "_read_pdf"}]
+    return ast.dump(tree, include_attributes=False)
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--write-report", action="store_true")
+parser.add_argument("--check-current", action="store_true")
+args = parser.parse_args()
+phase = Path(__file__).resolve().parent
+repo = phase.parents[4]
+prior_counts = {}
+for name, expected in load(phase / "prior-versions.json").items():
+    previous = phase.parent / name
+    assert sha(previous / "manifest.json") == expected, name
+    files = load(previous / "manifest.json")["files"]
+    for rel, digest in files.items():
+        assert sha(previous / rel) == digest, (name, rel)
+    prior_counts[name] = len(files)
+assert prior_counts == {
+    "revision-pipeline": 84, "scope-blocks": 93, "deployed-retrieval-check": 31}
+documents = load(phase / "document-sha256.json")["files"]
+assert len(documents) == 5
+for rel, expected in documents.items():
+    assert sha(phase / "final-documents" / (rel.replace("/", "__") + ".txt")) == expected
+    if args.check_current:
+        assert sha(repo / rel) == expected, rel
+code = load(phase / "code-sha256.json")
+before = phase / "before-code/public_web_providers.py.txt"
+after = phase / "candidate-code/public_web_providers.py.txt"
+initial = phase / "formatting-initial-candidate.py.txt"
+assert sha(before) == code["before"]
+assert sha(after) == code["after"]
+assert sha(initial) == code["initial_unformatted_after"]
+assert code["after"] == "9095b832c38f799b90eb1243c06f0690694e78fc9b2535604e5780047e51cf37"
+assert unchanged_ast(before) == unchanged_ast(after)
+assert ast.dump(ast.parse(initial.read_text()), include_attributes=False) == ast.dump(
+    ast.parse(after.read_text()), include_attributes=False)
+baseline = load(phase / "baseline-source-manifest.json")["files"]
+assert len(baseline) == 208 and baseline[code["source_path"]] == code["before"]
+setup = load(phase / "regression.json")
+assert len(setup) == 2 and all(row["exit_code"] == 1 for row in setup)
+assert all("No module named pytest" in row["output"] for row in setup)
+tests = load(phase / "regression-run2.json")
+assert len(tests) == 2 and tests[0]["version"] == "baseline"
+assert tests[0]["exit_code"] == 1 and "1 failed, 12 passed" in tests[0]["output"]
+assert tests[1]["version"] == "patched" and tests[1]["exit_code"] == 0
+assert "13 passed" in tests[1]["output"]
+assert "All checks passed!" in (phase / "lint-final.log").read_text()
+assert "1 file already formatted" in (phase / "format-final.log").read_text()
+assert "0 errors, 0 warnings" in (phase / "types-final.log").read_text()
+plan = load(phase / "plan.json")
+assert plan["model_calls"] == 0 and not plan["new_prompts_or_personas"]
+assert plan["quality_standard_unchanged"] and plan["no_q02_approval_from_component_checks"]
+assert plan["retained_model"] == "gemini-3.8-flash-high"
+assert plan["retained_model_endpoint"] == "https://mubai.website:8318/v1"
+assert plan["retained_reader_endpoint"] == "http://127.0.0.1:11235"
+assert plan["retained_search_endpoint"] == "http://127.0.0.1:18080"
+assert plan["public_read_dns_resolver"] == "cloudflare"
+assert plan["immutable_image_preflight"] == {
+    "crawl4ai": "0.9.3", "exit_code": 0, "pypdf": "6.16.2"}
+image = load(phase / "immutable-image.json")
+assert image["image_id"] == plan["new_companion_image_id"]
+assert image["repo_digests"] == [plan["new_companion_reference"]]
+rollout = load(phase / "rollout.json")
+assert rollout["actual_source_sha256_after"] == code["after"]
+assert rollout["code_sha256_before"] == code["before"]
+assert rollout["rollout"] == "functional_reader_checks_passed"
+assert not rollout["rollback_executed"] and not rollout["q02_approval"]
+assert not rollout["model_calls"] and rollout["only_reader_class_ast_changed"]
+assert rollout["backup_env_mode"] == "0o600" and rollout["backup_private_mode"] == "0o700"
+assert rollout["protected_file_count"] == 14 and rollout["protected_files_unchanged"]
+assert rollout["crawler_health"] == {"http": 200, "status": "ok", "version": "0.9.3"}
+assert rollout["runtime_health"] == {
+    "certificate_verified": True, "database": "ready", "http": 200, "status": "ok"}
+assert all(row["exit_code"] == 0 for row in rollout["commands"])
+post = load(phase / "post-rollout-integrity.json")
+assert post["production_python_files_baselined"] == 208
+assert post["production_python_changed"] == [code["source_path"]]
+assert post["new_source_sha256"] == code["after"] and not post["new_model_calls"]
+assert post["credential_leaks"] == 0 and post["credential_values_checked"] == 2
+assert post["files_scanned"] == 14
+components = {row["name"]: row for row in post["components"]}
+assert components["cw2-public-web-crawl4ai-1"]["image_id"] == image["image_id"]
+assert components["cw2-public-web-crawl4ai-1"]["image_reference"] == plan["new_companion_reference"]
+assert components["cw2-public-web-searxng-1"]["started_at"] == "2026-10-03T04:45:34.589376209Z"
+assert all(row["running"] for row in components.values())
+reads = load(phase / "deployed-reader-results.json")
+assert reads["actual_reader_operations"] == 2 and not reads["model_calls"]
+assert reads["source_module_sha256"] == code["after"]
+assert reads["runtime_source_origin_verified"] and not reads["new_persona_or_model_config"]
+assert not reads["q02_approval"] and len(reads["results"]) == 2
+by_kind = {row["kind"]: row for row in reads["results"]}
+review = load(phase / "content-review.json")
+assert not review["q02_approval"] and not review["model_calls"]
+for kind, row in by_kind.items():
+    result = row["result"]
+    assert row["ok"] and not row["model_calls"] and row["elapsed_ms"] > 0
+    assert row["arguments"]["dns_resolver"] == result["dns_resolver"] == "cloudflare"
+    assert result["provider"] == "crawl4ai" and result["url"] == row["arguments"]["url"]
+    assert text_sha(result["text"]) == review[kind]["text_sha256"]
+html = by_kind["html"]["result"]
+pdf = by_kind["pdf"]["result"]
+frozen = load(phase.parent / "frozen-quality/frozen-sources.json")["airchina"]
+assert html["text"] == frozen["text"] and text_sha(html["text"]) == frozen["text_sha256"]
+assert len(html["text"]) == html["total_characters"] == html["document_characters"] == 1339
+assert html["text_offset"] == 0 and not html["truncated"]
+assert review["html"]["matches_prior_frozen_full_airchina_text"]
+assert by_kind["pdf"]["origin"] == "previous_production_search_rank4"
+assert pdf["url"] == "https://raft.github.io/raft.pdf"
+assert len(pdf["text"]) == 6000 and pdf["text_offset"] == 26962
+assert pdf["document_characters"] == pdf["total_characters"] == 91168
+assert pdf["truncated"] and pdf["focus_matched"]
+report = {
+    "new_model_calls": 0, "new_persona_candidates": 0, "q02_approval": False,
+    "actual_deployed_reader_operations": 2, "reader_http_attempts": "not_collected",
+    "production_regressions": {"before": "1 failed, 12 passed", "after": "13 passed"},
+    "setup_failures_preserved": 2, "protected_config_files_unchanged": 14,
+    "production_python_baseline_files": 208, "production_python_changed_files": 1,
+    "pinned_reader_companion": "0.9.3", "searxng_not_restarted": True,
+    "html_same_frozen_body": True, "pdf_truncated_selected_characters": 6000,
+    "prior_manifest_entries_unchanged": prior_counts,
+    "document_snapshots": 5, "current_checkout_check_optional": True,
+    "semantic_quality_scope": "Two selected extracted texts only, no answer or discovery approval",
+}
+out = phase / "final-artifact-audit.json"
+if args.write_report:
+    assert not out.exists()
+    out.write_text(json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2) + "\n")
+else:
+    assert load(out) == report
+    actual = {str(path.relative_to(phase)): sha(path) for path in phase.rglob("*")
+              if path.is_file() and path != phase / "manifest.json"}
+    assert actual == load(phase / "manifest.json")["files"]
+print(json.dumps(report, ensure_ascii=False, sort_keys=True))

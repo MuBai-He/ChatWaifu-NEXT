@@ -1,0 +1,26 @@
+[
+  {
+    "command": [
+      "/home/mubai/chatwaifu-server/source/.venv/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "/tmp/cw2-q02-reader-integration-20261004/test_reader_backport.py"
+    ],
+    "exit_code": 1,
+    "output": "/home/mubai/chatwaifu-server/source/.venv/bin/python: No module named pytest\n",
+    "version": "baseline"
+  },
+  {
+    "command": [
+      "/home/mubai/chatwaifu-server/source/.venv/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "/tmp/cw2-q02-reader-integration-20261004/test_reader_backport.py"
+    ],
+    "exit_code": 1,
+    "output": "/home/mubai/chatwaifu-server/source/.venv/bin/python: No module named pytest\n",
+    "version": "patched"
+  }
+]

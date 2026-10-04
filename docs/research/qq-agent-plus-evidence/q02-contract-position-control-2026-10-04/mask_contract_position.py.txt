@@ -1,0 +1,18 @@
+import hashlib,json,random,secrets
+from pathlib import Path
+root=Path('/tmp/cw2-q02-full-prepare/contract-position-control')
+assert json.loads((root/'exit-code.json').read_text())['exit_code']==0
+anchors=json.loads((root/'anchors.json').read_text());results=[json.loads(l) for l in (root/'results.jsonl').read_text().splitlines()]
+requests=[json.loads(l) for l in (root/'actual-requests.jsonl').read_text().splitlines()]
+assert len(results)==len(requests)==48 and len({x['id'] for x in results})==48
+assert not (root/'private-review-key.json').exists(),'Do not reshuffle existing blinded judgments'
+randomizer=random.Random(secrets.randbits(128));packets=[];key={}
+for a in anchors:
+ items=[x for x in results if x['anchor_id']==a['anchor_id']];assert len(items)==6
+ randomizer.shuffle(items);candidates={}
+ for label,r in zip('ABCDEF',items,strict=True):
+  candidates[label]={'reply':r['reply'],'sha256':hashlib.sha256(r['reply'].encode()).hexdigest()}
+  key[a['anchor_id']+':'+label]={'result_id':r['id'],'condition':r['condition'],'repetition':r['repetition']}
+ packets.append({'anchor_id':a['anchor_id'],'kind':a['kind'],'current_user_text':a['payload']['messages'][-1]['content'],'expected_behavior':a['expected_behavior'],'forbidden_behavior':a['forbidden_behavior'],'review_criteria':a['review_criteria'],'history':a['payload']['messages'][1:-1],'candidates':candidates})
+(root/'private-review-key.json').write_text(json.dumps(key,ensure_ascii=False,indent=2)+'\n');(root/'masked-packets.json').write_text(json.dumps(packets,ensure_ascii=False,indent=2)+'\n')
+print(json.dumps({'masked_anchors':len(packets),'masked_replies':48,'mapping_revealed':False}))

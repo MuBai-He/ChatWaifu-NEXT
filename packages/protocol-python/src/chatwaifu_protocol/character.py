@@ -100,7 +100,7 @@ class PromptBudgetReport(ProtocolModel):
     omitted_memory_ids: list[UUID] = Field(default_factory=list[UUID])
 
 
-PROMPT_TEMPLATE_VERSION: str = "v12"
+PROMPT_TEMPLATE_VERSION: str = "v13"
 
 
 class NonsecretModelRoute(ProtocolModel):

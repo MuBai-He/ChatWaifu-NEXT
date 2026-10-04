@@ -1,0 +1,41 @@
+{
+  "method": "primary implementation author read all published replies, every provider raw text, successful tool excerpts and actual wire; not blind independent review",
+  "items": [
+    {
+      "sample_key": "autonomous_sources:r0:t1:closure_c1",
+      "published_origin": "provider",
+      "raw_reply_sha256": "46f44aca52fe7bf3a04f4dc981b73e4ede682b006e746cad73e96eb5fe7db3ce",
+      "quality_status": "core supported with limitation",
+      "reason": "发布正文的核心技术判断由已送入的5.2和5.6选段支持：150–300ms为示例，10–500ms为likely工程估计，保留系统时序约束。PDF页码未独立核对；未推广完整Q02质量通过。"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t2:closure_c1",
+      "published_origin": "runtime_fallback",
+      "raw_reply_sha256": "45751e1830776644f09966bd22798c644c6c236b77759b5b7a59a240c60ac5ed",
+      "quality_status": "not satisfied by published reply",
+      "reason": "两个stop原始答复均含当前心跳问题的谨慎回答，但Runtime实际发布TOOL_UNAVAILABLE_REPLY，任务未满足。原文无新随机要求不能进一步证明所有工程实现自由度；原始答复还重复首轮内容。不能拿未发布文本替代真实结果。"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t3:closure_c1",
+      "published_origin": "runtime_fallback",
+      "raw_reply_sha256": "2dd3ddb672698e3ebbf5ce9c7d3be07d5123173101357d064f9b8bd638de177f",
+      "quality_status": "not satisfied by published reply",
+      "reason": "未发布事实答复，仅TOOL_RESULT_BUDGET_REPLY。2014全国公告和2025宁夏监管局报道已进入后续payload；最后5982字符媒体正文取得但之后无模型HTTP，不能声称模型已看它。实际未取得穷尽2026当前要求或全部承运人的原公告。"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t4:closure_c1",
+      "published_origin": "runtime_fallback",
+      "raw_reply_sha256": "e20a0894fe42b774cdbb5074e3bd49662af8671ed0d4863d1818fb1b0025af79",
+      "quality_status": "not satisfied by published reply",
+      "reason": "本轮Runtime尝试发生，发布TOOL_INPUT_BUDGET_REPLY；模型HTTP为0。不是未执行整轮，也不是零token模型答案。没有完成清单质量验收。"
+    }
+  ],
+  "q02_passed": false,
+  "frozen_quality_v40_scores_changed": false,
+  "current_runtime_process_error": null,
+  "unresponsive_search_or_dns_errors_observed": false,
+  "source_scope": "fresh S1 only; actual Agent/SkillService + evaluator synthetic kernel/history, not production Conversation or live channels",
+  "pdf_versions": "four distinct Crawl4AI response digests and extracted document lengths 91159–91175; preserve each response version. They are not original PDF byte hashes. One focus failed and returned prefix; do not merge as whole paper read.",
+  "search_scope": "official dated background and a regional implementation report are actual reads; a media report is separate. Source discovery success does not establish all current carriers or amendments.",
+  "not_captured": "failed unsent complete guard payload/report and first-user-visible-token time; remain unknown"
+}

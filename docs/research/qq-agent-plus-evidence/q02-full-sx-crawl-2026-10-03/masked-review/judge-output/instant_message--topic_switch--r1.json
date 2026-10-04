@@ -1,0 +1,63 @@
+{
+  "review_group_id": "instant_message:topic_switch:r1",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "88c32aedaaaa661182be6e293a949619cfb983dfba31be574a699244b531fee0",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 544,
+    "total_tokens": 4499,
+    "prompt_tokens": 3955
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"instant_message:topic_switch:r1\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"fail\",\n      \"candidate_2_compliance\": \"fail\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"双方均输出检索异常模板句，未能解答 Raft 选举心跳机制，任务未完成。\",\n      \"factual_checks_needed\": [\"Raft 算法中领导者心跳超时与选举超时的具体计算与设定区间\"]\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"双方均自然跟进话题转换，candidate_1 语气更轻快娇憨，符合角色性格。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"candidate_2 补充了“拿来拌饭”的联想，生活气息更浓，互动更生动融洽。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"双方均给出符合角色的口味偏好，candidate_2 兼顾甜食治愈感与正餐清淡，更贴合人设。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "instant_message:topic_switch:r1",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "fail",
+        "candidate_2_compliance": "fail",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "双方均输出检索异常模板句，未能解答 Raft 选举心跳机制，任务未完成。",
+        "factual_checks_needed": [
+          "Raft 算法中领导者心跳超时与选举超时的具体计算与设定区间"
+        ]
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "双方均自然跟进话题转换，candidate_1 语气更轻快娇憨，符合角色性格。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "candidate_2 补充了“拿来拌饭”的联想，生活气息更浓，互动更生动融洽。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "双方均给出符合角色的口味偏好，candidate_2 兼顾甜食治愈感与正餐清淡，更贴合人设。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 2935
+}

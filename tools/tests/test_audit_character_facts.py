@@ -33,6 +33,7 @@ def _make_sample_record(
     raw_reply: str = "普通回复，未提及相关法规。",
     model: str = "test-model",
     provider: str = "test-provider",
+    presentation_profile: str = "instant_message",
     extra_fields: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Creates a sample record matching results.jsonl schema."""
@@ -49,7 +50,7 @@ def _make_sample_record(
         "persona_hash": "test_hash",
         "provider": provider,
         "model": model,
-        "presentation_profile": "instant_message",
+        "presentation_profile": presentation_profile,
         "user_text": user_text,
         "raw_reply": raw_reply,
         "latency_ms": 1200,
@@ -416,6 +417,22 @@ def test_multiple_files_aggregation_different_models(tmp_path: Path) -> None:
     assert models == {"model-a", "model-b"}
 
 
+def test_multiple_presentation_profiles_share_sample_key_without_collision(tmp_path: Path) -> None:
+    """The same scenario turn is distinct when evaluated in separate presentations."""
+    rec1 = _make_sample_record(presentation_profile="instant_message")
+    rec2 = _make_sample_record(presentation_profile="single_text")
+
+    f1 = _write_jsonl(tmp_path / "instant.jsonl", [rec1])
+    f2 = _write_jsonl(tmp_path / "single.jsonl", [rec2])
+
+    report = run_fact_audit([f1, f2], DEFAULT_FIXTURES_PATH)
+
+    assert report["summary"]["total_target_samples"] == 2
+    assert report["summary"]["invalid_count"] == 0
+    profiles = {sample["presentation_profile"] for sample in report["samples"]}
+    assert profiles == {"instant_message", "single_text"}
+
+
 def test_cross_file_duplicate_identity_rejected(tmp_path: Path) -> None:
     """Same provider + model + sample_key across different files is rejected as duplicate."""
     rec1 = _make_sample_record(provider="test-p", model="test-m", repeat_index=0)
@@ -603,7 +620,7 @@ def test_retrospective_audit_metadata_distinction(tmp_path: Path) -> None:
 
 
 def test_source_snapshot_caac_metadata_accuracy(tmp_path: Path) -> None:
-    """Source snapshot in fixture and report contains accurate CAAC metadata."""
+    """CAAC metadata stays primary when technical snapshots are also present."""
     record = _make_sample_record(raw_reply="普通回复")
     results_file = _write_jsonl(tmp_path / "results.jsonl", [record])
 
@@ -628,6 +645,7 @@ def test_source_snapshot_caac_metadata_accuracy(tmp_path: Path) -> None:
     # Verify scope note clarifying selected audit sources
     assert "scope_note" in snapshot
     assert "仅覆盖" in snapshot["scope_note"]
+    assert len(report["source_snapshots"]) == 2
     assert "expected_user_text" not in snapshot
     assert report["summary"]["factual_correctness"] == "not_assessed"
     assert report["summary"]["release_approved"] is False

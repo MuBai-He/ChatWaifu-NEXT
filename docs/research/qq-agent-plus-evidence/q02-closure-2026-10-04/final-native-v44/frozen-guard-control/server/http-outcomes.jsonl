@@ -1,0 +1,3 @@
+{"sample_key": "frozen_guard:T3_review", "http_attempt": 1, "status": 200, "error_type": null, "elapsed_ms": 13418}
+{"sample_key": "frozen_guard:T4", "http_attempt": 2, "status": 200, "error_type": null, "elapsed_ms": 5314}
+{"sample_key": "frozen_guard:T4", "http_attempt": 3, "status": 200, "error_type": null, "elapsed_ms": 9250}

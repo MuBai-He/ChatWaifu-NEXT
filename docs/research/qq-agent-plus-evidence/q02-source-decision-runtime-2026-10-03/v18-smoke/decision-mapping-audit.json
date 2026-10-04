@@ -1,0 +1,17 @@
+{
+  "counts": {
+    "web.search:succeeded": 1,
+    "decisions": 2,
+    "rejected:invalid_schema": 2
+  },
+  "samples": [
+    {
+      "sample_key": "topic_switch:r0:t1:candidate",
+      "source_calls": 1,
+      "provider_calls": 3,
+      "completed": false
+    }
+  ],
+  "quality_approved": false,
+  "limitation": "Model inventories can omit leads and mislabel issuer/scope. This audit validates mapping and bounded execution only."
+}

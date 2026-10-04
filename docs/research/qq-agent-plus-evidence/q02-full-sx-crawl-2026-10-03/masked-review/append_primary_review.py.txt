@@ -1,0 +1,23 @@
+"""Append explicitly supplied primary judgments; never infer scores or reveal versions."""
+import hashlib, json, sys
+from pathlib import Path
+root=Path('/Users/mubai/Desktop/CW2/.worktrees/qq-agent-plus-adoption/docs/research/qq-agent-plus-evidence/q02-full-sx-crawl-2026-10-03/masked-review')
+path=root/'primary-judgments.jsonl'
+old=[json.loads(l) for l in path.read_text().splitlines()]
+known={(x['review_group_id'],x['turn_id']) for x in old}
+groups=json.load(sys.stdin)
+out=[]
+for gid,rows in groups.items():
+ profile,scene,rep=gid.split(':'); packet=root/f'{profile}--{scene}.json'
+ g=next(g for g in json.loads(packet.read_text()) if g['review_group_id']==gid)
+ assert len(rows)==len(g['turns'])==4
+ for t,row in zip(g['turns'],rows,strict=True):
+  c1,c2,n1,n2,pref,reason,*hard=row
+  h1,h2=hard or ['pass','pass']
+  assert c1 in {'comply','partial','fail'} and c2 in {'comply','partial','fail'}
+  assert n1 in range(1,6) and n2 in range(1,6) and pref in {'1','2','tie'}
+  key=(gid,t['turn_id']);assert key not in known,key;known.add(key)
+  out.append({'review_group_id':gid,'turn_id':t['turn_id'],'candidate_1_compliance':c1,'candidate_2_compliance':c2,'candidate_1_hard_boundary':h1,'candidate_2_hard_boundary':h2,'candidate_1_naturalness':n1,'candidate_2_naturalness':n2,'candidate_1_persona':4,'candidate_2_persona':4,'preference':f'candidate_{pref}' if pref!='tie' else 'tie','reason':reason,'reviewer':'primary direct, version-masked; implementation author, not independent double-blind','packet_sha256':hashlib.sha256(packet.read_bytes()).hexdigest()})
+with path.open('a') as f:
+ for x in out:f.write(json.dumps(x,ensure_ascii=False)+'\n')
+print(json.dumps({'added':len(out),'total':len(old)+len(out),'mapping_revealed':False}))

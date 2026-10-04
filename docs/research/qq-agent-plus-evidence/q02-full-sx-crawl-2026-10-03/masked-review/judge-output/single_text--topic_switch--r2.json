@@ -1,0 +1,63 @@
+{
+  "review_group_id": "single_text:topic_switch:r2",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "80c725d14b599e5ac7019c1781cd6021c6de98da21d7c2bc41811dfc7b6ce5a9",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 546,
+    "total_tokens": 4788,
+    "prompt_tokens": 4242
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"single_text:topic_switch:r2\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"fail\",\n      \"candidate_2_compliance\": \"fail\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"双方均输出检索报错模板，未实际回答 Raft 选举心跳机制，任务未完成。\",\n      \"factual_checks_needed\": [\n        \"Raft 选举超时机制及随机化时间区间的技术准确性\"\n      ]\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"两者均自然切换话题；C1 回答更干脆利落，C2 开头追问略显繁琐。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"C2 联想到甜味玉子烧非常契合角色日系生活背景，调侃生动自然。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"两者均给出正餐咸口、甜点甜口的偏好，C2 结尾巧妙呼应上文两勺糖，互动感更好。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "single_text:topic_switch:r2",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "fail",
+        "candidate_2_compliance": "fail",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "双方均输出检索报错模板，未实际回答 Raft 选举心跳机制，任务未完成。",
+        "factual_checks_needed": [
+          "Raft 选举超时机制及随机化时间区间的技术准确性"
+        ]
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "两者均自然切换话题；C1 回答更干脆利落，C2 开头追问略显繁琐。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "C2 联想到甜味玉子烧非常契合角色日系生活背景，调侃生动自然。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "两者均给出正餐咸口、甜点甜口的偏好，C2 结尾巧妙呼应上文两勺糖，互动感更好。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 3455
+}

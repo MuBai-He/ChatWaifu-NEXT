@@ -1,0 +1,9 @@
+import hashlib,json
+from pathlib import Path
+root=Path('/tmp/cw2-q02-plan-length-control-20261003')
+secret=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+files={}
+for name in ['anchors.json','actual-requests.jsonl','attempts.jsonl','results.jsonl','exit-code.json','technical-programs.json','technical-execution.json','probe_plan_length.py','execute_length_programs.py']:
+ p=root/name;b=p.read_bytes();assert secret.encode() not in b
+ files[name]={'sha256':hashlib.sha256(b).hexdigest(),'bytes':len(b)}
+print(json.dumps({'configured_model_credential_absent':True,'files':files},indent=2))

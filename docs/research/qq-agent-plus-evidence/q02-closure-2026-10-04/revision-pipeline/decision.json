@@ -1,0 +1,32 @@
+{
+  "actual_model_http_attempts": 32,
+  "answer_quality_scope": "Two earlier condition ambiguities not observed in this batch; 3/4 T4 lose precise prior T3 as-of scope. Narrow observation, no causal improvement guarantee",
+  "budget_scope": "Both phases include full originals and own published history; usage32/32 known, no omission; reference bias and extra latency recorded. Not proof of native limits or semantic quality",
+  "candidate": "closure-c1 + default-off SourceAnswerFrame1.1 pipeline v38",
+  "complete_source_flows": 4,
+  "completed_replies": 16,
+  "frame_or_draft_rejected": 0,
+  "known_gap_controls_passed": 5,
+  "known_gap_flow_controls_passed": 4,
+  "known_gap_retention_is_not_all_scope_retention": true,
+  "later_gates": {
+    "autonomous_source_discovery": "not_run_for_this_candidate",
+    "role_directional": "not_run_for_this_candidate",
+    "three_presentation_full_ab": "not_run_for_this_candidate"
+  },
+  "logical_requests": 32,
+  "new_persona_rules": false,
+  "next": "Freeze entire v38 result and retain default off. Resolve how the candidate represents newly requested unknown scope before any next source-quality gate; do not parse arbitrary prose into control state or patch old replies, add persona/format variants, repeat independent discovery or launch full864 on this rejected version.",
+  "previous_valid_acceptance_repeated": false,
+  "production_adopted": false,
+  "provider_published": 16,
+  "q02_approval": false,
+  "quality_complete": 13,
+  "quality_partial": 3,
+  "read_revision_policy_byte_unchanged": true,
+  "reliability_scope": "Candidate provided-originals review path made consistent, draft bounded and withheld, complete four-round flows; not historical v30 diagnosis or universal provider reliability",
+  "reported_usage_calls": 32,
+  "runtime_fallback": 0,
+  "source_quality_gate": "rejected",
+  "turns_not_executed": 0
+}

@@ -1,0 +1,41 @@
+import copy,hashlib,json,statistics
+from collections import Counter,defaultdict
+from pathlib import Path
+p=Path('/tmp/cw2-q02-full-prepare/plan-length-control')
+# The judgments are saved before the mapping is read.
+review=json.loads((p/'primary-review.json').read_text());assert len(review['judgments'])==32
+review_hash=hashlib.sha256((p/'primary-review.json').read_bytes()).hexdigest()
+keys=json.loads((p/'private-key.json').read_text());lookup={(k['anchor_id'],k['label']):k['id'] for k in keys}
+rows={r['id']:r for r in map(json.loads,(p/'results.jsonl').read_text().splitlines())}
+requests={r['id']:r for r in map(json.loads,(p/'actual-requests.jsonl').read_text().splitlines())}
+anchors={a['anchor_id']:a for a in json.loads((p/'anchors.json').read_text())}
+assert len(rows)==len(requests)==32
+started=Counter();finished=Counter()
+for r in map(json.loads,(p/'attempts.jsonl').read_text().splitlines()):
+ (started if r['event']=='started' else finished)[r['id']]+=1
+assert started==finished==Counter({k:1 for k in rows})
+joined=[]
+for j in review['judgments']:
+ key=lookup[(j['anchor_id'],j['label'])];row=rows[key];wire=requests[key];payload=wire['payload'];anchor=anchors[row['anchor_id']]
+ assert hashlib.sha256(json.dumps(payload,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()==wire['payload_sha256']==row['payload_sha256']
+ restored=copy.deepcopy(payload)
+ if row['condition']=='short':restored['messages'][0]['content']=restored['messages'][0]['content'].replace('response length short.','response length normal.',1)
+ assert restored==anchor['payload']
+ joined.append(dict(j,id=key,condition=row['condition'],kind=anchor['kind'],reported_model=row['reported_model'],latency_ms=row['latency_ms'],reply_characters=len(row['reply'])))
+def pct(vals,q):
+ s=sorted(vals);i=(len(s)-1)*q;a=int(i);return round(s[a]+(s[min(a+1,len(s)-1)]-s[a])*(i-a))
+def summarize(items):
+ return {'n':len(items),'compliance':dict(Counter(x['compliance'] for x in items)),'mean_characters':round(statistics.mean(x['reply_characters'] for x in items),1),'mean_naturalness':round(statistics.mean(x['naturalness'] for x in items),2),'p50_ms':pct([x['latency_ms'] for x in items],.5),'p95_ms':pct([x['latency_ms'] for x in items],.95),'reported_labels':dict(Counter(x['reported_model'] for x in items))}
+usage={}
+for field in ['prompt_tokens','completion_tokens','reasoning_tokens','total_tokens']:
+ vals=[r['usage'].get(field) if r['usage'] else None for r in rows.values()];known=[v for v in vals if v is not None]
+ usage[field]={'reported_attempts':len(known),'known_subtotal':sum(known),'complete_total':sum(known) if len(known)==len(vals) else None}
+summary={'requests':32,'unique_requests':32,'requested_models':dict(Counter(x['payload']['model'] for x in requests.values())),'only_plan_length_varied':True,'review_saved_before_reveal_sha256':review_hash,'all_attempt_usage':usage,'finish_reasons':dict(Counter(r['finish_reason'] for r in rows.values())),'conditions':{},'stratified_labels':{},'quality_approved':False,'limitation':'Small frozen non-stream direct-API screen, no random seed; labels do not prove underlying model identity. Not a new end-to-end Runtime A/B.'}
+for kind in ['closure','task_guard']:
+ for c in ['normal','short']:
+  items=[j for j in joined if j['kind']==kind and j['condition']==c];summary['conditions'][kind+':'+c]=summarize(items)
+  for label in sorted(set(j['reported_model'] for j in items)):
+   summary['stratified_labels'][kind+':'+c+':'+label]=summarize([j for j in items if j['reported_model']==label])
+(p/'unmasked-review.json').write_text(json.dumps(joined,ensure_ascii=False,indent=2)+'\n')
+(p/'summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2)+'\n')
+print(json.dumps(summary,ensure_ascii=False,indent=2))

@@ -1,0 +1,167 @@
+"""Offline reconstruction: no credentials, no HTTP, no external execution."""
+import asyncio
+import hashlib
+import json
+from dataclasses import asdict, replace
+from pathlib import Path
+from types import SimpleNamespace
+from uuid import UUID
+
+from chatwaifu_protocol.base import SideEffect
+from chatwaifu_protocol.skills import SkillRunSnapshot
+from chatwaifu_runtime.agent.input_budget import InputBudgetExceeded, fit_input_budget
+from chatwaifu_runtime.agent.source_answer import source_answer_revision_prompt, source_tool_followup_prompt
+from chatwaifu_runtime.agent.tool_calling import _snapshot_result, _successful_source_read_urls
+from chatwaifu_runtime.providers.contracts import LlmInputBudget, LlmRequest, LlmToolCall, LlmToolDefinition, LlmToolExchange, LlmToolResult
+from chatwaifu_runtime.providers.input_estimation import count_reference_tokens, estimate_reference_input_tokens
+from chatwaifu_runtime.providers.openai_compatible import build_chat_completions_payload, build_messages
+from tools.source_decision_evaluation import SourceDecisionProvider
+
+ROOT = Path('/tmp/cw2-q02-full-prepare/v26-contract-runtime/final-download/results')
+FIXTURES = Path('/tmp/cw2-q02-full-prepare/v27-budget-guard/download')
+OUT = Path('/tmp/cw2-q02-full-prepare/v28-budget-frozen')
+
+def rows(path):
+    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+
+def sha(value):
+    return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+
+def payload(request):
+    return build_chat_completions_payload('gemini-3.8-flash-high', request, build_messages(request), request_usage=True)
+
+class FreezeWire(Exception):
+    pass
+
+class Capture(SourceDecisionProvider):
+    async def _events(self, request):
+        self.captured = request
+        raise FreezeWire
+        yield
+
+def definitions(trace):
+    result = []
+    for t in trace['provider_calls'][0]['tools']:
+        skill = 'web.read' if 'url' in t['input_schema']['properties'] else 'web.search'
+        result.append(SimpleNamespace(**t, skill_id=skill, side_effect=SideEffect.READ))
+    return result
+
+def wrapper(trace, decisions, request):
+    obj = Capture(SimpleNamespace(kind='offline', supports_tool_calling=True))
+    obj.begin(request.generation_id, definitions(trace))
+    for row in decisions:
+        if row['validation_error'] is not None:
+            continue
+        obj.current_requirements |= row['current_requirements_declared']
+        if row['validated_projection']:
+            native = LlmToolCall(**row['native_calls'][0])
+            obj.native[native.call_id] = native
+        for u in row['native_calls'][0]['arguments']['unresolved_updates']:
+            obj.pending[u['url']] = u
+    return obj
+
+async def capture(obj, request):
+    try:
+        async for _ in obj.stream(request):
+            raise AssertionError('no provider execution authorized')
+    except FreezeWire:
+        return obj.captured
+    raise AssertionError('wire not captured')
+
+def raw_request(trace, record, wire, fixture):
+    user = fixture['turns'][0]['user_text']
+    index = next(i for i,m in enumerate(wire['messages']) if m['role']=='user' and m.get('content')==user)
+    prefix = wire['messages'][1:index]
+    pre = None
+    if record['pre_user_system_prompt_sha256']:
+        pre = prefix[-1]['content']
+        assert hashlib.sha256(pre.encode()).hexdigest()==record['pre_user_system_prompt_sha256']
+        prefix = prefix[:-1]
+    assert record['input_context_sha256']==hashlib.sha256(b'[]').hexdigest(), 'this reconstruction only handles verified empty context'
+    history = tuple((m['role'],m['content']) for m in prefix)
+    assert hashlib.sha256(json.dumps(history,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()==record['input_history_sha256']
+    exchanges = []
+    for e in record['input_tool_exchanges']:
+        actual = {r['call_id']:r['content']['executed_call'] for r in e['results'] if isinstance(r['content'],dict) and 'executed_call' in r['content']}
+        calls = tuple(LlmToolCall(**actual.get(c['call_id'],c)) for c in e['calls'])
+        results = tuple(LlmToolResult(r['call_id'],actual[r['call_id']]['name'] if r['call_id'] in actual else r['name'],r['content']['executed_result'] if r['call_id'] in actual else r['content'],r['is_error']) for r in e['results'])
+        exchanges.append(LlmToolExchange(e['assistant_text'],calls,results))
+    original = tuple((h['role'],h['text']) for h in fixture['seed_history'])
+    return LlmRequest(UUID(record['generation_id']),user,wire['messages'][0]['content'],history=original,tools=tuple(LlmToolDefinition(p.name,p.description,p.input_schema) for p in definitions(trace)) if wire.get('tools') else (),tool_choice='auto',tool_exchanges=tuple(exchanges),input_budget=LlmInputBudget(21370),max_output_tokens=8192,tool_result_max_bytes=131072,pre_user_system_prompt=pre), history
+
+def fit_report(request):
+    try:
+        fitted = fit_input_budget(request)
+        return fitted, {'dispatch_allowed':True, 'report':asdict(fitted.input_budget_report)}
+    except InputBudgetExceeded as error:
+        return None, {'dispatch_allowed':False, 'report':asdict(error.report)}
+
+def components(request):
+    wire = payload(request)
+    parts = []
+    # Standalone token counts are diagnostic only, not an additive decomposition.
+    for i,m in enumerate(wire['messages']):
+        text = m.get('content') or ''
+        row = {'index':i,'role':m['role'],'reference_message_tokens':count_reference_tokens(json.dumps(m,ensure_ascii=False,separators=(',',':'))),'characters':len(text),'sha256':sha(m)}
+        if m['role']=='tool':
+            value=json.loads(text); value=value.get('executed_result',value); data=value.get('data',{})
+            body=data.get('text'); row['body_reference_tokens']=count_reference_tokens(body) if isinstance(body,str) else 0
+            row['body_characters']=len(body) if isinstance(body,str) else 0
+            row['url']=data.get('url'); row['truncated']=data.get('truncated')
+        if 'tool_calls' in m:
+            row['native_decision_argument_tokens']=sum(count_reference_tokens(c['function']['arguments']) for c in m['tool_calls'])
+        parts.append(row)
+    return {'complete_reference_tokens':estimate_reference_input_tokens(request),'messages':parts,'tools_reference_tokens':count_reference_tokens(json.dumps(wire.get('tools',[]),ensure_ascii=False,separators=(',',':'))),'standalone_counts_are_nonadditive':True}
+
+async def main():
+    reports=[]
+    for profile,position in [('instant_message','pre_user'),('single_text','system')]:
+        path=ROOT/profile/position
+        item=next(x for x in reversed(rows(path/'incomplete.jsonl')) if x['reason']=='InputBudgetExceeded')
+        trace=item['runtime_source_trace']; record=trace['provider_calls'][-1]
+        captured=next(x for x in rows(path/'actual-provider-payloads.jsonl') if x['captured_at_utc']>=record['started_at'])
+        wire=captured['payload']
+        assert sha(wire)==captured['payload_sha256']
+        fixture=json.loads((FIXTURES/f'fixtures-{profile}-{position}-four-turn.json').read_text())[0]
+        raw,sent_history=raw_request(trace,record,wire,fixture)
+        previous_decisions=trace['source_decisions'][:-1] if profile=='instant_message' else trace['source_decisions']
+        # Match the previously sent complete wire first, including automatic omissions.
+        if profile=='instant_message':
+            raw=replace(raw,continuation_system_prompt=source_tool_followup_prompt(2))
+        fitted_raw, raw_report = fit_report(raw)
+        assert fitted_raw
+        prior_wire = await capture(wrapper(trace,previous_decisions,fitted_raw),fitted_raw)
+        fitted_prior, prior_report = fit_report(prior_wire)
+        assert fitted_prior
+        assert payload(fitted_prior)==wire, f'prior wire mismatch: {profile}'
+        if profile=='instant_message':
+            decision=trace['source_decisions'][-1]; call=LlmToolCall(**decision['validated_projection'])
+            run=next(r for r in trace['tool_runs'] if r['provider_tool_call_id']==call.call_id)
+            result=_snapshot_result(call,SkillRunSnapshot.model_validate(run),max_bytes=131072)
+            raw=replace(raw,tool_exchanges=(*raw.tool_exchanges,LlmToolExchange('',(call,),(result,))),continuation_system_prompt=source_tool_followup_prompt(1),input_budget_report=None)
+        else:
+            defs={p.name:p for p in definitions(trace)}
+            urls=_successful_source_read_urls(raw.tool_exchanges,defs)
+            assert len(urls)>0
+            raw=replace(raw,tools=(),continuation_system_prompt=source_answer_revision_prompt(record['text'],urls),input_budget_report=None)
+        agent_fitted, agent_report=fit_report(raw)
+        assert agent_fitted, 'failure must occur in wrapper, not Agent prefit'
+        complete=await capture(wrapper(trace,trace['source_decisions'],agent_fitted),agent_fitted)
+        low,low_report=fit_report(complete)
+        assert low is None, f'original failure did not reproduce: {profile}'
+        large_raw=replace(raw,input_budget=LlmInputBudget(35617),input_budget_report=None)
+        large_agent=fit_input_budget(large_raw)
+        large_complete=await capture(wrapper(trace,trace['source_decisions'],large_agent),large_agent)
+        large,large_report=fit_report(large_complete)
+        assert large
+        # Preserve exactly the missing, blocked wire as well as the dispatched high-budget form.
+        stem=f'{profile}-{position}'
+        (OUT/f'{stem}-blocked-wire.json').write_text(json.dumps(payload(complete),ensure_ascii=False,indent=2)+'\n')
+        (OUT/f'{stem}-larger-wire.json').write_text(json.dumps(payload(large),ensure_ascii=False,indent=2)+'\n')
+        (OUT/f'{stem}-raw-request.json').write_text(json.dumps(asdict(raw),ensure_ascii=False,indent=2,default=str)+'\n')
+        reports.append({'case':stem,'prior_wire_exact_match':True,'prior_payload_sha256':sha(wire),'prior_agent_fit':raw_report,'prior_complete_fit':prior_report,'next_agent_fit':agent_report,'next_complete_fit_current':low_report,'next_complete_fit_larger':large_report,'blocked_wire_sha256':sha(payload(complete)),'larger_wire_sha256':sha(payload(large)),'prior_components':components(fitted_prior),'blocked_components':components(complete),'larger_components':components(large),'high_preserves_original_history':large.history==raw.history,'scope':'offline exact previous-wire match; next request recreated from recorded native calls, tool receipts and unchanged Runtime policies; not captured from original dispatch'})
+        print(json.dumps({k:v for k,v in reports[-1].items() if k not in ['prior_components','blocked_components','larger_components']},ensure_ascii=False),flush=True)
+    (OUT/'reconstruction.json').write_text(json.dumps(reports,ensure_ascii=False,indent=2)+'\n')
+
+if __name__ == '__main__':
+    asyncio.run(main())

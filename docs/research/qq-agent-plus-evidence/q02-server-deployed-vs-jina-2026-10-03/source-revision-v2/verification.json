@@ -1,0 +1,29 @@
+{
+  "source_hashes": {
+    "services/runtime/src/chatwaifu_runtime/agent/source_answer.py": "fa89af3fd3961b2ad0555ec152b56f9bee6e30250298b05c73f078f075bfea7b",
+    "services/runtime/src/chatwaifu_runtime/agent/source_context.py": "f1c4df66d243f33678b85e38b7b67cd48dc1dff3e00057fcd84d46e0ff0f1d5f",
+    "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py": "a68f939b31d4c8bc2a57d3f32ab13ede94e52c00c442c1542cdc5cb196fd8b34",
+    "services/runtime/src/chatwaifu_runtime/providers/openai_compatible.py": "1010cdcebcde165d367830bb669fe8cfe81bc96bd8c6266b8d8049f338f0aa00",
+    "tools/evaluate_character_scenarios.py": "6f85745bb7662a162250a72d09d11708e9916b13e6b77ef0c1800818cc7f5b3d"
+  },
+  "configured_model_key_found_in_artifacts": false,
+  "artifact_files_scanned": 5,
+  "scope": "Isolated source snapshot; production unchanged",
+  "local_source_hashes_match_server": true,
+  "local_related_tests": {
+    "passed": 378,
+    "warning": "existing audioop deprecation"
+  },
+  "server_related_tests": {
+    "passed": 214,
+    "warning": "existing audioop deprecation"
+  },
+  "ruff": "passed",
+  "targeted_pyright": "passed",
+  "diff_check": "passed",
+  "production_deployed": false,
+  "known_failures_before_final_tests": [
+    "Conversation test provider-call counts required updates for the new revision; verbose history fixture moved to the delivered revision output",
+    "Server snapshot initially lacked conftest and local MCP echo fixture; test assets restored before the final suite"
+  ]
+}

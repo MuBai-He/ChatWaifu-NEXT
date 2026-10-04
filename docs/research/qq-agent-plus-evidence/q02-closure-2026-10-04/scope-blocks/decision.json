@@ -1,0 +1,26 @@
+{
+  "actual_model_http_attempts": 32,
+  "candidate": "closure-c1 + default-off scope-block frame1.2 v39",
+  "completed_replies": 16,
+  "existing_source_review_policy_changed": false,
+  "frame_rejects": 0,
+  "later_gates": {
+    "autonomous_source_discovery": "not_run_for_this_candidate",
+    "full_three_presentation_864_ab": "not_run_for_this_candidate",
+    "role_directional": "not_run_for_this_candidate"
+  },
+  "literal_scope_controls_passed": 16,
+  "logical_requests": 32,
+  "new_persona_rules": false,
+  "next": "Keep all v39 results frozen and default off. Mandatory epistemic classification does not guarantee precise scope declaration, and whole mixed-block retention duplicates facts. Replace that responsibility with a coherent question/conclusion or atomic-claim design before another paid gate, no superficial persona/layout variation or failed-row repair.",
+  "precise_scope_preserved_flows": 3,
+  "production_adopted": false,
+  "q02_approval": false,
+  "quality_complete": 4,
+  "quality_partial": 12,
+  "runtime_fallback": 0,
+  "scope_missing_flows": 1,
+  "source_quality_gate": "rejected",
+  "turns_not_executed": 0,
+  "whole_block_capture_has_systematic_readability_regression": true
+}

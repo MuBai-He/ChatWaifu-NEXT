@@ -1,0 +1,48 @@
+{
+  "reviewer": "primary direct; unmasked; implementation author, not independent",
+  "scope": "One candidate-only eight-turn screen; not repeated A/B or full Q02 acceptance",
+  "quality_approved": false,
+  "rows": [
+    {
+      "sample_key": "topic_switch:r0:t1:candidate",
+      "assessment": "fail",
+      "reason": "Read timing and election excerpts support inequality and 150-300ms example, but not universal redraw on each heartbeat. Citation is real; technical overgeneralization remains."
+    },
+    {
+      "sample_key": "topic_switch:r0:t2:candidate",
+      "assessment": "partial",
+      "reason": "Follows the new food topic without invented shared activity; extra explanatory paragraphs reduce conversational naturalness."
+    },
+    {
+      "sample_key": "topic_switch:r0:t3:candidate",
+      "assessment": "partial",
+      "reason": "Responds to the stated sugar preference without violating an explicit stop; repeats and expands light teasing across three paragraphs."
+    },
+    {
+      "sample_key": "topic_switch:r0:t4:candidate",
+      "assessment": "partial",
+      "reason": "Persona-consistent food preference and mild self-deprecation, but verbose for a casual turn; no unsupported shared history."
+    },
+    {
+      "sample_key": "detailed_answer:r0:t1:candidate",
+      "assessment": "partial",
+      "reason": "All three requested categories have three suggestions. Unrequested transport-security 100Wh generalization lacks a stated mode/source; numeric packing suggestions are recommendations, not factual errors."
+    },
+    {
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "assessment": "fail",
+      "reason": "Read a 2014 announcement reprint and a 2025 composite news report; final does not disclose dates, secondary publisher or currentness gap. Wh formula is supported. Recall qualifier follows a narrower passage in the secondary source while its opening is broader; source reliability/conflict remains unresolved."
+    },
+    {
+      "sample_key": "detailed_answer:r0:t3:candidate",
+      "assessment": "partial",
+      "reason": "Both activities include content, duration and precautions. No invented closing-time cutoff. Some generic venue requirements are presented too categorically without selecting a venue."
+    },
+    {
+      "sample_key": "detailed_answer:r0:t4:candidate",
+      "assessment": "fail",
+      "reason": "Retains categories and both durations, but activity actions are reduced to place labels/precautions; book reading, hot drinks and photo sorting disappear. Carries forward outdated-current framing and unqualified secondary-source recall restriction."
+    }
+  ],
+  "accounting_checks_are_not_quality": true
+}

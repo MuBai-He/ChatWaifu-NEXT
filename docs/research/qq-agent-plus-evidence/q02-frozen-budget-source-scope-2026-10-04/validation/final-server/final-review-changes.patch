@@ -1,0 +1,100 @@
+--- a/services/runtime/src/chatwaifu_runtime/runtime_skills/public_web.py
++++ b/services/runtime/src/chatwaifu_runtime/runtime_skills/public_web.py
+@@ -199,6 +199,7 @@
+             raise SkillExecutionError(
+                 "web_invalid_arguments", "Invalid source URL, focus, excerpt length or link limit"
+             )
++        fallback_trace: dict[str, object] = {}
+         try:
+             async with asyncio.timeout(self._timeout_seconds):
+                 return await self._read(
+@@ -208,14 +209,21 @@
+                     maximum_links,
+                     cast(Literal["system", "cloudflare"], resolver),
+                     fresh,
++                    fallback_trace,
+                 )
+         except (TimeoutError, httpx2.TimeoutException) as error:
+             raise SkillExecutionError(
+-                "web_timeout", "Public source read timed out", retryable=True
++                "web_timeout",
++                "Public source read timed out",
++                retryable=True,
++                details=fallback_trace,
+             ) from error
+         except httpx2.HTTPError as error:
+             raise SkillExecutionError(
+-                "web_network_error", "Public source could not be read", retryable=True
++                "web_network_error",
++                "Public source could not be read",
++                retryable=True,
++                details=fallback_trace,
+             ) from error
+         except SkillExecutionError as error:
+             if error.structured.code.startswith("mcp_"):
+@@ -225,7 +233,9 @@
+                     else "web_invalid_response"
+                 )
+                 raise SkillExecutionError(
+-                    code, "Public source failed its network response validation"
++                    code,
++                    "Public source failed its network response validation",
++                    details=fallback_trace,
+                 ) from error
+             raise
+ 
+@@ -237,6 +247,7 @@
+         maximum_links: int,
+         resolver: Literal["system", "cloudflare"],
+         fresh: bool,
++        fallback_trace: dict[str, object] | None = None,
+     ) -> JsonObject:
+         if self._provider_config.reader_provider != "builtin":
+             try:
+@@ -258,6 +269,8 @@
+                     "reason": error.structured.code,
+                     "http_status": status if type(status) is int and 100 <= status <= 599 else None,
+                 }
++                if fallback_trace is not None:
++                    fallback_trace["provider_fallback"] = fallback
+                 # The outer read() deadline owns both attempts. The builtin path
+                 # revalidates every redirect and never sends companion credentials.
+                 try:
+--- a/services/runtime/src/chatwaifu_runtime/agent/tool_calling.py
++++ b/services/runtime/src/chatwaifu_runtime/agent/tool_calling.py
+@@ -375,7 +375,7 @@
+     r"该(?:公告|通知|网页|文章|文档)|这[份篇个](?:公告|通知|网页|文章|文档)"
+ )
+ _CURRENT_APPLICABILITY_QUERY = re.compile(
+-    r"最新|现行|当前|近期|现在|截至|后续|是否.{0,8}(?:生效|有效|执行)|"
++    r"最新|现行|当前|近期|最近|现在|截至|后续|是否.{0,8}(?:生效|有效|执行|适用|更新)|"
+     r"\b(?:latest|current|currently|still\s+(?:effective|valid)|subsequent)\b",
+     re.IGNORECASE,
+ )
+--- a/services/runtime/tests/test_public_web_fallback.py
++++ b/services/runtime/tests/test_public_web_fallback.py
+@@ -191,6 +191,11 @@
+     with pytest.raises(SkillExecutionError) as error:
+         await reader.read({"url": URL})
+     assert error.value.structured.code == "web_timeout" and stopped.is_set()
++    assert error.value.structured.details["provider_fallback"] == {
++        "from_provider": "crawl4ai",
++        "reason": "web_provider_unavailable",
++        "http_status": 503,
++    }
+     entered.clear()
+     stopped.clear()
+     task = asyncio.create_task(PublicWebReader(provider_config=config()).read({"url": URL}))
+--- a/services/runtime/tests/test_tool_calling_agent.py
++++ b/services/runtime/tests/test_tool_calling_agent.py
+@@ -1385,6 +1385,10 @@
+         ),
+         ("请总结这份公告 https://source.example/notice 的充电宝规定。", ()),
+         (
++            "请读取 https://source.example/notice ，该充电宝公告是否仍适用国内航班规定？",
++            ("3C 标识", "召回型号或批次", "额定能量"),
++        ),
++        (
+             "请读取 https://source.example/notice ，说明该公告及当前国内航班充电宝规定。",
+             ("3C 标识", "召回型号或批次", "额定能量"),
+         ),

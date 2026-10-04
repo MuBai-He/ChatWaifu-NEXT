@@ -1,0 +1,67 @@
+{
+  "review_group_id": "single_text:detailed_answer:r2",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "c9c58f2d83f8f204e36095851e73baa1699e8d35bd5351e5d5b61f1933077d72",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 788,
+    "total_tokens": 8856,
+    "prompt_tokens": 8068
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"single_text:detailed_answer:r2\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均严格按要求的三个类别展开，且每类均给出三条详尽实用的建议，条理清晰，语气温柔得体。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"fail\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"候选1完整列出随身携带、额定能量分级与标识/3C三条明确规定；候选2仅有一句未核实的系统提示式拒答，任务未完成。\",\n      \"factual_checks_needed\": [\n        \"https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html\",\n        \"https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html\"\n      ]\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均给出了两个室内方案，且各方案均完整包含活动内容、预计用时与注意事项三要素，细节丰富贴心。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"partial\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"候选1完整整合了前文所有模块与第2轮的充电宝合规要点；候选2因第2轮未答导致充电宝核对项缺失具体数值门槛。\",\n      \"factual_checks_needed\": [\n        \"https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html\",\n        \"https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html\"\n      ]\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "single_text:detailed_answer:r2",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均严格按要求的三个类别展开，且每类均给出三条详尽实用的建议，条理清晰，语气温柔得体。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "fail",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "候选1完整列出随身携带、额定能量分级与标识/3C三条明确规定；候选2仅有一句未核实的系统提示式拒答，任务未完成。",
+        "factual_checks_needed": [
+          "https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html",
+          "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html"
+        ]
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均给出了两个室内方案，且各方案均完整包含活动内容、预计用时与注意事项三要素，细节丰富贴心。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "partial",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "候选1完整整合了前文所有模块与第2轮的充电宝合规要点；候选2因第2轮未答导致充电宝核对项缺失具体数值门槛。",
+        "factual_checks_needed": [
+          "https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html",
+          "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html"
+        ]
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 3665
+}

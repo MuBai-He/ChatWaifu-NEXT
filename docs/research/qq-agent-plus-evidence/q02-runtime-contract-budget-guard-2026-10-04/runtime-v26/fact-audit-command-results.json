@@ -1,0 +1,38 @@
+[
+  {
+    "group": "default_voice/pre_user",
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "group": "default_voice/system",
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "group": "instant_message/pre_user",
+    "exit_code": 1,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "group": "instant_message/system",
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "group": "single_text/pre_user",
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "group": "single_text/system",
+    "exit_code": 1,
+    "stdout": "",
+    "stderr": ""
+  }
+]

@@ -1,0 +1,38 @@
+{
+  "actual_http_attempts": 8,
+  "known_usage_calls": 8,
+  "unknown_usage_calls": 0,
+  "known_usage_subtotals": {
+    "prompt_tokens": 153838,
+    "completion_tokens": 7295,
+    "total_tokens": 164279
+  },
+  "reasoning_known_calls": 2,
+  "reasoning_unknown_calls": 6,
+  "reasoning_known_subtotal": 3146,
+  "reference_range": [
+    20920,
+    28397
+  ],
+  "bias_percent_range": [
+    21.872516,
+    32.589511
+  ],
+  "http_status_counts": {
+    "200": 8
+  },
+  "http_error_counts": {},
+  "http_latency_p50_p95_ms": [
+    9013.5,
+    10697.8
+  ],
+  "turn_latency_p50_p95_ms": [
+    17419.0,
+    21269.5
+  ],
+  "execution_counts": {
+    "provider": 4
+  },
+  "usd_cost": null,
+  "first_visible_latency": null
+}

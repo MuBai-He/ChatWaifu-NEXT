@@ -1,0 +1,42 @@
+[
+  {
+    "file": "services/runtime/src/chatwaifu_runtime/agent/source_context.py",
+    "sha256": "9cc7474bd3d156d37db28cbab3f797c52d0a35abd7ad294df897fc21df8a7b5f",
+    "snapshot": "services__runtime__src__chatwaifu_runtime__agent__source_context.py.txt"
+  },
+  {
+    "file": "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py",
+    "sha256": "9dd64ea4495fec714e5ae7ba9114eb5aebfd54f3b705f7d6bd3f428ea72d4e51",
+    "snapshot": "services__runtime__src__chatwaifu_runtime__agent__tool_calling.py.txt"
+  },
+  {
+    "file": "services/runtime/src/chatwaifu_runtime/providers/contracts.py",
+    "sha256": "3e2c33beb6ba7eb827feb8b4cd5c3fe0dfb85c72710e296c6743eee45bb6120d",
+    "snapshot": "services__runtime__src__chatwaifu_runtime__providers__contracts.py.txt"
+  },
+  {
+    "file": "services/runtime/src/chatwaifu_runtime/providers/demo_llm.py",
+    "sha256": "617802a5105f5d07e5bce72d2e57f041abbc6caf566848ba00f407af606a99f2",
+    "snapshot": "services__runtime__src__chatwaifu_runtime__providers__demo_llm.py.txt"
+  },
+  {
+    "file": "services/runtime/src/chatwaifu_runtime/providers/input_estimation.py",
+    "sha256": "d22ce6ec7fdbb1259e8c54b38a41dc69a47b6453135d54ad52e0e6226633acf8",
+    "snapshot": "services__runtime__src__chatwaifu_runtime__providers__input_estimation.py.txt"
+  },
+  {
+    "file": "services/runtime/src/chatwaifu_runtime/providers/openai_compatible.py",
+    "sha256": "9aca9179cd04845372ed5c52f00811d4b84950155eac8e4e2e6732bcee5b1cc2",
+    "snapshot": "services__runtime__src__chatwaifu_runtime__providers__openai_compatible.py.txt"
+  },
+  {
+    "file": "services/runtime/src/chatwaifu_runtime/conversation/service.py",
+    "sha256": "c2ecec4b7832e5679507fa19f3e867819ddda4496920ce0dc255674fc8f50dbb",
+    "snapshot": "services__runtime__src__chatwaifu_runtime__conversation__service.py.txt"
+  },
+  {
+    "file": "services/runtime/src/chatwaifu_runtime/bootstrap/container.py",
+    "sha256": "d162def493b79d007fe0929444b3b5bf9bb136fcc58c0c6c36a742ef72924c4d",
+    "snapshot": "services__runtime__src__chatwaifu_runtime__bootstrap__container.py.txt"
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "original_execution_file": "prompt-v13/code-checks/gather-later-exception-control.py",
+    "archived_source": "prompt-v13/code-checks/gather-later-exception-control.py.txt",
+    "sha256": "80e2562bcdb6600460662bc92809e8083974baa18422407c29e29ab0f841e875"
+  },
+  {
+    "original_execution_file": "prompt-v13/code-checks/repeat-0.py",
+    "archived_source": "prompt-v13/code-checks/repeat-0.py.txt",
+    "sha256": "5e349c56f3ad4ce87807f63d78102585693c2c402f8a83986429c5752ff90956"
+  },
+  {
+    "original_execution_file": "prompt-v13/code-checks/repeat-1.py",
+    "archived_source": "prompt-v13/code-checks/repeat-1.py.txt",
+    "sha256": "8270092bc52ed0c07917a3f71d5598e4924ee049bbf77b751c0921704256296d"
+  },
+  {
+    "original_execution_file": "prompt-v13/code-checks/repeat-2.py",
+    "archived_source": "prompt-v13/code-checks/repeat-2.py.txt",
+    "sha256": "4b7c3a3b170b6541d01f5ede5dfdc99bfb756872285e36db8092bc9c6b804388"
+  },
+  {
+    "original_execution_file": "source-revision-v2/examples/technical_help_r0_t2_baseline_0.py",
+    "archived_source": "source-revision-v2/examples/technical_help_r0_t2_baseline_0.py.txt",
+    "sha256": "de1b8e32e33a4eb4e6b4f4392a96ab58c462891a8caebc8d17be0908fa94b8eb"
+  },
+  {
+    "original_execution_file": "source-revision-v2/examples/technical_help_r0_t3_baseline_0.py",
+    "archived_source": "source-revision-v2/examples/technical_help_r0_t3_baseline_0.py.txt",
+    "sha256": "8af66e07311f50577410139b206cccad5d37b339114d069442f41c08932d34a7"
+  },
+  {
+    "original_execution_file": "source-revision-v2/examples/technical_help_r1_t3_baseline_0.py",
+    "archived_source": "source-revision-v2/examples/technical_help_r1_t3_baseline_0.py.txt",
+    "sha256": "5b1e236ce43634523afdaf90093ea929af97611d84869d9b1a746cfcff9b8497"
+  },
+  {
+    "original_execution_file": "source-revision-v2/examples/technical_help_r2_t2_baseline_0.py",
+    "archived_source": "source-revision-v2/examples/technical_help_r2_t2_baseline_0.py.txt",
+    "sha256": "b96ca4ce78ccc849c7c67e445d5be2dadb55f042028b85b5996307fff2193d38"
+  },
+  {
+    "original_execution_file": "source-revision-v2/examples/technical_help_r2_t3_baseline_0.py",
+    "archived_source": "source-revision-v2/examples/technical_help_r2_t3_baseline_0.py.txt",
+    "sha256": "a7c71b936fdef0dbaa12906fea663f6872103b54a887d3072066330da043d126"
+  }
+]

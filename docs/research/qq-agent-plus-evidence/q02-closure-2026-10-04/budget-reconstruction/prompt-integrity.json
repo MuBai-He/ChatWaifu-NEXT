@@ -1,0 +1,8 @@
+{
+  "source_policy_and_tool_policy_constants_unchanged": true,
+  "persona_sha256": "204644ee525210c1cb253688d7db218a2a2bc3fe6e91bfb3f5d135e9c5e47959",
+  "input_window": 32768,
+  "output_reserve": 8192,
+  "estimate_margin": 0.15,
+  "new_rules": false
+}

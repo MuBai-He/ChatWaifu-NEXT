@@ -1,0 +1,125 @@
+{
+  "configured_credentials_absent": true,
+  "files": {
+    "live/results.jsonl": {
+      "sha256": "e197a7ad537ffa326582f8357c98eb8b91a3e609d97a63d1d13816fd2855cceb",
+      "bytes": 3414
+    },
+    "live/attempts.jsonl": {
+      "sha256": "58e88130063a19cdb686f20c07e68cbdc37085eb9ba6eda4f10b6c839976dfd9",
+      "bytes": 146
+    },
+    "live/provider-rounds.jsonl": {
+      "sha256": "84c5e94573e1903ce2da79e696db792705245bb33c9d43223b8280c148494d59",
+      "bytes": 7110
+    },
+    "live/exit-code.json": {
+      "sha256": "e89df0eae5ec7db81135aed16463968955c578bcc4f2ec43172eff351f080c17",
+      "bytes": 17
+    },
+    "additional-engines/plan.json": {
+      "sha256": "b5bbf6d4eb32cd5da358646728d1b2507281fa9ac5e6a78c1d9172c4c082f5fc",
+      "bytes": 814
+    },
+    "additional-engines/results.jsonl": {
+      "sha256": "04f94e0a5922b6d61cdd45f3c4f37bfd387ad3cc6efd5b402a465980b2fc7477",
+      "bytes": 27160
+    },
+    "additional-engines/stopped.json": {
+      "sha256": "e0b6c14ec540fbd72478187b44b42b1c5a8a4bae5f57b77329fad627f727d34a",
+      "bytes": 144
+    },
+    "additional-engines/exit-code.json": {
+      "sha256": "d24219f6de94b955cf36d25bd2aca88e2d35eef45b9317b7083f55ec8fe9653c",
+      "bytes": 16
+    },
+    "additional-engines/active-engines.json": {
+      "sha256": "3d5ac67f0f142b23d7a6a4fb34026a8c1e224dafe123e85cf198faf4e572b9c0",
+      "bytes": 491
+    },
+    "additional-engines/initialization-errors.json": {
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "bytes": 3
+    },
+    "additional-engines/default-engine-flags.json": {
+      "sha256": "ae3c0a22122137515513ce02fcc4ce2f321ad44f8fb3512a97518d769743b17a",
+      "bytes": 317
+    },
+    "source/services/runtime/src/chatwaifu_runtime/providers/contracts.py.txt": {
+      "sha256": "99ffdb79bd68a9476dd0fd435a47927457a5dc067f23beee86852ff1a53946e2",
+      "bytes": 8776
+    },
+    "source/services/runtime/src/chatwaifu_runtime/providers/openai_compatible.py.txt": {
+      "sha256": "fe83c453204ab372cfa77f23835558dcba648f98abd2623d8955eed1055de40a",
+      "bytes": 30569
+    },
+    "source/tools/runtime_source_evaluation.py.txt": {
+      "sha256": "a8073fd3cf84f8af221ef2e6861b80e783d25c427c573e74aab185a158bd86b5",
+      "bytes": 14812
+    },
+    "source/tools/evaluate_character_scenarios.py.txt": {
+      "sha256": "d60ba69f0d18fc5851c3aff881da7e0b4b4ca546ca8a7a398717226f9adccda6",
+      "bytes": 98074
+    },
+    "source/services/runtime/tests/test_llm_stream_lifecycle.py.txt": {
+      "sha256": "3a7bb6fa822fface80437ce8970616ea2d5ef4d32217abbffc57e600be818a76",
+      "bytes": 9871
+    },
+    "source/tools/tests/test_evaluate_character_scenarios.py.txt": {
+      "sha256": "9caeb7f46fe7c8aae725c7b8e4af5491d46779900d78c0e2b7f84d28ea40e56c",
+      "bytes": 74149
+    },
+    "probe_stream_identity.py.txt": {
+      "sha256": "e8738f2a737c61040bf99846d1511c9700773ead895933ad31ab93f4b8eefb2e",
+      "bytes": 4143
+    },
+    "probe_additional_engines.py.txt": {
+      "sha256": "30d6a96fb472609fde327dd6ac1946ae6eb4276dcba5333df20ebd41b29072e8",
+      "bytes": 3960
+    },
+    "runtime/metadata.json": {
+      "sha256": "d5e92670f691114abcafff0b6652fccf4bf914af8c519daade5b8e9fe3f243ad",
+      "bytes": 1583
+    },
+    "runtime/results.jsonl": {
+      "sha256": "3655806a17402bd217305022b811caadef8bf7db92f9f1c0c27bb6c6431e2071",
+      "bytes": 348279
+    },
+    "runtime/provider-rounds.jsonl": {
+      "sha256": "34a8bf683ae4fa34003a55a52a4eb3745195a6fac0a55952745299b5ac9e7bab",
+      "bytes": 475487
+    },
+    "runtime/actual-provider-payloads.jsonl": {
+      "sha256": "757f078ecde25df5991cce00c60a39605ee8d75419e9102103abc1d305c70b3e",
+      "bytes": 621184
+    },
+    "runtime/command.json": {
+      "sha256": "5a358d620614a0a24b21aa4649005ec7b70b61361d7fb0756e9c2ef73c4f1729",
+      "bytes": 1075
+    },
+    "runtime/fixtures.json": {
+      "sha256": "89d99c08ddd9a7b59b8e4118d2abae3052bc5c7c070bf37fb80a4913dc0afd97",
+      "bytes": 11535
+    },
+    "runtime/changes.json": {
+      "sha256": "e2a6f718b3afc17596d1e1bfaf0d1f5932802b565707d7b47f7c670e3377e857",
+      "bytes": 896
+    },
+    "runtime/exit-code.json": {
+      "sha256": "e89df0eae5ec7db81135aed16463968955c578bcc4f2ec43172eff351f080c17",
+      "bytes": 17
+    },
+    "runtime/launch.py.txt": {
+      "sha256": "841492ff51d2de2c9305ae5e8e5fed0d7d4c0470fe56cb93b015b78fa077aae8",
+      "bytes": 2155
+    },
+    "runtime/execute.py.txt": {
+      "sha256": "3ca66faa84a4ce67b260d549a417896ad98ace785debb2c4c8f65bd9daed42ba",
+      "bytes": 464
+    },
+    "runtime/searx-setup.json": {
+      "sha256": "872cb4ea61d631e481e962b6ca1001f2fc88ba42543e636a3c7d906fd2a840c8",
+      "bytes": 415
+    }
+  }
+}

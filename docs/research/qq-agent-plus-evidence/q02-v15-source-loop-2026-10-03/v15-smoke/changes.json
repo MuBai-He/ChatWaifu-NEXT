@@ -1,0 +1,9 @@
+{
+  "parent_snapshot": "/tmp/cw2-q02-source-revision-v14-eval",
+  "snapshot": "/tmp/cw2-q02-source-revision-v15-eval",
+  "sha256": {
+    "services/runtime/src/chatwaifu_runtime/agent/source_answer.py": "be19118526e91aedc4ac95bec82442dd4d7e674fcfb30d78219e3ab198afe351",
+    "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py": "2eb02f2171b46a2e7c0ec000e383f84b46d53d9b7948d6d6a58187c455469af5",
+    "services/runtime/tests/test_tool_calling_agent.py": "411670e7e81d62f0e70f11d9a44e87fdd83b0211a0c796a6af91349a9eecf69b"
+  }
+}

@@ -1,0 +1,307 @@
+--- v42/services/runtime/src/chatwaifu_runtime/agent/source_context.py
++++ candidate/services/runtime/src/chatwaifu_runtime/agent/source_context.py
+@@ -218,6 +218,18 @@
+ def project_source_context(request: LlmRequest, packet: SourceContextPacket) -> LlmRequest:
+     if not packet.receipts and not packet.truncated:
+         return request
++    # Later tool results and review policy change the available allowance. Replace
++    # our last envelope when projecting the same authoritative packet again;
++    # supplied user material and other context remain mandatory and unchanged.
++    context = list(request.context)
++    for index in range(len(context) - 2, -1, -1):
++        if context[index] == ("system", _POLICY) and (
++            context[index + 1][0] == "user"
++            and context[index + 1][1].startswith("[PUBLIC SOURCE DATA]\n")
++        ):
++            del context[index : index + 2]
++            request = replace(request, context=tuple(context))
++            break
+     records: list[JsonObject] = []
+     for receipt in packet.receipts:
+         run = receipt.run
+--- v42/services/runtime/src/chatwaifu_runtime/agent/tool_calling.py
++++ candidate/services/runtime/src/chatwaifu_runtime/agent/tool_calling.py
+@@ -613,8 +613,19 @@
+     return TOOL_QUERY_FAILED_REPLY
+ 
+ 
+-def _budgeted_request(request: LlmRequest) -> LlmRequest:
++def _budgeted_request(
++    request: LlmRequest, *, source_context: SourceContextPacket | None = None
++) -> LlmRequest:
+     try:
++        if (
++            source_context is not None
++            and request.input_budget is not None
++            and estimate_input_tokens(request) > request.input_budget.estimated_token_limit
++        ):
++            # Earlier receipts have an explicit whole-body omission policy. Fit
++            # them against this complete outgoing phase, including new results
++            # or a withheld draft. Current results and supplied facts stay intact.
++            request = project_source_context(request, source_context)
+         fitted = fit_input_budget(request)
+         report = fitted.input_budget_report
+     except InputBudgetExceeded as error:
+@@ -781,6 +792,7 @@
+                 source_urls=prior_source_revision_urls(request)
+                 if source_context is not None
+                 else (),
++                source_context=source_context,
+             ):
+                 yield text
+             return
+@@ -854,7 +866,7 @@
+         while True:
+             ensure_current()
+             try:
+-                tool_request = _budgeted_request(tool_request)
++                tool_request = _budgeted_request(tool_request, source_context=source_context)
+                 # A provider wrapper may add mandatory wire policy after this fit.
+                 # Apply the same truthful fallback if that complete request cannot fit.
+                 decision = await self._collect_tool_round(
+@@ -888,6 +900,7 @@
+                         llm=effective_llm,
+                         source_urls=_successful_source_read_urls(exchanges, mapped),
+                         source_answer_turn=source_answer_turn,
++                        source_context=source_context,
+                     ):
+                         yield text
+                 else:
+@@ -936,6 +949,7 @@
+                                 ensure_current,
+                                 llm=effective_llm,
+                                 source_answer_turn=source_answer_turn,
++                                source_context=source_context,
+                             )
+                         for text in decision.text_chunks:
+                             ensure_current()
+@@ -1042,6 +1056,7 @@
+                         ensure_current,
+                         llm=effective_llm,
+                         source_answer_turn=source_answer_turn,
++                        source_context=source_context,
+                     )
+                     for text in revised:
+                         ensure_current()
+@@ -1139,6 +1154,7 @@
+                     ensure_current,
+                     llm=effective_llm,
+                     source_answer_turn=source_answer_turn,
++                    source_context=source_context,
+                 ):
+                     yield text
+                 return
+@@ -1164,6 +1180,7 @@
+                     llm=effective_llm,
+                     source_urls=_successful_source_read_urls(exchanges, mapped),
+                     source_answer_turn=source_answer_turn,
++                    source_context=source_context,
+                 ):
+                     yield text
+                 return
+@@ -1189,6 +1206,7 @@
+         llm: LlmProvider,
+         source_urls: tuple[str, ...] = (),
+         source_answer_turn: SourceAnswerTurn | None = None,
++        source_context: SourceContextPacket | None = None,
+     ) -> AsyncIterator[str]:
+         ensure_current()
+         final_request = replace(
+@@ -1205,6 +1223,7 @@
+             llm=llm,
+             source_urls=source_urls,
+             source_answer_turn=source_answer_turn,
++            source_context=source_context,
+         ):
+             yield text
+ 
+@@ -1216,10 +1235,11 @@
+         llm: LlmProvider | None = None,
+         source_urls: tuple[str, ...] = (),
+         source_answer_turn: SourceAnswerTurn | None = None,
++        source_context: SourceContextPacket | None = None,
+     ) -> AsyncIterator[str]:
+         ensure_current()
+         try:
+-            request = _budgeted_request(replace(request, tools=()))
++            request = _budgeted_request(replace(request, tools=()), source_context=source_context)
+         except InputBudgetExceeded:
+             ensure_current()
+             yield _runtime_fallback(
+@@ -1281,6 +1301,7 @@
+                 ensure_current,
+                 llm=provider,
+                 source_answer_turn=source_answer_turn,
++                source_context=source_context,
+             )
+             for text in revised:
+                 ensure_current()
+@@ -1322,6 +1343,7 @@
+         *,
+         llm: LlmProvider,
+         source_answer_turn: SourceAnswerTurn | None = None,
++        source_context: SourceContextPacket | None = None,
+     ) -> list[str]:
+         """One bounded text-only pass; never execute tools or publish the draft."""
+         ensure_current()
+@@ -1370,7 +1392,10 @@
+                 )
+             ]
+         try:
+-            revision = _budgeted_request(revision)
++            revision = _budgeted_request(revision, source_context=source_context)
++            if missing_required_prior_read(revision):
++                ensure_current()
++                return [_runtime_fallback(TOOL_SOURCE_REVISION_BUDGET_REPLY, source_answer_turn)]
+             result = await self._collect_tool_round(
+                 revision,
+                 ensure_current,
+--- v42/services/runtime/tests/test_source_context_projection.py
++++ candidate/services/runtime/tests/test_source_context_projection.py
+@@ -71,6 +71,16 @@
+         input_budget=LlmInputBudget(limit),
+         history=(("user", "Only personal use, preserve all exceptions."),),
+     )
++
++
++def test_reprojection_replaces_runtime_envelope_and_keeps_other_context() -> None:
++    packet = SourceContextPacket((_receipt("COMPLETE ORIGINAL"),))
++    request = replace(_request(), context=(("user", "supplied material"),))
++    projected = project_source_context(request, packet)
++    reprojection = project_source_context(projected, packet)
++    assert reprojection.context == projected.context
++    assert reprojection.context[0] == ("user", "supplied material")
++    assert sum(text.startswith("[PUBLIC SOURCE DATA]\n") for _, text in reprojection.context) == 1
+ 
+ 
+ @pytest.mark.parametrize(
+--- v42/services/runtime/tests/test_tool_calling_agent.py
++++ candidate/services/runtime/tests/test_tool_calling_agent.py
+@@ -2632,6 +2632,127 @@
+ 
+ @pytest.mark.asyncio
+ @pytest.mark.parametrize(
++    "phase", ["decision", "tool_result", "revision", "revision_lost", "mandatory_overflow"]
++)
++async def test_later_input_accounts_for_prior_sources_without_clipping_current_evidence(
++    phase: str,
++) -> None:
++    from chatwaifu_runtime.agent.input_budget import estimate_input_tokens
++    from chatwaifu_runtime.agent.source_context import project_source_context
++    from chatwaifu_runtime.agent.tool_calling import (
++        _TOOL_POLICY,  # pyright: ignore[reportPrivateUsage]
++        TOOL_RESULT_BUDGET_REPLY,
++        TOOL_SOURCE_REVISION_BUDGET_REPLY,
++    )
++    from chatwaifu_runtime.conversation.source_context import (
++        SourceContextPacket,
++        SourceContextReceipt,
++    )
++    from chatwaifu_runtime.providers.contracts import LlmInputBudget, LlmToolDefinition
++
++    old_text = "OLD COMPLETE CONDITION " * 500
++    old_run = _snapshot(
++        SkillRunState.SUCCEEDED,
++        data={"url": "https://source.example/old", "text": old_text},
++    ).model_copy(update={"skill_id": "web.read"})
++    packet = SourceContextPacket((SourceContextReceipt(old_run, True),))
++    if phase == "revision":
++        newest_run = _snapshot(
++            SkillRunState.SUCCEEDED,
++            data={"url": "https://source.example/newest", "text": "Retained latest condition."},
++        ).model_copy(update={"skill_id": "web.read"})
++        packet = SourceContextPacket((SourceContextReceipt(newest_run, True), *packet.receipts))
++    source: JsonObject = {
++        "url": "https://source.example/current",
++        "text": ("CURRENT CONDITION " * (4000 if phase == "mandatory_overflow" else 200))
++        + " FINAL EXCEPTION",
++        "body_sha256": "d" * 64,
++        "truncated": False,
++    }
++    read = _SourceProjection("read", "web.read")
++    router = _Router((read,))
++    user_text = "你好" if phase == "decision" else "读取并解释新的文档。"
++    if phase in {"revision", "revision_lost"}:
++        user_text = "把已经取得的资料整理成清单，不要新检索。"
++    request = replace(
++        _request(user_text),
++        tool_choice="auto" if phase in {"decision", "revision", "revision_lost"} else "required",
++        tool_result_max_bytes=131072,
++    )
++    # The retained original fits the initial request, before a real later phase
++    # adds an optional policy, executed result, or withheld draft.
++    initial = project_source_context(
++        request
++        if phase in {"revision", "revision_lost"}
++        else replace(
++            request,
++            system_prompt=request.system_prompt + _TOOL_POLICY,
++            tools=(LlmToolDefinition(read.name, read.description, read.input_schema),),
++        ),
++        packet,
++    )
++    limit = estimate_input_tokens(initial) + 40
++    request = replace(request, input_budget=LlmInputBudget(limit))
++    draft = "WITHHELD DRAFT " * (100 if phase in {"revision", "revision_lost"} else 1)
++    text_rounds: list[tuple[LlmStreamEvent, ...]] = [
++        (LlmTextDelta(draft), LlmResponseCompleted("stop")),
++        (LlmTextDelta("核对后的当前答复。"), LlmResponseCompleted("stop")),
++    ]
++    if phase in {"tool_result", "mandatory_overflow"}:
++        text_rounds.insert(
++            0,
++            (
++                LlmToolCallRequested(LlmToolCall("current", "read", {"url": source["url"]})),
++                LlmResponseCompleted("tool_calls"),
++            ),
++        )
++    llm = _ScriptedLlm(text_rounds)
++    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED, data=source))
++    reply = [
++        text
++        async for text in AgentTurnOrchestrator(llm, gateway, router).stream(
++            request,
++            session_id=uuid4(),
++            turn_id=uuid4(),
++            ensure_current=lambda: None,
++            source_context=packet,
++        )
++    ]
++    if phase == "mandatory_overflow":
++        assert reply == [TOOL_RESULT_BUDGET_REPLY]
++        assert len(llm.requests) == len(gateway.invocations) == 1
++    elif phase == "revision_lost":
++        assert reply == [TOOL_SOURCE_REVISION_BUDGET_REPLY]
++        assert len(llm.requests) == 1 and not gateway.invocations
++    else:
++        assert reply == [draft if phase == "decision" else "核对后的当前答复。"]
++        assert len(llm.requests) == (1 if phase == "decision" else 2 if phase == "revision" else 3)
++        final = llm.requests[-1]
++        envelope = json.loads(final.context[-1][1].split("\n", 1)[1])
++        old_receipt = envelope["receipts"][1 if phase == "revision" else 0]
++        assert old_receipt["original_result"] == "omitted_for_input_budget"
++        assert "data" not in old_receipt
++        assert old_receipt["source_metadata"]["url"] == "https://source.example/old"
++        if phase == "revision":
++            assert envelope["receipts"][0]["original_result"] == "available"
++            assert envelope["receipts"][0]["data"]["text"] == "Retained latest condition."
++        if phase in {"tool_result", "revision"}:
++            assert old_text in llm.requests[0].context[-1][1]
++        if phase == "tool_result":
++            for sent in llm.requests[1:]:
++                content = sent.tool_exchanges[0].results[0].content
++                assert isinstance(content, dict) and content["data"] == source
++        assert all(estimate_input_tokens(sent) <= limit for sent in llm.requests)
++    assert len(gateway.invocations) == (1 if phase in {"tool_result", "mandatory_overflow"} else 0)
++    assert old_run.result is not None and old_run.result.data == {
++        "url": "https://source.example/old",
++        "text": old_text,
++    }
++    assert isinstance(source["text"], str) and source["text"].endswith(" FINAL EXCEPTION")
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize(
+     "text",
+     [
+         "整理上述所有准备要点成核对表。",

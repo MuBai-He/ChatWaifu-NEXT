@@ -1,0 +1,24 @@
+"""Reverse ordering after observing alternating endpoint response-model labels."""
+import hashlib,json,time
+from pathlib import Path
+import requests
+previous=Path('/tmp/cw2-q02-cap-selection-probe-20261003')
+rows=[json.loads(l) for l in (previous/'results.jsonl').read_text().splitlines()]
+requests_by_limit={r['limit']:r['request'] for r in rows if r['repeat']==0}
+root=Path('/tmp/cw2-q02-cap-counterbalance-probe-20261003');root.mkdir(mode=0o700,exist_ok=True)
+assert not (root/'attempts.jsonl').exists(),'Existing attempts require inspection'
+(root/'plan.json').write_text(json.dumps({'requested_model':'gemini-3.8-flash-high','ordering':[20,5]*3,'repeats':3,'requests_max':6,'reason':'Earlier 5/20 arms perfectly confounded with alternating response model labels; same frozen requests in reverse order','tool_execution':False,'synthetic_receipt_projection':True,'reported_model_labels_do_not_verify_underlying_model':True},indent=2)+'\n')
+key=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+s=requests.Session();s.trust_env=False
+for repeat in range(3):
+ for limit in [20,5]:
+  p=requests_by_limit[limit];digest=hashlib.sha256(json.dumps(p,ensure_ascii=False,sort_keys=True).encode()).hexdigest();sample=f'{repeat}:{limit}'
+  with (root/'attempts.jsonl').open('a') as f:f.write(json.dumps({'key':sample,'request_sha256':digest})+'\n')
+  begin=time.monotonic();response=s.post('https://mubai.website:8318/v1/chat/completions',json=p,headers={'Authorization':'Bearer '+key},timeout=180);data=response.json()
+  for choice in data.get('choices',[]):
+   for field in ['reasoning','reasoning_content','thinking']:choice.get('message',{}).pop(field,None)
+  record={'key':sample,'limit':limit,'repeat':repeat,'request':p,'request_sha256':digest,'http_status':response.status_code,'response':data,'latency_ms':round((time.monotonic()-begin)*1000),'tool_execution':False,'synthetic_receipt_projection':True}
+  assert key not in json.dumps(record)
+  with (root/'results.jsonl').open('a') as f:f.write(json.dumps(record,ensure_ascii=False)+'\n')
+  print(json.dumps({'key':sample,'http':response.status_code,'reported_model':data.get('model'),'latency_ms':record['latency_ms']}),flush=True)
+(root/'exit-code.json').write_text('{"exit_code":0}\n')

@@ -1,0 +1,25 @@
+{
+  "category": "S1 independent deployed-service readiness, not new answer candidate",
+  "config_mutations": 0,
+  "model_calls": 0,
+  "previous_frozen_phase": "scope-blocks v39 rejected; 93 manifest entries unchanged",
+  "public_read_dns_resolver": "cloudflare",
+  "quality_gate": "These readiness controls cannot pass model-autonomous discovery or Q02; failure blocks use of current service route.",
+  "queries": [
+    "中国民航局 充电宝 现行 携带规定",
+    "国航 充电宝 携带规定",
+    "Raft original paper randomized election timeout"
+  ],
+  "read_calls_limit": 2,
+  "reader_endpoint": "http://127.0.0.1:11235",
+  "required_evidence": [
+    "Actual deployed version/engine names, no full config or credentials",
+    "Each search HTTP, errors and returned URL/title/snippet with latency",
+    "One HTML and one PDF only if search discovered relevant sources; no invented or seeded notice dates",
+    "Separate upstream discovery/reader failure from Runtime code and answer quality",
+    "No production change, source corpus replacement or quality approval"
+  ],
+  "rerun_completed_calls": false,
+  "search_calls_limit": 3,
+  "search_endpoint": "http://127.0.0.1:18080"
+}

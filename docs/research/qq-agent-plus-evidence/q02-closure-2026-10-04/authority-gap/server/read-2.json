@@ -1,0 +1,40 @@
+{
+  "arguments": {
+    "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/DB_DQXW/202507/t20250709_227899.html",
+    "max_characters": 6000,
+    "dns_resolver": "cloudflare",
+    "fresh": true
+  },
+  "discovery": {
+    "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/DB_DQXW/202507/t20250709_227899.html",
+    "query_index": 1,
+    "rank": 2,
+    "title": "caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/DB_DQXW/202507...",
+    "snippet": "日前民航局发布紧急通知，自6月28日起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。 东北局及辽宁监管局紧急部署，要求辖区单位严格落实卡控政策。 辖区各机场及航司迅速行动，多措 并举保障政策实施。"
+  },
+  "ok": true,
+  "result": {
+    "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/DB_DQXW/202507/t20250709_227899.html",
+    "provider": "crawl4ai",
+    "title": "",
+    "text": "东北地区管理局 - 地区新闻\n菜单\n\n东北局对沈阳机场旅客携带充电宝乘机安全工作开展督导检查\n来源：地区管理局 2025-06-30 15:04\n日前民航局发布紧急通知，自6月28日起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。东北局及辽宁监管局紧急部署，要求辖区单位严格落实卡控政策。辖区各机场及航司迅速行动，多措 并举保障政策实施。沈阳机场强化安检流程，增设充电宝暂存处并提供邮寄、回收服务，同时开展员工专项培训；各支线机场同步推进宣传告知、安检升级及旅客服务保障；南航北方分公司、深航沈阳分公司通过官方渠道发布提示，确保政策信息全覆盖。\n为保障航空运行安全，政策实施首日，东北局李大宇副局长带队对沈阳机场开展督导检查。检查组深入安检通道，详细检查充电宝查验流程，随机抽查安检员对卡控要求、召回型号查询及处置程序的掌握情况；在旅客问询柜台，重点检查工作人员政策解释的准确性、服务引导规范性，及自弃、暂存、邮寄等需求的处置流程；实地查看公告栏、宣传板等新规宣传覆盖效果，评估旅客知晓程度。从检查情况看，沈阳机场管控措施有效，暂存邮寄等配套服务完善，保障现场秩序平稳。当日，累计卡控不合格充电宝3973部，占过检充电宝总量72%，均已妥善处置。\n李大宇副局长提出三点工作要求：一是提高政治站位，压实安全责任。各单位要深刻认识做好此项工作对保障航空安全的重要性，将其作为当前安全管理的重点进行部署落实。二是强化宣传告知，确保有序实施。要持续加强对充电宝起火冒烟事件的警示宣传力度，引导旅客充分认知相关产品的安全风险及管控政策，保障政策执行顺畅。三是夯实能力基础，提升应急水平。要强化一线人员培训，精准解答旅客政策问询，严防舆情事件发生，完善充电宝起火、冒烟等应急处置预案，强化应急演练。\n相关推送\n[首页](https://www.caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/)丨[导航](https://www.caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/DB_DQXW/202507/t20250709_227899.html)丨[电脑版](http://db.caac.gov.cn/index.html)\n版权所有：中国民用航空局",
+    "retrieved_at": "2026-10-04T11:09:18.317540+00:00",
+    "content_type": "text/plain",
+    "body_sha256": "b5ff0b049a687378b389391416edb38b7e9dbafc05a38448671ef0ca32982b65",
+    "total_characters": 960,
+    "text_offset": 0,
+    "truncated": false,
+    "focus_matched": null,
+    "dns_resolver": "cloudflare",
+    "extraction_method": "plain_text",
+    "document_characters": 960,
+    "links": [],
+    "links_requested": false,
+    "links_truncated": false,
+    "links_scope": "selected_source",
+    "read_url_schemes": [
+      "https"
+    ]
+  },
+  "elapsed_ms": 1327
+}

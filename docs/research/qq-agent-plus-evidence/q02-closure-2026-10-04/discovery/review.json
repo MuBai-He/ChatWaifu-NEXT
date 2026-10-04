@@ -1,0 +1,34 @@
+{
+  "model_calls": 0,
+  "search_calls": 3,
+  "reader_calls": 2,
+  "scope": "operator-directed existing adapters, not automatic Runtime model retrieval acceptance",
+  "query_result_review": [
+    {
+      "id": "search-0",
+      "finding": "Search did not directly rank known notice; found official announcement index. Query includes already-known issue date, so this is bounded rediscovery, not open-ended discovery proof."
+    },
+    {
+      "id": "search-1",
+      "finding": "Returned official historical pages; does not prove completeness or absence of later domestic updates."
+    },
+    {
+      "id": "search-2",
+      "finding": "Returned Raft original paper URL; previous actual reader evidence retained, not repeated."
+    }
+  ],
+  "airchina_chain": {
+    "discovered_index": "https://webresource.airchina.com.cn/zh-CN/content/about_us/service_announcement/",
+    "linked_target": "https://webresource.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml",
+    "reader": "crawl4ai",
+    "dns_resolver": "cloudflare",
+    "target_body_characters": 1371,
+    "target_truncated": false,
+    "frozen_body_characters": 1339,
+    "frozen_main_text_unchanged": true,
+    "new_text_sha256": "a74392ebc1be983e65e9d32a576fa35129007cc87f73db1863588e79880b853b",
+    "frozen_corpus_overwritten": false,
+    "structured_links": "External Reader returns links=[] with links_truncated=true; target is present in actual returned Markdown, not inferred from metadata."
+  },
+  "q02_approved": false
+}

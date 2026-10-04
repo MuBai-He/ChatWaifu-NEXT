@@ -1,0 +1,11 @@
+{
+  "at_utc": "2026-10-03T17:18:38.293116+00:00",
+  "condition_mapping_read": false,
+  "reply_count": 21,
+  "hashes": {
+    "review-rubric.json": "98a5caee158ac81a9ac2eb19cdbf4bda0c0e6111ae3a9327f6bdd724232aabb0",
+    "initial-review-packets.json": "a73cf765a9c460582bcc317b4a2632a56ab50b2bb05a44b7712d148fd81ea9d1",
+    "initial-primary-judgments.json": "c2f2228287bbacc0cc394aa7e92898e9e45d51f874467447eef2ac3636e12cc9",
+    "initial-review-key.json": "28fc75f65b7f4c62b157d8042b0a993a6e578e4113eadab7c6d377c84033493a"
+  }
+}

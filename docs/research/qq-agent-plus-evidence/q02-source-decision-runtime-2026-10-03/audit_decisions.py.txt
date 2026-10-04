@@ -1,0 +1,68 @@
+"""Audit native decisions separately from Runtime receipts; no quality approval."""
+import json
+import sys
+from collections import Counter
+from pathlib import Path
+
+root = Path(sys.argv[1])
+def rows(name):
+    path = root / name
+    return [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
+
+completed = rows("results.jsonl")
+incomplete = rows("incomplete.jsonl")
+all_rows = completed + incomplete
+stats = Counter()
+checks = []
+for row in all_rows:
+    trace = row.get("runtime_source_trace") or {}
+    calls = trace.get("provider_calls", [])
+    originals = [call for round in calls for call in round["requested_calls"]]
+    runs = trace.get("tool_runs", [])
+    receipts = {run["provider_tool_call_id"]: run for run in runs}
+    assert len(runs) <= 6
+    assert len(calls) <= 13
+    stats.update(run["skill_id"] + ":" + run["state"] for run in runs)
+    for record in trace.get("source_decisions") or []:
+        native = record["native_calls"]
+        assert all(call in originals for call in native)
+        projection = record.get("validated_projection", record.get("executed_projection"))
+        error = record["validation_error"]
+        stats["decisions"] += 1
+        if error:
+            stats["rejected:" + error] += 1
+            assert projection is None
+        elif projection:
+            assert len(native) == 1
+            original = native[0]
+            action = original["arguments"]["next_action"]
+            assert projection["call_id"] == original["call_id"]
+            assert projection["arguments"] == action["arguments"]
+            receipt = receipts.get(projection["call_id"])
+            if row in completed:
+                assert receipt is not None
+            if receipt:
+                assert receipt["skill_id"] == "web." + action["kind"]
+                assert receipt["generation_id"] == record["generation_id"]
+                stats["native_action_receipts"] += 1
+            for round in calls:
+                for exchange in round["input_tool_exchanges"]:
+                    for call in exchange["calls"]:
+                        if call["call_id"] == projection["call_id"]:
+                            assert call == original
+                            for result in exchange["results"]:
+                                if result["call_id"] == call["call_id"]:
+                                    assert result["name"] == original["name"]
+                                    assert result["content"]["executed_call"] == projection
+                                    stats["restored_history_results"] += 1
+        else:
+            stats["native_finish_drafts"] += 1
+    if row in completed and row["runtime_source_trace"]["reply_origin"] == "provider":
+        assert calls[-1]["tools"] == []
+        assert calls[-1]["text"] == row["raw_reply"]
+    checks.append({"sample_key": row["sample_key"], "source_calls": len(runs),
+                   "provider_calls": len(calls), "completed": row in completed})
+result = {"counts": dict(stats), "samples": checks, "quality_approved": False,
+          "limitation": "Model inventories can omit leads and mislabel issuer/scope. This audit validates mapping and bounded execution only."}
+(root / "decision-mapping-audit.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+print(json.dumps(result, ensure_ascii=False, indent=2))

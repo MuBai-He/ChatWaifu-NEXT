@@ -1,0 +1,22 @@
+{
+  "reviewer": "primary_codex",
+  "masked": false,
+  "fixed_payload_comparison": true,
+  "known_limitations": [
+    "two samples per arm only",
+    "same provider sampling is not guaranteed deterministic",
+    "fixed original source set cannot establish current regulations",
+    "coverage variant repeat 1 still generalizes the exact underwear quantity"
+  ],
+  "original": {
+    "retained_both_activity_durations": 1,
+    "removed_unverified_admission_cutoff": 0,
+    "total": 2
+  },
+  "whole_task_coverage": {
+    "retained_both_activity_durations": 2,
+    "removed_unverified_admission_cutoff": 2,
+    "total": 2
+  },
+  "decision": "Adopt as bounded revision-policy candidate and verify real multi-turn outputs; not a quality pass."
+}

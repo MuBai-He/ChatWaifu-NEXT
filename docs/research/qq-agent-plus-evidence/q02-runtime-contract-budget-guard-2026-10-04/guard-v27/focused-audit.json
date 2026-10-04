@@ -1,0 +1,51 @@
+{
+  "scope": "same prior conversation/state recovery probe; later live retrieval and model outputs can differ; no real overflow reproduced in these two",
+  "records": [
+    {
+      "case": "focused-instant_message-pre_user",
+      "logical_completed": 1,
+      "planned_dispatch_limit": 1,
+      "remaining_fixture_turns_deliberately_not_dispatched": 3,
+      "first_payload_matches_v26_failed_case": true,
+      "provider_calls": 6,
+      "wire_requests": 6,
+      "origin": "provider",
+      "actual_budget_overflows": [],
+      "finish_reason": "stop",
+      "requested_models": [
+        "gemini-3.8-flash-high"
+      ],
+      "latency_ms": 30002,
+      "usage": {
+        "provider_tokens_prompt": 47757,
+        "provider_tokens_completion": 1871,
+        "provider_tokens_total": 49792,
+        "provider_tokens_reasoning": null
+      },
+      "quality_approved": false
+    },
+    {
+      "case": "focused-single_text-system",
+      "logical_completed": 1,
+      "planned_dispatch_limit": 1,
+      "remaining_fixture_turns_deliberately_not_dispatched": 3,
+      "first_payload_matches_v26_failed_case": true,
+      "provider_calls": 6,
+      "wire_requests": 6,
+      "origin": "provider",
+      "actual_budget_overflows": [],
+      "finish_reason": "stop",
+      "requested_models": [
+        "gemini-3.8-flash-high"
+      ],
+      "latency_ms": 25836,
+      "usage": {
+        "provider_tokens_prompt": 49671,
+        "provider_tokens_completion": 1733,
+        "provider_tokens_total": 51578,
+        "provider_tokens_reasoning": null
+      },
+      "quality_approved": false
+    }
+  ]
+}

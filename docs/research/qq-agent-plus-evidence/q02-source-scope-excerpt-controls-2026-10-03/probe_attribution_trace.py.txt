@@ -1,0 +1,64 @@
+"""Compare model-proposed original-source queries against real deployed search."""
+import asyncio,copy,hashlib,json,sys,time
+from pathlib import Path
+import requests
+ROOT=Path('/tmp/cw2-q02-source-decision-v21-eval')
+sys.path[:0]=[str(ROOT/'services/runtime/src'),str(ROOT/'packages/protocol-python/src'),str(ROOT/'packages/model-worker-sdk-python/src'),'/tmp/cw2-q02-eval-deps',str(ROOT)]
+from pydantic import SecretStr
+from chatwaifu_runtime.config.settings import PublicWebConfig
+from chatwaifu_runtime.runtime_skills.public_web import PublicWebReader
+from chatwaifu_runtime.runtime_skills.public_web_search import PublicWebSearch
+from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
+base=Path('/tmp/cw2-q02-authority-same-name-probe-20261003')
+base_rows=[json.loads(l) for l in (base/'results.jsonl').read_text().splitlines()]
+p=copy.deepcopy(base_rows[0]['request'])
+item=p['tools'][0]['function']['parameters']['properties']['read_sources']['items']
+item['properties']['publisher_attribution_quote']={'type':'string','maxLength':200,'description':'A short exact quote from the retained body stating who originally published or supplied this article, or empty if absent. Do not substitute an authority from general knowledge.'}
+item['required'].append('publisher_attribution_quote')
+p['messages'][-1]['content']+='\nBefore selecting the original-publication tracing query, quote the actual attribution in the provided body. The named original publisher may differ from a generally relevant regulator. Trace the publication that supplied this report and its dated changes; searching an older baseline from another issuer is not a substitute. Do not output reasoning.\n'
+out=Path('/tmp/cw2-q02-attribution-trace-probe-20261003');out.mkdir(exist_ok=True)
+key=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+s=requests.Session();s.trust_env=False
+started=[json.loads(l) for l in (out/'attempts.jsonl').read_text().splitlines()] if (out/'attempts.jsonl').exists() else []
+done=[json.loads(l) for l in (out/'results.jsonl').read_text().splitlines()] if (out/'results.jsonl').exists() else []
+assert {r['repeat'] for r in started}=={r['repeat'] for r in done},'unfinished attempt needs review'
+for repeat in range(3):
+ if any(r['repeat']==repeat for r in done):continue
+ digest=hashlib.sha256(json.dumps(p,ensure_ascii=False,sort_keys=True).encode()).hexdigest()
+ with (out/'attempts.jsonl').open('a') as f:f.write(json.dumps({'repeat':repeat,'request_sha256':digest})+'\n')
+ start=time.monotonic();r=s.post('https://mubai.website:8318/v1/chat/completions',headers={'Authorization':'Bearer '+key},json=p,timeout=180);data=r.json()
+ for c in data.get('choices',[]):
+  if isinstance(c.get('message'),dict):
+   for field in ['reasoning_content','reasoning','thinking']:c['message'].pop(field,None)
+ record={'repeat':repeat,'variant':'literal_attribution_trace','request':p,'request_sha256':digest,'http_status':r.status_code,'latency_ms':round((time.monotonic()-start)*1000),'response':data,'tool_execution':False}
+ assert key not in json.dumps(record)
+ with (out/'results.jsonl').open('a') as f:f.write(json.dumps(record,ensure_ascii=False)+'\n')
+ done.append(record)
+ print(json.dumps({'repeat':repeat,'status':r.status_code,'latency_ms':record['latency_ms']}),flush=True)
+settings={}
+for line in Path('/home/mubai/.local/share/chatwaifu-server/config/public-web.env').read_text().splitlines():
+ if line.startswith('CHATWAIFU_PUBLIC_WEB__') and '=' in line:
+  name,value=line.split('=',1);settings[name]=value.strip().strip(chr(34)).strip(chr(39))
+token=settings.get('CHATWAIFU_PUBLIC_WEB__CRAWL4AI_API_TOKEN')
+config=PublicWebConfig(search_provider='searxng',searxng_endpoint='http://127.0.0.1:18081',reader_provider='crawl4ai',crawl4ai_endpoint='http://127.0.0.1:11236',crawl4ai_api_token=SecretStr(token) if token else None)
+search=PublicWebSearch(PublicWebReader(provider_config=config),provider_config=config)
+async def main():
+ prior=[json.loads(l) for l in (out/'search-results.jsonl').read_text().splitlines()] if (out/'search-results.jsonl').exists() else []
+ for variant,rows in [('role_only',base_rows),('literal_attribution',done)]:
+  for row in rows:
+   identity=f'{variant}:{row["repeat"]}'
+   if any(r['key']==identity for r in prior):continue
+   calls=row['response']['choices'][0]['message'].get('tool_calls') or []
+   if len(calls)!=1 or calls[0]['function']['name']!='cw2_source_decision_v3':continue
+   action=json.loads(calls[0]['function']['arguments'])['next_action']
+   if action['kind']!='search':continue
+   args=action['arguments'];start=time.monotonic()
+   result={'key':identity,'arguments':args,'scope':'PublicWebSearch adapter control; no Runtime Skill permission or model-action receipt'}
+   try:result.update(ok=True,result=await search.search(args))
+   except SkillExecutionError as error:result.update(ok=False,error_code=error.structured.code)
+   result['latency_ms']=round((time.monotonic()-start)*1000)
+   assert key not in json.dumps(result)
+   with (out/'search-results.jsonl').open('a') as f:f.write(json.dumps(result,ensure_ascii=False)+'\n')
+   print(json.dumps({'search':identity,'ok':result['ok'],'count':len(result.get('result',{}).get('results',[]))}),flush=True)
+asyncio.run(main())
+print('complete',flush=True)

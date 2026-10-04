@@ -1,0 +1,57 @@
+"""Direct accounting and wire integrity, no keyword quality grading."""
+import hashlib,json,statistics
+from pathlib import Path
+BASE=Path('/tmp/cw2-q02-source-frame-prep')
+TARGET=Path('/Users/mubai/Desktop/CW2/.worktrees/qq-agent-plus-adoption/docs/research/qq-agent-plus-evidence/q02-closure-2026-10-04/source-frame')
+ROOT=TARGET.parents[5]
+SOURCE=json.loads((TARGET.parent/'frozen-quality/frozen-sources.json').read_text())['airchina']
+
+def percentile(values,q):
+ values=sorted(values);position=(len(values)-1)*q;lo=int(position);hi=min(lo+1,len(values)-1)
+ return round(values[lo]+(values[hi]-values[lo])*(position-lo),2)
+
+def write(path,row):
+ path.write_text(json.dumps(row,ensure_ascii=False,indent=2)+'\n')
+
+groups={}
+all_rows=[]
+for name in ('capability','frozen','layout','existing-revision','preflight-failure'):
+ folder=TARGET/name;folder.mkdir(parents=True,exist_ok=True)
+ for f in (BASE/name).iterdir():
+  if f.suffix in {'.json','.jsonl'}:(folder/f.name).write_bytes(f.read_bytes())
+ if name=='preflight-failure':continue
+ rows=[json.loads(x) for x in (folder/'results.jsonl').read_text().splitlines()]
+ all_rows.extend(rows)
+ wire_file=folder/('payloads.jsonl' if name=='capability' else 'actual-provider-payloads.jsonl')
+ wires=[json.loads(x) for x in wire_file.read_text().splitlines()]
+ checks=[];errors=[]
+ for row,wire in zip(rows,wires,strict=True):
+  payload=wire['payload']
+  assert payload['model']=='gemini-3.8-flash-high' and payload['stream'] is True
+  assert row['schema_valid'] and row['finish_reason']=='stop'
+  if name!='capability':
+   assert payload['max_tokens']==8192 and wire['reference_input_tokens']<=21370
+   docs=[json.loads(m['content'])['frozen_public_document'] for m in payload['messages'] if isinstance(m['content'],str) and m['content'].startswith('{"frozen_public_document":')]
+   assert len(docs)==1 and docs[0]['text']==SOURCE['text'] and docs[0]['text_sha256']==SOURCE['text_sha256']
+   assert wire['omitted_contents']==[]
+   expected=wire.get('t3_actual_reply_in_t4')
+   if expected is not None:assert any(m['role']=='assistant' and m['content']==expected for m in payload['messages'])
+   if row.get('prior_gaps'):
+    data=[json.loads(m['content'].split('\n',1)[1]) for m in payload['messages'] if m['content'].startswith('[SOURCE ANSWER FRAME DATA]\n')]
+    assert len(data)==1
+    assert [g['statement'] for g in data[0]['prior_gaps']]==[g['statement'] for g in row['prior_gaps']]
+    assert all(g['statement'] in row['published_reply'] for g in row['prior_gaps'])
+   usage=row['usage'];ref=wire['reference_input_tokens']
+   errors.append((ref-usage['prompt_tokens'])/usage['prompt_tokens']*100)
+  checks.append({'sample':row.get('sample',row.get('case')),'wire_sha256':hashlib.sha256(json.dumps(payload,ensure_ascii=False,sort_keys=True).encode()).hexdigest(),'complete_original_and_no_omission':name!='capability','schema_valid':row['schema_valid'],'runtime_path_used':False,'no_live_search':True})
+ known_reasoning=[r['usage']['completion_tokens_details']['reasoning_tokens'] for r in rows if 'reasoning_tokens' in r['usage'].get('completion_tokens_details',{})]
+ usage={k:sum(r['usage'][k] for r in rows) for k in ('prompt_tokens','completion_tokens','total_tokens')}
+ stats={'actual_http':len(rows),'provider_raw_frames':len(rows),'rendered_replies':0 if name=='capability' else len(rows),'rejected_frames':0,'complete_four_turn_flows':0,'usage':usage,'reasoning':{'reported_count':len(known_reasoning),'unknown_count':len(rows)-len(known_reasoning),'reported_subtotal':sum(known_reasoning)},'latency_ms':{'n':len(rows),'p50':statistics.median(r['latency_ms'] for r in rows),'p95':percentile([r['latency_ms'] for r in rows],.95)},'reference_error_percent':{'min':round(min(errors),4),'max':round(max(errors),4)} if errors else None,'checks':checks,'quality_approval':False}
+ write(folder/'accounting.json',stats);groups[name]=stats
+
+reasoning=[r['usage']['completion_tokens_details']['reasoning_tokens'] for r in all_rows if 'reasoning_tokens' in r['usage'].get('completion_tokens_details',{})]
+write(TARGET/'accounting.json',{'model_http':len(all_rows),'groups':groups,'total_usage':{k:sum(r['usage'][k] for r in all_rows) for k in ('prompt_tokens','completion_tokens','total_tokens')},'reasoning_reported_count':len(reasoning),'reasoning_unknown_count':len(all_rows)-len(reasoning),'reasoning_reported_subtotal':sum(reasoning),'current_window':32768,'output_reserve_and_cap':8192,'margin':.15,'estimated_input_allowance':21370,'schema_included_in_reference':True,'same_source_hash':SOURCE['text_sha256'],'production_changed':False,'full_q02_approved':False})
+for source,name in [('capability_probe.py','capability-probe.py.txt'),('frozen_probe.py','frozen-probe.py.txt'),('layout_probe.py','layout-probe.py.txt'),('existing_revision_probe.py','existing-revision-probe.py.txt'),('source_answer_frame-v1.0.py','historical-frame-v1.0.py.txt')]:
+ (TARGET/name).write_bytes((BASE/source).read_bytes())
+(TARGET/'audit.py.txt').write_bytes(Path(__file__).read_bytes())
+print(json.dumps({'http':len(all_rows),'usage':{k:sum(r['usage'][k] for r in all_rows) for k in ('prompt_tokens','completion_tokens','total_tokens')},'groups':{k:{p:v[p] for p in ('actual_http','latency_ms','reference_error_percent','reasoning')} for k,v in groups.items()}},ensure_ascii=False))

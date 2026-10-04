@@ -1,0 +1,24 @@
+import asyncio
+
+async def task_success():
+    await asyncio.sleep(0.1)
+    return "ok"
+
+async def task_fail():
+    await asyncio.sleep(0.1)
+    raise ValueError("出错了")
+
+async def main():
+    results = await asyncio.gather(
+        task_success(),
+        task_fail(),
+        return_exceptions=True
+    )
+    
+    for res in results:
+        if isinstance(res, Exception):
+            print(f"任务失败: {res}")
+        else:
+            print(f"任务成功: {res}")
+
+asyncio.run(main())

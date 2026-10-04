@@ -1,0 +1,25 @@
+{
+  "html": {
+    "characters": 1339,
+    "finding": "Full published notice and footer returned, including each original business clause, source actor and publication date. Existing frozen corpus is not overwritten. No claim of current all-carrier applicability.",
+    "matches_prior_frozen_full_airchina_text": true,
+    "text_sha256": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+    "truncated": false,
+    "url": "https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml"
+  },
+  "model_calls": 0,
+  "pdf": {
+    "document_characters": 91168,
+    "finding": "Selected text contains the election-split-vote prevention/retry explanation and its explicitly illustrative timing interval. Extraction has ligatures/hyphenation artifacts and truncates the paper; not a whole-paper review, all technical questions or model-answer quality acceptance.",
+    "offset": 26962,
+    "selected_characters": 6000,
+    "text_sha256": "2d9e132408fe95bdd5b6126d4a2aa9965e69d4b500d889b2dbe8a13b94a637ec",
+    "truncated": true,
+    "url": "https://raft.github.io/raft.pdf"
+  },
+  "production_change": "PDF adapter branch and pinned0.9.3 companion only, with server-private original-module/env backup",
+  "q02_approval": false,
+  "reviewer": "primary implementation author, full returned selected text reviewed",
+  "runtime": "TLS health200, database ready, protected14 config/persona files unchanged; only208 baselined Python files one provider module changed",
+  "scope": "Actual deployed adapter plus production11235 text extraction, not autonomous model discovery, permission UI, delivery or answer-quality acceptance"
+}

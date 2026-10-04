@@ -1,0 +1,62 @@
+{
+  "counts": {
+    "web.search:succeeded": 3,
+    "web.read:succeeded": 3,
+    "decisions": 6,
+    "native_action_receipts": 4,
+    "restored_history_results": 11,
+    "native_finish_drafts": 2
+  },
+  "samples": [
+    {
+      "sample_key": "topic_switch:r0:t1:candidate",
+      "source_calls": 2,
+      "provider_calls": 5,
+      "completed": true
+    },
+    {
+      "sample_key": "topic_switch:r0:t2:candidate",
+      "source_calls": 0,
+      "provider_calls": 1,
+      "completed": true
+    },
+    {
+      "sample_key": "topic_switch:r0:t3:candidate",
+      "source_calls": 0,
+      "provider_calls": 1,
+      "completed": true
+    },
+    {
+      "sample_key": "topic_switch:r0:t4:candidate",
+      "source_calls": 0,
+      "provider_calls": 1,
+      "completed": true
+    },
+    {
+      "sample_key": "detailed_answer:r0:t1:candidate",
+      "source_calls": 0,
+      "provider_calls": 1,
+      "completed": true
+    },
+    {
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "source_calls": 4,
+      "provider_calls": 6,
+      "completed": true
+    },
+    {
+      "sample_key": "detailed_answer:r0:t3:candidate",
+      "source_calls": 0,
+      "provider_calls": 1,
+      "completed": true
+    },
+    {
+      "sample_key": "detailed_answer:r0:t4:candidate",
+      "source_calls": 0,
+      "provider_calls": 2,
+      "completed": true
+    }
+  ],
+  "quality_approved": false,
+  "limitation": "Model inventories can omit leads and mislabel issuer/scope. This audit validates mapping and bounded execution only."
+}

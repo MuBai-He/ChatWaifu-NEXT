@@ -1,0 +1,31 @@
+import ast,difflib,hashlib,json,re,tarfile
+from pathlib import Path
+stage=Path('/tmp/cw2-q02-v31-final-review-20261004')
+older=Path('/tmp/cw2-q02-scope-receipts-v30-eval')
+final=Path('/tmp/cw2-q02-final-types-v32-eval')
+fields={'_CURRENT_SOURCE_QUERY','_PROVIDED_DOCUMENT_REFERENCE','_CURRENT_APPLICABILITY_QUERY'}
+def classifier(root):
+ tree=ast.parse((root/'services/runtime/src/chatwaifu_runtime/agent/tool_calling.py').read_text())
+ nodes=[node for node in tree.body if (isinstance(node,ast.Assign) and any(isinstance(t,ast.Name) and t.id in fields for t in node.targets)) or (isinstance(node,ast.FunctionDef) and node.name=='_source_quality_requirements')]
+ scope={'re':re};exec(compile(ast.Module(nodes,type_ignores=[]),'<pure source scope classifier>','exec'),scope)
+ return scope['_source_quality_requirements']
+questions=json.loads(Path('/tmp/cw2-q02-v30-scope-receipts-20261004/fixtures.json').read_text())[0]['turns']
+before=classifier(older);after=classifier(final)
+checks=[{'turn_id':q['turn_id'],'v30_requirements':before(q['user_text']),'final_requirements':after(q['user_text'])} for q in questions]
+assert all(c['v30_requirements']==c['final_requirements'] for c in checks)
+(stage/'classification-equivalence.json').write_text(json.dumps({'same_four_model_fixture_classifications':True,'new_model_requests':0,'model_batch_remains_frozen_v30':True,'checks':checks},ensure_ascii=False,indent=2)+'\n')
+names=json.loads((stage/'final-overlay-integrity.json').read_text())
+hashes={name:hashlib.sha256((final/name).read_bytes()).hexdigest() for name in names}
+(stage/'final-source-sha256.json').write_text(json.dumps(hashes,indent=2)+'\n')
+patch=[]
+for name in names:
+ patch.extend(difflib.unified_diff((older/name).read_text().splitlines(keepends=True),(final/name).read_text().splitlines(keepends=True),fromfile='a/'+name,tofile='b/'+name))
+(stage/'final-review-changes.patch').write_text(''.join(patch))
+secret=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+files=[p for p in stage.iterdir() if p.is_file() and p.suffix in {'.json','.log','.patch','.py'} and p.name not in {'artifact-integrity.json'}]
+assert all(secret.encode() not in p.read_bytes() for p in files),'Credential in evidence'
+manifest={'configured_model_credential_absent':True,'new_model_requests':0,'files':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in files}}
+(stage/'artifact-integrity.json').write_text(json.dumps(manifest,indent=2)+'\n')
+with tarfile.open(stage/'final-evidence.tar.gz','w:gz') as out:
+ for p in files+[stage/'artifact-integrity.json']:out.add(p,arcname=p.name)
+print(json.dumps({'files':len(files),'classifier_equivalence':True,'credential_scan':True}))

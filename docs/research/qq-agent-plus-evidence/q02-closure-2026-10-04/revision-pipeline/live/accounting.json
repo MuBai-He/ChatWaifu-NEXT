@@ -1,0 +1,48 @@
+{
+  "actual_http_attempts": 32,
+  "error_rows": [],
+  "execution_counts": {
+    "completed": 16
+  },
+  "extra_http_attempts_usage_unknown": 0,
+  "first_user_token_latency_captured": false,
+  "http_p50_ms": 11448.5,
+  "http_p95_ms": 26658.0,
+  "logical_requests": 32,
+  "model_reported_ids": {
+    "gemini-3.8-flash-control": 16,
+    "gemini-3.8-flash-n": 16
+  },
+  "native_model_caps_or_alias_mapping_verified": false,
+  "new_public_read_calls": 0,
+  "phase_usage": {
+    "draft": {
+      "completion_tokens": 4600,
+      "prompt_tokens": 64069,
+      "reasoning_reported_calls": 11,
+      "reasoning_reported_subtotal": 9553,
+      "reported_calls": 16,
+      "total_tokens": 78222
+    },
+    "final_frame": {
+      "completion_tokens": 7607,
+      "prompt_tokens": 84298,
+      "reasoning_reported_calls": 16,
+      "reasoning_reported_subtotal": 39929,
+      "reported_calls": 16,
+      "total_tokens": 131834
+    }
+  },
+  "provider_frame_rendered": 16,
+  "quality_approval": false,
+  "reference_error_max_percent": 46.093427,
+  "reference_error_min_percent": 19.346247,
+  "reference_input_max": 8556,
+  "reference_input_min": 3631,
+  "reported_usage_calls": 32,
+  "runtime_fallback": 0,
+  "turn_p50_ms": 25088.0,
+  "turn_p95_ms": 41269.5,
+  "unknown_usage_logical_calls": 0,
+  "whole_input_omissions": []
+}

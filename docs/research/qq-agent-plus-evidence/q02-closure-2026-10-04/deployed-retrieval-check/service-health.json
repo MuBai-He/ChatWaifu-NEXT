@@ -1,0 +1,22 @@
+[
+  {
+    "service": "runtime",
+    "error_type": "RemoteDisconnected",
+    "elapsed_ms": 5
+  },
+  {
+    "service": "searxng",
+    "http": 200,
+    "elapsed_ms": 3
+  },
+  {
+    "service": "crawl4ai",
+    "http": 200,
+    "body": {
+      "status": "ok",
+      "timestamp": 1791089567.9503515,
+      "version": "0.9.2"
+    },
+    "elapsed_ms": 3
+  }
+]

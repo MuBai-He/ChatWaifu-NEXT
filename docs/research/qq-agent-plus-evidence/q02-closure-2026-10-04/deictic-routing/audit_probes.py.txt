@@ -1,0 +1,42 @@
+import sys,json,hashlib
+from pathlib import Path
+sys.path.insert(0,'/tmp/cw2-q02-full-prepare/v28-budget-frozen')
+from audit import reference,percentile,rows,sha
+root=Path('/tmp/cw2-q02-deictic-review')
+original=Path('/Users/mubai/Desktop/CW2/.worktrees/qq-agent-plus-adoption/docs/research/qq-agent-plus-evidence/q02-closure-2026-10-04/candidate-one')
+old_wires=rows(original/'actual-provider-payloads.jsonl');old_results=rows(original/'results/results.jsonl')
+from uuid import uuid5,NAMESPACE_URL
+mapped={str(uuid5(NAMESPACE_URL,r['sample_key'])):r for r in old_results}
+old_by_gen={w['generation_id']:w for w in old_wires}
+reports=[];reviews=[];by_key={}
+for group in ['revision','conflict']:
+ stage=root/group;wires=rows(stage/'actual-provider-payloads.jsonl');journal=rows(stage/'provider-rounds.jsonl');starts=[r for r in journal if r['event']=='started'];ends=[r for r in journal if r['event']=='finished'];results=rows(stage/'results.jsonl')
+ assert len(wires)==len(starts)==len(ends)==len(results)==4
+ checks=[];errors=[]
+ for w,s,e,r in zip(wires,starts,ends,results,strict=True):
+  p=w['payload'];source=old_by_gen[s['generation_id']]['payload'];old=mapped[s['generation_id']]
+  assert p['messages'][:-1]==source['messages'] and p['messages'][-1]['role']=='system'
+  revision=p['messages'][-1]['content'];draft=json.loads(revision[revision.index('{"draft":'):revision.rindex('\n</runtime_source_answer_revision>')])
+  assert draft['draft']==old['raw_reply']
+  assert s['sample_key']==w['key']==r['key']==e['sample_key'] and s['call_id']==e['call_id']
+  assert sha(p)==w['payload_sha256'];count=reference(p)
+  assert count==s['input_budget_report']['estimated_input_tokens']<=21370
+  assert not s['input_budget_report']['omitted_history_indices'] and p['max_tokens']==8192
+  assert not e['error_type'] and e['finish_reason']=='stop' and r['complete']
+  if group=='revision':by_key[w['key']]=p
+  else:
+   old_p=by_key[w['key']];modified=json.loads(json.dumps(old_p));clause='4. 完成用户请求后就结束；不要在结尾追加新的条件总结、未请求的建议或保证结果的承诺。\n'
+   assert modified['messages'][-1]['content'].count(clause)==1
+   modified['messages'][-1]['content']=modified['messages'][-1]['content'].replace(clause,'')
+   assert p==modified
+  errors.append(100*(count-e['usage']['prompt_tokens'])/e['usage']['prompt_tokens'])
+  checks.append({'key':w['key'],'payload_sha256':sha(p),'original_messages_unchanged':True,'draft_unchanged':True,'reference_tokens':count,'budget_report':s['input_budget_report'],'finish_reason':e['finish_reason'],'response_identity':e['response_identity']})
+  reviews.append({'condition':group,'key':r['key'],'grade':'partial','reason':'携带条件、来源日期/URL与国航范围保留，但均未保留前轮截至10月4日后续更新是否发生的未核实状态；0/4符合保真门槛。','reply_sha256':hashlib.sha256(r['reply'].encode()).hexdigest()})
+ usage={}
+ for field in ['prompt_tokens','completion_tokens','total_tokens','reasoning_tokens']:
+  values=[e['usage'][field] for e in ends if e.get('usage') and e['usage'].get(field) is not None]
+  usage[field]={'reported':len(values),'attempts':4,'known_subtotal':sum(values),'complete_total':sum(values) if len(values)==4 else None}
+ report={'condition':group,'actual_http':4,'complete_replies':4,'new_live_source_calls':0,'whole_original_payload_history_and_source_retained':True,'only_policy_change':'existing revision appended' if group=='revision' else 'existing revision finish clause removed relative to revision control','usage':usage,'reference_error_percent_min_max':[round(min(errors),4),round(max(errors),4)],'latency_p50_ms':percentile([r['latency_ms'] for r in ends],.5),'latency_p95_ms':percentile([r['latency_ms'] for r in ends],.95),'wire_checks':checks,'fidelity_pass':0,'q02_approved':False}
+ (stage/'accounting.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n');reports.append(report)
+(root/'primary-review.json').write_text(json.dumps({'reviewer':'implementation author; direct full-text review, not independent/blind','criteria':'same previous Q02 fidelity criteria; no threshold lowered','complete':0,'partial':8,'items':reviews,'conclusion':'No adoption of finish-clause removal; route fix is deterministic correctness only, not evidence of quality improvement.'},ensure_ascii=False,indent=2)+'\n')
+print(json.dumps([{k:v for k,v in r.items() if k!='wire_checks'} for r in reports],ensure_ascii=False))

@@ -1,0 +1,41 @@
+{
+  "reviewer": "Primary Codex, direct author review",
+  "independent_reviewer": false,
+  "blind": false,
+  "criteria": "Preserve actual supplied primary-source conditions and dates, operator scope, media attribution, and unverified current-domestic scope; no quality approval from HTTP or input fit.",
+  "quality_pass_count": 0,
+  "reviewed": 3,
+  "q02_approved": false,
+  "items": [
+    {
+      "repeat": 0,
+      "source_use": "引用了国航正文，但把鼓包/变形/开裂禁运条件合并为国内航班普遍要求。",
+      "quantity": "仍仅在100–160Wh分档中写最多两块，未保留新国航提示的每位旅客最多两块。",
+      "scope_and_freshness": "没有说明旧媒体/国航运营商提示与截至2026-10-04的境内普遍执行之间的核查缺口。",
+      "key": "single_text:original_source_supplement:r0",
+      "reply_sha256": "a1990397e7262ebec927f424c32e23d34fea90169872ebbe811918e7e4e550a7",
+      "source_scope_quality_pass": false,
+      "hard_character_boundary_violation": false
+    },
+    {
+      "repeat": 1,
+      "source_use": "没有引用或消化追加的2026年国航原始提示。",
+      "quantity": "仍仅在100–160Wh分档中写最多两块。",
+      "scope_and_freshness": "没有说明旧媒体与当前执行之间的核查缺口。",
+      "key": "single_text:original_source_supplement:r1",
+      "reply_sha256": "27784827ba40ad6b0a67135cde1d3a0203e788b0b743378dc44e0021d7175ee4",
+      "source_scope_quality_pass": false,
+      "hard_character_boundary_violation": false
+    },
+    {
+      "repeat": 2,
+      "source_use": "将国航2026年8月缺陷禁运条件标明为航空公司提示，范围表述有局部改进。",
+      "quantity": "仍仅在100–160Wh分档中写最多两块，漏掉国航正文的全部能量档均最多两块。",
+      "scope_and_freshness": "依然没有说明截至2026-10-04的境内普遍执行尚未核实；个人自用只在检索摘录中出现，未出现在实际成功阅读正文中。",
+      "key": "single_text:original_source_supplement:r2",
+      "reply_sha256": "d01a53e5f66a85019e181cbc53305acef4b933e5f428ae08e82c974e86f23bdd",
+      "source_scope_quality_pass": false,
+      "hard_character_boundary_violation": false
+    }
+  ]
+}

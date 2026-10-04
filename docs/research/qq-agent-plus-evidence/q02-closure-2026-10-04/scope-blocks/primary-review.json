@@ -1,0 +1,187 @@
+{
+  "complete": 4,
+  "criteria": "Same complete-source fidelity and organization criteria; no added requirements or fixed length threshold. Actual repeated paragraphs and one lost requested time/operator scope remain failures; gap counts/booleans do not prove quality.",
+  "independent_or_blind_review": false,
+  "items": [
+    {
+      "execution": "completed",
+      "failure_dimensions": [],
+      "grade": "complete",
+      "reason": "日期、每人2个、禁止给充电宝充电、机组运行例外与成员国范围保留；未加国内准入要求。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "d307b5fdbdf26c2f5bb3c6b772b46219970aa10e4cd44578089f56bddaf8826d",
+      "sample_key": "frozen_icao:r0:t1"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [
+        "whole_block_retention_repetition"
+      ],
+      "grade": "partial",
+      "reason": "未给Wh分档的回答正确，但Runtime附加了前轮整块发布日期、数量及机组范围，重复容量缺口并牵回无关细节；不能仅按事实或gap存在批准组织质量。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "a1660456a0d3271df0db89aa2f813e7a60cfd639e12ee320cf8e1696b099a570",
+      "sample_key": "frozen_icao:r0:t2"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [
+        "whole_block_retention_repetition"
+      ],
+      "grade": "partial",
+      "reason": "明确材料不能证明截至10月4日国内执行，范围和事实正确；旧发布日期、数量、机组及容量整块追加，形成重复说明。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "b0b1398105cbbea148bf657693318c80dc6139d82de58c9f5598a87738949024",
+      "sample_key": "frozen_icao:r0:t3"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [
+        "whole_block_retention_repetition"
+      ],
+      "grade": "partial",
+      "reason": "三条主体保留全部核心内容、日期和10月4日未知范围；每条之后重复以前完整事实/未知段落，精简清单组织退化。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "40e39ca06a0f5ce33e7c876bd5d68cd5dfa34b342b49055bda14c4459ca2e9db",
+      "sample_key": "frozen_icao:r0:t4"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [],
+      "grade": "complete",
+      "reason": "日期、数量、禁止对象、机组运行例外、细则提供范围均保留；未将公告扩为中国承运限制。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "68b49171bbdd2c195a5085833b0917ec41cf31c291c84db6f33bd5bba486c670",
+      "sample_key": "frozen_icao:r1:t1"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [
+        "whole_block_retention_repetition"
+      ],
+      "grade": "partial",
+      "reason": "正确承认100Wh/160Wh未写，但正文后又追加前轮完整适用范围/事实，容量与落地未知重复。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "66e562a6076133fb26b40d9a5f4242f7e27c5088507b24a593810391787199bb",
+      "sample_key": "frozen_icao:r1:t2"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [
+        "whole_block_retention_repetition"
+      ],
+      "grade": "partial",
+      "reason": "日期/主体/分发安排与真实落地区分正确；末项附两份既有整块说明，多次重复同样的机组/Wh/成员国范围。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "2723755e15962a5ae7947fd93eba63d4edc39b99b4c2dc2ceb3a6aae6c565260",
+      "sample_key": "frozen_icao:r1:t3"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [
+        "whole_block_retention_repetition"
+      ],
+      "grade": "partial",
+      "reason": "核心条款与指定时点范围保留；最后一项追加3份旧整块，重复当前条款及同一未核实范围。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "d947864831499f16112c7de76d1c5d64e37079e17a7383e7bdfb4d2377fcfb36",
+      "sample_key": "frozen_icao:r1:t4"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [],
+      "grade": "complete",
+      "reason": "国航日期/主体、境内3C、召回与外观禁运、能量或金属含量关系、数量/分档/批准及携带使用完整；绝缘要求独立。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "e8d326ea9e5f1c86d504849de0c3471b63e9b49bf00aba2f67783b7dc43c0baf",
+      "sample_key": "frozen_airchina:r0:t1"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [
+        "whole_block_retention_repetition"
+      ],
+      "grade": "partial",
+      "reason": "100Wh以下同样2块与超过100至160Wh批准条件正确；携带方式与适用范围紧接着被旧整块再讲一遍。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "115a220dd94c6470c6f47105875e938fc35dbd05486e787fe3484a24925c7a07",
+      "sample_key": "frozen_airchina:r0:t2"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [
+        "whole_block_retention_repetition"
+      ],
+      "grade": "partial",
+      "reason": "正确区分单航司文件与全行业、8月4日至10月4日现行未知；原始模型块已抄入旧范围，Runtime又追加，导致同一范围反复出现。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "475f0bad34738ec13e48faa86e72dce6ba940e9703476c0814daba73b81f6657",
+      "sample_key": "frozen_airchina:r0:t3"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [
+        "whole_block_retention_repetition",
+        "condition_relation_ambiguity"
+      ],
+      "grade": "partial",
+      "reason": "日期/链接/国航及10月4日范围存在；大量旧段落散在三条清单后重复。将原禁运条件改为正向“能确认额定能量或锂金属含量”还引入否定条件反转歧义，未声明原文要求已被逻辑等价保留。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "4ca9f6fadb518cda18afe61d55cf67a0b38cbd4a9c94ac993771049e275c28ee",
+      "sample_key": "frozen_airchina:r0:t4"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [],
+      "grade": "complete",
+      "reason": "实质限制、来源落款、国航和境内3C范围正确，机上禁止行为与绝缘对象明确。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "841d2b4db3add85db6c3800302eb8df028a5244f72d53a2a3db48cf49949664e",
+      "sample_key": "frozen_airchina:r1:t1"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [
+        "whole_block_retention_repetition"
+      ],
+      "grade": "partial",
+      "reason": "数量/分档/条件与机上要求完整；适用范围与未核实说明又被旧原块重复，组织退化。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "3d33a3ba0e250c967af3f7499e6b9588cee3ad9b4a055d9b41bbf7afdf5ca42a",
+      "sample_key": "frozen_airchina:r1:t2"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [
+        "whole_block_retention_repetition",
+        "precise_scope_not_classified_for_retention"
+      ],
+      "grade": "partial",
+      "reason": "正文说明其他航司、实际执行及10月4日现行不能证明，但这些段落均标为false，只捕获泛化国航范围；末尾还重复3次近似适用范围。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "696d17586b823082bb5a8dd587b8b57113fada2aac1b8206036bf8a57983139c",
+      "sample_key": "frozen_airchina:r1:t3"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [
+        "whole_block_retention_repetition",
+        "cross_turn_as_of_scope_omitted",
+        "condition_relation_ambiguity"
+      ],
+      "grade": "partial",
+      "reason": "主要条款保留；截至10月4日后续更新/行业执行未知仍丢失，适用范围多次重复；正向能确认能量或锂金属含量存在条件反转歧义。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "2b76e2a73552b153fbea359b87ceaa37da6926bce92e8972ac2afdbe6beee6df",
+      "sample_key": "frozen_airchina:r1:t4"
+    }
+  ],
+  "not_causal_ab_to_previous_batches": true,
+  "partial": 12,
+  "q02_approval": false,
+  "reviewer": "implementation_author_full_text_review",
+  "source_text_sha256": {
+    "airchina": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+    "icao": "4dfe7980b04b1c65ed14156ce7cd8381f19b0cd7874e76b42315491f19df1fe3"
+  }
+}

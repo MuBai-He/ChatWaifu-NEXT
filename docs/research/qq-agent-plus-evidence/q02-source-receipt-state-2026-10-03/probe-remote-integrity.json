@@ -1,0 +1,65 @@
+{
+  "configured_credentials_absent": true,
+  "files": {
+    "grounded-answer/plan.json": {
+      "sha256": "d9432f59849652c4e0ab49be127a1738a17ced6f743cb66c4bfe3086bb32b478",
+      "bytes": 398
+    },
+    "grounded-answer/results.jsonl": {
+      "sha256": "bec8fd3e4d9d43ac7181694276d75abdf6038b55d7ff48d57e524e3a9d68652a",
+      "bytes": 744374
+    },
+    "grounded-answer/attempts.jsonl": {
+      "sha256": "8313c9326eec7e929a573c994ae058f85b3611f9437b469476446317efe345be",
+      "bytes": 2115
+    },
+    "grounded-answer/exit-code.json": {
+      "sha256": "d24219f6de94b955cf36d25bd2aca88e2d35eef45b9317b7083f55ec8fe9653c",
+      "bytes": 16
+    },
+    "search-cap/plan.json": {
+      "sha256": "c3bbf410aa8e1971e5a26a4a2ffb033a6241d2527febe21be12204b532fe7587",
+      "bytes": 521
+    },
+    "search-cap/results.jsonl": {
+      "sha256": "366816b7bc29ec0a2d6e4eb68f0264736c089f210aaedf8986e721ea666cdc9c",
+      "bytes": 52064
+    },
+    "search-cap/exit-code.json": {
+      "sha256": "d24219f6de94b955cf36d25bd2aca88e2d35eef45b9317b7083f55ec8fe9653c",
+      "bytes": 16
+    },
+    "cap-selection/plan.json": {
+      "sha256": "ea1d7a8865e34062bf29afd90b281b1834ae3bfd6f97e5f79dd209c86ab10149",
+      "bytes": 539
+    },
+    "cap-selection/results.jsonl": {
+      "sha256": "ecd146f42241bfe5add3b81b73838a793e23b117333b88c22ed6ac7ab4ad1899",
+      "bytes": 195858
+    },
+    "cap-selection/attempts.jsonl": {
+      "sha256": "46979b08ec845b62f88f584eaf67756c2d33afbffb4918166da02f6cc3b1d825",
+      "bytes": 609
+    },
+    "cap-selection/exit-code.json": {
+      "sha256": "d24219f6de94b955cf36d25bd2aca88e2d35eef45b9317b7083f55ec8fe9653c",
+      "bytes": 16
+    },
+    "cap-counterbalance/plan.json": {
+      "sha256": "c265a93d2cba696492349a528c0bc60eaebea0678c394982ae10f26b8b63087d",
+      "bytes": 414
+    },
+    "cap-counterbalance/results.jsonl": {
+      "sha256": "98f4d76eda214a3ec37a550d5b24e7f77f7a20984e67b9bb862d05f421422298",
+      "bytes": 195636
+    },
+    "cap-counterbalance/attempts.jsonl": {
+      "sha256": "b4fcf1ce83fa0ed6a07a2e79a4450ad59ca38b98416fed7381557a77c8f26933",
+      "bytes": 609
+    },
+    "cap-counterbalance/exit-code.json": {
+      "sha256": "d24219f6de94b955cf36d25bd2aca88e2d35eef45b9317b7083f55ec8fe9653c",
+      "bytes": 16
+    }
+  }
+}

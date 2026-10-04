@@ -1,0 +1,101 @@
+{
+  "id": 1,
+  "query": "国航 充电宝 携带规定",
+  "endpoint": "http://127.0.0.1:18080/search",
+  "http": 200,
+  "results": [
+    {
+      "url": "https://www.21jingji.com/article/20250702/herald/8ef3587707abf5cd14a405f794a81a1b.html",
+      "title": "充电宝上飞机和高铁分别要满足哪些条件？ 看这几张图就明白了 - 21...",
+      "content": "没有3C标识、 被召回范围的充电宝上机规定.分别可以携带什么样的充电宝？",
+      "engine": "yandex",
+      "engines": [
+        "yandex"
+      ]
+    },
+    {
+      "url": "https://www.visitbeijing.com.cn/article/47QpPE4h4Uo",
+      "title": "注意了，中秋出行带这些东西坐飞机高铁，可能过不了安检",
+      "content": "经航空公司批准的100~160Wh的备用锂电池只能携带两个。 \"充电宝\"携带规定： 充电宝必须是旅客个人自用携带。 充电宝只能在手提行李中携带或随身携带，严禁在托运行李中携带。",
+      "engine": "yandex",
+      "engines": [
+        "yandex"
+      ]
+    },
+    {
+      "url": "https://www.cqnews.net/1/detail/1389907718848774144/web/content_1389907718848774144.html",
+      "title": "充电宝上飞机和高铁分别要满足哪些条件？ 看这几张图就明白了-华龙网",
+      "content": "没有3C标识、 被召回范围的充电宝上机规定.分别可以携带什么样的充电宝？ 充电宝上飞机.",
+      "engine": "yandex",
+      "engines": [
+        "yandex"
+      ]
+    },
+    {
+      "url": "https://www.jfdaily.com/sgh/detail?id=1698482",
+      "title": "你的充电宝能“飞”吗？ 这份指南请收好！_ 上观新闻",
+      "content": "今天，东东带你一文读懂. 充电宝携带规则.2. 3C标识不清晰的充电宝.",
+      "engine": "yandex",
+      "engines": [
+        "yandex"
+      ]
+    },
+    {
+      "url": "https://item.btime.com/41v8i91ponu8e9pnuojftmddbgs",
+      "title": "充电宝乘机新规首日，你的充电宝能否带上飞机？ 现场直击_北京时间",
+      "content": "对于携带充电宝上飞机还有哪些规定？根据《关于民航旅客携带“充电宝”乘机规定的公告》： 充电宝只能在手提行李中携带或随身携带， 严禁在托运行李中携带。",
+      "engine": "yandex",
+      "engines": [
+        "yandex"
+      ]
+    },
+    {
+      "url": "https://post.smzdm.com/p/amor035d/",
+      "title": "post.smzdm.com/p/amor035d",
+      "content": "明确充电宝、化妆品及特产的携带规定，能有效避免尴尬情况发生。压力罐装防晒喷雾无论大小均禁止携带或托运. 生鲜肉类及具有强烈气味的食物不可带上飞机. 含锂电池的电子产品均需随身携带，严禁托运.",
+      "engine": "yandex",
+      "engines": [
+        "yandex"
+      ]
+    },
+    {
+      "url": "https://tt.jxnews.com.cn/news/2748672",
+      "title": "充电宝上飞机和高铁分别要满足哪些条件？ 看这几张图就明白了",
+      "content": "没有3C标识、 被召回范围的充电宝上机规定.分别可以携带什么样的充电宝？ 充电宝上飞机.",
+      "engine": "yandex",
+      "engines": [
+        "yandex"
+      ]
+    },
+    {
+      "url": "https://www.jiaheu.com/topic/907561.html",
+      "title": "jiaheu.com/topic/907561.html",
+      "content": "——民航充电宝携带规定的详解.• 如果充电宝的额定能量不超过100Wh，无需航空公司额外批准，可直接携带。",
+      "engine": "yandex",
+      "engines": [
+        "yandex"
+      ]
+    },
+    {
+      "url": "https://you.ctrip.com/asks/hongkong38/5216020.html",
+      "title": "请问20000毫安的充电宝能带上飞机吗",
+      "content": "亲 不能哦 \"充电宝\"携带规定 充电宝必须是旅客个人自用携带。 充电宝只能在手提行李中携带或随身携带,严禁在托运行李中携带。",
+      "engine": "yandex",
+      "engines": [
+        "yandex"
+      ]
+    },
+    {
+      "url": "https://m.voc.com.cn/xhn/news/202507/29976577.html",
+      "title": "男子机场怒摔充电宝，瞬间起火！ 劣质充电宝有多危险",
+      "content": "一男子因携带的充电宝. 不符合规定无法登机.充电宝登机. 还要符合容量规定.",
+      "engine": "yandex",
+      "engines": [
+        "yandex"
+      ]
+    }
+  ],
+  "unresponsive_engines": [],
+  "total_number": null,
+  "elapsed_ms": 1018
+}

@@ -1,0 +1,12 @@
+{
+  "parent_snapshot": "/tmp/cw2-q02-source-revision-v9-eval",
+  "snapshot": "/tmp/cw2-q02-source-revision-v10-eval",
+  "files": {
+    "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py": "badfb616eadfb0e32be3bd9d80fc6824a2f8cc0dd5f83267146c35579c3ffcae",
+    "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web_search.py": "5da5563379e171bb11135d25f44aea55acd21bb1f3c55770b5c8ffcfd75bebed",
+    "services/runtime/tests/test_public_web_search.py": "94a48cbcdb90dd35beb5640229404e0b4c7094b63168564d6ce278d60e6c7ad3",
+    "services/runtime/tests/test_runtime_source_evaluation.py": "57579d4ba1eb52eb5a37e28db2bb4d967d6d0764c3b826ab79a0590bbb390357",
+    "skills/builtin/web-search/SKILL.md": "1edbca7c45fbfe1a2251b851a62f267de514b7478ed75ded86264a1c8d45fa14",
+    "skills/builtin/web-search/chatwaifu.yaml": "aa4a16f29c1444b84ad4f3f3908ce99bfb61c9550394f1d11fb1a314c0797fa5"
+  }
+}

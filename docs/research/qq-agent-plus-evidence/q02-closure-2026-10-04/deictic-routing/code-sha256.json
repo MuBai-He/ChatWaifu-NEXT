@@ -1,0 +1,6 @@
+{
+  "services/runtime/src/chatwaifu_runtime/agent/source_context.py": "9cc7474bd3d156d37db28cbab3f797c52d0a35abd7ad294df897fc21df8a7b5f",
+  "services/runtime/tests/test_source_context_projection.py": "112682dd7c242f34e8e23b7a5810c63de2dfecb813c9d3fcb590ccdf0f5c761c",
+  "services/runtime/tests/test_tool_calling_agent.py": "c49a868c07f900132589bbc3304ff811976af67982e8c686eea8189d56693cf0",
+  "tools/evaluate_character_scenarios.py": "949230a3ad5eaa0c53ca7748a64cf953c7f2f8ac8a2e9beffd4307cbe5f1891b"
+}

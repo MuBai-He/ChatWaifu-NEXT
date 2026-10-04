@@ -1,0 +1,197 @@
+--- before/services/runtime/src/chatwaifu_runtime/agent/tool_intent.py
++++ after/services/runtime/src/chatwaifu_runtime/agent/tool_intent.py
+@@ -84,7 +84,11 @@
+     re.IGNORECASE,
+ )
+ _EXCLUSIVE_CONTENT_SCOPE = re.compile(
+-    r"(?:只|仅(?:仅)?)(?:能)?(?:根据|依据|使用|基于|参考)"
++    r"(?:(?:只|仅(?:仅)?)(?:能)?(?:根据|依据|使用|基于|参考)|"
++    r"(?:根据|依据|使用|基于|参考)(?:刚才|刚刚|先前|之前|已(?:经)?)"
++    r"(?:成功|实际)?(?:取得|读取|读到|提供|获取|获得)(?:的)?|"
++    r"(?:把|将)(?:刚才|刚刚|先前|之前|已(?:经)?)(?:成功|实际)?"
++    r"(?:取得|读取|读到|获取|获得)(?:的)?)"
+     r"[^，,。.!?！？\uFF1B;\n]{0,80}"
+     r"(?:原文|文档|资料|材料|网页|页面|(?:两|这|几|三|一|[0-9]+)页|文本|内容|记录)|"
+     r"\b(?:based\s+(?:solely|only)\s+on|(?:using|use)\s+only|only\s+(?:use|using|from))"
+@@ -92,8 +96,9 @@
+     re.IGNORECASE,
+ )
+ _NO_NEW_TOOLS = re.compile(
+-    r"(?:不要|不用|不必|别)(?:再|再次|继续)?"
+-    r"(?:(?:调用|使用|执行)(?:任何|新的|新)?(?:工具|函数)|联网|上网|搜索|读取|浏览)|"
++    r"(?:不要|不用|不必|别)(?:再|再次|继续|重新)?"
++    r"(?:(?:调用|使用|执行)(?:任何|新的|新)?(?:工具|函数)|联网|上网|搜索|读取|浏览|"
++    r"(?:进行)?(?:新(?:的)?)?检索)|"
+     r"\b(?:do\s+not|don't)\s+"
+     r"(?:(?:call|use|invoke)\s+(?:any\s+|new\s+|more\s+)?tools?\b|browse\b|search\b|fetch\b|read\b)",
+     re.IGNORECASE,
+@@ -135,8 +140,9 @@
+ def restricts_to_existing_content(user_text: str) -> bool:
+     """Recognize explicit content-only scope, not evidence or execution authority.
+ 
+-    Both exclusive supplied/prior content and a no-new-tools instruction are
+-    required. Affirmative commands elsewhere still take precedence through
++    An exclusive content scope or explicit obtained-material reference, together
++    with a no-new-tools instruction, is required. Affirmative commands elsewhere
++    still take precedence through
+     requires_external_operation; source text and assistant output never participate.
+     """
+     return bool(_EXCLUSIVE_CONTENT_SCOPE.search(user_text) and _NO_NEW_TOOLS.search(user_text))
+--- before/services/runtime/src/chatwaifu_runtime/agent/source_context.py
++++ after/services/runtime/src/chatwaifu_runtime/agent/source_context.py
+@@ -33,7 +33,7 @@
+ )
+ 
+ _SOURCE_REFERENCE = re.compile(
+-    r"刚才|刚刚|上述|前面|此前|之前|先前|前轮|已读|已读取|"
++    r"刚才|刚刚|上述|前面|此前|之前|先前|前轮|已读|已读取|已(?:经)?(?:取得|获取|读取)|"
+     r"\b(?:previous(?:ly)?|prior|above|earlier)\b|(?:already|just)\s+read",
+     re.IGNORECASE,
+ )
+@@ -61,7 +61,7 @@
+     re.IGNORECASE,
+ )
+ _PRIOR_READ_REFERENCE = re.compile(
+-    r"(?:刚才|刚刚|此前|之前|先前|前面|已)(?:成功)?(?:读到|读过|读取)|"
++    r"(?:刚才|刚刚|此前|之前|先前|前面|已(?:经)?)(?:成功)?(?:读到|读过|读取|取得|获取)|"
+     r"\b(?:previously|already|just)\s+read\b",
+     re.IGNORECASE,
+ )
+--- before/services/runtime/tests/test_tool_intent.py
++++ after/services/runtime/tests/test_tool_intent.py
+@@ -2,6 +2,36 @@
+ 
+ import pytest
+ from chatwaifu_runtime.agent.tool_intent import requires_external_operation
++
++
++@pytest.mark.parametrize(
++    "text",
++    [
++        "依据刚才取得的原文，合法心跳到达后是否必须重新随机生成选举超时？"
++        "原文没规定就说明未规定，不要新检索。",
++        "根据已经读取的文档分析现行规定的证据缺口，不要重新检索。",
++        "仅依据已有原文分析现行规定，不要进行新的检索。",
++    ],
++)
++def test_obtained_material_and_no_new_retrieval_are_local_scope(text: str) -> None:
++    from chatwaifu_runtime.agent.tool_intent import restricts_to_existing_content
++
++    assert restricts_to_existing_content(text)
++    assert not requires_external_operation(text)
++
++
++@pytest.mark.parametrize(
++    "text",
++    [
++        "依据刚才取得的原文分析规定，不要新检索，然后读取网页。",
++        "根据已经读取的文档说明现行规定，不要新检索，并保存到笔记。",
++        "依据刚才取得的原文解释规定，不要新检索，然后发送到邮箱。",
++        "依据刚才取得的原文，现行规定是否仍适用？",
++        "哪些现行规定还没核实？不要新检索。",
++    ],
++)
++def test_no_retrieval_phrase_does_not_hide_other_authorized_operations(text: str) -> None:
++    assert requires_external_operation(text)
+ 
+ 
+ @pytest.mark.parametrize(
+--- before/services/runtime/tests/test_source_context_projection.py
++++ after/services/runtime/tests/test_source_context_projection.py
+@@ -82,6 +82,11 @@
+         ("Summarize the previously read document; keep unresolved checks for current rules.", True),
+         ("将这份 ICAO 公告整理为三条清单，保留日期与适用范围。", True),
+         ("将这份国航提示整理为三条出发前检查清单。", True),
++        (
++            "把已经取得的充电宝资料整理成三条出发前检查清单，保留日期与真实链接、"
++            "实质条件和未核实范围。不要新检索。",
++            True,
++        ),
+         ("请把这个网页概括为两段。", True),
+         ("Summarize this document as a checklist.", True),
+         ("把这份公告整理成清单，并核实今天的更新。", False),
+--- before/services/runtime/tests/test_tool_calling_agent.py
++++ after/services/runtime/tests/test_tool_calling_agent.py
+@@ -2591,6 +2591,46 @@
+ 
+ 
+ @pytest.mark.asyncio
++async def test_obtained_paper_followup_does_not_force_another_operation() -> None:
++    from chatwaifu_runtime.conversation.source_context import (
++        SourceContextPacket,
++        SourceContextReceipt,
++    )
++
++    text = (
++        "依据刚才取得的原文，合法心跳到达后是否必须重新随机生成选举超时？"
++        "原文没规定就说明未规定，不要新检索。"
++    )
++    run = _snapshot(
++        SkillRunState.SUCCEEDED,
++        data={
++            "url": "https://source.example/paper",
++            "text": "Retained original excerpt.",
++            "body_sha256": "c" * 64,
++        },
++    ).model_copy(update={"skill_id": "web.read"})
++    packet = SourceContextPacket((SourceContextReceipt(run, True),))
++    llm = _ScriptedLlm([(LlmTextDelta("答复当前原文问题。"), LlmResponseCompleted("stop"))] * 2)
++    gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
++    agent = AgentTurnOrchestrator(llm, gateway, _Router((_SourceProjection("read", "web.read"),)))
++    request = replace(_request(text), tool_choice=agent.tool_choice_for(text))
++    reply = [
++        chunk
++        async for chunk in agent.stream(
++            request,
++            session_id=uuid4(),
++            turn_id=uuid4(),
++            ensure_current=lambda: None,
++            source_context=packet,
++        )
++    ]
++    assert reply == ["答复当前原文问题。"]
++    assert len(llm.requests) == 1 and not gateway.invocations
++    assert llm.requests[0].tools == ()
++    assert "Retained original excerpt." in llm.requests[0].context[-1][1]
++
++
++@pytest.mark.asyncio
+ @pytest.mark.parametrize(
+     "text",
+     [
+@@ -2598,6 +2638,8 @@
+         "将这份 ICAO 公告整理为三条清单，保留日期与适用范围。",
+         "将这份国航提示整理为三条出发前检查清单。",
+         "Summarize this document as a checklist.",
++        "把已经取得的充电宝资料整理成三条出发前检查清单，保留日期与真实链接、"
++        "实质条件和未核实范围。不要新检索。",
+     ],
+ )
+ async def test_prior_source_checklist_gets_one_review_without_another_read(text: str) -> None:
+@@ -2637,7 +2679,16 @@
+ 
+ @pytest.mark.asyncio
+ @pytest.mark.parametrize("mode", ["failed", "omitted", "stale"])
+-async def test_prior_read_only_summary_never_substitutes_background_knowledge(mode: str) -> None:
++@pytest.mark.parametrize(
++    "text",
++    [
++        "不要再联网，只根据刚才读到的原文，用两句话概括区别。",
++        "把已经取得的充电宝资料整理成三条清单，保留日期和未核实范围。不要新检索。",
++    ],
++)
++async def test_prior_read_only_summary_never_substitutes_background_knowledge(
++    mode: str, text: str
++) -> None:
+     from chatwaifu_runtime.agent.tool_calling import TOOL_PRIOR_SOURCE_UNAVAILABLE_REPLY
+     from chatwaifu_runtime.conversation.source_context import (
+         SourceContextPacket,
+@@ -2653,7 +2704,7 @@
+     llm = _ScriptedLlm([(LlmTextDelta("UNSUPPORTED BACKGROUND"), LlmResponseCompleted("stop"))])
+     gateway = _Gateway(_snapshot(SkillRunState.SUCCEEDED))
+     request = replace(
+-        _request("不要再联网，只根据刚才读到的原文，用两句话概括区别。"),
++        _request(text),
+         input_budget=LlmInputBudget(1600),
+     )
+ 

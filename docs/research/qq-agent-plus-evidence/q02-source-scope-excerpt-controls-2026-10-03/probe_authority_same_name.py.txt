@@ -1,0 +1,26 @@
+"""Separate native-name/history mismatch from publication-role action selection."""
+import copy,hashlib,json,time
+from pathlib import Path
+import requests
+original=Path('/tmp/cw2-q02-authority-excerpt-probe-20261003')
+row=next(r for r in map(json.loads,(original/'results.jsonl').read_text().splitlines()) if r['key']=='publisher_role:0:typed_publication_role')
+p=copy.deepcopy(row['request']);p['tools'][0]['function']['name']='cw2_source_decision_v3'
+p['messages'][-1]['content']+='\nTrace the original publication behind THIS particular report, preserving its date and scope. An older same-topic base rule alone does not verify its reported changes. unresolved_updates URLs must be present in actual supplied source data; if the original URL is unknown, leave original_publication_url null and choose search, never invent a root or article URL.\n'
+out=Path('/tmp/cw2-q02-authority-same-name-probe-20261003');out.mkdir(exist_ok=True)
+key=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+s=requests.Session();s.trust_env=False
+started=[json.loads(l) for l in (out/'attempts.jsonl').read_text().splitlines()] if (out/'attempts.jsonl').exists() else []
+done=[json.loads(l) for l in (out/'results.jsonl').read_text().splitlines()] if (out/'results.jsonl').exists() else []
+assert {r['repeat'] for r in started}=={r['repeat'] for r in done},'unfinished attempt needs explicit review'
+for repeat in range(3):
+ if any(r['repeat']==repeat for r in done):continue
+ digest=hashlib.sha256(json.dumps(p,ensure_ascii=False,sort_keys=True).encode()).hexdigest()
+ with (out/'attempts.jsonl').open('a') as f:f.write(json.dumps({'repeat':repeat,'request_sha256':digest})+'\n')
+ start=time.monotonic();r=s.post('https://mubai.website:8318/v1/chat/completions',headers={'Authorization':'Bearer '+key},json=p,timeout=180);data=r.json()
+ for c in data.get('choices',[]):
+  if isinstance(c.get('message'),dict):
+   for field in ['reasoning_content','reasoning','thinking']:c['message'].pop(field,None)
+ record={'repeat':repeat,'variant':'publication_role_same_native_name_and_trace_scope','request':p,'request_sha256':digest,'http_status':r.status_code,'latency_ms':round((time.monotonic()-start)*1000),'response':data,'tool_execution':False}
+ assert key not in json.dumps(record)
+ with (out/'results.jsonl').open('a') as f:f.write(json.dumps(record,ensure_ascii=False)+'\n')
+ print(json.dumps({'repeat':repeat,'status':r.status_code,'latency_ms':record['latency_ms']}),flush=True)

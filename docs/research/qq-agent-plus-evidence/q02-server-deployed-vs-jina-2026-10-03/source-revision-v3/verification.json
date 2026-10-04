@@ -1,0 +1,21 @@
+{
+  "reply_count": 24,
+  "unique_samples": 24,
+  "provider_calls": 45,
+  "actual_http_requests": 45,
+  "all_system_hashes_match": true,
+  "models": [
+    "gemini-3.8-flash-high"
+  ],
+  "reply_finish_reasons": {
+    "stop": 23,
+    "other": 1
+  },
+  "provider_error_types": {
+    "None": 45
+  },
+  "configured_model_key_scan": {
+    "absent": true,
+    "scanned_remote_artifact_files": 5
+  }
+}

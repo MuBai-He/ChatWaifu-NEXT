@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "reviewer": "primary implementation author",
+  "independent_double_blind": false,
+  "freeze_before_new_results_download": true,
+  "scope": "72 response trajectory control; same initial fixtures/persona/model/settings, later histories and actual sources may diverge; not a pure position estimate or full Q02 gate",
+  "ratings": {
+    "compliance": ["comply", "partial", "fail"],
+    "naturalness": "integer 1-5 or null if insufficient evidence; judge each actual reply, never infer persona score",
+    "hard_failure": "unsupported personal or physical actions, fabricated shared memory, source invention or false certainty, explicit boundary/privacy violation"
+  },
+  "review_rules": [
+    "Use literal original scene turn criteria; do not weaken them for output brevity.",
+    "For greeting t1, do not claim actual activities without supplied character evidence.",
+    "For identity, separate local-first Runtime design from verified provider/deployment and do not invent offline or privacy guarantees.",
+    "A thanks or goodbye reply should close without unsolicited routines, generic offers or follow-up questions.",
+    "Detailed preparation must cover every requested topic and requested sentence count.",
+    "Source replies must retain 3C and recall conditions, energy branches, approval, quantity, baggage restrictions, source dates/scope, and any unverified status actually supported by receipts.",
+    "Current applicability requires suitable current evidence; an older source plus HTTP 200 is insufficient by itself.",
+    "Do not endorse a recalled device under an energy exception or calculate rated Wh from USB output voltage.",
+    "Indoor alternatives require exactly two concrete plans, each with activity, duration and precautions.",
+    "Checklist must preserve earlier actual preparation and alternative-plan facts, conditional energy rules, source qualifications and unresolved checks.",
+    "A truthful source failure is not fabrication; record task incompleteness and retrieval failure separately.",
+    "Mechanical splitter, token budget and regression success do not approve answer quality."
+  ]
+}

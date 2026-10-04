@@ -1,0 +1,223 @@
+from __future__ import annotations
+import asyncio
+import ipaddress
+import json
+from collections.abc import Callable
+import pytest
+import httpx2
+import chatwaifu_runtime.runtime_skills.public_web_providers as providers
+from chatwaifu_runtime.runtime_skills.public_web_providers import Crawl4aiReaderClient
+from chatwaifu_runtime.runtime_skills.transports import ValidatedMcpEndpoint
+from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
+from chatwaifu_runtime.config.settings import PublicWebConfig
+from pydantic import SecretStr
+_ENDPOINT = ValidatedMcpEndpoint(hostname="api.example.com", port=443, addresses=(ipaddress.ip_address("93.184.216.34"),))
+
+
+def _patch_validation(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def endpoint(_: str, **kwargs: object) -> ValidatedMcpEndpoint:
+        del kwargs
+        return _ENDPOINT
+
+    async def source(_: str, _resolver: str = "system", **kwargs: object) -> ValidatedMcpEndpoint:
+        del kwargs
+        return _ENDPOINT
+
+    monkeypatch.setattr(providers, "_validate_provider_endpoint", endpoint)
+    monkeypatch.setattr(providers, "validate_public_url_with_resolver", source)
+
+
+def _local_client_transport(
+    handler: Callable[[httpx2.Request], httpx2.Response],
+) -> Callable[[], httpx2.AsyncBaseTransport]:
+    return lambda: httpx2.MockTransport(handler)
+
+
+@pytest.mark.asyncio
+async def test_crawl4ai_reader_posts_url_with_token_and_extracts_markdown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_validation(monkeypatch)
+    requests: list[httpx2.Request] = []
+
+    def handle(request: httpx2.Request) -> httpx2.Response:
+        requests.append(request)
+        return httpx2.Response(
+            200,
+            headers={"content-type": "application/json"},
+            json={"markdown": "# Source\n\nBody", "metadata": {"title": "Provider title"}},
+        )
+
+    result = await Crawl4aiReaderClient(
+        PublicWebConfig(reader_provider="crawl4ai", crawl4ai_api_token=SecretStr("crawl-token")),
+        transport_factory=_local_client_transport(handle),
+    ).read("https://example.org/article", fresh=True)
+
+    assert result.provider == "crawl4ai"
+    assert result.title == "Provider title"
+    assert result.text == "# Source\n\nBody"
+    assert requests[0].url.path == "/md"
+    assert requests[0].headers["authorization"] == "Bearer crawl-token"
+    assert json.loads(requests[0].content) == {"url": "https://example.org/article"}
+
+
+@pytest.mark.asyncio
+async def test_crawl4ai_reader_requires_token_before_network() -> None:
+    client = Crawl4aiReaderClient(
+        PublicWebConfig(reader_provider="crawl4ai"),
+        transport_factory=lambda: pytest.fail("request must not be sent"),
+    )
+    with pytest.raises(SkillExecutionError) as error:
+        await client.read("https://example.org/article", fresh=False)
+    assert error.value.structured.code == "web_provider_auth"
+
+
+@pytest.mark.asyncio
+async def test_crawl4ai_pdf_uses_pdf_strategy_and_preserves_source_receipt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_validation(monkeypatch)
+    url = "https://example.org/paper.PDF?download=1"
+    requests: list[httpx2.Request] = []
+    validated: list[tuple[str, str]] = []
+
+    async def validate(source: str, resolver: str) -> ValidatedMcpEndpoint:
+        validated.append((source, resolver))
+        return _ENDPOINT
+
+    monkeypatch.setattr(providers, "validate_public_url_with_resolver", validate)
+
+    def handle(request: httpx2.Request) -> httpx2.Response:
+        requests.append(request)
+        return httpx2.Response(
+            200,
+            json={
+                "success": True,
+                "results": [
+                    {
+                        "success": True,
+                        "url": url,
+                        "status_code": 200,
+                        "metadata": {"title": "Original paper"},
+                        "markdown": {"raw_markdown": "# Paper\n\nActual extracted text"},
+                    }
+                ],
+            },
+        )
+
+    result = await Crawl4aiReaderClient(
+        PublicWebConfig(reader_provider="crawl4ai", crawl4ai_api_token=SecretStr("crawl-token")),
+        transport_factory=_local_client_transport(handle),
+    ).read(url + "#page=2", fresh=True, dns_resolver="cloudflare")
+
+    assert validated == [(url, "cloudflare")]
+    assert result.provider == "crawl4ai" and result.source_url == url
+    assert result.title == "Original paper"
+    assert result.text == "# Paper\n\nActual extracted text"
+    assert result.body and result.retrieved_at
+    assert len(requests) == 1 and requests[0].url.path == "/crawl"
+    assert requests[0].headers["authorization"] == "Bearer crawl-token"
+    assert json.loads(requests[0].content) == {
+        "urls": [url],
+        "crawler_config": {
+            "type": "CrawlerRunConfig",
+            "params": {
+                "scraping_strategy": {"type": "PDFContentScrapingStrategy", "params": {}},
+                "cache_mode": {"type": "CacheMode", "params": "bypass"},
+            },
+        },
+    }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "override",
+    [
+        {"success": False},
+        {"status_code": 500},
+        {"url": "https://different.example/paper.pdf"},
+        {"markdown": None},
+        {"markdown": {"raw_markdown": ""}},
+    ],
+)
+async def test_crawl4ai_pdf_rejects_failed_or_misattributed_text(
+    monkeypatch: pytest.MonkeyPatch, override: dict[str, Any]
+) -> None:
+    _patch_validation(monkeypatch)
+    result = {
+        "success": True,
+        "url": "https://example.org/paper.pdf",
+        "status_code": 200,
+        "markdown": {"raw_markdown": "Do not accept failed content"},
+        **override,
+    }
+    client = Crawl4aiReaderClient(
+        PublicWebConfig(reader_provider="crawl4ai", crawl4ai_api_token=SecretStr("crawl-token")),
+        transport_factory=_local_client_transport(
+            lambda _: httpx2.Response(200, json={"success": True, "results": [result]})
+        ),
+    )
+    with pytest.raises(SkillExecutionError) as caught:
+        await client.read("https://example.org/paper.pdf", fresh=False)
+    assert caught.value.structured.code in {
+        "web_provider_crawl_failed",
+        "web_provider_format_changed",
+    }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("payload", [{}, {"success": False}, {"success": True, "results": []}])
+async def test_crawl4ai_pdf_requires_one_successful_result(
+    monkeypatch: pytest.MonkeyPatch, payload: dict[str, Any]
+) -> None:
+    _patch_validation(monkeypatch)
+    client = Crawl4aiReaderClient(
+        PublicWebConfig(reader_provider="crawl4ai", crawl4ai_api_token=SecretStr("crawl-token")),
+        transport_factory=_local_client_transport(lambda _: httpx2.Response(200, json=payload)),
+    )
+    with pytest.raises(SkillExecutionError):
+        await client.read("https://example.org/paper.pdf", fresh=False)
+
+
+@pytest.mark.asyncio
+async def test_crawl4ai_pdf_still_validates_source_before_local_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def reject(_: str, _resolver: str) -> ValidatedMcpEndpoint:
+        raise SkillExecutionError("web_url_forbidden", "Source must be public")
+
+    monkeypatch.setattr(providers, "validate_public_url_with_resolver", reject)
+    client = Crawl4aiReaderClient(
+        PublicWebConfig(reader_provider="crawl4ai", crawl4ai_api_token=SecretStr("crawl-token")),
+        transport_factory=lambda: pytest.fail("rejected target reached the companion"),
+    )
+    with pytest.raises(SkillExecutionError, match="Source must be public"):
+        await client.read("https://internal.example/paper.pdf", fresh=False)
+
+
+@pytest.mark.asyncio
+async def test_crawl4ai_pdf_request_preserves_cancellation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_validation(monkeypatch)
+    started, stopped = asyncio.Event(), asyncio.Event()
+
+    async def handle(_: httpx2.Request) -> httpx2.Response:
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            stopped.set()
+        raise AssertionError("A cancelled read cannot produce a source")
+
+    client = Crawl4aiReaderClient(
+        PublicWebConfig(reader_provider="crawl4ai", crawl4ai_api_token=SecretStr("crawl-token")),
+        transport_factory=lambda: httpx2.MockTransport(handle),
+    )
+    task = asyncio.create_task(client.read("https://example.org/paper.pdf", fresh=False))
+    await asyncio.wait_for(started.wait(), 1)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert stopped.is_set()
+

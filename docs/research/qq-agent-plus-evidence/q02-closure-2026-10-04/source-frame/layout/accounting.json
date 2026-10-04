@@ -1,0 +1,45 @@
+{
+  "actual_http": 2,
+  "provider_raw_frames": 2,
+  "rendered_replies": 2,
+  "rejected_frames": 0,
+  "complete_four_turn_flows": 0,
+  "usage": {
+    "prompt_tokens": 8450,
+    "completion_tokens": 641,
+    "total_tokens": 15252
+  },
+  "reasoning": {
+    "reported_count": 2,
+    "unknown_count": 0,
+    "reported_subtotal": 6161
+  },
+  "latency_ms": {
+    "n": 2,
+    "p50": 18051.5,
+    "p95": 24479.75
+  },
+  "reference_error_percent": {
+    "min": 42.5113,
+    "max": 42.7189
+  },
+  "checks": [
+    {
+      "sample": "layout_control:r0:t4",
+      "wire_sha256": "1df99a309fb299f1c2359e3bf0a2dfac418506661381268e0f2ee3fb58754052",
+      "complete_original_and_no_omission": true,
+      "schema_valid": true,
+      "runtime_path_used": false,
+      "no_live_search": true
+    },
+    {
+      "sample": "layout_control:r1:t4",
+      "wire_sha256": "4c6c5978802aad59d0287a7276f0fd778d5eeab5c68e7291c8e269ac0a5bef5d",
+      "complete_original_and_no_omission": true,
+      "schema_valid": true,
+      "runtime_path_used": false,
+      "no_live_search": true
+    }
+  ],
+  "quality_approval": false
+}

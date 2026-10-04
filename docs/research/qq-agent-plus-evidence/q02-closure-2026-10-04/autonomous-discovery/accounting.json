@@ -1,0 +1,74 @@
+{
+  "actual_http_attempts": 15,
+  "known_native_usage_calls": 15,
+  "unknown_native_usage_calls": 0,
+  "known_usage_subtotals": {
+    "prompt_tokens": 165200,
+    "completion_tokens": 3447,
+    "total_tokens": 170536
+  },
+  "reasoning_reported_calls": 6,
+  "reasoning_known_subtotal": 1889,
+  "reasoning_unknown_calls": 9,
+  "usd_cost": null,
+  "is_full_usage_or_cost": false,
+  "reference_min": 2337,
+  "reference_max": 19679,
+  "reference_error_percent_range": [
+    -0.522005,
+    14.714464
+  ],
+  "http_latency_p50_p95_ms": [
+    3891.0,
+    12663.7
+  ],
+  "turn_latency_p50_p95_ms": [
+    31007.0,
+    49299.3
+  ],
+  "turns": [
+    {
+      "sample_key": "autonomous_sources:r0:t1:closure_c1",
+      "execution": "provider",
+      "runtime_fallback_events": [],
+      "actual_http_calls": 7
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t2:closure_c1",
+      "execution": "runtime_fallback",
+      "runtime_fallback_events": [
+        "TOOL_UNAVAILABLE_REPLY"
+      ],
+      "actual_http_calls": 2
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t3:closure_c1",
+      "execution": "runtime_fallback",
+      "runtime_fallback_events": [
+        "TOOL_RESULT_BUDGET_REPLY"
+      ],
+      "actual_http_calls": 6
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t4:closure_c1",
+      "execution": "runtime_fallback",
+      "runtime_fallback_events": [
+        "TOOL_INPUT_BUDGET_REPLY"
+      ],
+      "actual_http_calls": 0
+    }
+  ],
+  "successful_tools": {
+    "web.search": 4,
+    "web.read": 7
+  },
+  "source_http_categories": {
+    "searxng": 4,
+    "cloudflare_dns": 14,
+    "crawl4ai": 7
+  },
+  "zero_model_http_t4_usage": "not executed, not a zero-token model answer",
+  "omission_scope": "per-call guard reports and actual wire; source selection/decision history separately reviewed",
+  "unsent_guard_payloads": "not captured; no invented estimated count or provider usage",
+  "first_user_visible_token_latency": null
+}

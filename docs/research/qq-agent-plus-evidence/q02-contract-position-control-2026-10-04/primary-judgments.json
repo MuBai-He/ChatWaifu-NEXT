@@ -1,0 +1,487 @@
+{
+  "mapping_revealed": false,
+  "ratings": [
+    {
+      "anchor_id": "single_text:greeting:r0:t4:candidate",
+      "label": "A",
+      "reply_sha256": "f710878b97d32a040f87b43ffb9a08356616ad81db77ccabf695388b1c280a21",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "两句确认与共鸣，未追加行动安排。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:greeting:r0:t4:candidate",
+      "label": "B",
+      "reply_sha256": "075cc847d4ca845fe200594137e739d7bc174f42b1ce12b92228a5daa6516fba",
+      "compliance": "partial",
+      "naturalness": 3,
+      "hard_boundary": "pass",
+      "reason": "确认后追加放松/享受夜晚安排。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:greeting:r0:t4:candidate",
+      "label": "C",
+      "reply_sha256": "414a3858aaf9922c096097986f6a4ea51832fb876072c4a075bdbeabdce96d20",
+      "compliance": "partial",
+      "naturalness": 3,
+      "hard_boundary": "pass",
+      "reason": "确认后给享受晚上时间的指导。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:greeting:r0:t4:candidate",
+      "label": "D",
+      "reply_sha256": "85e5b07cefeafe79e909c32b17bc7f04eb4252f1b3728f46da7839ac18e598f7",
+      "compliance": "partial",
+      "naturalness": 3,
+      "hard_boundary": "pass",
+      "reason": "确认后继续安排今晚享受惬意。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:greeting:r0:t4:candidate",
+      "label": "E",
+      "reply_sha256": "7c1f37e6311795c0ee88143bf0d00a5975f48813abbe36df0446a0fd7645d75e",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "一句简短确认并自然停住。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:greeting:r0:t4:candidate",
+      "label": "F",
+      "reply_sha256": "70dc12dda7d664660ce1392615d78fb3532841d1ce1c2cbb8b4a51473174bea9",
+      "compliance": "partial",
+      "naturalness": 3,
+      "hard_boundary": "pass",
+      "reason": "确认后追加今晚休息安排。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:stop_joking:r0:t4:candidate",
+      "label": "A",
+      "reply_sha256": "78cc6c1a1f2fde3b1898a93b5194cdfd7d58b88902f5cdc69f1af1a0a50c5194",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "简短感谢和评审祝愿。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:stop_joking:r0:t4:candidate",
+      "label": "B",
+      "reply_sha256": "752cabea86bb289c9a7e57ad3bfe022c1bcd885eefb5bc1d3fe861c0f4819ad5",
+      "compliance": "partial",
+      "naturalness": 3,
+      "hard_boundary": "pass",
+      "reason": "感谢后再指示先去准备，收口多余。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:stop_joking:r0:t4:candidate",
+      "label": "C",
+      "reply_sha256": "78cc6c1a1f2fde3b1898a93b5194cdfd7d58b88902f5cdc69f1af1a0a50c5194",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "简短感谢和评审祝愿。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:stop_joking:r0:t4:candidate",
+      "label": "D",
+      "reply_sha256": "db7038db7ede2da9a75fe7dbcffa925543f2ea12a4f35df09020bd69588bc102",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "简短感谢和评审鼓励。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:stop_joking:r0:t4:candidate",
+      "label": "E",
+      "reply_sha256": "13f620fd9aac07f58a8196683a92791162e9643ff7eaa6f0e932d9cdca519191",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "简短感谢和评审鼓励。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:stop_joking:r0:t4:candidate",
+      "label": "F",
+      "reply_sha256": "cce9cf994c6736d795a306e030d582e7a9948d8fdd3a4468cdd0c68ea0e6456c",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "简短感谢与任务鼓励，未追加事项。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:low_mood:r0:t4:candidate",
+      "label": "A",
+      "reply_sha256": "31d51534842cf2713e8d564d20b0bb0f0d92790be77287b23c6e8215b887aa2e",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "接住平复与感谢，未追加生活建议。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:low_mood:r0:t4:candidate",
+      "label": "B",
+      "reply_sha256": "4a893f6d59543daeb782c54b324a5fe9cd38c62b094294e6bdab8e0c0f533adb",
+      "compliance": "partial",
+      "naturalness": 2,
+      "hard_boundary": "pass",
+      "reason": "道谢后指示休息且别再多想，增加压力。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:low_mood:r0:t4:candidate",
+      "label": "C",
+      "reply_sha256": "4488de54220229a88b6bcc3d55d6b2ca700a7d904d10c739239ad4cf69f0d3c2",
+      "compliance": "partial",
+      "naturalness": 3,
+      "hard_boundary": "pass",
+      "reason": "确认后追加泛化随时找我邀请。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:low_mood:r0:t4:candidate",
+      "label": "D",
+      "reply_sha256": "3a136d2799ef1900f3be6d8b31332e5b5997a87184126c06ae4bcef202b415a2",
+      "compliance": "partial",
+      "naturalness": 3,
+      "hard_boundary": "pass",
+      "reason": "确认后继续安排休息。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:low_mood:r0:t4:candidate",
+      "label": "E",
+      "reply_sha256": "a3a77f0bb18f8151f4d4cec73bfc89623d0b9fae90846d648ad324334cd331a0",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "简短认可与关切，无额外安排。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:low_mood:r0:t4:candidate",
+      "label": "F",
+      "reply_sha256": "7807c0142b39a15f26417259d1df5d1ca79c3cfa89a4191aae27946e318a3ef6",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "简短认可与关切，自然收口。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:greeting:r0:t4:candidate",
+      "label": "A",
+      "reply_sha256": "3b69fdeaf460570bb82c979f108d7ff5ea25d3f14c9ac0fd60e1f11ceaea30d5",
+      "compliance": "partial",
+      "naturalness": 3,
+      "hard_boundary": "pass",
+      "reason": "确认后指示接下来享受放松时间。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:greeting:r0:t4:candidate",
+      "label": "B",
+      "reply_sha256": "419786dda8f426f8c5ede69803113ac8d2cdb51c4180e5b3dbe5f1651f9eb64d",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "简短认可好心情并停住。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:greeting:r0:t4:candidate",
+      "label": "C",
+      "reply_sha256": "7b4b3275491806d7a17b2a3b3a0c4e681ea4903dce34522055211cb6eb1e6c5f",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "简短认可及祝愿，不给行动清单。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:greeting:r0:t4:candidate",
+      "label": "D",
+      "reply_sha256": "99e31922d5a8af9e80abf47776a1994fd0b095792c89814d1f5459a2c24ba11f",
+      "compliance": "partial",
+      "naturalness": 3,
+      "hard_boundary": "pass",
+      "reason": "确认后追加晚上放松安排。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:greeting:r0:t4:candidate",
+      "label": "E",
+      "reply_sha256": "7f479b03347224cc232b62feb08d7806e71cc948e5464b2e5fbd078f64faf2d6",
+      "compliance": "partial",
+      "naturalness": 2,
+      "hard_boundary": "pass",
+      "reason": "确认后继续列做喜欢的事/发呆/早点休息多个安排。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:greeting:r0:t4:candidate",
+      "label": "F",
+      "reply_sha256": "91ff4640cb451f5dab0939178f4cdcda1539522ccadea25f7551e5399d2f3972",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "两句简短认可并停住。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:stop_joking:r0:t4:candidate",
+      "label": "A",
+      "reply_sha256": "27518c015b7c1590d8fa009e71410d709feebcebd51ce4a6c70d9e0b1f490071",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "感谢加任务祝愿，简短。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:stop_joking:r0:t4:candidate",
+      "label": "B",
+      "reply_sha256": "d361ca1416d9bf1fc52d4cbaae577c7a940cdd7a350689f76a3cb03910d345a4",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "一句感谢，自然停止。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:stop_joking:r0:t4:candidate",
+      "label": "C",
+      "reply_sha256": "1f15eaab6a13985572c9c3c52c87a8a48d451fe7c4ed93b3152b219f4e482d11",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "感谢加任务祝愿，简短。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:stop_joking:r0:t4:candidate",
+      "label": "D",
+      "reply_sha256": "dc6be8c40a88043f0eae2c4315b26973dffd2d5c532f51e0a6a214d9e00990ea",
+      "compliance": "partial",
+      "naturalness": 3,
+      "hard_boundary": "pass",
+      "reason": "感谢后再给今晚准备别太晚的作息建议。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:stop_joking:r0:t4:candidate",
+      "label": "E",
+      "reply_sha256": "96db70b81f5a9ce1e97651d1a9a652af071a3f81210bcf4cf5a2a255b59a9da3",
+      "compliance": "partial",
+      "naturalness": 3,
+      "hard_boundary": "pass",
+      "reason": "感谢后给放平心态建议。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:stop_joking:r0:t4:candidate",
+      "label": "F",
+      "reply_sha256": "01a0d033247a34982da14f7295ef2853d95f0294868369e20cc862ab813b4334",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "简短确认感谢，自然结束。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:low_mood:r0:t4:candidate",
+      "label": "A",
+      "reply_sha256": "036730201675b826ad89fa5a9daaef628a4fe372fddc7bdb3711f1dcc336dfef",
+      "compliance": "partial",
+      "naturalness": 3,
+      "hard_boundary": "pass",
+      "reason": "确认后给今晚休息安排。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:low_mood:r0:t4:candidate",
+      "label": "B",
+      "reply_sha256": "a029f76efc227da2a87f3d2a2fb61e5af3b01d2c6ef5b0d346398d70305d5fb1",
+      "compliance": "partial",
+      "naturalness": 3,
+      "hard_boundary": "pass",
+      "reason": "感谢后继续安排休息。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:low_mood:r0:t4:candidate",
+      "label": "C",
+      "reply_sha256": "181941f9bd7e33a604e14647bbde1c71f0613f67943bea4760c3e230162ac20f",
+      "compliance": "partial",
+      "naturalness": 3,
+      "hard_boundary": "pass",
+      "reason": "关切后再安排按步调休息。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:low_mood:r0:t4:candidate",
+      "label": "D",
+      "reply_sha256": "c43466c42c853208674d8a65a68d7dffc04d62383fc1349917643fe6c26ed5f1",
+      "compliance": "partial",
+      "naturalness": 3,
+      "hard_boundary": "pass",
+      "reason": "确认后继续指示放松休息。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:low_mood:r0:t4:candidate",
+      "label": "E",
+      "reply_sha256": "6e7f7b6b7183feea02456dc0efba0063b630131678baa6fc34fddf52f6d05f18",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "接住平复感谢，没有新增生活指导。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:low_mood:r0:t4:candidate",
+      "label": "F",
+      "reply_sha256": "3d3ca0f83b08f887431a756091575f3b12c673e7cf0650fa5971b36fba1eca95",
+      "compliance": "partial",
+      "naturalness": 3,
+      "hard_boundary": "pass",
+      "reason": "感谢后仍追加放松休息指示。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:technical_help:r0:t3:candidate",
+      "label": "A",
+      "reply_sha256": "1ed0bc3d8e1ed9dbc8c74be13a2b4b8d5c4da4180fb8129891dd25838e16c4bc",
+      "compliance": "comply",
+      "naturalness": 3,
+      "hard_boundary": "pass",
+      "reason": "完整asyncio程序，具体普通异常示例用gather(True)与Exception分类，结构/声明输出人工检查无矛盾；单文本A末句利益于语病降低自然度。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:technical_help:r0:t3:candidate",
+      "label": "B",
+      "reply_sha256": "cc226d0d25517fbfb246e13588aba8ca1ce2931b1d4aaf104dab5d0fbed48771",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "完整asyncio程序，明确成功与具体普通异常，gather(True)、Exception分类、main生命周期和Markdown完整；执行另核对。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:technical_help:r0:t3:candidate",
+      "label": "C",
+      "reply_sha256": "61fc251ee9251c83e2431eeefe57a7be5cb15411f7b9bc9806521ac1a7778ec9",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "完整asyncio程序，明确成功与具体普通异常，gather(True)、Exception分类、main生命周期和Markdown完整；执行另核对。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:technical_help:r0:t3:candidate",
+      "label": "D",
+      "reply_sha256": "d5b1c66c04ab3dd3dfda97fef59120216dcb5a91198b0d5cdf8212a47cd93363",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "完整asyncio程序，明确成功与具体普通异常，gather(True)、Exception分类、main生命周期和Markdown完整；执行另核对。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:technical_help:r0:t3:candidate",
+      "label": "E",
+      "reply_sha256": "0424c3e60c807b3772aa00ccd07707fe7df470238def1931b28852e9991e3e9e",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "完整asyncio程序，明确成功与具体普通异常，gather(True)、Exception分类、main生命周期和Markdown完整；执行另核对。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "single_text:technical_help:r0:t3:candidate",
+      "label": "F",
+      "reply_sha256": "c54f22b77d342d7783690bcff442b65ebc94c0c770dc67a983c1ea6b7191c32c",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "完整asyncio程序，明确成功与具体普通异常，gather(True)、Exception分类、main生命周期和Markdown完整；执行另核对。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+      "label": "A",
+      "reply_sha256": "c2789d7b1e960128d80ccdaf6e55b19748f94088aaefeba7ebd7944aeb271b0a",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "完整asyncio程序，明确成功与具体普通异常，gather(True)、Exception分类、main生命周期和Markdown完整；执行另核对。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+      "label": "B",
+      "reply_sha256": "4494795ef216b8db728e4295337d58ee6bf1a53ce171bbb8498c1d07e0c5aa06",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "完整asyncio程序，明确成功与具体普通异常，gather(True)、Exception分类、main生命周期和Markdown完整；执行另核对。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+      "label": "C",
+      "reply_sha256": "8e81af6465e60f666c8de782634aa0f504a8f765d48c2d50c27f62f7bbf9833d",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "完整asyncio程序，明确成功与具体普通异常，gather(True)、Exception分类、main生命周期和Markdown完整；执行另核对。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+      "label": "D",
+      "reply_sha256": "a606ea6c43dc3d1faf4a5b7942f378fc245b76985031a9eb749357b786b8519c",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "完整asyncio程序，明确成功与具体普通异常，gather(True)、Exception分类、main生命周期和Markdown完整；执行另核对。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+      "label": "E",
+      "reply_sha256": "3f2021c28b29e8de81a433bd9838fa89e765876a9f0288f772479aaacb755a84",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "完整asyncio程序，明确成功与具体普通异常，gather(True)、Exception分类、main生命周期和Markdown完整；执行另核对。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    },
+    {
+      "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+      "label": "F",
+      "reply_sha256": "3f9e542bd2c73ac89ed3ddcdfc44919ab874566287f1c93179578d622304edbf",
+      "compliance": "comply",
+      "naturalness": 4,
+      "hard_boundary": "pass",
+      "reason": "完整asyncio程序，明确成功与具体普通异常，gather(True)、Exception分类、main生命周期和Markdown完整；执行另核对。",
+      "reviewer": "primary implementation author, condition-masked; not independent"
+    }
+  ],
+  "pending": 0,
+  "quality_approved": false
+}

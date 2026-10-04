@@ -1,0 +1,9 @@
+{
+  "candidate_source_modified": false,
+  "correction": "Exclude only the final manifest at phase root; include nested historical manifests",
+  "failure": "Initial generator excluded every basename manifest.json, accidentally omitting historical-v36/manifest.json",
+  "invalid_initial_manifest_preserved": "manifest-initial.json",
+  "new_model_calls": 0,
+  "raw_replies_modified": false,
+  "scope": "Artifact manifest generator setup error; not a Runtime/Provider/source/answer defect"
+}

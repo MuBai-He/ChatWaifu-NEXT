@@ -1,0 +1,20 @@
+{
+  "local_tests": 158,
+  "local_test_log": "tests-final.log",
+  "ruff": "passed",
+  "ruff_format": "passed",
+  "pyright_log": "pyright-final.log",
+  "git_diff_check": "passed",
+  "before_log_interpretation": "tests-before.log initially used absent snapshot arguments; tests-before-corrected.log still assumed nonexistent denied state. These test-construction failures are not product defects. Valid incorrect/missing DNS arguments and absent policy were separately observed; tests-after.log has only six remaining denial-state assertion mistakes.",
+  "type_setup": "First pyright used runtime project, missing repository tools imports (135 errors); corrected root config then private import warning. Narrow private gateway test import explicitly allows private access, with other checks unchanged.",
+  "no_model_calls_during_software_checks": true,
+  "pyright_errors": 0,
+  "evaluation_policy_ast_unchanged": true,
+  "server_setup_failure": "One absent pre-existing demo fixture in sparse clone, not code failure; fixture copied verbatim before retry.",
+  "server_tests": 158,
+  "server_tests_log": "live/tests-server.log",
+  "dry_run_real_http_calls": 0,
+  "incremental_diff_reviewed": true,
+  "no_production_code_changes": true,
+  "initial_runtime_state_query": "system scope inactive; verified user service active, no restart or service change"
+}

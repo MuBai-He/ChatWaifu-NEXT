@@ -1,0 +1,26 @@
+{
+  "health_status": 200,
+  "health_body": {
+    "status": "ok",
+    "version": "0.1.0",
+    "database": "ready",
+    "subscribers": 3,
+    "dropped_events": 0,
+    "providers": {
+      "llm": "openai_compatible",
+      "tts": "gpt_sovits",
+      "stt": "faster_whisper_worker"
+    },
+    "resources": {
+      "state": "active",
+      "idle_seconds": 124,
+      "sleep_count": 0,
+      "last_sleep_at": null,
+      "last_wake_at": null
+    }
+  },
+  "runtime_registered_skill_version": "1.3.0",
+  "provider_queries_schema_loaded": true,
+  "service": "MainPID=3720248\nActiveState=active\nSubState=running\n",
+  "probe_note": "authenticated loopback HTTPS; corrected initial wrong plain-HTTP scheme and /health path"
+}

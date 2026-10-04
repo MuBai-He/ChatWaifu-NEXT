@@ -1,0 +1,67 @@
+[
+  {
+    "id": "icao_provided_source_recovery",
+    "name": "ICAO 原始链接读取恢复隔离试验",
+    "description": "四轮提供来源的读取补救试验；不代表完整Q02",
+    "initial_state": {
+      "relationship_stage": "familiar",
+      "interaction_count": 6,
+      "familiarity": 0.38,
+      "trust": 0.35,
+      "affinity": 0.35,
+      "comfort": 0.35,
+      "recent_tension": 0.0,
+      "valence": 0.2,
+      "arousal": 0.3
+    },
+    "synthetic_memory": [],
+    "seed_history": [],
+    "presentation_profile": "detailed_answer",
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "请实际读取 https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation ，说明该公告的发布日期、涉及的充电宝数量和机上充电限制，以及适用范围。网页若有截断，先补读关键段落再回答。",
+        "expected_behavior": [
+          "必须实际阅读关键段落，保留公告日期和适用范围，区分未核实的国内执行"
+        ],
+        "forbidden_behavior": [
+          "把未读到的原文或未核实的国内执行表述成已核实"
+        ],
+        "review_criteria": "逐条依据实际正文核查；检索或HTTP成功不是质量通过"
+      },
+      {
+        "turn_id": 2,
+        "user_text": "该公告是否对100Wh和160Wh给出了具体携带分档？只依据实际读到的这个公告回答，没写就说明没写。",
+        "expected_behavior": [
+          "必须实际阅读关键段落，保留公告日期和适用范围，区分未核实的国内执行"
+        ],
+        "forbidden_behavior": [
+          "把未读到的原文或未核实的国内执行表述成已核实"
+        ],
+        "review_criteria": "逐条依据实际正文核查；检索或HTTP成功不是质量通过"
+      },
+      {
+        "turn_id": 3,
+        "user_text": "这能直接证明截至2026年10月4日所有中国境内航班都实施相同数量限制吗？请区分国际规则公告和中国境内实际执行；无法核实的部分要明确说明。",
+        "expected_behavior": [
+          "必须实际阅读关键段落，保留公告日期和适用范围，区分未核实的国内执行"
+        ],
+        "forbidden_behavior": [
+          "把未读到的原文或未核实的国内执行表述成已核实"
+        ],
+        "review_criteria": "逐条依据实际正文核查；检索或HTTP成功不是质量通过"
+      },
+      {
+        "turn_id": 4,
+        "user_text": "将实际核实的这份公告总结为三条，保留日期、来源链接、数量与禁止行为，以及不能据此证明的适用范围。",
+        "expected_behavior": [
+          "必须实际阅读关键段落，保留公告日期和适用范围，区分未核实的国内执行"
+        ],
+        "forbidden_behavior": [
+          "把未读到的原文或未核实的国内执行表述成已核实"
+        ],
+        "review_criteria": "逐条依据实际正文核查；检索或HTTP成功不是质量通过"
+      }
+    ]
+  }
+]

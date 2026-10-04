@@ -1,0 +1,9 @@
+{
+  "services/runtime/src/chatwaifu_runtime/agent/source_answer_frame.py": "0771802ba5cf85959972f31d58e5537e4fce4f48708b4f103e66087b6ad6c405",
+  "services/runtime/src/chatwaifu_runtime/bootstrap/container.py": "245f824fcb609e2df0f7d75037ab857fa849bfea8c45c9379564234ba7f61a6e",
+  "services/runtime/src/chatwaifu_runtime/character_kernel/prompt.py": "4aace81c47f8ed64a4504bd2d6ffeb8a333f07c4cb8891120d6634a8695857de",
+  "services/runtime/src/chatwaifu_runtime/conversation/service.py": "0764dcde596e722a5aaee04cbd05e54f4c04be72e51f6c960d058b0872ec7849",
+  "services/runtime/src/chatwaifu_runtime/providers/contracts.py": "1013a2ccff350453031c699564600611ec18dd1254f014eedf5f77cfcf90cb0a",
+  "services/runtime/src/chatwaifu_runtime/providers/input_estimation.py": "acf173b831cd5df3d1221b24d2eafd5873461f05816fd25ad5be22b191276d52",
+  "services/runtime/src/chatwaifu_runtime/providers/openai_compatible.py": "e7b90ff4d39d29f7964e9c5b349553d31186d6c8b7ec9f4f51ec6bd52300fd19"
+}

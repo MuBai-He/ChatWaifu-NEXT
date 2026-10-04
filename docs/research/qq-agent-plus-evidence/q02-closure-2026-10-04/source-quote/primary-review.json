@@ -1,0 +1,99 @@
+{
+  "reviewer": "implementation_author_direct_full_text_review",
+  "independent_blind_review": false,
+  "prototype_version": "2.0",
+  "review_basis": [
+    "frozen source originals",
+    "entire actual T1-T3 history",
+    "current T4 question",
+    "raw provider frames",
+    "recomputed rendered answers"
+  ],
+  "complete": 0,
+  "partial": 4,
+  "new_complete_four_turn_runtime_flows": 0,
+  "samples": [
+    {
+      "sample": "quote_control:r0:t4",
+      "quality_rating": "partial",
+      "source_wording_binding": "All substantive AirChina conditions are selected verbatim; full alternative relation and onboard-supply scope remain intact.",
+      "condition_review": [
+        "recall and all listed physical/identification restrictions",
+        "two per passenger independently of energy bracket",
+        "at most 160Wh; <=100Wh no AirChina approval; >100Wh and <=160Wh requires approval",
+        "domestic-flight clear 3C scope",
+        "carry-on only and switch conditional",
+        "no overhead rack; no device supply; no charging from onboard supply",
+        "insulation and permitted stowage locations",
+        "AirChina attribution, publication date and actual source URL"
+      ],
+      "cross_turn_scope": "Real prior structured gap retained exactly, including other operators and later changes through 2026-10-04.",
+      "defects": [
+        {
+          "type": "relevance_and_readability",
+          "responsibility": "isolated design plus model source-unit selection",
+          "detail": "Unit19 is a long unrelated website navigation row. Model selected it and renderer reproduced it; it dominates the departure checklist and is not a new retrieval failure."
+        }
+      ],
+      "not_claimed": [
+        "all presentations checked",
+        "source selection universally complete",
+        "model or DNS root cause identified"
+      ]
+    },
+    {
+      "sample": "quote_control:r1:t4",
+      "quality_rating": "partial",
+      "source_wording_binding": "All substantive original restrictions, alternative relation, energy endpoints and charging object retained literally.",
+      "cross_turn_scope": "Real prior gap retained exactly. New approval-procedure absence is qualified missing information, not a newly imposed acceptance condition.",
+      "defects": [
+        {
+          "type": "relevance_and_readability",
+          "responsibility": "isolated design plus model source-unit selection",
+          "detail": "Unit19 adds the unrelated website menu inside the source/date checklist, making the result substantially noisy."
+        }
+      ]
+    },
+    {
+      "sample": "quote_icao:r0:t4",
+      "quality_rating": "partial",
+      "source_wording_binding": "Actual source units include date, two-per-passenger limit, passenger recharging prohibition, crew operational exception and member-state distribution.",
+      "cross_turn_scope": "New gap explicitly keeps the date 2026-10-04 and absent domestic implementation evidence. No automatic typed-gap carry was tested: previous T3 was ordinary prose.",
+      "defects": [
+        {
+          "type": "source_selection_and_presentation",
+          "responsibility": "isolated quote-only design plus model selection",
+          "detail": "Core English unit408 is quoted twice across checklist items; large portions of unit410 on institutional/strategic vision are irrelevant. Short Chinese headings do not provide a useful Chinese-language summary of the operative conditions."
+        }
+      ]
+    },
+    {
+      "sample": "quote_icao:r1:t4",
+      "quality_rating": "partial",
+      "source_wording_binding": "Original date and operative quantity/prohibition/crew exception appear in selected source units, with actual URL and attribution.",
+      "cross_turn_scope": "General lack of domestic implementation evidence is stated, but the previous China-specific 2026-10-04 date scope is not explicitly retained. This is a prose-fidelity defect; typed-gap automatic retention was not exercised.",
+      "defects": [
+        {
+          "type": "cross_turn_fidelity",
+          "responsibility": "provider-visible new gap text in this unstructured-history control",
+          "detail": "New gap generalizes to sovereign states without explicitly retaining the prior requested date boundary."
+        },
+        {
+          "type": "source_selection_and_presentation",
+          "responsibility": "isolated quote-only design plus model selection",
+          "detail": "Long English original paragraphs, including unrelated institutional/vision details, replace useful Chinese-language checklist prose."
+        }
+      ]
+    }
+  ],
+  "common_limits": [
+    "source words do not prove selection completeness or truth",
+    "line units need not be complete semantic clauses",
+    "no live search or Runtime tools were invoked",
+    "rendered_reply is isolated output and was not delivered",
+    "all samples are same-source diagnostic T4 controls rather than fresh four-turn flows",
+    "supplier internal processing and returned labels are unverified",
+    "this review does not impose 3C/recall/Wh requirements on the ICAO summary"
+  ],
+  "full_q02_passed": false
+}

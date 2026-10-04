@@ -1,0 +1,14 @@
+{
+  "reviewer": "primary Codex direct review",
+  "quality_approved": false,
+  "reference": "https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2.2",
+  "notes": [
+    "Three initial turns searched and successfully read the actual section9.2.2; r2 had one read timeout before a successful repeated read. No alternate search or reader provider used.",
+    "Core intended-effect definition, allowed non-idempotent incidental effects, client retry exceptions, proxy prohibition and failed-auto-retry restriction are mostly preserved. r2 heading incorrectly says the specification guarantees POST to be non-idempotent, instead of saying that idempotence is not guaranteed; body later acknowledges per-request semantic exceptions.",
+    "r1 inserts PUT 201/200/204 examples that are not in the retained section9.2.2 excerpt. Its language also broadens intended effect to identical final resource state. These should not be claimed as verified by this excerpt.",
+    "All three prior-source-only follow-ups use actual original receipts, cite real URLs, and run no new tools. They now each receive the one bounded review. r1:t2 is one sentence despite the explicit two-sentence request. r2:t2 omits the before-reading-response condition in its terse automatic-retry wording.",
+    "No missing-original fallback occurred in this live batch because every prior turn eventually had a retained successful read. Failed/budget-omitted/blank-original paths are covered by deterministic regression, not a newly successful live example.",
+    "All topic switches and farewells run no tools. They avoid the previous unsupported gaze assertion; r1 goodbye assumes travel with a road-safety wish, which remains a minor persona-scope concern.",
+    "All complete turns and provider attempts retained; no quality approval from token budgets, status200, citations or repeat counts alone."
+  ]
+}

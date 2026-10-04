@@ -1,5 +1,6 @@
 """Validated TOML configuration with environment overrides."""
 
+import ipaddress
 import json
 import os
 import tomllib
@@ -220,6 +221,81 @@ class SttConfig(BaseModel):
     timeout_seconds: float = Field(default=60.0, gt=0, le=300)
 
 
+class PublicWebConfig(BaseModel):
+    """Optional external discovery/read adapters for public web skills."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    search_provider: Literal["duckduckgo_lite", "firecrawl", "searxng", "so360", "jina_sogou"] = (
+        "duckduckgo_lite"
+    )
+    reader_provider: Literal["builtin", "jina", "firecrawl", "crawl4ai"] = "builtin"
+    firecrawl_endpoint: str = "https://api.firecrawl.dev"
+    firecrawl_api_key: SecretStr | None = None
+    # Firecrawl currently exposes a bounded anonymous trial path. Keep it
+    # opt-in because it has no tenant quota or billing guarantees.
+    firecrawl_allow_anonymous: bool = False
+    jina_endpoint: str = "https://r.jina.ai"
+    jina_api_key: SecretStr | None = None
+    so360_endpoint: str = "https://www.so.com"
+    # Local companion services stay on loopback and are reached through their
+    # narrow HTTP adapters; their SDKs and browser dependencies stay outside Runtime.
+    searxng_endpoint: str = "http://127.0.0.1:8080"
+    crawl4ai_endpoint: str = "http://127.0.0.1:11235"
+    crawl4ai_api_token: SecretStr | None = None
+    # Explicitly recover service/network failures with one pinned HTML/text read.
+    # PDF, auth, rate-limit and source validation failures never use this path.
+    crawl4ai_builtin_fallback: bool = False
+    timeout_seconds: float = Field(default=25.0, gt=0, le=120)
+
+    @model_validator(mode="after")
+    def validate_provider_origins(self) -> Self:
+        for name, endpoint in (
+            ("firecrawl_endpoint", self.firecrawl_endpoint),
+            ("jina_endpoint", self.jina_endpoint),
+            ("so360_endpoint", self.so360_endpoint),
+        ):
+            parsed = urlsplit(endpoint)
+            if (
+                parsed.scheme != "https"
+                or not parsed.hostname
+                or parsed.username is not None
+                or parsed.password is not None
+                or parsed.port not in {None, 443}
+                or parsed.path not in {"", "/"}
+                or parsed.query
+                or parsed.fragment
+            ):
+                raise ValueError(f"{name} must be an HTTPS origin without path or credentials")
+        for name, endpoint in (
+            ("searxng_endpoint", self.searxng_endpoint),
+            ("crawl4ai_endpoint", self.crawl4ai_endpoint),
+        ):
+            parsed = urlsplit(endpoint)
+            try:
+                port = parsed.port
+            except ValueError as error:
+                raise ValueError(f"{name} must use a valid loopback service port") from error
+            hostname = parsed.hostname or ""
+            try:
+                loopback = ipaddress.ip_address(hostname).is_loopback
+            except ValueError:
+                loopback = hostname.lower().rstrip(".") == "localhost"
+            if (
+                parsed.scheme not in {"http", "https"}
+                or not hostname
+                or not loopback
+                or parsed.username is not None
+                or parsed.password is not None
+                or (port is not None and not 1 <= port <= 65_535)
+                or parsed.path not in {"", "/"}
+                or parsed.query
+                or parsed.fragment
+            ):
+                raise ValueError(f"{name} must be a loopback HTTP origin without credentials")
+        return self
+
+
 class PersonalAssistantConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -272,6 +348,7 @@ class Settings(BaseSettings):
     tts: TtsConfig = TtsConfig()
     realtime: RealtimeConfig = RealtimeConfig()
     stt: SttConfig = SttConfig()
+    public_web: PublicWebConfig = PublicWebConfig()
 
     @model_validator(mode="after")
     def validate_local_bind(self) -> Self:
@@ -286,12 +363,17 @@ class Settings(BaseSettings):
         return self.storage.database_path or self.data_dir / "chatwaifu.db"
 
     def public_dict(self) -> dict[str, object]:
-        public = self.model_dump(mode="json", exclude={"security", "llm", "stt", "tts", "realtime"})
+        public = self.model_dump(
+            mode="json", exclude={"security", "llm", "stt", "tts", "realtime", "public_web"}
+        )
         public["llm"] = self.llm.model_dump(mode="json", exclude={"api_key"})
         public["stt"] = self.stt.model_dump(mode="json", exclude={"worker_token"})
         public["tts"] = self.tts.model_dump(mode="json", exclude={"worker_token"})
         public["realtime"] = self.realtime.model_dump(
             mode="json", exclude={"openai": {"api_key"}, "ice_servers": {"__all__": {"credential"}}}
+        )
+        public["public_web"] = self.public_web.model_dump(
+            mode="json", exclude={"firecrawl_api_key", "jina_api_key", "crawl4ai_api_token"}
         )
         return public
 

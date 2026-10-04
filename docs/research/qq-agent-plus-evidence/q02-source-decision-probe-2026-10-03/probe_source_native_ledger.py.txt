@@ -1,0 +1,24 @@
+"""Confirm that the evidence ledger also works as one native function decision."""
+import copy,json,time
+from pathlib import Path
+import requests
+payloads=[json.loads(l)['payload'] for l in Path('/tmp/cw2-q02-v17-source-smoke-20261003/results/actual-provider-payloads.jsonl').read_text().splitlines()]
+control=Path('/tmp/cw2-q02-source-ledger-probe-20261003')
+schema=json.loads((control/'schema.json').read_text());policy=(control/'policy.txt').read_text()
+out=Path('/tmp/cw2-q02-source-native-ledger-probe-20261003');out.mkdir(exist_ok=True)
+key=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+s=requests.Session();s.trust_env=False
+for repeat in range(2):
+ for target,index in [('after_update_search',14),('after_older_operator_read',15)]:
+  if (out/'results.jsonl').exists() and any((r['repeat'],r['target'])==(repeat,target) for r in map(json.loads,(out/'results.jsonl').read_text().splitlines())):continue
+  p=copy.deepcopy(payloads[index]);p['stream']=False;p.pop('stream_options',None)
+  p['messages'][-1]['content']+=policy+'\n通过唯一提供的 source_decision 函数提交这份记录；此函数只提交决策，实际执行仍由 Runtime 校验权限和预算。'
+  p['tools']=[{'type':'function','function':{'name':'source_decision','description':'Submit the next bounded source-research decision and a brief auditable evidence inventory. This does not itself perform a web request.','parameters':schema}}]
+  p['tool_choice']='required'
+  start=time.monotonic();r=s.post('https://mubai.website:8318/v1/chat/completions',headers={'Authorization':'Bearer '+key},json=p,timeout=180);data=r.json()
+  for c in data.get('choices',[]):
+   if isinstance(c.get('message'),dict):c['message']['reasoning_content']=None
+  row={'repeat':repeat,'target':target,'variant':'native_ledger','http_status':r.status_code,'latency_ms':round((time.monotonic()-start)*1000),'source_payload_index':index,'request':p,'response':data,'tool_execution':False}
+  assert key not in json.dumps(row)
+  with (out/'results.jsonl').open('a') as f:f.write(json.dumps(row,ensure_ascii=False)+'\n')
+  print(json.dumps({'repeat':repeat,'target':target,'status':r.status_code,'message':data.get('choices',[{}])[0].get('message'),'usage':data.get('usage')},ensure_ascii=False),flush=True)

@@ -1,0 +1,1099 @@
+{
+  "gap_checks": [
+    {
+      "gap_id": "45f081b3-1e14-407d-b202-68ed46a91f0f:block1",
+      "prior_declared_gap_on_wire": true,
+      "retained_completed_gap": true,
+      "sample_key": "frozen_icao:r0:t4",
+      "statement_present_in_published_reply": true
+    },
+    {
+      "gap_id": "45f081b3-1e14-407d-b202-68ed46a91f0f:block3",
+      "prior_declared_gap_on_wire": true,
+      "retained_completed_gap": true,
+      "sample_key": "frozen_icao:r0:t4",
+      "statement_present_in_published_reply": true
+    },
+    {
+      "gap_id": "45f081b3-1e14-407d-b202-68ed46a91f0f:block5",
+      "prior_declared_gap_on_wire": true,
+      "retained_completed_gap": true,
+      "sample_key": "frozen_icao:r0:t4",
+      "statement_present_in_published_reply": true
+    },
+    {
+      "gap_id": "62268533-eb27-4a0a-92f5-e7f06bc8d4f7:block1",
+      "prior_declared_gap_on_wire": true,
+      "retained_completed_gap": true,
+      "sample_key": "frozen_icao:r0:t4",
+      "statement_present_in_published_reply": true
+    },
+    {
+      "gap_id": "f9733fbb-292c-4561-b994-5819a30babfd:block2",
+      "prior_declared_gap_on_wire": true,
+      "retained_completed_gap": true,
+      "sample_key": "frozen_icao:r0:t4",
+      "statement_present_in_published_reply": true
+    },
+    {
+      "gap_id": "f627adba-0c7e-4dc4-876b-d081b9d000bd:block5",
+      "prior_declared_gap_on_wire": true,
+      "retained_completed_gap": true,
+      "sample_key": "frozen_icao:r1:t4",
+      "statement_present_in_published_reply": true
+    },
+    {
+      "gap_id": "9792a0b1-fed9-467e-a6da-8f93c338681c:block0",
+      "prior_declared_gap_on_wire": true,
+      "retained_completed_gap": true,
+      "sample_key": "frozen_icao:r1:t4",
+      "statement_present_in_published_reply": true
+    },
+    {
+      "gap_id": "305311e8-85b2-4e9e-868b-d0f0a781b54d:block3",
+      "prior_declared_gap_on_wire": true,
+      "retained_completed_gap": true,
+      "sample_key": "frozen_icao:r1:t4",
+      "statement_present_in_published_reply": true
+    },
+    {
+      "gap_id": "de8cd273-1766-4fe1-b62f-79d8ab70605c:block2",
+      "prior_declared_gap_on_wire": true,
+      "retained_completed_gap": true,
+      "sample_key": "frozen_airchina:r0:t4",
+      "statement_present_in_published_reply": true
+    },
+    {
+      "gap_id": "8c7e3a5a-0574-4b0b-9ed1-a31ab38e6dea:block5",
+      "prior_declared_gap_on_wire": true,
+      "retained_completed_gap": true,
+      "sample_key": "frozen_airchina:r0:t4",
+      "statement_present_in_published_reply": true
+    },
+    {
+      "gap_id": "4025dfd3-1f13-4c6a-a119-5baec2353485:block5",
+      "prior_declared_gap_on_wire": true,
+      "retained_completed_gap": true,
+      "sample_key": "frozen_airchina:r0:t4",
+      "statement_present_in_published_reply": true
+    },
+    {
+      "gap_id": "4025dfd3-1f13-4c6a-a119-5baec2353485:block6",
+      "prior_declared_gap_on_wire": true,
+      "retained_completed_gap": true,
+      "sample_key": "frozen_airchina:r0:t4",
+      "statement_present_in_published_reply": true
+    },
+    {
+      "gap_id": "4025dfd3-1f13-4c6a-a119-5baec2353485:block7",
+      "prior_declared_gap_on_wire": true,
+      "retained_completed_gap": true,
+      "sample_key": "frozen_airchina:r0:t4",
+      "statement_present_in_published_reply": true
+    },
+    {
+      "gap_id": "2a75b9e9-bdf4-4281-93e1-27d75f3e090e:block2",
+      "prior_declared_gap_on_wire": true,
+      "retained_completed_gap": true,
+      "sample_key": "frozen_airchina:r1:t4",
+      "statement_present_in_published_reply": true
+    },
+    {
+      "gap_id": "08a4837d-dee5-4795-b874-958d8405d5f3:block5",
+      "prior_declared_gap_on_wire": true,
+      "retained_completed_gap": true,
+      "sample_key": "frozen_airchina:r1:t4",
+      "statement_present_in_published_reply": true
+    },
+    {
+      "gap_id": "8844a330-9aa7-4874-b3e0-39778b36528c:block8",
+      "prior_declared_gap_on_wire": true,
+      "retained_completed_gap": true,
+      "sample_key": "frozen_airchina:r1:t4",
+      "statement_present_in_published_reply": true
+    }
+  ],
+  "quality_approval": false,
+  "scope_flags": [
+    {
+      "block_index": 0,
+      "sample_key": "frozen_icao:r0:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "依据提供的 ICAO 网站公告（https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation），为您整理相关内容如下：",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 1,
+      "sample_key": "frozen_icao:r0:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "发布日期：正文中表述为“今日”（today）作出的决定，文末附注日期为 2026 年 3 月 27 日；材料未给出更具体的新闻发布时间戳。",
+      "unresolved_scope": true
+    },
+    {
+      "block_index": 2,
+      "sample_key": "frozen_icao:r0:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "生效日期：新规范将于 2026 年 3 月 27 日生效。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 3,
+      "sample_key": "frozen_icao:r0:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "充电宝数量限制：每位旅客限带 2 个锂电池供电的充电宝（lithium battery-powered power banks）；文中未涉及容量（Wh/mAh）等其他技术参数，额定容量限制情况在本文中未核实。",
+      "unresolved_scope": true
+    },
+    {
+      "block_index": 4,
+      "sample_key": "frozen_icao:r0:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "机上充电限制：飞行途中禁止旅客为这些充电宝充电（prohibited from recharging them during flights）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 5,
+      "sample_key": "frozen_icao:r0:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "适用范围与例外：限制主要适用于旅客携带的锂电池充电宝；机组人员（crew）属于例外，可根据飞机的运行需求继续携带和使用这些设备。相关规范将作为《危险品航空安全运输技术细则》（Doc 9284）补篇提供给全部 193 个 ICAO 成员国，各成员国与各航司的具体实际执行情况材料中未载明。",
+      "unresolved_scope": true
+    },
+    {
+      "block_index": 0,
+      "sample_key": "frozen_icao:r0:t2",
+      "source_indices": [
+        0
+      ],
+      "text": "这份 ICAO 公告中完全没有提到 100Wh 或 160Wh，也没有给出任何具体的容量携带分档（https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 1,
+      "sample_key": "frozen_icao:r0:t2",
+      "source_indices": [
+        0
+      ],
+      "text": "依照提供的公告正文（https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation），关于携带数量仅明确限制为每位旅客限带 2 个锂电池供电的充电宝，且飞行途中禁止充电；正文未涉及额定能量（Wh/mAh）等技术参数，具体的容量限制与分档情况在材料中未核实。",
+      "unresolved_scope": true
+    },
+    {
+      "block_index": 0,
+      "sample_key": "frozen_icao:r0:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "仅凭这份 ICAO 公告（https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation），不能直接证明截至 2026 年 10 月 4 日所有中国境内航班都已实施相同的数量限制。材料能证明的内容与未核实的范围区分如下：",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 1,
+      "sample_key": "frozen_icao:r0:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "材料能直接证明的内容：ICAO 理事会批准了针对《危险品航空安全运输技术细则》（Doc 9284）的修订建议，新规范自 2026 年 3 月 27 日起生效；旅客携带的锂电池充电宝限制为每人 2 个，且飞行途中禁止旅客为其充电；机组人员因运行需求可继续携带和使用；该细则补篇将分发给全部 193 个 ICAO 成员国（https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 2,
+      "sample_key": "frozen_icao:r0:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "材料未核实的范围：公告仅说明将补篇分发给各成员国，并未载明各成员国（包括中国民航主管部门）或各航空公司是否已将该国际规范转化为国内规章并实际执行，也未提及中国境内航班的现行规章及本地化执行情况；因此，截至 2026 年 10 月 4 日中国境内航班的实际落地与执行情况在本文中均属于未核实范围（https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation）。",
+      "unresolved_scope": true
+    },
+    {
+      "block_index": 0,
+      "sample_key": "frozen_icao:r0:t4",
+      "source_indices": [
+        0
+      ],
+      "text": "发布与生效日期及来源：依据 ICAO 官方公告（https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation），正文中表述为“今日”（today）作出的决定，文末附注日期为 2026 年 3 月 27 日，新规范同样自 2026 年 3 月 27 日起生效；材料未给出更具体的新闻发布时间戳。",
+      "unresolved_scope": true
+    },
+    {
+      "block_index": 1,
+      "sample_key": "frozen_icao:r0:t4",
+      "source_indices": [
+        0
+      ],
+      "text": "数量限制、禁止行为与机组例外：依据该公告（https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation），旅客携带锂电池供电的充电宝限制为每人最多 2 个，且飞行途中严禁旅客为充电宝充电；机组人员（crew）属于例外，可根据飞机的运行需求继续携带和使用这些设备。公告中未涉及额定能量（如 100Wh/160Wh）等技术参数，具体的容量限制与分档情况在材料中未核实。",
+      "unresolved_scope": true
+    },
+    {
+      "block_index": 2,
+      "sample_key": "frozen_icao:r0:t4",
+      "source_indices": [
+        0
+      ],
+      "text": "不能据此证明的适用范围：相关规范作为《危险品航空安全运输技术细则》（Doc 9284）补篇提供给全部 193 个 ICAO 成员国，但公告并未载明各成员国（包括中国民航主管部门）或各航空公司是否已转化为国内规章并实际执行，也未提及中国境内航班的现行规章及本地化执行情况；因此，不能凭此公告（https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation）直接证明截至 2026 年 10 月 4 日所有中国境内航班均实施了相同的数量限制，各成员国与各航司的具体实际执行情况在材料中均属于未核实范围。",
+      "unresolved_scope": true
+    },
+    {
+      "block_index": 0,
+      "sample_key": "frozen_icao:r1:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "依据提供的 ICAO 资料，相关规定的核对结果如下：",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 1,
+      "sample_key": "frozen_icao:r1:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "发布日期：正文表述为“今天（Today）”做出决定，文末注明的发布日期为 2026 年 3 月 27 日（https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 2,
+      "sample_key": "frozen_icao:r1:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "生效日期：新规范将于 2026 年 3 月 27 日正式生效（https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 3,
+      "sample_key": "frozen_icao:r1:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "充电宝数量限制：每位旅客限制携带最多 2 个锂电池充电宝（https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 4,
+      "sample_key": "frozen_icao:r1:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "机上充电限制：飞行途中禁止旅客为充电宝充电（https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 5,
+      "sample_key": "frozen_icao:r1:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "适用范围与例外：规范适用于航空运输中旅客携带的锂电池充电宝，经理事会批准作为《危险货物安全航空运输技术细则》（Doc 9284）补篇提供给全部 193 个 ICAO 成员国；机组人员属于明确例外，可继续依据航空器运行要求携带并使用充电宝。正文未提及容量门槛（Wh）、携带方式（随身或托运）以及各成员国实际执行情况，相关范围仍待核实（https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation）。",
+      "unresolved_scope": true
+    },
+    {
+      "block_index": 0,
+      "sample_key": "frozen_icao:r1:t2",
+      "source_indices": [
+        0
+      ],
+      "text": "这份公告中完全没有提及 100Wh 和 160Wh，也没有给出任何具体的容量能量分档（https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation）。材料里只明确了每位旅客限带 2 个锂电池充电宝、飞行途中禁止为充电宝充电，以及机组人员依据运行要求的例外；关于容量门槛（Wh）、携带方式（随身或托运）以及各成员国实际执行情况，正文均未说明，相关范围仍待核实（https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation）。",
+      "unresolved_scope": true
+    },
+    {
+      "block_index": 0,
+      "sample_key": "frozen_icao:r1:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "仅凭这份 ICAO 公告，不能直接证明截至 2026 年 10 月 4 日所有中国境内航班都实施相同的数量限制。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 1,
+      "sample_key": "frozen_icao:r1:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "材料能证明的内容与未核实的范围区分如下：",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 2,
+      "sample_key": "frozen_icao:r1:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "材料能证明的内容：ICAO 理事会批准了对《危险货物安全航空运输技术细则》（Doc 9284）的修订，将每位旅客携带的锂电池充电宝限制为 2 个，飞行途中禁止旅客为充电宝充电，并定于 2026 年 3 月 27 日生效；机组人员可依据运行要求继续携带和使用，且该细则补篇会提供给全部 193 个 ICAO 成员国（https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 3,
+      "sample_key": "frozen_icao:r1:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "材料未核实的范围：向成员国提供补篇不等于各成员国已实际转化并执行；公告正文完全未提及中国民航规定、境内航班细则、容量门槛（Wh）或携带方式（随身或托运），各成员国实际落地执行情况均未说明，因此截至 2026 年 10 月 4 日中国境内航班的具体实施情况仍待核实（https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation）。",
+      "unresolved_scope": true
+    },
+    {
+      "block_index": 0,
+      "sample_key": "frozen_icao:r1:t4",
+      "source_indices": [
+        0
+      ],
+      "text": "发布与生效日期：ICAO 做出决定与正文注明的发布日期均为 2026 年 3 月 27 日，新规范定于 2026 年 3 月 27 日正式生效（https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 1,
+      "sample_key": "frozen_icao:r1:t4",
+      "source_indices": [
+        0
+      ],
+      "text": "数量限制、禁止行为与机组例外：每位旅客携带锂电池充电宝的数量限制为最多 2 个，且飞行途中明确禁止旅客为充电宝充电；机组人员属于明确例外，可继续依据航空器的运行要求携带并使用充电宝（https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 2,
+      "sample_key": "frozen_icao:r1:t4",
+      "source_indices": [
+        0
+      ],
+      "text": "规范适用与不能据此证明的范围：该规范作为《危险货物安全航空运输技术细则》（Doc 9284）补篇提供给全部 193 个 ICAO 成员国，但分发补篇不等于各国已实际执行，不能据此直接证明截至 2026 年 10 月 4 日中国境内航班已实施该限制；此外公告未提及 100Wh 或 160Wh 等容量门槛，也未说明携带方式（随身或托运），相关落地范围仍待核实（https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation）。",
+      "unresolved_scope": true
+    },
+    {
+      "block_index": 0,
+      "sample_key": "frozen_airchina:r0:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "依据提供的国航提示正文，为你整理发布日期、适用范围与携带条件如下：",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 1,
+      "sample_key": "frozen_airchina:r0:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "发布日期：二〇二六年八月四日（2026年8月4日），由中国国际航空股份有限公司发布（来源：https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 2,
+      "sample_key": "frozen_airchina:r0:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "适用范围：适用于乘坐国航航班的旅客。正文明确将“清晰3C标识”限定为“乘坐中国境内航班”，但未说明境外航班的认证替代要求或发布后是否有后续修订。",
+      "unresolved_scope": true
+    },
+    {
+      "block_index": 3,
+      "sample_key": "frozen_airchina:r0:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "数量限制：每位旅客最多携带2块充电宝。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 4,
+      "sample_key": "frozen_airchina:r0:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "能量限制：单个充电宝的额定能量不得超过160Wh；100Wh及以下无需国航批准；超过100Wh但不超过160Wh须经国航批准。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 5,
+      "sample_key": "frozen_airchina:r0:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "禁运要求：生产厂家召回（召回信息在“国家市场监督管理总局缺陷产品召回技术中心”官网“消费品召回”栏目查询）、鼓包、变形、开裂、标识不清、无法确认额定能量或锂金属含量的充电宝一律禁运。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 6,
+      "sample_key": "frozen_airchina:r0:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "携带与存放：只能随身携带，不允许托运；做好绝缘防护，放置于前方座椅下方的手提行李或座椅靠背口袋内；机上全程不得将充电宝放入行李架。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 7,
+      "sample_key": "frozen_airchina:r0:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "开关与使用：具备电源开关功能的需关闭电源；机上全程不得使用充电宝给任何设备供电，亦不得使用机上电源给充电宝充电。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 8,
+      "sample_key": "frozen_airchina:r0:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "标识要求：乘坐中国境内航班须有清晰3C标识。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 0,
+      "sample_key": "frozen_airchina:r0:t2",
+      "source_indices": [
+        0
+      ],
+      "text": "是的，依据国航提示（https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml），“每位旅客最多携带2块充电宝”属于总的数量限制，因此即便是100Wh及以下的充电宝，每位旅客最多也只能携带2块。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 1,
+      "sample_key": "frozen_airchina:r0:t2",
+      "source_indices": [
+        0
+      ],
+      "text": "对于超过100Wh但不超过160Wh的充电宝，提示中明确的要求如下（https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）：",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 2,
+      "sample_key": "frozen_airchina:r0:t2",
+      "source_indices": [
+        0
+      ],
+      "text": "能量与审批：单个充电宝的额定能量不得超过160Wh，且必须经国航批准（https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 3,
+      "sample_key": "frozen_airchina:r0:t2",
+      "source_indices": [
+        0
+      ],
+      "text": "数量限制：计入每位旅客最多携带2块充电宝的总限额内（https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 4,
+      "sample_key": "frozen_airchina:r0:t2",
+      "source_indices": [
+        0
+      ],
+      "text": "禁运排除：生产厂家召回（召回信息在“国家市场监督管理总局缺陷产品召回技术中心”官方网站“消费品召回”栏目查询）、鼓包、变形、开裂、标识不清、无法确认额定能量或锂金属含量的充电宝一律禁运（https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 5,
+      "sample_key": "frozen_airchina:r0:t2",
+      "source_indices": [
+        0
+      ],
+      "text": "携带方式与标识范围：只能随身携带，不允许托运；乘坐中国境内航班须有清晰3C标识，但正文未说明境外航班的认证替代要求或发布后是否有后续修订（https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": true
+    },
+    {
+      "block_index": 6,
+      "sample_key": "frozen_airchina:r0:t2",
+      "source_indices": [
+        0
+      ],
+      "text": "机上状态与使用：具备电源开关功能的需关闭电源；机上全程不得将充电宝放入行李架，不得使用充电宝给任何设备供电，不得使用机上电源给充电宝充电（https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 7,
+      "sample_key": "frozen_airchina:r0:t2",
+      "source_indices": [
+        0
+      ],
+      "text": "存放与防护：必须做好绝缘防护，放置于前方座椅下方的手提行李或座椅靠背口袋内（https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 0,
+      "sample_key": "frozen_airchina:r0:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "仅凭这份国航提示，并不能证明所有中国境内航空公司截至2026年10月4日都实施完全相同的限制。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 1,
+      "sample_key": "frozen_airchina:r0:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "这份材料能够证明的内容包括：",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 2,
+      "sample_key": "frozen_airchina:r0:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "国航自身的规章与发布背景：中国国际航空股份有限公司于二〇二六年八月四日发布了该提示，声明是“按照中国民航局要求”制定的，用于规范乘坐国航航班旅客的充电宝与锂电池运输（https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 3,
+      "sample_key": "frozen_airchina:r0:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "国航对旅客的具体运输限制：包括每人最多带2块；单个额定能量不得超过160Wh；100Wh及以下无需国航批准，超过100Wh但不超过160Wh须经国航批准；召回、鼓包等问题充电宝禁运；只能随身携带；具备电源开关需关闭且机上全程禁用；存放于前排座椅下方手提行李或座椅靠背口袋内且不得放入行李架等（https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 4,
+      "sample_key": "frozen_airchina:r0:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "这份材料不能证明的内容包括：",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 5,
+      "sample_key": "frozen_airchina:r0:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "不能证明所有境内航空公司规定完全相同：该提示仅为国航单方面的旅客提示，正文并未附带中国民航局完整规范全文或其他航司规章，无法证明其他航司在执行标准或审批细则上是否与国航完全一致（https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": true
+    },
+    {
+      "block_index": 6,
+      "sample_key": "frozen_airchina:r0:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "不能证明截至2026年10月4日的现行有效状态：材料落款时间为2026年8月4日，正文未说明发布后是否有后续修订，无法核实现行最新状态，境外航班的认证替代要求也未在文中说明（https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。适用范围：适用于乘坐国航航班的旅客。正文明确将“清晰3C标识”限定为“乘坐中国境内航班”，但未说明境外航班的认证替代要求或发布后是否有后续修订。",
+      "unresolved_scope": true
+    },
+    {
+      "block_index": 7,
+      "sample_key": "frozen_airchina:r0:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "不能证明各航司的实际落地执行情况：一份企业安全提示的发布不能直接等同于所有相关方在各航线现场均已按相同标准全面实际落实（https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": true
+    },
+    {
+      "block_index": 0,
+      "sample_key": "frozen_airchina:r0:t4",
+      "source_indices": [],
+      "text": "为你整理的三条出发前检查清单如下：",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 1,
+      "sample_key": "frozen_airchina:r0:t4",
+      "source_indices": [
+        0
+      ],
+      "text": "**外观、认证与数量合规检查**：确认充电宝无厂家召回（召回信息于国家市场监督管理总局缺陷产品召回技术中心官网查询）、鼓包、变形、开裂，且标识清晰、能确认额定能量或锂金属含量；每位旅客最多携带2块；乘坐中国境内航班须有清晰3C标识（https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 2,
+      "sample_key": "frozen_airchina:r0:t4",
+      "source_indices": [
+        0
+      ],
+      "text": "**额定能量与审批条件检查**：单个充电宝额定能量不得超过160Wh；若额定能量在100Wh及以下无需国航批准，超过100Wh但不超过160Wh须经国航批准方可携带（https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 3,
+      "sample_key": "frozen_airchina:r0:t4",
+      "source_indices": [
+        0
+      ],
+      "text": "**携带方式、存放与机上使用规范**：只能随身携带、严禁托运；具备电源开关需关闭；登机后做好绝缘防护并放置于前方座椅下方手提行李或座椅靠背口袋内，机上全程严禁放入行李架、严禁给任何设备供电且严禁使用机上电源为其充电（https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 4,
+      "sample_key": "frozen_airchina:r0:t4",
+      "source_indices": [
+        0
+      ],
+      "text": "适用范围：适用于乘坐国航航班的旅客。正文明确将“清晰3C标识”限定为“乘坐中国境内航班”，但未说明境外航班的认证替代要求或发布后是否有后续修订。",
+      "unresolved_scope": true
+    },
+    {
+      "block_index": 5,
+      "sample_key": "frozen_airchina:r0:t4",
+      "source_indices": [
+        0
+      ],
+      "text": "来源日期与链接：二〇二六年八月四日（https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 0,
+      "sample_key": "frozen_airchina:r1:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "我仅依据所提供的国航提示材料，为你整理发布日期、适用范围与充电宝携带条件如下：",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 1,
+      "sample_key": "frozen_airchina:r1:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "发布日期：二〇二六年八月四日（发布单位为中国国际航空股份有限公司）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 2,
+      "sample_key": "frozen_airchina:r1:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "适用范围：乘坐国航航班时携带充电宝、锂电池的旅客；其中“须有清晰3C标识”明确限定为乘坐中国境内航班。提示未说明境外航班或其他承运人的规则，超出该材料范围的执行情况均属未核实。",
+      "unresolved_scope": true
+    },
+    {
+      "block_index": 3,
+      "sample_key": "frozen_airchina:r1:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "充电宝携带条件——禁运要求：凡生产厂家召回（可在“国家市场监督管理总局缺陷产品召回技术中心”官网“消费品召回”栏目查询）、鼓包、变形、开裂、标识不清、无法确认额定能量或锂金属含量的充电宝，均禁止运输。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 4,
+      "sample_key": "frozen_airchina:r1:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "充电宝携带条件——数量与能量限制：每位旅客最多携带2块充电宝；单个充电宝额定能量不得超过160Wh；100Wh及以下无需国航批准；超过100Wh但不超过160Wh须经国航批准。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 5,
+      "sample_key": "frozen_airchina:r1:t1",
+      "source_indices": [
+        0
+      ],
+      "text": "充电宝携带条件——携带与使用要求：只能随身携带，不允许托运；乘坐中国境内航班须有清晰3C标识；若具备电源开关功能需关闭电源；做好绝缘防护并放置于前方座椅下方手提行李或座椅靠背口袋内；机上全程不得放入行李架，不得使用充电宝给任何设备供电，不得使用机上电源给充电宝充电。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 0,
+      "sample_key": "frozen_airchina:r1:t2",
+      "source_indices": [
+        0
+      ],
+      "text": "是的，按照这份提示的规定，100Wh及以下的充电宝同样受数量限制，每位旅客最多只能携带2块；“100Wh及以下”仅代表无需国航批准，并未放宽每人最多2块的限制（来源：https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 1,
+      "sample_key": "frozen_airchina:r1:t2",
+      "source_indices": [
+        0
+      ],
+      "text": "对于超过100Wh但不超过160Wh的充电宝，提示中列出的具体要求如下（来源：https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）：",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 2,
+      "sample_key": "frozen_airchina:r1:t2",
+      "source_indices": [
+        0
+      ],
+      "text": "能量与批准要求：单个充电宝额定能量不得超过160Wh，且必须经国航批准；数量同样受限，每位旅客最多携带2块（来源：https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 3,
+      "sample_key": "frozen_airchina:r1:t2",
+      "source_indices": [
+        0
+      ],
+      "text": "合规与禁运要求：严禁携带生产厂家召回（召回信息在“国家市场监督管理总局缺陷产品召回技术中心”官网“消费品召回”栏目查询）、鼓包、变形、开裂、标识不清、无法确认额定能量或锂金属含量的充电宝；乘坐中国境内航班须有清晰3C标识（来源：https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 4,
+      "sample_key": "frozen_airchina:r1:t2",
+      "source_indices": [
+        0
+      ],
+      "text": "携带与机上使用要求：只能随身携带，不允许托运；若具备电源开关功能需关闭电源；做好绝缘防护并放置于前方座椅下方手提行李或座椅靠背口袋内；机上全程不得放入行李架，不得使用充电宝给任何设备供电，不得使用机上电源给充电宝充电（来源：https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 5,
+      "sample_key": "frozen_airchina:r1:t2",
+      "source_indices": [
+        0
+      ],
+      "text": "适用范围与未核实说明：该要求适用于乘坐国航航班时携带充电宝、锂电池的旅客；其中“须有清晰3C标识”明确限定为乘坐中国境内航班。提示未说明境外航班或其他承运人的规则，超出该材料范围的执行情况均属未核实（来源：https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": true
+    },
+    {
+      "block_index": 0,
+      "sample_key": "frozen_airchina:r1:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "仅凭这份国航提示，不能证明所有中国境内航空公司截至2026年10月4日都实施完全相同的限制。以下为你说明材料能证明和不能证明的具体内容：",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 1,
+      "sample_key": "frozen_airchina:r1:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "材料能证明的部分：",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 2,
+      "sample_key": "frozen_airchina:r1:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "国航自身在发布时的规定：能证明中国国际航空股份有限公司于二〇二六年八月四日发布了该提示，对其承运航班旅客明确了禁运情形、数量限制（最多2块）、能量限制（100Wh及以下免批，超100Wh至160Wh须国航批准）、境内航班须有清晰3C标识以及机上存放与禁用等具体要求（来源：https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 3,
+      "sample_key": "frozen_airchina:r1:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "依据背景的提及：能证明国航在提示开头说明了是“按照中国民航局要求，为保障航班飞行安全”而制定的相关运输要求（来源：https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 4,
+      "sample_key": "frozen_airchina:r1:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "材料不能证明的部分：",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 5,
+      "sample_key": "frozen_airchina:r1:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "其他航空公司的具体规定：材料发布主体仅为国航，且多处条款明确包含“须经国航批准”等承运人特定表述。材料并未提供中国民航局原始规范的正文，也没有其他航司的规则，不能证明其他航司的执行细则、审批要求或具体限制与国航完全一致（来源：https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 6,
+      "sample_key": "frozen_airchina:r1:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "全行业的实际执行状态：单家航空公司的提示发布，不等于所有相关主体及承运人均已在实际中完全相同地落地执行（来源：https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 7,
+      "sample_key": "frozen_airchina:r1:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "截至2026年10月4日的现行时效：材料发布日期为二〇二六年八月四日，在缺乏后续更新或现行有效证明的情况下，无法单凭该文件证实截至2026年10月4日全行业政策无任何调整或变动（来源：https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 8,
+      "sample_key": "frozen_airchina:r1:t3",
+      "source_indices": [
+        0
+      ],
+      "text": "适用范围：乘坐国航航班时携带充电宝、锂电池的旅客；其中“须有清晰3C标识”明确限定为乘坐中国境内航班。提示未说明境外航班或其他承运人的规则，超出该材料范围的执行情况均属未核实（来源：https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": true
+    },
+    {
+      "block_index": 0,
+      "sample_key": "frozen_airchina:r1:t4",
+      "source_indices": [
+        0
+      ],
+      "text": "外观、认证与禁运排查：确认充电宝非生产厂家召回产品（召回信息在“国家市场监督管理总局缺陷产品召回技术中心”官方网站“消费品召回”栏目查询），无鼓包、变形、开裂，标识清晰且能确认额定能量或锂金属含量；乘坐中国境内航班须有清晰3C标识（来源日期：二〇二六年八月四日，来源：https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 1,
+      "sample_key": "frozen_airchina:r1:t4",
+      "source_indices": [
+        0
+      ],
+      "text": "数量与额定能量核对：每位旅客最多携带2块充电宝；单个充电宝额定能量不得超过160Wh；100Wh及以下无需国航批准，超过100Wh但不超过160Wh须经国航批准（来源日期：二〇二六年八月四日，来源：https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 2,
+      "sample_key": "frozen_airchina:r1:t4",
+      "source_indices": [
+        0
+      ],
+      "text": "携带、存放与机上操作规范：充电宝只能随身携带，不允许托运；具备电源开关功能需关闭电源；做好绝缘防护并放置于前方座椅下方手提行李或座椅靠背口袋内；机上全程不得放入行李架，不得使用充电宝给任何设备供电，不得使用机上电源给充电宝充电（来源日期：二〇二六年八月四日，来源：https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": false
+    },
+    {
+      "block_index": 3,
+      "sample_key": "frozen_airchina:r1:t4",
+      "source_indices": [
+        0
+      ],
+      "text": "适用范围：乘坐国航航班时携带充电宝、锂电池的旅客；其中“须有清晰3C标识”明确限定为乘坐中国境内航班。提示未说明境外航班或其他承运人的规则，超出该材料范围的执行情况均属未核实（来源日期：二〇二六年八月四日，来源：https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml）。",
+      "unresolved_scope": true
+    }
+  ],
+  "wire_checks": [
+    {
+      "http_attempt": 1,
+      "own_prior_replies_complete": true,
+      "phase": "draft",
+      "sample_key": "frozen_icao:r0:t1",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 2,
+      "own_prior_replies_complete": true,
+      "phase": "final_frame",
+      "sample_key": "frozen_icao:r0:t1",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 3,
+      "own_prior_replies_complete": true,
+      "phase": "draft",
+      "sample_key": "frozen_icao:r0:t2",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 4,
+      "own_prior_replies_complete": true,
+      "phase": "final_frame",
+      "sample_key": "frozen_icao:r0:t2",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 5,
+      "own_prior_replies_complete": true,
+      "phase": "draft",
+      "sample_key": "frozen_icao:r0:t3",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 6,
+      "own_prior_replies_complete": true,
+      "phase": "final_frame",
+      "sample_key": "frozen_icao:r0:t3",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 7,
+      "own_prior_replies_complete": true,
+      "phase": "draft",
+      "sample_key": "frozen_icao:r0:t4",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 8,
+      "own_prior_replies_complete": true,
+      "phase": "final_frame",
+      "sample_key": "frozen_icao:r0:t4",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 9,
+      "own_prior_replies_complete": true,
+      "phase": "draft",
+      "sample_key": "frozen_icao:r1:t1",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 10,
+      "own_prior_replies_complete": true,
+      "phase": "final_frame",
+      "sample_key": "frozen_icao:r1:t1",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 11,
+      "own_prior_replies_complete": true,
+      "phase": "draft",
+      "sample_key": "frozen_icao:r1:t2",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 12,
+      "own_prior_replies_complete": true,
+      "phase": "final_frame",
+      "sample_key": "frozen_icao:r1:t2",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 13,
+      "own_prior_replies_complete": true,
+      "phase": "draft",
+      "sample_key": "frozen_icao:r1:t3",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 14,
+      "own_prior_replies_complete": true,
+      "phase": "final_frame",
+      "sample_key": "frozen_icao:r1:t3",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 15,
+      "own_prior_replies_complete": true,
+      "phase": "draft",
+      "sample_key": "frozen_icao:r1:t4",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 16,
+      "own_prior_replies_complete": true,
+      "phase": "final_frame",
+      "sample_key": "frozen_icao:r1:t4",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 17,
+      "own_prior_replies_complete": true,
+      "phase": "draft",
+      "sample_key": "frozen_airchina:r0:t1",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 18,
+      "own_prior_replies_complete": true,
+      "phase": "final_frame",
+      "sample_key": "frozen_airchina:r0:t1",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 19,
+      "own_prior_replies_complete": true,
+      "phase": "draft",
+      "sample_key": "frozen_airchina:r0:t2",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 20,
+      "own_prior_replies_complete": true,
+      "phase": "final_frame",
+      "sample_key": "frozen_airchina:r0:t2",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 21,
+      "own_prior_replies_complete": true,
+      "phase": "draft",
+      "sample_key": "frozen_airchina:r0:t3",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 22,
+      "own_prior_replies_complete": true,
+      "phase": "final_frame",
+      "sample_key": "frozen_airchina:r0:t3",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 23,
+      "own_prior_replies_complete": true,
+      "phase": "draft",
+      "sample_key": "frozen_airchina:r0:t4",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 24,
+      "own_prior_replies_complete": true,
+      "phase": "final_frame",
+      "sample_key": "frozen_airchina:r0:t4",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 25,
+      "own_prior_replies_complete": true,
+      "phase": "draft",
+      "sample_key": "frozen_airchina:r1:t1",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 26,
+      "own_prior_replies_complete": true,
+      "phase": "final_frame",
+      "sample_key": "frozen_airchina:r1:t1",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 27,
+      "own_prior_replies_complete": true,
+      "phase": "draft",
+      "sample_key": "frozen_airchina:r1:t2",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 28,
+      "own_prior_replies_complete": true,
+      "phase": "final_frame",
+      "sample_key": "frozen_airchina:r1:t2",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 29,
+      "own_prior_replies_complete": true,
+      "phase": "draft",
+      "sample_key": "frozen_airchina:r1:t3",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 30,
+      "own_prior_replies_complete": true,
+      "phase": "final_frame",
+      "sample_key": "frozen_airchina:r1:t3",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 31,
+      "own_prior_replies_complete": true,
+      "phase": "draft",
+      "sample_key": "frozen_airchina:r1:t4",
+      "source_complete": true
+    },
+    {
+      "http_attempt": 32,
+      "own_prior_replies_complete": true,
+      "phase": "final_frame",
+      "sample_key": "frozen_airchina:r1:t4",
+      "source_complete": true
+    }
+  ]
+}

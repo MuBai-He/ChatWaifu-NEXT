@@ -1,0 +1,132 @@
+"""Frozen guard control; no original run rewrite, new sources, prompts or code."""
+import asyncio
+import contextlib
+import hashlib
+import json
+import sys
+import time
+from dataclasses import asdict,replace
+from datetime import datetime
+from pathlib import Path
+from types import SimpleNamespace
+from uuid import UUID,uuid4
+
+ROOT=Path('/tmp/cw2-q02-history-candidate-v44-eval')
+BASE=Path('/tmp/cw2-q02-final-native-v44-20261004')
+OUT=BASE/'frozen-guard-control'
+sys.path[:0]=[str(ROOT/'services/runtime/src'),str(ROOT/'packages/protocol-python/src'),
+              str(ROOT/'packages/model-worker-sdk-python/src'),'/tmp/cw2-q02-eval-deps',str(ROOT)]
+import httpx2
+from chatwaifu_protocol.character import CharacterKernelSnapshot,ModelContextBudget,ResponsePlan
+from chatwaifu_protocol.memory import MemoryContextPacket
+from chatwaifu_protocol.skills import SkillRunSnapshot
+from chatwaifu_runtime.characters.service import CharacterService
+from chatwaifu_runtime.character_kernel.prompt import PromptCompiler
+from chatwaifu_runtime.conversation.models import ConversationHistoryEntry
+from chatwaifu_runtime.conversation.source_context import SourceContextPacket,SourceContextReceipt
+from chatwaifu_runtime.providers.contracts import LlmRequest,LlmInputBudget,LlmInputBudgetReport,LlmToolExchange,LlmToolCall,LlmToolResult
+from chatwaifu_runtime.providers.context_budget import resolve_context_budget
+from chatwaifu_runtime.providers.openai_compatible import OpenAiCompatibleLlmProvider,build_messages,build_chat_completions_payload
+from tools.runtime_source_evaluation import _RecordedProvider
+import chatwaifu_runtime.agent.tool_calling as tc
+from chatwaifu_runtime.agent.input_budget import InputBudgetExceeded,estimate_input_tokens
+
+assert not (OUT/'admission.json').exists()
+KEY=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+MODEL,ENDPOINT='gemini-3.8-flash-high','https://mubai.website:8318/v1'
+current=None;http_count=0;fallbacks=[]
+def save(name,value,append=False):
+    text=json.dumps(value,ensure_ascii=False,default=str);assert KEY not in text
+    with (OUT/name).open('a' if append else 'w') as f:f.write(text+'\n')
+def rows(p):return [json.loads(x) for x in p.read_text().splitlines() if x]
+def wire(r):return build_chat_completions_payload(MODEL,r,build_messages(r),request_usage=True)
+def decode(raw):
+    d=dict(raw);assert d['tools']==d['images']==[] and d['response_schema'] is None
+    d.update(generation_id=UUID(d['generation_id']),history=tuple(map(tuple,d['history'])),context=tuple(map(tuple,d['context'])),tools=(),images=(),recalled_memory_texts=tuple(d['recalled_memory_texts']),input_budget=LlmInputBudget(**d['input_budget']))
+    d['tool_exchanges']=tuple(LlmToolExchange(e['assistant_text'],tuple(LlmToolCall(**c) for c in e['calls']),tuple(LlmToolResult(**r) for r in e['results'])) for e in d['tool_exchanges'])
+    if d.get('input_budget_report'):
+        report=dict(d['input_budget_report'])
+        for k in ['omitted_history_indices','omitted_tool_preamble_indices']:report[k]=tuple(report[k])
+        d['input_budget_report']=LlmInputBudgetReport(**report)
+    return LlmRequest(**d)
+original_stream,original_send=httpx2.AsyncClient.stream,httpx2.AsyncClient.send
+@contextlib.asynccontextmanager
+async def capture_http(self,method,url,**kwargs):
+    global http_count
+    assert str(url)==ENDPOINT+'/chat/completions' and http_count<3
+    http_count+=1;body=kwargs['json'];assert body['model']==MODEL and body['max_tokens']==8192
+    save('actual-provider-payloads.jsonl',{'sample_key':current,'http_attempt':http_count,'payload':body,'payload_sha256':hashlib.sha256(json.dumps(body,ensure_ascii=False,sort_keys=True).encode()).hexdigest()},True)
+    row={'sample_key':current,'http_attempt':http_count,'status':None,'error_type':None};start=time.monotonic()
+    try:
+        async with original_stream(self,method,url,**kwargs) as r:row['status']=r.status_code;yield r
+    except BaseException as e:row['error_type']=type(e).__name__;raise
+    finally:row['elapsed_ms']=round((time.monotonic()-start)*1000);save('http-outcomes.jsonl',row,True)
+async def forbid_source(self,request,**kwargs):
+    assert str(request.url)==ENDPOINT+'/chat/completions','Frozen control forbids source HTTP'
+    return await original_send(self,request,**kwargs)
+httpx2.AsyncClient.stream=capture_http;httpx2.AsyncClient.send=forbid_source
+guard=tc._budgeted_request
+def capture_guard(r,**kwargs):
+    row={'sample_key':current,'request':asdict(r),'payload':wire(r),'prefit_reference':estimate_input_tokens(r)}
+    try:
+        f=guard(r,**kwargs);row.update(outcome='fits',fitted_request=asdict(f),fitted_payload=wire(f),report=asdict(f.input_budget_report));return f
+    except InputBudgetExceeded as e:row.update(outcome='blocked',report=asdict(e.report));raise
+    finally:save('guards.jsonl',row,True)
+tc._budgeted_request=capture_guard
+original_fallback=tc._runtime_fallback
+def capture_fallback(text,turn):
+    fallbacks.extend(k for k,v in vars(tc).items() if k.endswith('_REPLY') and v==text)
+    return original_fallback(text,turn)
+tc._runtime_fallback=capture_fallback
+class Router:
+    def select(self,*a,**kw):return ()
+class Gateway:
+    async def invoke(self,*a,**kw):raise AssertionError('No new source operations admitted')
+budget=ModelContextBudget.model_validate(json.loads((OUT/'budget.json').read_text()))
+limit=resolve_context_budget(32768,budget).input_tokens;assert limit==22118
+blocked=json.loads((OUT/'blocked-request.json').read_text())
+original=decode(blocked['fitted_request']);assert estimate_input_tokens(original)==21683
+flows=rows(BASE/'flow-observations.jsonl');results=rows(BASE/'runtime-pilot/results.jsonl')
+terminals={r['skill_run_id']:SkillRunSnapshot.model_validate(r) for f in flows for r in f['trace']['tool_runs']}
+trace=flows[3]['trace']['source_context']
+packet=SourceContextPacket(tuple(SourceContextReceipt(terminals[r['skill_run_id']],r['original_result_available']) for r in trace['receipts']),truncated=trace['truncated'])
+provider=_RecordedProvider(OpenAiCompatibleLlmProvider(model=MODEL,base_url=ENDPOINT,api_key=KEY,timeout_seconds=180,request_usage=True),OUT/'provider-rounds.jsonl',3)
+agent=tc.AgentTurnOrchestrator(provider,Gateway(),Router())
+characters=CharacterService(ROOT/'characters');characters.start()
+persona=(BASE/'persona.md').read_text().strip();character=characters.get('default').model_copy(update={'system_prompt':persona})
+as_of=datetime.fromisoformat(json.loads((BASE/'admission.json').read_text())['prompt_as_of'])
+policy='\nPublic source tools use an evaluation-only permission policy. When selecting a source tool use dns_resolver=cloudflare. This operational setting supplies no facts or source URLs.'
+async def main():
+    global current,fallbacks
+    save('admission.json',{'plan':json.loads((OUT/'plan.json').read_text()),'input_limit':limit,'model_http_max':3,'source_http_max':0,'publication_scope':'frozen controlled continuation, no rewrite of original T3/T4','new_rules':False,'production_changed':False})
+    current='frozen_guard:T3_review';provider.sample_key=current
+    request=replace(original,generation_id=uuid4(),input_budget=LlmInputBudget(limit))
+    save('admitted-requests.jsonl',{'sample_key':current,'request':asdict(request)},True)
+    row={'sample_key':current,'reply':'','error_type':None,'execution':'failed'};start=time.monotonic()
+    try:
+        f=capture_guard(request)
+        assert wire(f)==blocked['fitted_payload'],'Exact formerly unsent wire must be preserved'
+        result=await agent._collect_tool_round(f,lambda:None,llm=provider)
+        assert result.terminal_received and result.finish_reason=='stop' and not result.calls
+        row.update(reply=''.join(result.text_chunks),execution='provider')
+    except Exception as e:row.update(error_type=type(e).__name__,protocol_error_code=getattr(e,'code',None))
+    finally:row.update(elapsed_ms=round((time.monotonic()-start)*1000),provider_calls=list(provider.calls),runtime_fallback_events=[]);save('turns.jsonl',row,True)
+    current='frozen_guard:T4';provider.sample_key=current;provider.calls=[];fallbacks=[]
+    if row['execution']!='provider':save('turns.jsonl',{'sample_key':current,'reply':None,'execution':'unexecuted_after_failed_review'},True)
+    else:
+        history=[ConversationHistoryEntry(role,text,generation_id=UUID(f['generation_id']) if role=='assistant' else None) for r,f in zip(results[:2],flows[:2],strict=True) for role,text in [('user',r['user_text']),('assistant',r['raw_reply'])]]
+        history.extend([ConversationHistoryEntry('user',results[2]['user_text']),ConversationHistoryEntry('assistant',row['reply'],generation_id=request.generation_id)])
+        compiler=PromptCompiler(SimpleNamespace(get=lambda purpose:SimpleNamespace(context_window=32768,budget=budget)))
+        state=results[3]['input_snapshot']
+        compiled=await compiler.compile(character=character,kernel=CharacterKernelSnapshot.model_validate(state['kernel']),plan=ResponsePlan.model_validate(state['plan']),memory=MemoryContextPacket(token_budget_used=0),history=tuple(history),user_text=results[3]['user_text'],presentation_profile='detailed_answer',as_of=as_of)
+        req=LlmRequest(uuid4(),results[3]['user_text'],compiled.system_prompt+policy,character_name=character.display_name,context=compiled.context,history=compiled.history,input_budget=LlmInputBudget(compiled.report.budget),max_output_tokens=8192,tool_result_max_bytes=131072)
+        save('admitted-requests.jsonl',{'sample_key':current,'request':asdict(req),'published_history':[(h.role,h.text) for h in history]},True)
+        result={'sample_key':current,'reply':'','error_type':None};start=time.monotonic()
+        try:
+            async with contextlib.aclosing(agent.stream(req,session_id=uuid4(),turn_id=uuid4(),ensure_current=lambda:None,tools=(),source_context=packet)) as stream:
+                async for text in stream:result['reply']+=text
+            result['execution']='runtime_fallback' if fallbacks else 'provider'
+        except Exception as e:result.update(execution='failed',error_type=type(e).__name__,protocol_error_code=getattr(e,'code',None))
+        finally:result.update(elapsed_ms=round((time.monotonic()-start)*1000),provider_calls=list(provider.calls),runtime_fallback_events=list(fallbacks));save('turns.jsonl',result,True)
+    save('exit.json',{'actual_model_http':http_count,'source_http':0,'manual_retries':0,'old_native_flow_rewritten':False})
+asyncio.run(main())

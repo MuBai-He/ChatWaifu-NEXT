@@ -1,0 +1,322 @@
+{
+  "schema_version": "1.0",
+  "quality_approved": false,
+  "web_execution_in_model_probes": false,
+  "groups": {
+    "cw2-q02-source-chronology-probe-20261003": {
+      "requests": 18,
+      "http_statuses": {
+        "200": 18
+      },
+      "usage": {
+        "prompt_tokens": {
+          "reported_requests": 18,
+          "known_subtotal": 226272
+        },
+        "completion_tokens": {
+          "reported_requests": 18,
+          "known_subtotal": 20170
+        },
+        "total_tokens": {
+          "reported_requests": 18,
+          "known_subtotal": 246442
+        }
+      },
+      "latency_ms": {
+        "p50": 6514,
+        "p95": 12315
+      }
+    },
+    "cw2-q02-source-ledger-probe-20261003": {
+      "requests": 8,
+      "http_statuses": {
+        "200": 8
+      },
+      "usage": {
+        "prompt_tokens": {
+          "reported_requests": 8,
+          "known_subtotal": 94824
+        },
+        "completion_tokens": {
+          "reported_requests": 8,
+          "known_subtotal": 4856
+        },
+        "total_tokens": {
+          "reported_requests": 8,
+          "known_subtotal": 99680
+        }
+      },
+      "latency_ms": {
+        "p50": 3405,
+        "p95": 8388
+      }
+    },
+    "cw2-q02-source-native-ledger-probe-20261003": {
+      "requests": 4,
+      "http_statuses": {
+        "200": 4
+      },
+      "usage": {
+        "prompt_tokens": {
+          "reported_requests": 4,
+          "known_subtotal": 47620
+        },
+        "completion_tokens": {
+          "reported_requests": 4,
+          "known_subtotal": 1561
+        },
+        "total_tokens": {
+          "reported_requests": 4,
+          "known_subtotal": 49181
+        }
+      },
+      "latency_ms": {
+        "p50": 3523,
+        "p95": 4381
+      }
+    },
+    "cw2-q02-source-ledger-correction-probe-20261003": {
+      "requests": 4,
+      "http_statuses": {
+        "200": 4
+      },
+      "usage": {
+        "prompt_tokens": {
+          "reported_requests": 4,
+          "known_subtotal": 53168
+        },
+        "completion_tokens": {
+          "reported_requests": 4,
+          "known_subtotal": 2653
+        },
+        "total_tokens": {
+          "reported_requests": 4,
+          "known_subtotal": 55821
+        }
+      },
+      "latency_ms": {
+        "p50": 3630,
+        "p95": 5710
+      }
+    },
+    "cw2-q02-source-ledger-active-probe-20261003": {
+      "requests": 4,
+      "http_statuses": {
+        "200": 4
+      },
+      "usage": {
+        "prompt_tokens": {
+          "reported_requests": 4,
+          "known_subtotal": 53288
+        },
+        "completion_tokens": {
+          "reported_requests": 4,
+          "known_subtotal": 1632
+        },
+        "total_tokens": {
+          "reported_requests": 4,
+          "known_subtotal": 54920
+        }
+      },
+      "latency_ms": {
+        "p50": 3481,
+        "p95": 4374
+      }
+    }
+  },
+  "total_http_requests": 38,
+  "typed_decisions": [
+    {
+      "group": "cw2-q02-source-ledger-probe-20261003",
+      "repeat": 0,
+      "source_repeat": null,
+      "target": "after_update_search",
+      "kind": "read",
+      "unresolved_count": 2,
+      "claims_finished_with_unresolved": false,
+      "selects_declared_unresolved_read": true,
+      "read_inventory_url_provenance_valid": true,
+      "shape_valid": true
+    },
+    {
+      "group": "cw2-q02-source-ledger-probe-20261003",
+      "repeat": 0,
+      "source_repeat": null,
+      "target": "after_older_operator_read",
+      "kind": "read",
+      "unresolved_count": 1,
+      "claims_finished_with_unresolved": false,
+      "selects_declared_unresolved_read": true,
+      "read_inventory_url_provenance_valid": true,
+      "shape_valid": true
+    },
+    {
+      "group": "cw2-q02-source-ledger-probe-20261003",
+      "repeat": 1,
+      "source_repeat": null,
+      "target": "after_update_search",
+      "kind": "read",
+      "unresolved_count": 2,
+      "claims_finished_with_unresolved": false,
+      "selects_declared_unresolved_read": true,
+      "read_inventory_url_provenance_valid": true,
+      "shape_valid": true
+    },
+    {
+      "group": "cw2-q02-source-ledger-probe-20261003",
+      "repeat": 1,
+      "source_repeat": null,
+      "target": "after_older_operator_read",
+      "kind": "finish_with_evidence",
+      "unresolved_count": 1,
+      "claims_finished_with_unresolved": true,
+      "selects_declared_unresolved_read": false,
+      "read_inventory_url_provenance_valid": true,
+      "shape_valid": true
+    },
+    {
+      "group": "cw2-q02-source-native-ledger-probe-20261003",
+      "repeat": 0,
+      "source_repeat": null,
+      "target": "after_update_search",
+      "kind": "read",
+      "unresolved_count": 1,
+      "claims_finished_with_unresolved": false,
+      "selects_declared_unresolved_read": true,
+      "read_inventory_url_provenance_valid": true,
+      "shape_valid": true
+    },
+    {
+      "group": "cw2-q02-source-native-ledger-probe-20261003",
+      "repeat": 0,
+      "source_repeat": null,
+      "target": "after_older_operator_read",
+      "kind": "finish_with_evidence",
+      "unresolved_count": 1,
+      "claims_finished_with_unresolved": true,
+      "selects_declared_unresolved_read": false,
+      "read_inventory_url_provenance_valid": true,
+      "shape_valid": true
+    },
+    {
+      "group": "cw2-q02-source-native-ledger-probe-20261003",
+      "repeat": 1,
+      "source_repeat": null,
+      "target": "after_update_search",
+      "kind": "read",
+      "unresolved_count": 1,
+      "claims_finished_with_unresolved": false,
+      "selects_declared_unresolved_read": true,
+      "read_inventory_url_provenance_valid": true,
+      "shape_valid": true
+    },
+    {
+      "group": "cw2-q02-source-native-ledger-probe-20261003",
+      "repeat": 1,
+      "source_repeat": null,
+      "target": "after_older_operator_read",
+      "kind": "finish_with_evidence",
+      "unresolved_count": 1,
+      "claims_finished_with_unresolved": true,
+      "selects_declared_unresolved_read": false,
+      "read_inventory_url_provenance_valid": true,
+      "shape_valid": true
+    },
+    {
+      "group": "cw2-q02-source-ledger-correction-probe-20261003",
+      "repeat": 0,
+      "source_repeat": 0,
+      "target": null,
+      "kind": "read",
+      "unresolved_count": 1,
+      "claims_finished_with_unresolved": false,
+      "selects_declared_unresolved_read": true,
+      "read_inventory_url_provenance_valid": true,
+      "shape_valid": true
+    },
+    {
+      "group": "cw2-q02-source-ledger-correction-probe-20261003",
+      "repeat": 1,
+      "source_repeat": 0,
+      "target": null,
+      "kind": "finish_with_gaps",
+      "unresolved_count": 1,
+      "claims_finished_with_unresolved": false,
+      "selects_declared_unresolved_read": false,
+      "read_inventory_url_provenance_valid": true,
+      "shape_valid": true
+    },
+    {
+      "group": "cw2-q02-source-ledger-correction-probe-20261003",
+      "repeat": 0,
+      "source_repeat": 1,
+      "target": null,
+      "kind": "finish_with_gaps",
+      "unresolved_count": 1,
+      "claims_finished_with_unresolved": false,
+      "selects_declared_unresolved_read": false,
+      "read_inventory_url_provenance_valid": true,
+      "shape_valid": true
+    },
+    {
+      "group": "cw2-q02-source-ledger-correction-probe-20261003",
+      "repeat": 1,
+      "source_repeat": 1,
+      "target": null,
+      "kind": "finish_with_gaps",
+      "unresolved_count": 1,
+      "claims_finished_with_unresolved": false,
+      "selects_declared_unresolved_read": false,
+      "read_inventory_url_provenance_valid": true,
+      "shape_valid": true
+    },
+    {
+      "group": "cw2-q02-source-ledger-active-probe-20261003",
+      "repeat": 0,
+      "source_repeat": 0,
+      "target": null,
+      "kind": "read",
+      "unresolved_count": 1,
+      "claims_finished_with_unresolved": false,
+      "selects_declared_unresolved_read": true,
+      "read_inventory_url_provenance_valid": true,
+      "shape_valid": true
+    },
+    {
+      "group": "cw2-q02-source-ledger-active-probe-20261003",
+      "repeat": 1,
+      "source_repeat": 0,
+      "target": null,
+      "kind": "read",
+      "unresolved_count": 1,
+      "claims_finished_with_unresolved": false,
+      "selects_declared_unresolved_read": true,
+      "read_inventory_url_provenance_valid": true,
+      "shape_valid": true
+    },
+    {
+      "group": "cw2-q02-source-ledger-active-probe-20261003",
+      "repeat": 0,
+      "source_repeat": 1,
+      "target": null,
+      "kind": "read",
+      "unresolved_count": 1,
+      "claims_finished_with_unresolved": false,
+      "selects_declared_unresolved_read": true,
+      "read_inventory_url_provenance_valid": true,
+      "shape_valid": true
+    },
+    {
+      "group": "cw2-q02-source-ledger-active-probe-20261003",
+      "repeat": 1,
+      "source_repeat": 1,
+      "target": null,
+      "kind": "read",
+      "unresolved_count": 1,
+      "claims_finished_with_unresolved": false,
+      "selects_declared_unresolved_read": true,
+      "read_inventory_url_provenance_valid": true,
+      "shape_valid": true
+    }
+  ]
+}

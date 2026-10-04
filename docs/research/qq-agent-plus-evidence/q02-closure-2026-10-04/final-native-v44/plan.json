@@ -1,0 +1,31 @@
+{
+  "frozen_code": "v44",
+  "code_manifest_sha256": "02a21a515208b9a2dc7b185bf0717b574de228bb3830ddff12d13cf21979cba3",
+  "root": "/tmp/cw2-q02-history-candidate-v44-eval",
+  "model": "gemini-3.8-flash-high",
+  "endpoint": "https://mubai.website:8318/v1",
+  "actual_model_http_limit": 20,
+  "logical_turns": 4,
+  "no_retry_resume_or_replacement": true,
+  "search_endpoint": "http://127.0.0.1:18080",
+  "reader_endpoint": "http://127.0.0.1:11235",
+  "public_read_dns": "cloudflare",
+  "builtin_fallback": false,
+  "source_frames": false,
+  "source_decision_contract": false,
+  "context_window": 32768,
+  "reserve_and_cap": 8192,
+  "estimate_margin": 0.15,
+  "provided_sources_or_urls_seeded": false,
+  "new_prompt_rules": 0,
+  "input_fixtures_sha256": {
+    "fixtures.json": "3932ccd9a63bf71411e1bedeb2ec5868ecc5a41e5fe3419b8b48c43b899ef779",
+    "persona.md": "204644ee525210c1cb253688d7db218a2a2bc3fe6e91bfb3f5d135e9c5e47959",
+    "budget.json": "07f49ce5059f086a84fe576fae76ba06371c5508e0e1074072c535e3b39d805d"
+  },
+  "basis": "Confirmed same-window input fix and two-query official-body discoverability/read control; do one final real native flow, preserve outcome and do not launch full A/B if fidelity fails.",
+  "production_changed": false,
+  "agy_used": false,
+  "live_channel_actions": false,
+  "acceptance_scope": "Agent+RuntimeSkillService with synthetic evaluation kernel/history; not production Conversation or full Q02"
+}

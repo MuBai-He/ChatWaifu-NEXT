@@ -1,0 +1,12 @@
+{
+  "config_mutations": 0,
+  "credential_leaks": 0,
+  "credential_values_checked": 1,
+  "files_scanned": 15,
+  "initial_package_probe_error_preserved": true,
+  "initial_wrong_scheme_runtime_probe_preserved": true,
+  "model_calls": 0,
+  "reader_http_attempt_count": "not_collected",
+  "reader_operations": 1,
+  "search_operations": 3
+}

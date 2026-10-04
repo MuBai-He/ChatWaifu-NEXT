@@ -1,0 +1,80 @@
+{
+  "verified_followup_manifest_files": 44,
+  "source_supplement_actual_http": 3,
+  "complete_replies": 3,
+  "baseline_and_supplement_actual_http": 16,
+  "baseline_and_supplement_complete_replies": 12,
+  "all_attempts_accounted": true,
+  "strict_causal_ab": false,
+  "source_provided_as_untrusted_user_context_not_tool_receipt": true,
+  "source_url": "https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml",
+  "source_body_sha256": "25eeb3bd9e5cf0bb50d42330a586d307257a3bd36b39e63bd4c50aaf781048c4",
+  "checks": [
+    {
+      "key": "single_text:original_source_supplement:r0",
+      "wire_sha256": "805d7c0eabcb4ceff768e5a14d1a4063f2ced12abd87ba731b5ad3905a54507e",
+      "reference_input_tokens": 24719,
+      "provider_prompt_tokens": 18385,
+      "supplied_source_matches_actual_reader_result": true,
+      "prior_read_bodies_unchanged": true,
+      "omitted_history_indices": []
+    },
+    {
+      "key": "single_text:original_source_supplement:r1",
+      "wire_sha256": "805d7c0eabcb4ceff768e5a14d1a4063f2ced12abd87ba731b5ad3905a54507e",
+      "reference_input_tokens": 24719,
+      "provider_prompt_tokens": 18385,
+      "supplied_source_matches_actual_reader_result": true,
+      "prior_read_bodies_unchanged": true,
+      "omitted_history_indices": []
+    },
+    {
+      "key": "single_text:original_source_supplement:r2",
+      "wire_sha256": "805d7c0eabcb4ceff768e5a14d1a4063f2ced12abd87ba731b5ad3905a54507e",
+      "reference_input_tokens": 24719,
+      "provider_prompt_tokens": 18385,
+      "supplied_source_matches_actual_reader_result": true,
+      "prior_read_bodies_unchanged": true,
+      "omitted_history_indices": []
+    }
+  ],
+  "provider_usage": {
+    "prompt_tokens": {
+      "reported": 3,
+      "attempts": 3,
+      "known_subtotal": 55155,
+      "complete_total": 55155
+    },
+    "completion_tokens": {
+      "reported": 3,
+      "attempts": 3,
+      "known_subtotal": 2073,
+      "complete_total": 2073
+    },
+    "reasoning_tokens": {
+      "reported": 0,
+      "attempts": 3,
+      "known_subtotal": 0,
+      "complete_total": null
+    },
+    "total_tokens": {
+      "reported": 3,
+      "attempts": 3,
+      "known_subtotal": 57228,
+      "complete_total": 57228
+    }
+  },
+  "reference_error_percent_min_max": [
+    34.452,
+    34.452
+  ],
+  "latency_p50_ms": 4843.0,
+  "latency_p95_ms": 5501.8,
+  "provider_identity_counts": {
+    "gemini-3.8-flash-control": 2,
+    "gemini-3.8-flash": 1
+  },
+  "quality_pass_count": 0,
+  "reviewed": 3,
+  "q02_approved": false
+}

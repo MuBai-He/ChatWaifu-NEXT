@@ -1,0 +1,214 @@
+{
+  "model_http": 10,
+  "groups": {
+    "capability": {
+      "actual_http": 2,
+      "provider_raw_frames": 2,
+      "rendered_replies": 0,
+      "rejected_frames": 0,
+      "complete_four_turn_flows": 0,
+      "usage": {
+        "prompt_tokens": 64,
+        "completion_tokens": 161,
+        "total_tokens": 1063
+      },
+      "reasoning": {
+        "reported_count": 2,
+        "unknown_count": 0,
+        "reported_subtotal": 838
+      },
+      "latency_ms": {
+        "n": 2,
+        "p50": 5149.0,
+        "p95": 6723.1
+      },
+      "reference_error_percent": null,
+      "checks": [
+        {
+          "sample": 0,
+          "wire_sha256": "2c59007296917587da550cb0d3ab0964dfad2d164e17597e68c21ec9a668d9d7",
+          "complete_original_and_no_omission": false,
+          "schema_valid": true,
+          "runtime_path_used": false,
+          "no_live_search": true
+        },
+        {
+          "sample": 1,
+          "wire_sha256": "12a0644eaf55589864021275e8866fe990201fae75e2a86d1d36135bbf6ff3c2",
+          "complete_original_and_no_omission": false,
+          "schema_valid": true,
+          "runtime_path_used": false,
+          "no_live_search": true
+        }
+      ],
+      "quality_approval": false
+    },
+    "frozen": {
+      "actual_http": 4,
+      "provider_raw_frames": 4,
+      "rendered_replies": 4,
+      "rejected_frames": 0,
+      "complete_four_turn_flows": 0,
+      "usage": {
+        "prompt_tokens": 16230,
+        "completion_tokens": 927,
+        "total_tokens": 26742
+      },
+      "reasoning": {
+        "reported_count": 4,
+        "unknown_count": 0,
+        "reported_subtotal": 9585
+      },
+      "latency_ms": {
+        "n": 4,
+        "p50": 16723.5,
+        "p95": 26990.05
+      },
+      "reference_error_percent": {
+        "min": 40.6548,
+        "max": 42.4372
+      },
+      "checks": [
+        {
+          "sample": "frame_control:r0:t3",
+          "wire_sha256": "ccb1f2988ae2dddc110db0e941de876a817eda3b45d5edde6bd1524f34e56e96",
+          "complete_original_and_no_omission": true,
+          "schema_valid": true,
+          "runtime_path_used": false,
+          "no_live_search": true
+        },
+        {
+          "sample": "frame_control:r0:t4",
+          "wire_sha256": "13cc83d54016a035f9c7a96ca10f55dd4036b4ea8a96c22a0558a503d738e703",
+          "complete_original_and_no_omission": true,
+          "schema_valid": true,
+          "runtime_path_used": false,
+          "no_live_search": true
+        },
+        {
+          "sample": "frame_control:r1:t3",
+          "wire_sha256": "3213eb5aaeb19dbe80ef11f2bd14151149fd8796c0a5a8701c299ad1e420e539",
+          "complete_original_and_no_omission": true,
+          "schema_valid": true,
+          "runtime_path_used": false,
+          "no_live_search": true
+        },
+        {
+          "sample": "frame_control:r1:t4",
+          "wire_sha256": "99c95ab0e2cfdff7f79219a7da367b8dfafeef9fe7e2fe9da2b992f70a99d042",
+          "complete_original_and_no_omission": true,
+          "schema_valid": true,
+          "runtime_path_used": false,
+          "no_live_search": true
+        }
+      ],
+      "quality_approval": false
+    },
+    "layout": {
+      "actual_http": 2,
+      "provider_raw_frames": 2,
+      "rendered_replies": 2,
+      "rejected_frames": 0,
+      "complete_four_turn_flows": 0,
+      "usage": {
+        "prompt_tokens": 8450,
+        "completion_tokens": 641,
+        "total_tokens": 15252
+      },
+      "reasoning": {
+        "reported_count": 2,
+        "unknown_count": 0,
+        "reported_subtotal": 6161
+      },
+      "latency_ms": {
+        "n": 2,
+        "p50": 18051.5,
+        "p95": 24479.75
+      },
+      "reference_error_percent": {
+        "min": 42.5113,
+        "max": 42.7189
+      },
+      "checks": [
+        {
+          "sample": "layout_control:r0:t4",
+          "wire_sha256": "1df99a309fb299f1c2359e3bf0a2dfac418506661381268e0f2ee3fb58754052",
+          "complete_original_and_no_omission": true,
+          "schema_valid": true,
+          "runtime_path_used": false,
+          "no_live_search": true
+        },
+        {
+          "sample": "layout_control:r1:t4",
+          "wire_sha256": "4c6c5978802aad59d0287a7276f0fd778d5eeab5c68e7291c8e269ac0a5bef5d",
+          "complete_original_and_no_omission": true,
+          "schema_valid": true,
+          "runtime_path_used": false,
+          "no_live_search": true
+        }
+      ],
+      "quality_approval": false
+    },
+    "existing-revision": {
+      "actual_http": 2,
+      "provider_raw_frames": 2,
+      "rendered_replies": 2,
+      "rejected_frames": 0,
+      "complete_four_turn_flows": 0,
+      "usage": {
+        "prompt_tokens": 10246,
+        "completion_tokens": 796,
+        "total_tokens": 12655
+      },
+      "reasoning": {
+        "reported_count": 1,
+        "unknown_count": 1,
+        "reported_subtotal": 1613
+      },
+      "latency_ms": {
+        "n": 2,
+        "p50": 7500.0,
+        "p95": 7673.7
+      },
+      "reference_error_percent": {
+        "min": 43.9005,
+        "max": 43.9191
+      },
+      "checks": [
+        {
+          "sample": "existing_revision_control:r0:t4",
+          "wire_sha256": "1dd0501e8f4539833c2c83f47720214401187db9bf6376a99c4a92762560de08",
+          "complete_original_and_no_omission": true,
+          "schema_valid": true,
+          "runtime_path_used": false,
+          "no_live_search": true
+        },
+        {
+          "sample": "existing_revision_control:r1:t4",
+          "wire_sha256": "e01c2926ee69773f83454a7459f8a85b2c51bb77e0d3ea9f5bf96c564439481c",
+          "complete_original_and_no_omission": true,
+          "schema_valid": true,
+          "runtime_path_used": false,
+          "no_live_search": true
+        }
+      ],
+      "quality_approval": false
+    }
+  },
+  "total_usage": {
+    "prompt_tokens": 34990,
+    "completion_tokens": 2525,
+    "total_tokens": 55712
+  },
+  "reasoning_reported_count": 9,
+  "reasoning_unknown_count": 1,
+  "reasoning_reported_subtotal": 18197,
+  "current_window": 32768,
+  "output_reserve_and_cap": 8192,
+  "margin": 0.15,
+  "estimated_input_allowance": 21370,
+  "schema_included_in_reference": true,
+  "same_source_hash": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+  "production_changed": false,
+  "full_q02_approved": false
+}

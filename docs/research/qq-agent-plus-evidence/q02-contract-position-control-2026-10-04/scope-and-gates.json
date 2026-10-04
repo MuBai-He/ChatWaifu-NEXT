@@ -1,0 +1,28 @@
+{
+  "model": "gemini-3.8-flash-high",
+  "conditions": [
+    "current_single",
+    "split_pre_history",
+    "split_post_history"
+  ],
+  "anchors": 8,
+  "calls": 48,
+  "repeats": 2,
+  "order": "rotated conditions then reverse, per anchor",
+  "source_input": "frozen v8 actual inputs; no tools/extra sources",
+  "changed": "output contract placement and system-message split, isolated by split-before-history arm",
+  "not_changed": [
+    "all input text",
+    "history",
+    "persona",
+    "response length",
+    "model",
+    "budget",
+    "temperature",
+    "latest user request"
+  ],
+  "acceptance": "masked primary direct task/closure quality and technical execution; no production change from transport success",
+  "provider_identity": "retain actual response model label; does not prove weights",
+  "production_changes": false,
+  "quality_approved": false
+}

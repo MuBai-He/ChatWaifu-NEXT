@@ -1,0 +1,39 @@
+[
+  {
+    "dry_run": "dry",
+    "exit_code": 1,
+    "error_type": "OperationalError",
+    "logical_requests": 1,
+    "actual_http_attempts": 0,
+    "completed": 0,
+    "failed": 0,
+    "not_executed": 0,
+    "live_network_calls": 0,
+    "supplier_usage": null,
+    "quality_evidence": false
+  },
+  {
+    "dry_run": "dry2",
+    "exit_code": 0,
+    "logical_requests": 4,
+    "actual_http_attempts": 0,
+    "completed": 0,
+    "failed": 4,
+    "not_executed": 12,
+    "live_network_calls": 0,
+    "supplier_usage": null,
+    "quality_evidence": false
+  },
+  {
+    "dry_run": "dry3",
+    "exit_code": 0,
+    "logical_requests": 16,
+    "actual_http_attempts": 16,
+    "completed": 16,
+    "failed": 0,
+    "not_executed": 0,
+    "live_network_calls": 0,
+    "supplier_usage": null,
+    "quality_evidence": false
+  }
+]

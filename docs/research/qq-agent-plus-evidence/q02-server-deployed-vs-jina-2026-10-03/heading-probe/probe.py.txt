@@ -1,0 +1,31 @@
+import asyncio, json, os, sys, time
+from pathlib import Path
+root=Path('/tmp/cw2-q02-source-revision-v5-eval')
+sys.path[:0]=[str(root/'services/runtime/src'),str(root/'packages/protocol-python/src'),str(root/'packages/model-worker-sdk-python/src'),'/tmp/cw2-q02-eval-deps']
+from pydantic import SecretStr
+from chatwaifu_runtime.config.settings import PublicWebConfig
+from chatwaifu_runtime.runtime_skills.public_web import PublicWebReader
+from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
+settings={}
+for line in Path('/home/mubai/.local/share/chatwaifu-server/config/public-web.env').read_text().splitlines():
+ if line.startswith('CHATWAIFU_PUBLIC_WEB__') and '=' in line:
+  k,v=line.split('=',1);settings[k]=v.strip().strip(chr(34)).strip(chr(39))
+key=settings['CHATWAIFU_PUBLIC_WEB__CRAWL4AI_API_TOKEN']
+config=PublicWebConfig(reader_provider='crawl4ai',crawl4ai_endpoint='http://127.0.0.1:11235',crawl4ai_api_token=SecretStr(key),timeout_seconds=25)
+output=Path('/tmp/cw2-q02-source-revision-20261003/heading-probe');output.mkdir(parents=True,exist_ok=True)
+async def main():
+ reader=PublicWebReader(provider_config=config)
+ rows=[]
+ for label,url,focus in [('http-heading','https://www.rfc-editor.org/rfc/rfc9110.html','9.2.2. Idempotent Methods')]:
+  args={'url':url,'focus':focus,'dns_resolver':'cloudflare','fresh':True,'max_characters':6000}
+  start=time.monotonic(); row={'label':label,'arguments':args}
+  try:
+   row['result']=await reader.read(args);row['ok']=True
+  except SkillExecutionError as error:
+   row.update(ok=False,error_code=error.structured.code,retryable=error.structured.retryable)
+  row['latency_ms']=round((time.monotonic()-start)*1000)
+  rows.append(row)
+  (output/'results.json').write_text(json.dumps(rows,ensure_ascii=False,indent=2)+'\n')
+  print(json.dumps({k:v for k,v in row.items() if k!='result'}),flush=True)
+ print(json.dumps({'successful':sum(r['ok'] for r in rows),'total':len(rows)}),flush=True)
+asyncio.run(main())

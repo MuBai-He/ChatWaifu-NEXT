@@ -1,0 +1,25 @@
+{
+  "quality_approved": false,
+  "same_query_same_source_response": true,
+  "retrieval_time": "not recorded; projected receipt explicitly uses null",
+  "five_results": {
+    "calls": 3,
+    "selections": {
+      "search_base_rule": 2,
+      "read_secondary": 1
+    },
+    "provider_prompt_tokens_per_request": 6444
+  },
+  "twenty_result_limit": {
+    "actual_results": 18,
+    "calls": 3,
+    "selections": {
+      "read_2025_secondary": 3
+    },
+    "provider_prompt_tokens_per_request": 8024
+  },
+  "additional_input_tokens": 1580,
+  "followed_newer_lead": 0,
+  "actual_tool_execution": false,
+  "decision": "Do not increase the product default based on this probe. It shows independent information loss at the result cap but not improved selection or answer quality."
+}

@@ -1,0 +1,190 @@
+{
+  "quality_approved": false,
+  "requests": 6,
+  "requested_models": [
+    "gemini-3.8-flash-high"
+  ],
+  "reported_models": [
+    "gemini-3.8-flash",
+    "gemini-3.8-flash-control"
+  ],
+  "raw_usage": {
+    "prompt_tokens": 43404,
+    "completion_tokens": 1293,
+    "total_tokens": 44697
+  },
+  "p50_ms": 2948,
+  "p95_ms": 6911,
+  "max_actual_input_tokens": 8024,
+  "max_reference_input_tokens": 9608,
+  "reference_error_percent_min_max": [
+    17.039,
+    19.741
+  ],
+  "records": [
+    {
+      "key": "0:20",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash-control",
+      "usage": {
+        "completion_tokens": 235,
+        "total_tokens": 8259,
+        "prompt_tokens": 8024
+      },
+      "latency_ms": 3064,
+      "reference_input_tokens": 9608,
+      "reference_error_percent": 19.741,
+      "tool_execution": false,
+      "action": {
+        "answer_draft": "",
+        "arguments": {
+          "max_characters": 5000,
+          "focus": "关于民航旅客携带“充电宝”乘机规定的公告",
+          "max_links": 0,
+          "dns_resolver": "cloudflare",
+          "url": "https://finance.eastmoney.com/a/202506283443080455.html",
+          "fresh": false
+        },
+        "kind": "read"
+      },
+      "limit": 20,
+      "actual_result_count": 18
+    },
+    {
+      "key": "0:5",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash",
+      "usage": {
+        "completion_tokens": 187,
+        "total_tokens": 6631,
+        "prompt_tokens": 6444
+      },
+      "latency_ms": 2882,
+      "reference_input_tokens": 7542,
+      "reference_error_percent": 17.039,
+      "tool_execution": false,
+      "action": {
+        "arguments": {
+          "query": "民航局 关于民航旅客携带充电宝乘机规定的公告 caac.gov.cn",
+          "dns_resolver": "cloudflare"
+        },
+        "kind": "search",
+        "answer_draft": ""
+      },
+      "limit": 5,
+      "actual_result_count": 5
+    },
+    {
+      "key": "1:20",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash-control",
+      "usage": {
+        "completion_tokens": 219,
+        "total_tokens": 8243,
+        "prompt_tokens": 8024,
+        "prompt_tokens_details": {
+          "cached_tokens": 4062
+        }
+      },
+      "latency_ms": 2921,
+      "reference_input_tokens": 9608,
+      "reference_error_percent": 19.741,
+      "tool_execution": false,
+      "action": {
+        "arguments": {
+          "focus": "关于民航旅客携带“充电宝”乘机规定的公告",
+          "url": "https://finance.eastmoney.com/a/202506283443080455.html",
+          "dns_resolver": "cloudflare",
+          "max_characters": 5000
+        },
+        "kind": "read",
+        "answer_draft": ""
+      },
+      "limit": 20,
+      "actual_result_count": 18
+    },
+    {
+      "key": "1:5",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash",
+      "usage": {
+        "completion_tokens": 162,
+        "total_tokens": 6606,
+        "prompt_tokens": 6444,
+        "prompt_tokens_details": {
+          "cached_tokens": 4053
+        }
+      },
+      "latency_ms": 6911,
+      "reference_input_tokens": 7542,
+      "reference_error_percent": 17.039,
+      "tool_execution": false,
+      "action": {
+        "answer_draft": "",
+        "kind": "search",
+        "arguments": {
+          "query": "中国民用航空局 关于民航旅客携带充电宝乘机规定的公告 原文",
+          "dns_resolver": "cloudflare"
+        }
+      },
+      "limit": 5,
+      "actual_result_count": 5
+    },
+    {
+      "key": "2:20",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash-control",
+      "usage": {
+        "completion_tokens": 217,
+        "total_tokens": 8241,
+        "prompt_tokens": 8024
+      },
+      "latency_ms": 2948,
+      "reference_input_tokens": 9608,
+      "reference_error_percent": 19.741,
+      "tool_execution": false,
+      "action": {
+        "answer_draft": "",
+        "kind": "read",
+        "arguments": {
+          "url": "https://finance.eastmoney.com/a/202506283443080455.html",
+          "max_links": 0,
+          "max_characters": 5000,
+          "fresh": false,
+          "dns_resolver": "cloudflare"
+        }
+      },
+      "limit": 20,
+      "actual_result_count": 18
+    },
+    {
+      "key": "2:5",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash",
+      "usage": {
+        "completion_tokens": 273,
+        "total_tokens": 6717,
+        "prompt_tokens": 6444,
+        "prompt_tokens_details": {
+          "cached_tokens": 4053
+        }
+      },
+      "latency_ms": 3677,
+      "reference_input_tokens": 7542,
+      "reference_error_percent": 17.039,
+      "tool_execution": false,
+      "action": {
+        "kind": "read",
+        "answer_draft": "",
+        "arguments": {
+          "focus": "关于民航旅客携带“充电宝”乘机规定的公告",
+          "dns_resolver": "cloudflare",
+          "url": "https://www.cqnews.net/1/detail/1388454975074172928/web/content_1388454975074172928.html",
+          "max_characters": 5000
+        }
+      },
+      "limit": 5,
+      "actual_result_count": 5
+    }
+  ]
+}

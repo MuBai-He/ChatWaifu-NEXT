@@ -1,0 +1,15 @@
+import json, os, subprocess, sys
+from pathlib import Path
+stage=Path('/tmp/cw2-q02-v26-contract-runtime-20261004');root=Path('/tmp/cw2-q02-contract-position-v26-eval')
+assert json.loads((stage/'batch-exit.json').read_text())=={'exit_code':2,'last_job':1}
+assert not (stage/'continuation-exit.json').exists(), 'Inspect existing continuation'
+env=os.environ.copy();env['PYTHONPATH']=os.pathsep.join([str(root/'services/runtime/src'),str(root/'packages/protocol-python/src'),str(root/'packages/model-worker-sdk-python/src'),'/tmp/cw2-q02-eval-deps',str(root)])
+jobs=json.loads((stage/'commands.json').read_text());codes={}
+for i in range(2,len(jobs)):
+    job=jobs[i];assert not Path(job['output']).exists(), 'No duplicate dispatch'
+    with (stage/f'job-{i}.log').open('w') as log:
+        rc=subprocess.run([sys.executable,str(stage/'launch.py'),*job['arguments']],cwd=root,env=env,stdout=log,stderr=subprocess.STDOUT).returncode
+    (stage/f'job-{i}-exit.json').write_text(json.dumps({'exit_code':rc})+'\n');codes[str(i)]=rc
+    print(json.dumps({'completed_job':i,'profile':job['profile'],'position':job['position'],'exit_code':rc}),flush=True)
+    if rc not in {0,2}:break
+(stage/'continuation-exit.json').write_text(json.dumps({'codes':codes,'initial_failure_retained':True,'no_failed_sample_repeated':True},indent=2)+'\n')

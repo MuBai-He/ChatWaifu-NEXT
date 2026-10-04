@@ -1,0 +1,38 @@
+name: cw2-public-web
+
+services:
+  searxng:
+    image: ${SEARXNG_IMAGE:-searxng/searxng:latest}
+    ports:
+      - "127.0.0.1:${SEARXNG_HOST_PORT:-8080}:8080"
+    dns:
+      - "${SEARXNG_DNS_SERVER:-1.1.1.1}"
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+    environment:
+      SEARXNG_BASE_URL: http://127.0.0.1:8080/
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null 'http://127.0.0.1:8080/healthz'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  crawl4ai:
+    image: ${CRAWL4AI_IMAGE:-unclecode/crawl4ai:0.9.3}
+    ports:
+      - "127.0.0.1:${CRAWL4AI_HOST_PORT:-11235}:11235"
+    dns:
+      - "${CRAWL4AI_DNS_SERVER:-1.1.1.1}"
+    environment:
+      CRAWL4AI_API_TOKEN: ${CRAWL4AI_API_TOKEN:?set CRAWL4AI_API_TOKEN in deploy/public-web/.env}
+      SECRET_KEY: ${CRAWL4AI_SECRET_KEY:?set CRAWL4AI_SECRET_KEY in deploy/public-web/.env}
+    shm_size: "1gb"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:11235/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s

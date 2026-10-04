@@ -1,0 +1,25 @@
+{
+  "scope": "Primary Codex direct, unmasked review of fixed v12 source inputs; 2 repetitions per variant and target. Model self-review is not independent acceptance. No source tools executed by the probe.",
+  "conclusion": "Neither strategy establishes factual and current-source acceptance; no change to production revision policy.",
+  "observations": [
+    {
+      "sample": "topic_switch:r0:t1:candidate",
+      "fresh_answer": "Both omit the unsupported every-heartbeat re-randomization assertion, but conflate the paper’s 10-500ms deployment choice with a randomized election interval; repeat 0 also adds an unsupported multiple-of-broadcastTime claim.",
+      "evidence_review": "Both flag the generic fraction-to-one-tenth ratio, yet both retain every-heartbeat re-randomization as if normative.",
+      "quality_pass": false
+    },
+    {
+      "sample": "detailed_answer:r0:t2:candidate",
+      "fresh_answer": "Both retain the older capacity/quantity table. Repeat 0 still calls 2025 certification requirements latest; repeat 1 gives a source-date limitation. No later source is available in either request.",
+      "evidence_review": "Both claim no unsupported assertions; repeat 1 acknowledges a possible later-airline gap in metadata but omits it from the user answer and still says latest.",
+      "quality_pass": false
+    },
+    {
+      "sample": "detailed_answer:r0:t4:candidate",
+      "fresh_answer": "Both preserve the previously omitted durations, 2.5-3.5 and 2-3 hours. Repeat 0 still calls the old base rule currently valid. Both inherit the incomplete capacity/quantity scope.",
+      "evidence_review": "Both omit both durations and flag no unsupported assertions.",
+      "quality_pass": false
+    }
+  ],
+  "provider_note": "All requests used gemini-3.8-flash-high; non-streaming diagnostic only."
+}

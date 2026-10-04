@@ -1,0 +1,34 @@
+{
+  "http_attempts": 2,
+  "outcomes": [
+    {
+      "done_received": true,
+      "elapsed_ms": 6992,
+      "error_type": null,
+      "reference_input_tokens": 6615,
+      "sample_key": "frozen_icao:r1:t4",
+      "status": 200,
+      "usage": {
+        "completion_tokens": 293,
+        "prompt_tokens": 5147,
+        "reasoning_tokens": 1751,
+        "total_tokens": 7191
+      }
+    },
+    {
+      "done_received": true,
+      "elapsed_ms": 4878,
+      "error_type": null,
+      "reference_input_tokens": 5831,
+      "sample_key": "frozen_airchina:r1:t4",
+      "status": 200,
+      "usage": {
+        "completion_tokens": 356,
+        "prompt_tokens": 4009,
+        "reasoning_tokens": null,
+        "total_tokens": 4365
+      }
+    }
+  ],
+  "quality_samples_replaced": 0
+}

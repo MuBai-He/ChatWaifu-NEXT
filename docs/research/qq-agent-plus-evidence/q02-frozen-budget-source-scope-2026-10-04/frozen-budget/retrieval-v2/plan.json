@@ -1,0 +1,14 @@
+{
+  "source_path": "isolated SearXNG 360/Yandex + Crawl4AI 0.9.3",
+  "public_dns_resolver": "cloudflare",
+  "model_calls": 0,
+  "queries": [
+    "2026 国内航班 充电宝 携带 规定 变更",
+    "ICAO power banks 2026 addendum",
+    "site:icao.int power banks 2026",
+    "国际民航组织 2026 充电宝 规定",
+    "site:airchina.com.cn 2026 充电宝"
+  ],
+  "scope": "direct adapter discovery control, not Runtime permissioned skill receipts or original task continuation",
+  "not_quality_approval": true
+}

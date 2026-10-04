@@ -1,0 +1,138 @@
+{
+  "records": [
+    {
+      "sample_key": "greeting:r0:t1:candidate",
+      "profile": "single_text",
+      "raw_sha256": "2760fdbd316ec2af68e4136a72e29b758d7411e478d46c7271f084a9d84b7b9e",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "greeting:r0:t2:candidate",
+      "profile": "single_text",
+      "raw_sha256": "006fa3b78c1d151cb6daab79a19dd0b193797ef7db79b9c22a7b1cb22847b9b5",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "greeting:r0:t3:candidate",
+      "profile": "single_text",
+      "raw_sha256": "6637d60321bf40db55af7e6042525874b95304f0f4b3e728429dc99b5657a731",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "greeting:r0:t4:candidate",
+      "profile": "single_text",
+      "raw_sha256": "9b536a8b1edd836877794cf9e51c64749e7337e7d49eb5fa965b2de35343dec9",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "identity:r0:t1:candidate",
+      "profile": "single_text",
+      "raw_sha256": "0c74e7ade78f1dd7d8a2d6abefb2db88c2d33b8810d3f280314ea596da9610ec",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "identity:r0:t2:candidate",
+      "profile": "single_text",
+      "raw_sha256": "702d3959f4992243d0f88c123d4dfb5862c18072bebea59f8cff71f8ec6d135f",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "identity:r0:t3:candidate",
+      "profile": "single_text",
+      "raw_sha256": "96c247c112452df4613748c10ee0041c91d70bde4d7ccb3b8d993af0ea0c2d22",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "identity:r0:t4:candidate",
+      "profile": "single_text",
+      "raw_sha256": "bd35fbc0e290e299d392ee8cf94344d44b6cb1bfd7af8e9f87331c41d78efcc7",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "detailed_answer:r0:t1:candidate",
+      "profile": "single_text",
+      "raw_sha256": "11cd162d371d07e84f51ad3f87062bc1041debef61b1f28d89d02f9a192af8d2",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "profile": "single_text",
+      "raw_sha256": "08337e80e5d1d2476eaab20e0c466fc7e658f5156b0750b24be3ac57eca4b433",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "detailed_answer:r0:t3:candidate",
+      "profile": "single_text",
+      "raw_sha256": "6464ea6b5ca6ab690a1b108d007ef8dbfe031feb918117108c7b00c03a4332d6",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "detailed_answer:r0:t4:candidate",
+      "profile": "single_text",
+      "raw_sha256": "1a8654a7eb15aa3874010ed55fe5cb7b9645b06e983a52922b92acb1d51d923d",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    }
+  ],
+  "quality_approved": false,
+  "scope": "Actual splitter/renderer and voice segmenter only; no new channel sends, no TTS or physical playback."
+}

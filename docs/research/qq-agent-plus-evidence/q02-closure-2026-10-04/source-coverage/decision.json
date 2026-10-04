@@ -1,0 +1,22 @@
+{
+  "actual_model_scope": "Requested gemini-3.8-flash-high at specified endpoint. /models offers it; output control/n aliases were also present historically and mapping remains unverified. No intrinsic-model capability claim",
+  "budget_scope": "All quality inputs complete, reference 4165-6729 under frozen 21370. 16 native usage records unknown because harness omitted include_usage; separate two native SSE controls do not backfill those records",
+  "candidate": "closure-c1 + opt-in source-answer coverage v37",
+  "complete_source_flows": 4,
+  "completed_replies": 16,
+  "known_gap_retention_controls_passed": 4,
+  "later_gates": {
+    "autonomous_source_discovery": "not_run_for_this_candidate",
+    "role_directional": "not_run_for_this_candidate",
+    "three_presentation_full_ab": "not_run_for_this_candidate"
+  },
+  "new_persona_rules": false,
+  "next": "Keep the whole candidate frozen and default off. Treat remaining source plan/fact and condition-scope defects as answer-quality blockers, not restored-body or old 7292 budget failures. Do not repair sample prose/replace failed rows or launch another format/prompt variant or full A/B from local success.",
+  "previous_valid_acceptance_repeated": false,
+  "production_adopted": false,
+  "q02_approval": false,
+  "quality_complete": 13,
+  "quality_partial": 3,
+  "reliability_scope": "16 completed actual Conversation schema replies plus scoped software tests; not proof of v30 historical exception cause or universal provider reliability",
+  "source_quality_gate": "rejected"
+}

@@ -1,0 +1,107 @@
+{
+  "reviewer": "implementation author, direct full-text review; not independent or blind",
+  "scope": "two real-document four-turn conversations, two repeats, detailed_answer only",
+  "criteria": "Current request first; do not add domestic conditions to ICAO summary. Preserve requested material conditions, issuer/time applicability and previously stated unresolved status in follow-up checklists. No keyword-only approval.",
+  "complete": 13,
+  "partial": 3,
+  "items": [
+    {
+      "sample_key": "frozen_icao:r0:t1:baseline",
+      "grade": "complete",
+      "reason": "日期、2个、旅客再充电禁止、机组按运行需要携带使用、成员国分发范围齐全；未要求增加中国国内携带条件。",
+      "reply_sha256": "5f3abf42615d89936ccbf9418a7c4fb1827d9df8a9f082b2b10b35055db85446"
+    },
+    {
+      "sample_key": "frozen_icao:r0:t2:baseline",
+      "grade": "complete",
+      "reason": "准确说明正文没有100Wh/160Wh分档，没有把一般常识补成本文规定。",
+      "reply_sha256": "71348927635adeb436f3a58d641eda93f8cfdfd6e8626b52e5739de4ebb3f5f5"
+    },
+    {
+      "sample_key": "frozen_icao:r0:t3:baseline",
+      "grade": "partial",
+      "reason": "核心“不足以证明全部国内航班实施”正确；但“通常需要国内法规转化”和差异备案机制不是所给公告提供的解释。在仅依据该材料的约束下，这段无新增证据支持。",
+      "reply_sha256": "3e0dee98730ec86cf8d7b69071007cd12085f5ca77410af926a28bc3aa1de138"
+    },
+    {
+      "sample_key": "frozen_icao:r0:t4:baseline",
+      "grade": "complete",
+      "reason": "三条保留日期、实际链接、2个、旅客再充电禁止、机组运行例外和国内执行未核实边界。",
+      "reply_sha256": "acd0b738d131c7814cd44661cf90d2c3e00aac8b4062440ecbb4cbba59a792dc"
+    },
+    {
+      "sample_key": "frozen_airchina:r0:t1:baseline",
+      "grade": "complete",
+      "reason": "禁运外观/召回、总数2块、Wh各档审批、境内3C、随身/禁托运、开关、绝缘、放置与机上禁用禁充均覆盖；范围限定国航。",
+      "reply_sha256": "be3a7d74b1c03aa0afe6075a2e9428f086cfb51a3bde767e4f31a27153f56c46"
+    },
+    {
+      "sample_key": "frozen_airchina:r0:t2:baseline",
+      "grade": "complete",
+      "reason": "正确将100Wh及以下纳入总数2块，上档需要国航批准；其他携带条件与原文一致。",
+      "reply_sha256": "c8de3240b0bbcd9050e5fa71da9c5ab0058c39d55799c43052f3c2e3dbb71d14"
+    },
+    {
+      "sample_key": "frozen_airchina:r0:t3:baseline",
+      "grade": "complete",
+      "reason": "明确运营商原文不足以证明其他航司统一，且8月发布不能证明10月4日仍无后续修订。",
+      "reply_sha256": "1404233562e3ba3ec4121fe72893c338f5ae2e415836bb7a474ef4961b24fa5f"
+    },
+    {
+      "sample_key": "frozen_airchina:r0:t4:baseline",
+      "grade": "partial",
+      "reason": "三条实质携带条件、国航范围、日期和链接均保留；丢掉第三轮已明确的“截至10月4日后续更新未核实”状态。仅日期落款不等同于保留该未核实结论。",
+      "reply_sha256": "a08a50b1ea79c57484967a8cc9aa99b4fa843100373fd04b44e0e0cc8956fdab"
+    },
+    {
+      "sample_key": "frozen_icao:r1:t1:baseline",
+      "grade": "complete",
+      "reason": "给出文末日期和明确生效日期，其余条件及例外完整；对发布日期字段采用保守表述，不因缺少独立字段而强迫更肯定的结论。",
+      "reply_sha256": "41a7f4020fa06980a249b3602eee5222abb1a2754b5af2be2dbb453530bba83e"
+    },
+    {
+      "sample_key": "frozen_icao:r1:t2:baseline",
+      "grade": "complete",
+      "reason": "没有Wh分档的判断准确。",
+      "reply_sha256": "2b26ae634e83013684aa0b34805a9fb95c0c5a117c3dfa134c60121a2fce0f91"
+    },
+    {
+      "sample_key": "frozen_icao:r1:t3:baseline",
+      "grade": "complete",
+      "reason": "区分公告修订/分发与国内实际采纳及指定日期执行状态，未声称已核实所有航司。",
+      "reply_sha256": "c81ff6e7909aac9bfad8ac8dcb82cb2fc67ac50c1778bc6eaf6e827433d70472"
+    },
+    {
+      "sample_key": "frozen_icao:r1:t4:baseline",
+      "grade": "complete",
+      "reason": "三条保留日期、链接、数量、禁充、机组例外、成员国范围和中国境内未核实状态；保留了前轮日期表述的谨慎程度。",
+      "reply_sha256": "e8d30b3f4ce2a927f6a07cc000f5e3e855362866f9e9b2a001301668e6576075"
+    },
+    {
+      "sample_key": "frozen_airchina:r1:t1:baseline",
+      "grade": "complete",
+      "reason": "数量、能量边界/国航审批、全部主要禁运和机上要求完整，境内3C范围明确。",
+      "reply_sha256": "609d4a0469594553f0030453a2cf352aa9f3afe7c333eafab9ec7afa57bcf15f"
+    },
+    {
+      "sample_key": "frozen_airchina:r1:t2:baseline",
+      "grade": "complete",
+      "reason": "数量覆盖所有能量档，100Wh以下无需批准、100到160需国航批准及通用条件一致。",
+      "reply_sha256": "f47a144269f7fbcc8326cbeb00c80b1b4b65fd3dc9743d68787a4beb26057491"
+    },
+    {
+      "sample_key": "frozen_airchina:r1:t3:baseline",
+      "grade": "complete",
+      "reason": "未将国航提示升级为民航局全文或全行业现行证明，保留后续修订未核实状态。",
+      "reply_sha256": "c440b5506aa1fbbb16b2612f7e391675ec620ac381dd44e3090f89878d536d5c"
+    },
+    {
+      "sample_key": "frozen_airchina:r1:t4:baseline",
+      "grade": "partial",
+      "reason": "实质条款保真，保留国航范围及来源日期链接；再次遗漏前轮针对10月4日后续更新未知的限定。",
+      "reply_sha256": "3a26035b3f93bba63086fd4064967d2dd9f4ff99b424887d5e43b811177086f3"
+    }
+  ],
+  "q02_approval": false,
+  "not_comparable_as_causal_ab_to_prior_12_failed_replies": true
+}

@@ -1,0 +1,189 @@
+--- /tmp/cw2-q02-protocol-recovery-v34-eval/services/runtime/src/chatwaifu_runtime/runtime_skills/agent_router.py	2026-09-30 15:23:26.300534486 +0000
++++ /tmp/cw2-q02-source-companion-v35-eval/services/runtime/src/chatwaifu_runtime/runtime_skills/agent_router.py	2026-10-03 20:08:34.997537136 +0000
+@@ -20,6 +20,10 @@
+ MAX_AGENT_SCHEMA_BUDGET_BYTES = 65_536
+ MAX_AGENT_TOOL_SCHEMA_BYTES = 12_288
+ MAX_AGENT_TOOL_DESCRIPTION_BYTES = 768
++# Host-owned workflow relationships, not model/source claims or lexical aliases.
++# Discovery needs an available reader for its subsequent evidence step. This
++# grants no execution permission and never enables an absent/disabled capability.
++_BUILTIN_COMPANIONS = {("web.search", "search"): ("web.read", "read")}
+ _ASCII_WORD = re.compile(r"[a-z0-9][a-z0-9_-]*")
+ _CJK_RUN = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]+")
+ _CONTROL = re.compile(r"[\x00-\x1f\x7f]+")
+@@ -161,8 +165,9 @@
+             return ()
+         bounded_limit = min(limit, MAX_AGENT_TOOL_LIMIT)
+         bounded_budget = min(schema_budget_bytes, MAX_AGENT_SCHEMA_BUDGET_BYTES)
++        definitions = tuple(self._definitions())
+         candidates: list[_Candidate] = []
+-        for skill in self._definitions():
++        for skill in definitions:
+             if not skill.enabled:
+                 continue
+             for capability in skill.capabilities:
+@@ -182,6 +187,44 @@
+             selected.append(candidate)
+             consumed += projected_bytes
+ 
++        selected_ids = {candidate.identity for candidate in selected}
++        for candidate in tuple(selected):
++            companion_id = _BUILTIN_COMPANIONS.get(candidate.identity)
++            if (
++                candidate.skill.source != "builtin"
++                or companion_id is None
++                or companion_id in selected_ids
++                or len(selected) >= bounded_limit
++            ):
++                continue
++            for skill in definitions:
++                if (
++                    skill.skill_id != companion_id[0]
++                    or skill.source != "builtin"
++                    or not skill.enabled
++                ):
++                    continue
++                for capability in skill.capabilities:
++                    if (
++                        capability.name != companion_id[1]
++                        or capability.side_effect is not SideEffect.READ
++                    ):
++                        continue
++                    companion = _project_candidate(
++                        skill, capability, query=query, require_relevance=False
++                    )
++                    if companion is None:
++                        continue
++                    size = companion.schema_bytes + len(companion.description.encode("utf-8"))
++                    if (
++                        companion.identity not in selected_ids
++                        and len(selected) < bounded_limit
++                        and size <= bounded_budget - consumed
++                    ):
++                        selected.append(companion)
++                        selected_ids.add(companion.identity)
++                        consumed += size
++
+         identities = [candidate.identity for candidate in selected]
+         names = allocate_tool_names(identities, max_length=64, opaque_prefix="cw")
+         return tuple(
+@@ -199,7 +242,11 @@
+ 
+ 
+ def _project_candidate(
+-    skill: SkillDefinition, capability: SkillCapability, *, query: str
++    skill: SkillDefinition,
++    capability: SkillCapability,
++    *,
++    query: str,
++    require_relevance: bool = True,
+ ) -> _Candidate | None:
+     if capability.adapter_operation != "invoke":
+         return None
+@@ -231,7 +278,7 @@
+         return None
+ 
+     score = _relevance_score(query, skill, capability)
+-    if score <= 0:
++    if require_relevance and score <= 0:
+         return None
+     description = _model_description(skill, capability)
+     return _Candidate(
+--- /tmp/cw2-q02-protocol-recovery-v34-eval/services/runtime/tests/test_runtime_skill_agent_router.py	2026-10-03 07:01:07.622722864 +0000
++++ /tmp/cw2-q02-source-companion-v35-eval/services/runtime/tests/test_runtime_skill_agent_router.py	2026-10-03 20:09:33.013429641 +0000
+@@ -20,6 +20,8 @@
+         "关于分布式一致性算法的选举机制，领导者心跳超时是怎么计算的？",
+         "What timing assumptions does this consensus algorithm require?",
+         "这个协议的状态转换有哪些规范要求？",
++        "这能直接证明截至2026年10月4日所有中国境内航班都实施相同数量限制吗？"
++        "请区分国际规则公告和中国境内实际执行\uff1b无法核实的部分要明确说明。",
+     ],
+ )
+ def test_source_tools_route_external_documentation_from_metadata(query: str) -> None:
+@@ -30,6 +32,42 @@
+ 
+ 
+ @pytest.mark.parametrize(
++    "unavailable", ["available", "disabled", "missing", "plugin", "unsafe_schema"]
++)
++def test_search_companion_must_be_available_safe_host_builtin(unavailable: str) -> None:
++    search = _skill("web.search", "Discovery", "findmarker", [_capability("search", "findmarker")])
++    reader = _skill(
++        "web.read",
++        "Unmatched reader",
++        "Unmatched reader",
++        [
++            _capability(
++                "read",
++                "Unmatched reader",
++                permission="public_web.read",
++                confirmation=True,
++                schema={"type": "string"} if unavailable == "unsafe_schema" else None,
++            )
++        ],
++        enabled=unavailable != "disabled",
++        source="plugin" if unavailable == "plugin" else "builtin",
++    )
++    definitions = [search] if unavailable == "missing" else [search, reader]
++    tools = RuntimeSkillRouter(lambda: definitions).select("findmarker")
++    assert "web.search" in {tool.skill_id for tool in tools}
++    assert ("web.read" in {tool.skill_id for tool in tools}) == (unavailable == "available")
++
++
++def test_search_companion_respects_original_schema_and_count_limits() -> None:
++    registry = SkillRegistry(Path(__file__).resolve().parents[3] / "skills" / "builtin")
++    registry.reload([])
++    router = RuntimeSkillRouter(registry.list)
++    tools = router.select("搜索", limit=1)
++    assert len(tools) == 1
++    assert router.select("搜索", schema_budget_bytes=1) == ()
++
++
++@pytest.mark.parametrize(
+     "query",
+     [
+         "展示 return_exceptions=True 并区分正常结果与异常",
+--- /tmp/cw2-q02-protocol-recovery-v34-eval/services/runtime/tests/test_runtime_source_evaluation.py	2026-10-03 18:45:45.257801300 +0000
++++ /tmp/cw2-q02-source-companion-v35-eval/services/runtime/tests/test_runtime_source_evaluation.py	2026-10-03 20:08:34.997233152 +0000
+@@ -76,8 +76,20 @@
+ 
+ @pytest.mark.asyncio
+ @pytest.mark.parametrize("fallback", [False, True])
++@pytest.mark.parametrize(
++    "question",
++    [
++        "查询国内航班充电宝规定",
++        "这能直接证明截至2026年10月4日所有中国境内航班都实施相同数量限制吗？"
++        "请区分国际规则公告和中国境内实际执行；无法核实的部分要明确说明。",  # noqa: RUF001
++    ],
++)
+ async def test_searxng_query_receipts_pass_real_skill_output_validation(
+-    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fallback: bool
++    runtime_settings: Settings,
++    monkeypatch: pytest.MonkeyPatch,
++    tmp_path: Path,
++    fallback: bool,
++    question: str,
+ ) -> None:
+     queries: list[str] = []
+ 
+@@ -170,7 +182,7 @@
+             allow_once=True,
+         )
+         outcome = await evaluation.run(
+-            LlmRequest(uuid4(), "查询国内航班充电宝规定", "Persona"),
++            LlmRequest(uuid4(), question, "Persona"),
+             session_id=session.session_id,
+             turn_id=uuid4(),
+             sample_key="contract",
+--- /tmp/cw2-q02-protocol-recovery-v34-eval/tools/evaluate_character_scenarios.py	2026-10-03 19:54:05.026127815 +0000
++++ /tmp/cw2-q02-source-companion-v35-eval/tools/evaluate_character_scenarios.py	2026-10-03 20:07:03.739446878 +0000
+@@ -123,7 +123,7 @@
+     turns: list[TurnDefinition]
+ 
+ 
+-TOOL_VERSION = "1.31.0"
++TOOL_VERSION = "1.32.0"
+ 
+ 
+ def _utc_prompt_time(value: datetime) -> datetime:

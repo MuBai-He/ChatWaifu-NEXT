@@ -1,0 +1,12 @@
+{
+  "failure_type": "wrong_evaluation_interpreter",
+  "error_type": "ModuleNotFoundError",
+  "missing_module": "httpx2",
+  "interpreter_used": "python3",
+  "correct_interpreter": "/home/mubai/chatwaifu-server/source/.venv/bin/python",
+  "failed_before_admission_and_credentials": true,
+  "actual_model_http": 0,
+  "actual_source_http": 0,
+  "production_code_changed": false,
+  "is_product_runtime_failure": false
+}

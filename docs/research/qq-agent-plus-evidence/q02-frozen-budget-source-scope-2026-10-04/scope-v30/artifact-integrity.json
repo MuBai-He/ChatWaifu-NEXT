@@ -1,0 +1,31 @@
+{
+  "configured_credentials_absent": true,
+  "frozen_overlay_verified": true,
+  "source_snapshot_post_run_hashes": true,
+  "files": {
+    "actual-provider-payloads.jsonl": "4adf55609d418491dfb748eacdc110c8e38caa1d37485368b4d2e90ca5d99c2e",
+    "admission.json": "8f371e3137167c955f7974eeb8ccc09328ba2cf2b6e150ffe84f84a0e30539a9",
+    "budget.json": "07f49ce5059f086a84fe576fae76ba06371c5508e0e1074072c535e3b39d805d",
+    "code-changes-from-v27.patch": "1d7050d8416ca5e0bc4de9b15642dc34432baeb92207c4d5548920319e0505e4",
+    "collect_evidence.py": "d816804067f8b06deab5fad8bfe50383484e4e622835abbc5e752ad7ec8dd06b",
+    "exit.json": "73d25f364c873039062d6b88a998537f090bb90d0d0abdf0e963a831983d7b68",
+    "failed-stream-control/actual-provider-payloads.jsonl": "3357fae039c6358429081d261bf22474eacf01d79427fed6138e714f18380eae",
+    "failed-stream-control/plan.json": "6efcebf7e393d80a75653ba41a8053ed933c8dd2b5900c0e8ffc3375ecdd9bb0",
+    "failed-stream-control/result.json": "4deb854d13648fd04c9050f30f1a10c9f0391c9879d0577a509432a2dd9835d8",
+    "failed-stream-control.log": "d5e82a048705220c9584b406b75293eef2d1888b7082e9c4cb0c43bc9857593c",
+    "fixtures.json": "76926c47b5ab351d041c351f9a6043b3c0e1aebbd9e2a5befb7d0f258c940567",
+    "frozen-source-sha256.json": "f32515d7f41da6675f2ef61ce1723808e850aa8699419793550754e32ee2ba70",
+    "probe.log": "6d07829c5887338ade1a169e72f43cbdedc5c66674bdc78730b010ec6b2f3ff8",
+    "reader-diagnostics.jsonl": "e23c125557e46f23d1ff8f5b33e901b265bdd41935487a460da902cb9517faa7",
+    "replay_last_stream.py": "ce78e0cd08de5a5ac8b52cea0da802bd6aee6061aa096f06045da690c9620d30",
+    "run_probe.py": "ee959fac918ad85a5bfce061dee3672f62e3d5f82d4a552c0dbd5ce5563cadb7",
+    "runtime-pilot/incomplete.jsonl": "38ee47a8d738cc51cb8bc205a27178cc8c3b92901771475843701958182dafcc",
+    "runtime-pilot/metadata.json": "329da634aac04decebb6e62c4d67b3c9806f10cb6b0557102347832d5bd2f11c",
+    "runtime-pilot/provider-rounds.jsonl": "d3ed9851355f6935c79cf48fe8c3ebd3dc04babb90c547422bf96d445dbf4a72",
+    "runtime-pilot/results.jsonl": "28d276c68ac4a47e0a68c34dfbd183504d0e42b10279050732caa3a064a965ad",
+    "scope-overlay-integrity.json": "e32976a22edeb6434961ecafa13382900b83be5ffeec46c429fdcd0255d34327",
+    "server-tests.log": "621c1f76a7025143cd0a8bd0872813ec5fbbe8fe14445343ed2c803d4093b8fb"
+  },
+  "database_excluded": true,
+  "hidden_reasoning_not_captured": true
+}

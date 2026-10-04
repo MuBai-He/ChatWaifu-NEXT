@@ -1,0 +1,1032 @@
+[
+  {
+    "case": "instant_message-pre_user",
+    "prior_wire_exact_match": true,
+    "prior_payload_sha256": "9713934c1c8029afcbe8be710c92c077e1c035c4d5dc2ded1f0c180e2ca0d507",
+    "prior_agent_fit": {
+      "dispatch_allowed": true,
+      "report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 17632,
+        "estimated_input_tokens": 17632,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      }
+    },
+    "prior_complete_fit": {
+      "dispatch_allowed": true,
+      "report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 19155,
+        "estimated_input_tokens": 19155,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      }
+    },
+    "next_agent_fit": {
+      "dispatch_allowed": true,
+      "report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 20975,
+        "estimated_input_tokens": 20975,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      }
+    },
+    "next_complete_fit_current": {
+      "dispatch_allowed": false,
+      "report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 22832,
+        "estimated_input_tokens": 21852,
+        "omitted_history_indices": [
+          1
+        ],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      }
+    },
+    "next_complete_fit_larger": {
+      "dispatch_allowed": true,
+      "report": {
+        "estimated_token_limit": 35617,
+        "estimated_original_tokens": 22832,
+        "estimated_input_tokens": 22832,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      }
+    },
+    "blocked_wire_sha256": "295f18a35b9d7c8be11a126c42deee9b1c6dfaf7dc3a4f46db461ed8c88d6811",
+    "larger_wire_sha256": "295f18a35b9d7c8be11a126c42deee9b1c6dfaf7dc3a4f46db461ed8c88d6811",
+    "prior_components": {
+      "complete_reference_tokens": 19155,
+      "messages": [
+        {
+          "index": 0,
+          "role": "system",
+          "reference_message_tokens": 2842,
+          "characters": 8003,
+          "sha256": "1a2e53be5ff0fca5bc07518c4529f2aedb7126dd30a5db1cd059773e5f1a7e91"
+        },
+        {
+          "index": 1,
+          "role": "user",
+          "reference_message_tokens": 86,
+          "characters": 66,
+          "sha256": "b7135a14cf01a9f54cb397f6b24eea6e83492c68af68786ceaf888c08189c931"
+        },
+        {
+          "index": 2,
+          "role": "assistant",
+          "reference_message_tokens": 1010,
+          "characters": 828,
+          "sha256": "24c49f54ef1d6ebef36007e02e1edffde190ae3794388139defadeedfd85ca6b"
+        },
+        {
+          "index": 3,
+          "role": "system",
+          "reference_message_tokens": 288,
+          "characters": 1489,
+          "sha256": "168d8681eccf17702860ee5b3625253171e6ad4ac36b486adc8118fc75159a12"
+        },
+        {
+          "index": 4,
+          "role": "user",
+          "reference_message_tokens": 65,
+          "characters": 47,
+          "sha256": "6028a76b8517511269de8dd52e5951f089f63592bae8dd4a6981be6b200f4160"
+        },
+        {
+          "index": 5,
+          "role": "assistant",
+          "reference_message_tokens": 101,
+          "characters": 0,
+          "sha256": "5962e15b875655d52b3a780b6692e3c4f16569f47d56e61a477f5bdfec37b152",
+          "native_decision_argument_tokens": 38
+        },
+        {
+          "index": 6,
+          "role": "tool",
+          "reference_message_tokens": 1148,
+          "characters": 1670,
+          "sha256": "2e75b7bfd4c920d579016dd3e6f96f2f2ee2dd55f0bc4a72cd7bad4096b0287f",
+          "body_reference_tokens": 0,
+          "body_characters": 0,
+          "url": null,
+          "truncated": true
+        },
+        {
+          "index": 7,
+          "role": "assistant",
+          "reference_message_tokens": 228,
+          "characters": 0,
+          "sha256": "f694c4e4cac2c5f0917a01d02a0a43c8a6208238230e7d85abf81fa7860e5d06",
+          "native_decision_argument_tokens": 171
+        },
+        {
+          "index": 8,
+          "role": "tool",
+          "reference_message_tokens": 4798,
+          "characters": 6095,
+          "sha256": "5191f9c3b0f594e051af93e7b14430217660865dd9b46576b888def7ae212534",
+          "body_reference_tokens": 4260,
+          "body_characters": 5000,
+          "url": "https://www.dzwww.com/xinwen/shehuixinwen/202503/t20250317_15664978.htm",
+          "truncated": true
+        },
+        {
+          "index": 9,
+          "role": "assistant",
+          "reference_message_tokens": 273,
+          "characters": 0,
+          "sha256": "8cc5ee082f4998eb064a0c5e4f2e1e6013b9b4e2f8c3184697bd3b99e698ebbd",
+          "native_decision_argument_tokens": 213
+        },
+        {
+          "index": 10,
+          "role": "tool",
+          "reference_message_tokens": 4535,
+          "characters": 5040,
+          "sha256": "a4dda94109a144d595ee9e5e7bbd084708b6a1943dd41d2625722219c47ec653",
+          "body_reference_tokens": 4016,
+          "body_characters": 4000,
+          "url": "https://news.qq.com/rain/a/20250626A08H9P00",
+          "truncated": true
+        },
+        {
+          "index": 11,
+          "role": "assistant",
+          "reference_message_tokens": 300,
+          "characters": 0,
+          "sha256": "88ba7df532e4e878e432d4b2b5727f58a41db13d6d3a674b68cfe1b68520ede2",
+          "native_decision_argument_tokens": 238
+        },
+        {
+          "index": 12,
+          "role": "tool",
+          "reference_message_tokens": 1226,
+          "characters": 1957,
+          "sha256": "c4cc630e7be141936105370994f947a03be4982c7880451937db9498b1f50625",
+          "body_reference_tokens": 0,
+          "body_characters": 0,
+          "url": null,
+          "truncated": true
+        },
+        {
+          "index": 13,
+          "role": "system",
+          "reference_message_tokens": 850,
+          "characters": 4395,
+          "sha256": "2461ba05aa66cb2d5bc02b54621ba0693f82fd53ccb0043d6f5d959dcfb7d5a0"
+        }
+      ],
+      "tools_reference_tokens": 1166,
+      "standalone_counts_are_nonadditive": true
+    },
+    "blocked_components": {
+      "complete_reference_tokens": 22832,
+      "messages": [
+        {
+          "index": 0,
+          "role": "system",
+          "reference_message_tokens": 2842,
+          "characters": 8003,
+          "sha256": "1a2e53be5ff0fca5bc07518c4529f2aedb7126dd30a5db1cd059773e5f1a7e91"
+        },
+        {
+          "index": 1,
+          "role": "user",
+          "reference_message_tokens": 86,
+          "characters": 66,
+          "sha256": "b7135a14cf01a9f54cb397f6b24eea6e83492c68af68786ceaf888c08189c931"
+        },
+        {
+          "index": 2,
+          "role": "assistant",
+          "reference_message_tokens": 1010,
+          "characters": 828,
+          "sha256": "24c49f54ef1d6ebef36007e02e1edffde190ae3794388139defadeedfd85ca6b"
+        },
+        {
+          "index": 3,
+          "role": "system",
+          "reference_message_tokens": 288,
+          "characters": 1489,
+          "sha256": "168d8681eccf17702860ee5b3625253171e6ad4ac36b486adc8118fc75159a12"
+        },
+        {
+          "index": 4,
+          "role": "user",
+          "reference_message_tokens": 65,
+          "characters": 47,
+          "sha256": "6028a76b8517511269de8dd52e5951f089f63592bae8dd4a6981be6b200f4160"
+        },
+        {
+          "index": 5,
+          "role": "assistant",
+          "reference_message_tokens": 101,
+          "characters": 0,
+          "sha256": "5962e15b875655d52b3a780b6692e3c4f16569f47d56e61a477f5bdfec37b152",
+          "native_decision_argument_tokens": 38
+        },
+        {
+          "index": 6,
+          "role": "tool",
+          "reference_message_tokens": 1148,
+          "characters": 1670,
+          "sha256": "2e75b7bfd4c920d579016dd3e6f96f2f2ee2dd55f0bc4a72cd7bad4096b0287f",
+          "body_reference_tokens": 0,
+          "body_characters": 0,
+          "url": null,
+          "truncated": true
+        },
+        {
+          "index": 7,
+          "role": "assistant",
+          "reference_message_tokens": 228,
+          "characters": 0,
+          "sha256": "f694c4e4cac2c5f0917a01d02a0a43c8a6208238230e7d85abf81fa7860e5d06",
+          "native_decision_argument_tokens": 171
+        },
+        {
+          "index": 8,
+          "role": "tool",
+          "reference_message_tokens": 4798,
+          "characters": 6095,
+          "sha256": "5191f9c3b0f594e051af93e7b14430217660865dd9b46576b888def7ae212534",
+          "body_reference_tokens": 4260,
+          "body_characters": 5000,
+          "url": "https://www.dzwww.com/xinwen/shehuixinwen/202503/t20250317_15664978.htm",
+          "truncated": true
+        },
+        {
+          "index": 9,
+          "role": "assistant",
+          "reference_message_tokens": 273,
+          "characters": 0,
+          "sha256": "8cc5ee082f4998eb064a0c5e4f2e1e6013b9b4e2f8c3184697bd3b99e698ebbd",
+          "native_decision_argument_tokens": 213
+        },
+        {
+          "index": 10,
+          "role": "tool",
+          "reference_message_tokens": 4535,
+          "characters": 5040,
+          "sha256": "a4dda94109a144d595ee9e5e7bbd084708b6a1943dd41d2625722219c47ec653",
+          "body_reference_tokens": 4016,
+          "body_characters": 4000,
+          "url": "https://news.qq.com/rain/a/20250626A08H9P00",
+          "truncated": true
+        },
+        {
+          "index": 11,
+          "role": "assistant",
+          "reference_message_tokens": 300,
+          "characters": 0,
+          "sha256": "88ba7df532e4e878e432d4b2b5727f58a41db13d6d3a674b68cfe1b68520ede2",
+          "native_decision_argument_tokens": 238
+        },
+        {
+          "index": 12,
+          "role": "tool",
+          "reference_message_tokens": 1226,
+          "characters": 1957,
+          "sha256": "c4cc630e7be141936105370994f947a03be4982c7880451937db9498b1f50625",
+          "body_reference_tokens": 0,
+          "body_characters": 0,
+          "url": null,
+          "truncated": true
+        },
+        {
+          "index": 13,
+          "role": "assistant",
+          "reference_message_tokens": 384,
+          "characters": 0,
+          "sha256": "5a2c699f5bd430c6ca518c56bc4250ad93873b74f8c5a2fcb20de6ec78467fa2",
+          "native_decision_argument_tokens": 322
+        },
+        {
+          "index": 14,
+          "role": "tool",
+          "reference_message_tokens": 3301,
+          "characters": 3580,
+          "sha256": "21603cf8e7af5d01e43314ebb9c272bdc00806b687b02867214efabc4aa43f3f",
+          "body_reference_tokens": 2883,
+          "body_characters": 2601,
+          "url": "https://m.bjnews.com.cn/detail/1750921184129529.html",
+          "truncated": false
+        },
+        {
+          "index": 15,
+          "role": "system",
+          "reference_message_tokens": 801,
+          "characters": 4127,
+          "sha256": "a67d11ed516010e711a416062e2719e5ba0dca119569e6b3585f3b7733ed26c0"
+        }
+      ],
+      "tools_reference_tokens": 1176,
+      "standalone_counts_are_nonadditive": true
+    },
+    "larger_components": {
+      "complete_reference_tokens": 22832,
+      "messages": [
+        {
+          "index": 0,
+          "role": "system",
+          "reference_message_tokens": 2842,
+          "characters": 8003,
+          "sha256": "1a2e53be5ff0fca5bc07518c4529f2aedb7126dd30a5db1cd059773e5f1a7e91"
+        },
+        {
+          "index": 1,
+          "role": "user",
+          "reference_message_tokens": 86,
+          "characters": 66,
+          "sha256": "b7135a14cf01a9f54cb397f6b24eea6e83492c68af68786ceaf888c08189c931"
+        },
+        {
+          "index": 2,
+          "role": "assistant",
+          "reference_message_tokens": 1010,
+          "characters": 828,
+          "sha256": "24c49f54ef1d6ebef36007e02e1edffde190ae3794388139defadeedfd85ca6b"
+        },
+        {
+          "index": 3,
+          "role": "system",
+          "reference_message_tokens": 288,
+          "characters": 1489,
+          "sha256": "168d8681eccf17702860ee5b3625253171e6ad4ac36b486adc8118fc75159a12"
+        },
+        {
+          "index": 4,
+          "role": "user",
+          "reference_message_tokens": 65,
+          "characters": 47,
+          "sha256": "6028a76b8517511269de8dd52e5951f089f63592bae8dd4a6981be6b200f4160"
+        },
+        {
+          "index": 5,
+          "role": "assistant",
+          "reference_message_tokens": 101,
+          "characters": 0,
+          "sha256": "5962e15b875655d52b3a780b6692e3c4f16569f47d56e61a477f5bdfec37b152",
+          "native_decision_argument_tokens": 38
+        },
+        {
+          "index": 6,
+          "role": "tool",
+          "reference_message_tokens": 1148,
+          "characters": 1670,
+          "sha256": "2e75b7bfd4c920d579016dd3e6f96f2f2ee2dd55f0bc4a72cd7bad4096b0287f",
+          "body_reference_tokens": 0,
+          "body_characters": 0,
+          "url": null,
+          "truncated": true
+        },
+        {
+          "index": 7,
+          "role": "assistant",
+          "reference_message_tokens": 228,
+          "characters": 0,
+          "sha256": "f694c4e4cac2c5f0917a01d02a0a43c8a6208238230e7d85abf81fa7860e5d06",
+          "native_decision_argument_tokens": 171
+        },
+        {
+          "index": 8,
+          "role": "tool",
+          "reference_message_tokens": 4798,
+          "characters": 6095,
+          "sha256": "5191f9c3b0f594e051af93e7b14430217660865dd9b46576b888def7ae212534",
+          "body_reference_tokens": 4260,
+          "body_characters": 5000,
+          "url": "https://www.dzwww.com/xinwen/shehuixinwen/202503/t20250317_15664978.htm",
+          "truncated": true
+        },
+        {
+          "index": 9,
+          "role": "assistant",
+          "reference_message_tokens": 273,
+          "characters": 0,
+          "sha256": "8cc5ee082f4998eb064a0c5e4f2e1e6013b9b4e2f8c3184697bd3b99e698ebbd",
+          "native_decision_argument_tokens": 213
+        },
+        {
+          "index": 10,
+          "role": "tool",
+          "reference_message_tokens": 4535,
+          "characters": 5040,
+          "sha256": "a4dda94109a144d595ee9e5e7bbd084708b6a1943dd41d2625722219c47ec653",
+          "body_reference_tokens": 4016,
+          "body_characters": 4000,
+          "url": "https://news.qq.com/rain/a/20250626A08H9P00",
+          "truncated": true
+        },
+        {
+          "index": 11,
+          "role": "assistant",
+          "reference_message_tokens": 300,
+          "characters": 0,
+          "sha256": "88ba7df532e4e878e432d4b2b5727f58a41db13d6d3a674b68cfe1b68520ede2",
+          "native_decision_argument_tokens": 238
+        },
+        {
+          "index": 12,
+          "role": "tool",
+          "reference_message_tokens": 1226,
+          "characters": 1957,
+          "sha256": "c4cc630e7be141936105370994f947a03be4982c7880451937db9498b1f50625",
+          "body_reference_tokens": 0,
+          "body_characters": 0,
+          "url": null,
+          "truncated": true
+        },
+        {
+          "index": 13,
+          "role": "assistant",
+          "reference_message_tokens": 384,
+          "characters": 0,
+          "sha256": "5a2c699f5bd430c6ca518c56bc4250ad93873b74f8c5a2fcb20de6ec78467fa2",
+          "native_decision_argument_tokens": 322
+        },
+        {
+          "index": 14,
+          "role": "tool",
+          "reference_message_tokens": 3301,
+          "characters": 3580,
+          "sha256": "21603cf8e7af5d01e43314ebb9c272bdc00806b687b02867214efabc4aa43f3f",
+          "body_reference_tokens": 2883,
+          "body_characters": 2601,
+          "url": "https://m.bjnews.com.cn/detail/1750921184129529.html",
+          "truncated": false
+        },
+        {
+          "index": 15,
+          "role": "system",
+          "reference_message_tokens": 801,
+          "characters": 4127,
+          "sha256": "a67d11ed516010e711a416062e2719e5ba0dca119569e6b3585f3b7733ed26c0"
+        }
+      ],
+      "tools_reference_tokens": 1176,
+      "standalone_counts_are_nonadditive": true
+    },
+    "high_preserves_original_history": true,
+    "scope": "offline exact previous-wire match; next request recreated from recorded native calls, tool receipts and unchanged Runtime policies; not captured from original dispatch"
+  },
+  {
+    "case": "single_text-system",
+    "prior_wire_exact_match": true,
+    "prior_payload_sha256": "b44325263a1ec4e02b80e267eb734b973fefcf4802cfb541a49af372c7fb4aca",
+    "prior_agent_fit": {
+      "dispatch_allowed": true,
+      "report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 20674,
+        "estimated_input_tokens": 20674,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      }
+    },
+    "prior_complete_fit": {
+      "dispatch_allowed": true,
+      "report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 21928,
+        "estimated_input_tokens": 21026,
+        "omitted_history_indices": [
+          1
+        ],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      }
+    },
+    "next_agent_fit": {
+      "dispatch_allowed": true,
+      "report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 22198,
+        "estimated_input_tokens": 21296,
+        "omitted_history_indices": [
+          1
+        ],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      }
+    },
+    "next_complete_fit_current": {
+      "dispatch_allowed": false,
+      "report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 22550,
+        "estimated_input_tokens": 22550,
+        "omitted_history_indices": [
+          1
+        ],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      }
+    },
+    "next_complete_fit_larger": {
+      "dispatch_allowed": true,
+      "report": {
+        "estimated_token_limit": 35617,
+        "estimated_original_tokens": 23452,
+        "estimated_input_tokens": 23452,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      }
+    },
+    "blocked_wire_sha256": "6afba4c6ed1b55347bfa1d486e28b695430fad5437ad6196451b9b49c63f8e7b",
+    "larger_wire_sha256": "68ab0740eb327789c40bd694909eb1fa8ca60aa957dde55da7bb69b334c6893f",
+    "prior_components": {
+      "complete_reference_tokens": 21026,
+      "messages": [
+        {
+          "index": 0,
+          "role": "system",
+          "reference_message_tokens": 3078,
+          "characters": 9249,
+          "sha256": "a04575cd9f7991d9c547c46dde5641a7801ae11c704d8cc997cb7c7b272ff970"
+        },
+        {
+          "index": 1,
+          "role": "user",
+          "reference_message_tokens": 86,
+          "characters": 66,
+          "sha256": "b7135a14cf01a9f54cb397f6b24eea6e83492c68af68786ceaf888c08189c931"
+        },
+        {
+          "index": 2,
+          "role": "assistant",
+          "reference_message_tokens": 30,
+          "characters": 122,
+          "sha256": "6320352e128bcb56e6dca945e31f39e95cfda9c337ac1b47920079a3d2d90a0f"
+        },
+        {
+          "index": 3,
+          "role": "user",
+          "reference_message_tokens": 65,
+          "characters": 47,
+          "sha256": "6028a76b8517511269de8dd52e5951f089f63592bae8dd4a6981be6b200f4160"
+        },
+        {
+          "index": 4,
+          "role": "assistant",
+          "reference_message_tokens": 95,
+          "characters": 0,
+          "sha256": "ff914cb94ac4318d39c89253aa06e648cbe5f3767f646840c8e5b38aca2eca36",
+          "native_decision_argument_tokens": 32
+        },
+        {
+          "index": 5,
+          "role": "tool",
+          "reference_message_tokens": 988,
+          "characters": 1551,
+          "sha256": "794f429330d2a9262932d204a3132dbbbac6a7fd8612c11834c2f921136b9046",
+          "body_reference_tokens": 0,
+          "body_characters": 0,
+          "url": null,
+          "truncated": true
+        },
+        {
+          "index": 6,
+          "role": "assistant",
+          "reference_message_tokens": 194,
+          "characters": 0,
+          "sha256": "092ecb5a2179728120670cc244b207d98e6a7546bc8d7f3571d4ad9781c1b51d",
+          "native_decision_argument_tokens": 134
+        },
+        {
+          "index": 7,
+          "role": "tool",
+          "reference_message_tokens": 1343,
+          "characters": 1900,
+          "sha256": "8d7d5253a573fec78c45e7e1114797aee2fcdedea2a0898dba451259126cb81d",
+          "body_reference_tokens": 0,
+          "body_characters": 0,
+          "url": null,
+          "truncated": true
+        },
+        {
+          "index": 8,
+          "role": "assistant",
+          "reference_message_tokens": 175,
+          "characters": 0,
+          "sha256": "3ca75be84743a359c8aef8a5f0aec28964c015f0b172d19b35b4034a167d024a",
+          "native_decision_argument_tokens": 116
+        },
+        {
+          "index": 9,
+          "role": "tool",
+          "reference_message_tokens": 2052,
+          "characters": 2695,
+          "sha256": "68979bbeac4f16b7cc5925a15e052f805ddb92a87151cda238a82ffd5a397583",
+          "body_reference_tokens": 1651,
+          "body_characters": 1730,
+          "url": "https://m.voc.com.cn/xhn/news/202506/29805452.html",
+          "truncated": false
+        },
+        {
+          "index": 10,
+          "role": "assistant",
+          "reference_message_tokens": 280,
+          "characters": 0,
+          "sha256": "96c6be59b6414bf8328dad306c8d15e84d1e89b96bd0ff482259337c88a9167e",
+          "native_decision_argument_tokens": 221
+        },
+        {
+          "index": 11,
+          "role": "tool",
+          "reference_message_tokens": 1174,
+          "characters": 1869,
+          "sha256": "23522e0e11feb3cf0814ef8ddea08a058701f4fb6137e26a508dbd851a2d35fb",
+          "body_reference_tokens": 0,
+          "body_characters": 0,
+          "url": null,
+          "truncated": true
+        },
+        {
+          "index": 12,
+          "role": "assistant",
+          "reference_message_tokens": 300,
+          "characters": 0,
+          "sha256": "100bba0eb8872c15a63bf44e468b2518351b18ad900b80c83fa1cd6df40befa0",
+          "native_decision_argument_tokens": 242
+        },
+        {
+          "index": 13,
+          "role": "tool",
+          "reference_message_tokens": 4358,
+          "characters": 4828,
+          "sha256": "5d1e8e560d460b194c9dcc0ba053d6fb79fcce75c119c3a731d94dea330c4624",
+          "body_reference_tokens": 3923,
+          "body_characters": 3810,
+          "url": "https://app.dahecube.com/nweb/news/20250627/239583n579fa9378f2.htm?artid=239583",
+          "truncated": false
+        },
+        {
+          "index": 14,
+          "role": "assistant",
+          "reference_message_tokens": 360,
+          "characters": 0,
+          "sha256": "1ebf00347177c9b3f930a89429b9530ee370fe841c0086589ec4e1ea2d215467",
+          "native_decision_argument_tokens": 301
+        },
+        {
+          "index": 15,
+          "role": "tool",
+          "reference_message_tokens": 6198,
+          "characters": 6013,
+          "sha256": "d938aae64f8bf838d0b0d51f9126f506950a6133324c44b6e07a4c784725a976",
+          "body_reference_tokens": 5695,
+          "body_characters": 5000,
+          "url": "https://item.btime.com/41v8i91ponu8e9pnuojftmddbgs",
+          "truncated": true
+        }
+      ],
+      "tools_reference_tokens": 1,
+      "standalone_counts_are_nonadditive": true
+    },
+    "blocked_components": {
+      "complete_reference_tokens": 22550,
+      "messages": [
+        {
+          "index": 0,
+          "role": "system",
+          "reference_message_tokens": 3078,
+          "characters": 9249,
+          "sha256": "a04575cd9f7991d9c547c46dde5641a7801ae11c704d8cc997cb7c7b272ff970"
+        },
+        {
+          "index": 1,
+          "role": "user",
+          "reference_message_tokens": 86,
+          "characters": 66,
+          "sha256": "b7135a14cf01a9f54cb397f6b24eea6e83492c68af68786ceaf888c08189c931"
+        },
+        {
+          "index": 2,
+          "role": "assistant",
+          "reference_message_tokens": 30,
+          "characters": 122,
+          "sha256": "6320352e128bcb56e6dca945e31f39e95cfda9c337ac1b47920079a3d2d90a0f"
+        },
+        {
+          "index": 3,
+          "role": "user",
+          "reference_message_tokens": 65,
+          "characters": 47,
+          "sha256": "6028a76b8517511269de8dd52e5951f089f63592bae8dd4a6981be6b200f4160"
+        },
+        {
+          "index": 4,
+          "role": "assistant",
+          "reference_message_tokens": 95,
+          "characters": 0,
+          "sha256": "ff914cb94ac4318d39c89253aa06e648cbe5f3767f646840c8e5b38aca2eca36",
+          "native_decision_argument_tokens": 32
+        },
+        {
+          "index": 5,
+          "role": "tool",
+          "reference_message_tokens": 988,
+          "characters": 1551,
+          "sha256": "794f429330d2a9262932d204a3132dbbbac6a7fd8612c11834c2f921136b9046",
+          "body_reference_tokens": 0,
+          "body_characters": 0,
+          "url": null,
+          "truncated": true
+        },
+        {
+          "index": 6,
+          "role": "assistant",
+          "reference_message_tokens": 194,
+          "characters": 0,
+          "sha256": "092ecb5a2179728120670cc244b207d98e6a7546bc8d7f3571d4ad9781c1b51d",
+          "native_decision_argument_tokens": 134
+        },
+        {
+          "index": 7,
+          "role": "tool",
+          "reference_message_tokens": 1343,
+          "characters": 1900,
+          "sha256": "8d7d5253a573fec78c45e7e1114797aee2fcdedea2a0898dba451259126cb81d",
+          "body_reference_tokens": 0,
+          "body_characters": 0,
+          "url": null,
+          "truncated": true
+        },
+        {
+          "index": 8,
+          "role": "assistant",
+          "reference_message_tokens": 175,
+          "characters": 0,
+          "sha256": "3ca75be84743a359c8aef8a5f0aec28964c015f0b172d19b35b4034a167d024a",
+          "native_decision_argument_tokens": 116
+        },
+        {
+          "index": 9,
+          "role": "tool",
+          "reference_message_tokens": 2052,
+          "characters": 2695,
+          "sha256": "68979bbeac4f16b7cc5925a15e052f805ddb92a87151cda238a82ffd5a397583",
+          "body_reference_tokens": 1651,
+          "body_characters": 1730,
+          "url": "https://m.voc.com.cn/xhn/news/202506/29805452.html",
+          "truncated": false
+        },
+        {
+          "index": 10,
+          "role": "assistant",
+          "reference_message_tokens": 280,
+          "characters": 0,
+          "sha256": "96c6be59b6414bf8328dad306c8d15e84d1e89b96bd0ff482259337c88a9167e",
+          "native_decision_argument_tokens": 221
+        },
+        {
+          "index": 11,
+          "role": "tool",
+          "reference_message_tokens": 1174,
+          "characters": 1869,
+          "sha256": "23522e0e11feb3cf0814ef8ddea08a058701f4fb6137e26a508dbd851a2d35fb",
+          "body_reference_tokens": 0,
+          "body_characters": 0,
+          "url": null,
+          "truncated": true
+        },
+        {
+          "index": 12,
+          "role": "assistant",
+          "reference_message_tokens": 300,
+          "characters": 0,
+          "sha256": "100bba0eb8872c15a63bf44e468b2518351b18ad900b80c83fa1cd6df40befa0",
+          "native_decision_argument_tokens": 242
+        },
+        {
+          "index": 13,
+          "role": "tool",
+          "reference_message_tokens": 4358,
+          "characters": 4828,
+          "sha256": "5d1e8e560d460b194c9dcc0ba053d6fb79fcce75c119c3a731d94dea330c4624",
+          "body_reference_tokens": 3923,
+          "body_characters": 3810,
+          "url": "https://app.dahecube.com/nweb/news/20250627/239583n579fa9378f2.htm?artid=239583",
+          "truncated": false
+        },
+        {
+          "index": 14,
+          "role": "assistant",
+          "reference_message_tokens": 360,
+          "characters": 0,
+          "sha256": "1ebf00347177c9b3f930a89429b9530ee370fe841c0086589ec4e1ea2d215467",
+          "native_decision_argument_tokens": 301
+        },
+        {
+          "index": 15,
+          "role": "tool",
+          "reference_message_tokens": 6198,
+          "characters": 6013,
+          "sha256": "d938aae64f8bf838d0b0d51f9126f506950a6133324c44b6e07a4c784725a976",
+          "body_reference_tokens": 5695,
+          "body_characters": 5000,
+          "url": "https://item.btime.com/41v8i91ponu8e9pnuojftmddbgs",
+          "truncated": true
+        },
+        {
+          "index": 16,
+          "role": "system",
+          "reference_message_tokens": 1509,
+          "characters": 1617,
+          "sha256": "446afd4ee0ea488e631ae21f78b5afaf702c1ee37abd1535f1624837f93c6a37"
+        }
+      ],
+      "tools_reference_tokens": 1,
+      "standalone_counts_are_nonadditive": true
+    },
+    "larger_components": {
+      "complete_reference_tokens": 23452,
+      "messages": [
+        {
+          "index": 0,
+          "role": "system",
+          "reference_message_tokens": 3078,
+          "characters": 9249,
+          "sha256": "a04575cd9f7991d9c547c46dde5641a7801ae11c704d8cc997cb7c7b272ff970"
+        },
+        {
+          "index": 1,
+          "role": "user",
+          "reference_message_tokens": 86,
+          "characters": 66,
+          "sha256": "b7135a14cf01a9f54cb397f6b24eea6e83492c68af68786ceaf888c08189c931"
+        },
+        {
+          "index": 2,
+          "role": "assistant",
+          "reference_message_tokens": 932,
+          "characters": 792,
+          "sha256": "baf58db0d820440055874ec2d9268116f2c8ba93d337cccc3998576e2f2216d8"
+        },
+        {
+          "index": 3,
+          "role": "user",
+          "reference_message_tokens": 65,
+          "characters": 47,
+          "sha256": "6028a76b8517511269de8dd52e5951f089f63592bae8dd4a6981be6b200f4160"
+        },
+        {
+          "index": 4,
+          "role": "assistant",
+          "reference_message_tokens": 95,
+          "characters": 0,
+          "sha256": "ff914cb94ac4318d39c89253aa06e648cbe5f3767f646840c8e5b38aca2eca36",
+          "native_decision_argument_tokens": 32
+        },
+        {
+          "index": 5,
+          "role": "tool",
+          "reference_message_tokens": 988,
+          "characters": 1551,
+          "sha256": "794f429330d2a9262932d204a3132dbbbac6a7fd8612c11834c2f921136b9046",
+          "body_reference_tokens": 0,
+          "body_characters": 0,
+          "url": null,
+          "truncated": true
+        },
+        {
+          "index": 6,
+          "role": "assistant",
+          "reference_message_tokens": 194,
+          "characters": 0,
+          "sha256": "092ecb5a2179728120670cc244b207d98e6a7546bc8d7f3571d4ad9781c1b51d",
+          "native_decision_argument_tokens": 134
+        },
+        {
+          "index": 7,
+          "role": "tool",
+          "reference_message_tokens": 1343,
+          "characters": 1900,
+          "sha256": "8d7d5253a573fec78c45e7e1114797aee2fcdedea2a0898dba451259126cb81d",
+          "body_reference_tokens": 0,
+          "body_characters": 0,
+          "url": null,
+          "truncated": true
+        },
+        {
+          "index": 8,
+          "role": "assistant",
+          "reference_message_tokens": 175,
+          "characters": 0,
+          "sha256": "3ca75be84743a359c8aef8a5f0aec28964c015f0b172d19b35b4034a167d024a",
+          "native_decision_argument_tokens": 116
+        },
+        {
+          "index": 9,
+          "role": "tool",
+          "reference_message_tokens": 2052,
+          "characters": 2695,
+          "sha256": "68979bbeac4f16b7cc5925a15e052f805ddb92a87151cda238a82ffd5a397583",
+          "body_reference_tokens": 1651,
+          "body_characters": 1730,
+          "url": "https://m.voc.com.cn/xhn/news/202506/29805452.html",
+          "truncated": false
+        },
+        {
+          "index": 10,
+          "role": "assistant",
+          "reference_message_tokens": 280,
+          "characters": 0,
+          "sha256": "96c6be59b6414bf8328dad306c8d15e84d1e89b96bd0ff482259337c88a9167e",
+          "native_decision_argument_tokens": 221
+        },
+        {
+          "index": 11,
+          "role": "tool",
+          "reference_message_tokens": 1174,
+          "characters": 1869,
+          "sha256": "23522e0e11feb3cf0814ef8ddea08a058701f4fb6137e26a508dbd851a2d35fb",
+          "body_reference_tokens": 0,
+          "body_characters": 0,
+          "url": null,
+          "truncated": true
+        },
+        {
+          "index": 12,
+          "role": "assistant",
+          "reference_message_tokens": 300,
+          "characters": 0,
+          "sha256": "100bba0eb8872c15a63bf44e468b2518351b18ad900b80c83fa1cd6df40befa0",
+          "native_decision_argument_tokens": 242
+        },
+        {
+          "index": 13,
+          "role": "tool",
+          "reference_message_tokens": 4358,
+          "characters": 4828,
+          "sha256": "5d1e8e560d460b194c9dcc0ba053d6fb79fcce75c119c3a731d94dea330c4624",
+          "body_reference_tokens": 3923,
+          "body_characters": 3810,
+          "url": "https://app.dahecube.com/nweb/news/20250627/239583n579fa9378f2.htm?artid=239583",
+          "truncated": false
+        },
+        {
+          "index": 14,
+          "role": "assistant",
+          "reference_message_tokens": 360,
+          "characters": 0,
+          "sha256": "1ebf00347177c9b3f930a89429b9530ee370fe841c0086589ec4e1ea2d215467",
+          "native_decision_argument_tokens": 301
+        },
+        {
+          "index": 15,
+          "role": "tool",
+          "reference_message_tokens": 6198,
+          "characters": 6013,
+          "sha256": "d938aae64f8bf838d0b0d51f9126f506950a6133324c44b6e07a4c784725a976",
+          "body_reference_tokens": 5695,
+          "body_characters": 5000,
+          "url": "https://item.btime.com/41v8i91ponu8e9pnuojftmddbgs",
+          "truncated": true
+        },
+        {
+          "index": 16,
+          "role": "system",
+          "reference_message_tokens": 1509,
+          "characters": 1617,
+          "sha256": "446afd4ee0ea488e631ae21f78b5afaf702c1ee37abd1535f1624837f93c6a37"
+        }
+      ],
+      "tools_reference_tokens": 1,
+      "standalone_counts_are_nonadditive": true
+    },
+    "high_preserves_original_history": true,
+    "scope": "offline exact previous-wire match; next request recreated from recorded native calls, tool receipts and unchanged Runtime policies; not captured from original dispatch"
+  }
+]

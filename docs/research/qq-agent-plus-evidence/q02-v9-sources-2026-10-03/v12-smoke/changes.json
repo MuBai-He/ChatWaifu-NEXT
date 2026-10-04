@@ -1,0 +1,14 @@
+{
+  "parent_snapshot": "/tmp/cw2-q02-source-revision-v11-eval",
+  "snapshot": "/tmp/cw2-q02-source-revision-v12-eval",
+  "files": {
+    "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py": "983a59fe7523b072786e5c7e2cd9f0131ea7ae3dc5e172ae02ccfd31e625b491",
+    "services/runtime/src/chatwaifu_runtime/agent/source_answer.py": "a66662ab600629e96a15dbaebb0ffaaee7bb122c9683ab02ba22ab025a30f281",
+    "services/runtime/src/chatwaifu_runtime/providers/contracts.py": "ed6d3fdd96ae559f918f19b53f6ca3aac475a3e7091e452f8a696ced4cec19d8",
+    "services/runtime/src/chatwaifu_runtime/providers/openai_compatible.py": "3e9f3a773279f0e048c354c1f26d3008c3aa131925391046a97a78caf7b17853",
+    "services/runtime/tests/test_llm_input_budget.py": "d7d24ac3818566a3f991df62c30f67769c670942815ec981eac028b1b3480aeb",
+    "services/runtime/tests/test_tool_calling_agent.py": "d212a49a7c27aa77f97aa676972e8b3d5f59bc8d07ea0e86454da00dc5a38f89",
+    "services/runtime/tests/test_runtime_source_evaluation.py": "9f209fcb8dd0d01767a3848b61624a20f90b87624ca5fa1ce80615e0fff6f9e0",
+    "tools/runtime_source_evaluation.py": "1f58d07667f8bef8797ac43eb52caaf3e751d220fe33d0b40f7740ab832ee27a"
+  }
+}

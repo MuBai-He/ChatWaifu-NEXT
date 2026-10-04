@@ -1,0 +1,176 @@
+{
+  "adjudicated_rows": [
+    {
+      "final_grade": "complete",
+      "previous_grade": "partial",
+      "previous_reason": "核心“不足以证明所有国内航班实施”的结论正确；但在“公告能够直接证明”的段落里写“并将该增补内容分发给全部193个成员国”，未清楚保留原文“will be provided”的未来安排，证据强度表述偏强。问题是计划与既成事实边界不清，不据此断言真实分发未发生。",
+      "reason": "全文同时使用“并将”“仅说明将补篇提供”，并明确区分文件安排与成员国已实施；不能把“将”单句读作完成态。撤销计划/既成事实误判，原材料范围与指定时点仍保留。没有修改模型原始或发布答复。",
+      "sample_key": "frozen_icao:r1:t3"
+    }
+  ],
+  "complete": 14,
+  "criteria": "Same source fidelity criteria, including condition relations, applicability, requested organization and retained unresolved scope. No extra domestic requirements for ICAO overview; no keyword-only approval.",
+  "independent_or_blind_review": false,
+  "items": [
+    {
+      "execution": "completed",
+      "failure_dimensions": [],
+      "grade": "complete",
+      "reason": "文末标注日期与生效日分开说明；每人2个、禁止给充电宝充电、机组运行例外及材料的国际细则/成员国提供范围得到保留。没有加入国内3C、召回或Wh要求。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "9e6d445be0a0b51451b82fe0098884d76c1149b96decaf58db93f48b618edd9f",
+      "sample_key": "frozen_icao:r0:t1"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [],
+      "grade": "complete",
+      "reason": "明确该公告没有100Wh/160Wh分档，没有从其他规则补出数值。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "ccccdc8487213831fd1b3dde697a312a7b7401d6b51188fa99115e3557fc53ff",
+      "sample_key": "frozen_icao:r0:t2"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [],
+      "grade": "complete",
+      "reason": "不能证明指定日期所有国内航班执行的结论和时点保留；只将国内规章转化/执行列作材料没有说明的未知范围，没有像旧失败样本那样肯定宣称某种必经法律转化机制。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "ab40540c312e643804a0b6482691fee04b5e0eec51a1bc3191ff791fafca4a7b",
+      "sample_key": "frozen_icao:r0:t3"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [],
+      "grade": "complete",
+      "reason": "三条组织保留来源日期/链接、2个限制、禁止给充电宝充电及机组例外；保留第三轮针对10月4日国内实施未核实的完整声明。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "46b9f324f83678baab7d942438abad08bd5ac5a9860b58066eca45ad21417d93",
+      "sample_key": "frozen_icao:r0:t4"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [],
+      "grade": "complete",
+      "reason": "中文概述保留文末日期、生效日、数量、禁止行为对象、机组例外及来源范围，没有带入未请求国内条件或无关导航。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "c398252a5d797ca05f5dc2838d7763046402964cc665737132a8b899b897b023",
+      "sample_key": "frozen_icao:r1:t1"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [],
+      "grade": "complete",
+      "reason": "明确Wh值及分档不在所给公告中；没有伪造材料内容。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "f87608dca3bb1a7d13c6393da4d32bb80c1808edea099d334674a0f655f74950",
+      "sample_key": "frozen_icao:r1:t2"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [],
+      "grade": "complete",
+      "reason": "全文同时使用“并将”“仅说明将补篇提供”，并明确区分文件安排与成员国已实施；不能把“将”单句读作完成态。撤销计划/既成事实误判，原材料范围与指定时点仍保留。没有修改模型原始或发布答复。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "05ef91ba70d995f600cd607885859e591b5266a47cb9f0ddfb5c56c182cf1be5",
+      "sample_key": "frozen_icao:r1:t3"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [],
+      "grade": "complete",
+      "reason": "三条清单保留日期/实际链接、数量、禁止对象和机组例外，最后一条明确保留10月4日所有国内航班执行未知的声明。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "2a524f73cf353644917db373a7e72c237d5fbc248bec0e87440d195cac811d3d",
+      "sample_key": "frozen_icao:r1:t4"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [],
+      "grade": "complete",
+      "reason": "日期、国航范围与境内3C限定分清；召回/外观/标识/任一无法确认、数量、Wh区间及审批、运输/开关/绝缘/放置/行李架/两个禁止行为均保留。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "29fe0df613d63e4ef84b1463e20ed6df37427ee32724bc026df4900dd884b4cd",
+      "sample_key": "frozen_airchina:r0:t1"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [],
+      "grade": "complete",
+      "reason": "≤100Wh也受总数2块限制；>100Wh且≤160Wh须国航批准，实际携带和机上条件一并清楚保留。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "d3a5e8ba7542443b10117cf3196ec48f7cccfd59b9faa07e8ef0c45120fc5917",
+      "sample_key": "frozen_airchina:r0:t2"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [],
+      "grade": "complete",
+      "reason": "国航发布的规则与所有航司在10月4日的实际执行/后续修订分开，未将“按照民航局要求”当作全行业一致实施证明。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "db3a6b24ff87ff9db15bf6dbcca27829be83c6d8ab3a8f9108f6065c2744f851",
+      "sample_key": "frozen_airchina:r0:t3"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [],
+      "grade": "complete",
+      "reason": "三条完整保留条件、来源日期及实际URL、国航和境内3C范围；第三条附加保留前轮关于其他航司及10月4日時效未知的声明，未照搬页脚。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "e4829914ea2ae8140b4e60ac722c622fe2b21d1caaead478385e5f4ddd136b18",
+      "sample_key": "frozen_airchina:r0:t4"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [],
+      "grade": "complete",
+      "reason": "完整携带条件及否定/替代关系清楚，关机、绝缘与放置分别表达，国航范围和境内3C限定、发布日期保留。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "20f3a849bff13b7e789d4f0162bafcfc5b8017ba37db5b0a6481c4f6b8e6a8e9",
+      "sample_key": "frozen_airchina:r1:t1"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [
+        "source_condition_relation_ambiguous"
+      ],
+      "grade": "partial",
+      "reason": "禁运项将原文“无法确认额定能量或锂金属含量”改为“无法确认额定能量及锂金属含量”。否定句可能有不同作用域解释，不能断言一定强化或弱化，但未清楚保留任一无法确认即可触发的替代关系。其余数量、能量开闭区间、审批及机上要求保留。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "f089500353cdedd8546092f2aaf5ee30510806c0802353c05002d40bf7fdbc48",
+      "sample_key": "frozen_airchina:r1:t2"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [],
+      "grade": "complete",
+      "reason": "明确只证明国航8月4日文件内容，不能证明其他航司细则及8月4日至10月4日后续变动。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "c65402da55515bcadfb20251cd5df1a96963e68bbf31291ceb63b73a71f7dfb3",
+      "sample_key": "frozen_airchina:r1:t3"
+    },
+    {
+      "execution": "completed",
+      "failure_dimensions": [
+        "insulation_requirement_scope_ambiguous"
+      ],
+      "grade": "partial",
+      "reason": "第三条写“具备电源开关的需关闭电源并做好绝缘防护”，把关闭开关与绝缘接在同一条件下；原文绝缘要求是独立的全部充电宝要求。可能缩窄要求对象，不能仅因为出现“绝缘”就通过。其余携带限制、日期、链接、国航范围及前轮未知时点保留。",
+      "reply_origin": "provider_frame_rendered",
+      "reply_sha256": "9ac630abd4f7712afc27fb89898f85330630716d2ca644b8dea3545acda2cf13",
+      "sample_key": "frozen_airchina:r1:t4"
+    }
+  ],
+  "not_comparable_as_causal_ab_to_old_batches": true,
+  "original_review_file": "primary-review.json",
+  "original_review_sha256": "813e0869063ce4cb81f8dad0f74863e0b82bb2da1b522c614df046f37e085269",
+  "partial": 2,
+  "q02_approval": false,
+  "review_revision": "final-full-text-adjudication-1",
+  "reviewer": "implementation_author_direct_full_text_review",
+  "scope": "Configured High endpoint response chain; backend alias mapping not established. Actual completed Conversation flows, not intrinsic-model or causal A/B comparison.",
+  "source_text_sha256": {
+    "airchina": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+    "icao": "4dfe7980b04b1c65ed14156ce7cd8381f19b0cd7874e76b42315491f19df1fe3"
+  }
+}

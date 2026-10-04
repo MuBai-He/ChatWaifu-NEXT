@@ -1,0 +1,77 @@
+"""Audit dispatched payloads, historical failures, omissions and known usage."""
+import hashlib
+import json
+import sys
+from collections import Counter
+from pathlib import Path
+from chatwaifu_runtime.providers.input_estimation import count_reference_tokens
+
+def rows(path):
+    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()] if path.exists() else []
+
+def sha(value):
+    return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+
+def reference(p):
+    projection = {k:p[k] for k in ['messages','tools','tool_choice'] if k in p}
+    return count_reference_tokens(json.dumps(projection,ensure_ascii=False,separators=(',',':'))) + 16*len(p['messages']) + 16*len(p.get('tools',[]))
+
+def percentile(values, q):
+    if not values:return None
+    values=sorted(values);pos=(len(values)-1)*q;i=int(pos)
+    return round(values[i]+(values[min(i+1,len(values)-1)]-values[i])*(pos-i),2)
+
+stage=Path(sys.argv[1]);output=Path(sys.argv[2]);pilot=stage/'runtime-pilot'
+wires=rows(stage/'actual-provider-payloads.jsonl');journal=rows(pilot/'provider-rounds.jsonl')
+starts=[r for r in journal if r['event']=='started'];ends=[r for r in journal if r['event']=='finished']
+assert len(starts)==len(ends)==len(wires)
+assert len({r['call_id'] for r in starts})==len(starts)
+finished={r['call_id']:r for r in ends};checks=[];errors=[]
+for i,(wire,start) in enumerate(zip(wires,starts,strict=True)):
+    payload=wire['payload'];estimate=reference(payload);end=finished[start['call_id']]
+    assert sha(payload)==wire['payload_sha256']
+    assert payload['model']=='gemini-3.8-flash-high' and payload['max_tokens']==8192
+    report=start['input_budget_report'];assert estimate==report['estimated_input_tokens']<=report['estimated_token_limit']
+    if (end.get('usage') or {}).get('prompt_tokens'):
+        errors.append(100*(estimate-end['usage']['prompt_tokens'])/end['usage']['prompt_tokens'])
+    checks.append({'http_attempt':wire['http_attempt'],'sample_key':start['sample_key'],
+        'payload_sha256':sha(payload),'reference_tokens':estimate,'budget_report':report,
+        'error_type':end.get('error_type'),'http_status':end.get('http_status'),
+        'protocol_error_code':end.get('protocol_error_code'),'latency_ms':end['latency_ms']})
+samples=rows(pilot/'results.jsonl');incomplete=rows(pilot/'incomplete.jsonl')
+assert len({r['sample_key'] for r in samples})==len(samples)
+completed={r['sample_key'] for r in samples};expected={f'icao_provided_source_recovery:r0:t{i}:baseline' for i in range(1,5)}
+failed={r['sample_key'] for r in incomplete};usage={}
+for name in ['prompt_tokens','completion_tokens','total_tokens','reasoning_tokens']:
+    known=[r['usage'][name] for r in ends if r.get('usage') and isinstance(r['usage'].get(name),int)]
+    usage[name]={'reported':len(known),'attempts':len(ends),'known_subtotal':sum(known),'complete_total':sum(known) if len(known)==len(ends) else None}
+read_runs=[]
+for record in [*samples,*incomplete]:
+    for run in (record.get('runtime_source_trace') or {}).get('tool_runs',[]):
+        if run['skill_id']=='web.read' and run['state']=='succeeded':read_runs.append(run)
+read_runs=list({r['skill_run_id']:r for r in read_runs}.values())
+read_checks=[]
+for run in read_runs:
+    data=run['result']['data'];body=data['text'];serialized=json.dumps(body,ensure_ascii=False)[1:-1]
+    containing=[]
+    for i,w in enumerate(wires):
+        if any(isinstance(m.get('content'),str) and (body in m['content'] or serialized in m['content']) for m in w['payload']['messages']):containing.append(i+1)
+    read_checks.append({'skill_run_id':run['skill_run_id'],'url':data['url'],'provider':data.get('provider'),
+        'fallback':data.get('provider_fallback'),'body_sha256':data['body_sha256'],
+        'text_sha256':hashlib.sha256(body.encode()).hexdigest(),'text_offset':data.get('text_offset'),
+        'text_characters':len(body),'total_characters':data.get('total_characters'),'truncated':data['truncated'],
+        'dns_resolver':data['dns_resolver'],'whole_excerpt_present_in_http_attempts':containing})
+    assert containing and data['dns_resolver']=='cloudflare'
+report={'actual_http_attempts':len(wires),'wire_audit_passed':True,'wire_checks':checks,
+    'completed_model_answers':sum(r['runtime_source_trace']['reply_origin']=='provider' for r in samples),
+    'runtime_fallback_answers':sum(r['runtime_source_trace']['reply_origin']=='runtime_fallback' for r in samples),
+    'historical_incomplete':[{'sample_key':r['sample_key'],'reason':r['reason'],'later_completed':r['sample_key'] in completed} for r in incomplete],
+    'still_incomplete':sorted(failed-completed),'unexecuted':sorted(expected-completed-failed),
+    'usage':usage,'reference_error_percent_min_max':[round(min(errors),4),round(max(errors),4)] if errors else None,
+    'response_identity_counts':dict(Counter(x for r in ends for x in (r.get('response_identity') or {}).get('reported_model_ids',[]))),
+    'identity_unknown_attempts':sum(r.get('response_identity') is None for r in ends),
+    'logical_latency_p50_ms':percentile([r['latency_ms'] for r in samples],.5),
+    'logical_latency_p95_ms':percentile([r['latency_ms'] for r in samples],.95),
+    'actual_read_excerpts':read_checks,'q02_approval':False}
+output.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
+print(json.dumps({k:v for k,v in report.items() if k not in ['wire_checks','actual_read_excerpts']},ensure_ascii=False))

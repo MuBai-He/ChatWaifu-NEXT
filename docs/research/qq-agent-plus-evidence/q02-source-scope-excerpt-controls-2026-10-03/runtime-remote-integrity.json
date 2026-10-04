@@ -1,0 +1,125 @@
+{
+  "configured_credentials_absent": true,
+  "files": {
+    "runtime-v22/metadata.json": {
+      "sha256": "b603390b7605e94d63a5b925f4b3668f44887efca8f2b95b82f500fe9f69cdc2",
+      "bytes": 1583
+    },
+    "runtime-v22/results.jsonl": {
+      "sha256": "c51dde8362ccae449e220e984bd5242a7d347d5d5c1215d653b571f22c1f81bf",
+      "bytes": 274326
+    },
+    "runtime-v22/provider-rounds.jsonl": {
+      "sha256": "f3fb44cd5e0f6501d63925af1fc8fc7efeabc65e18fefb1642318ebcfb14f5bd",
+      "bytes": 378718
+    },
+    "runtime-v22/actual-provider-payloads.jsonl": {
+      "sha256": "b1412ee3c2cfbc191b6e51110a4950db32cd8ac370c4581dcdda5e8f7423e557",
+      "bytes": 515612
+    },
+    "runtime-v22/changes.json": {
+      "sha256": "fde40a460e6d68f945cfaea6100e00c168cbee90c72088e42ecee0541d9aed75",
+      "bytes": 616
+    },
+    "runtime-v22/command.json": {
+      "sha256": "4852108af13fde24f6b37c058d24d0deb5d5fcc406af36f70eb795b4df3d5654",
+      "bytes": 1078
+    },
+    "runtime-v22/fixtures.json": {
+      "sha256": "89d99c08ddd9a7b59b8e4118d2abae3052bc5c7c070bf37fb80a4913dc0afd97",
+      "bytes": 11535
+    },
+    "runtime-v22/exit-code.json": {
+      "sha256": "e89df0eae5ec7db81135aed16463968955c578bcc4f2ec43172eff351f080c17",
+      "bytes": 17
+    },
+    "runtime-v22/targeted-tests.txt": {
+      "sha256": "0b5a7d280d1c02f497d6ffeeb391d6a30dc2bb25c544b778ece7a9ac7eb4d855",
+      "bytes": 649
+    },
+    "runtime-v22/launch.py.txt": {
+      "sha256": "5b3aac1dfda040a7ba97e461407be14d427b5ebf6dca9bff7f4eb77bf30a8462",
+      "bytes": 2154
+    },
+    "runtime-v22/execute.py.txt": {
+      "sha256": "3ca66faa84a4ce67b260d549a417896ad98ace785debb2c4c8f65bd9daed42ba",
+      "bytes": 464
+    },
+    "runtime-v22/source_decision_evaluation.py.txt": {
+      "sha256": "6e006b62e764120f9f6695cdec5acf4672490a7c6a86ebb12e595a78d575f1eb",
+      "bytes": 22822
+    },
+    "runtime-v22/evaluate_character_scenarios.py.txt": {
+      "sha256": "7c3848a4d38e32257176031ab45ff294e8dc6ea81f12cc7b5240d04a4f7c9018",
+      "bytes": 96249
+    },
+    "runtime-v22/test_source_decision_evaluation.py.txt": {
+      "sha256": "6b0c3b0914acc844f6bb0a7408b8451fd9ace2a193bb926ded87b74ce8d1af23",
+      "bytes": 19119
+    },
+    "runtime-v22/test_runtime_source_evaluation.py.txt": {
+      "sha256": "81b1313fb6ce91952619d8f45ecbe33761435759b566566e3235aad18beff3be",
+      "bytes": 28352
+    },
+    "runtime-v23/metadata.json": {
+      "sha256": "d780a6861e3bb86e6a44bd9027cb463450af89d1d3a3dd8ee7851c052c4f74e0",
+      "bytes": 1583
+    },
+    "runtime-v23/results.jsonl": {
+      "sha256": "69ee6c821aa3784b716f3a5218a1ee1de39a6f3a56ea442283801c957e36ccd0",
+      "bytes": 409045
+    },
+    "runtime-v23/provider-rounds.jsonl": {
+      "sha256": "b52ef61e1ec2e0c43259be17bc3814ebe97e58d3b464d837fc042497b6c08192",
+      "bytes": 586909
+    },
+    "runtime-v23/actual-provider-payloads.jsonl": {
+      "sha256": "962be551679ee5d607fe6439bc1ec850b1bf213b1e90a46e2494d2dd351ef323",
+      "bytes": 721351
+    },
+    "runtime-v23/changes.json": {
+      "sha256": "86908b9a212d726236bc817575ce229998a93f1174017286c1956d959745814a",
+      "bytes": 616
+    },
+    "runtime-v23/command.json": {
+      "sha256": "3deb669799b5f558a5bfcddebf26889f5c9a21f2d85e0d5da2f330b5e33442ff",
+      "bytes": 1078
+    },
+    "runtime-v23/fixtures.json": {
+      "sha256": "89d99c08ddd9a7b59b8e4118d2abae3052bc5c7c070bf37fb80a4913dc0afd97",
+      "bytes": 11535
+    },
+    "runtime-v23/exit-code.json": {
+      "sha256": "e89df0eae5ec7db81135aed16463968955c578bcc4f2ec43172eff351f080c17",
+      "bytes": 17
+    },
+    "runtime-v23/targeted-tests.txt": {
+      "sha256": "aee3c1dab4868614b6ba697733bba31b1976f5e031f037500886f9ce816befb0",
+      "bytes": 649
+    },
+    "runtime-v23/launch.py.txt": {
+      "sha256": "9f59e0b39c8effe06707834052452b767b8a37043f43e3da8a2f3e3fa4a3fec6",
+      "bytes": 2154
+    },
+    "runtime-v23/execute.py.txt": {
+      "sha256": "3ca66faa84a4ce67b260d549a417896ad98ace785debb2c4c8f65bd9daed42ba",
+      "bytes": 464
+    },
+    "runtime-v23/source_decision_evaluation.py.txt": {
+      "sha256": "61263637749325239e9e503d53b89ffda25b64b1ef443df117df1e1bf2e1bf23",
+      "bytes": 22983
+    },
+    "runtime-v23/evaluate_character_scenarios.py.txt": {
+      "sha256": "3e17633682dded6780147921aee1c219ef7686fada6f60e288aff50497a051af",
+      "bytes": 96249
+    },
+    "runtime-v23/test_source_decision_evaluation.py.txt": {
+      "sha256": "1b935332c3067b0adfbef5c5a33906dc99d4bfccace6fd4b94805c646d8f4301",
+      "bytes": 20514
+    },
+    "runtime-v23/test_runtime_source_evaluation.py.txt": {
+      "sha256": "81b1313fb6ce91952619d8f45ecbe33761435759b566566e3235aad18beff3be",
+      "bytes": 28352
+    }
+  }
+}

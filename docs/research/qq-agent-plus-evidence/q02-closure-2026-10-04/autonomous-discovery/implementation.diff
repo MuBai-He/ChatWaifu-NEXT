@@ -1,0 +1,248 @@
+--- before/tools/runtime_source_evaluation.py
++++ after/tools/runtime_source_evaluation.py
+@@ -178,10 +178,20 @@
+ 
+ 
+ class _SourceGateway:
+-    def __init__(self, service: RuntimeSkillService, allow_once: bool) -> None:
++    def __init__(
++        self,
++        service: RuntimeSkillService,
++        allow_once: bool,
++        *,
++        dns_resolver: Literal["system", "cloudflare"] = "system",
++    ) -> None:
++        if dns_resolver not in {"system", "cloudflare"}:
++            raise ValueError("source resolver must be system or cloudflare")
+         self.service = service
+         self.allow_once = allow_once
++        self.dns_resolver = dns_resolver
+         self.runs: list[dict[str, Any]] = []
++        self.resolver_policy: list[dict[str, Any]] = []
+ 
+     def _record(self, snapshot: SkillRunSnapshot) -> None:
+         record = snapshot.model_dump(mode="json")
+@@ -206,6 +216,30 @@
+     ) -> SkillRunSnapshot:
+         if invocation.skill_id not in _SOURCE_SKILLS or invocation.background:
+             raise PermissionError("evaluation only permits foreground public source tools")
++        arguments = invocation.arguments
++        requested_present = "dns_resolver" in arguments
++        requested = arguments.get("dns_resolver")
++        # Enforce the selected evaluation environment without altering the
++        # provider call retained in tool exchanges. Invalid explicit arguments
++        # still reach the service schema unchanged and must fail validation.
++        apply_configuration = not requested_present or (
++            isinstance(requested, str) and requested in {"system", "cloudflare"}
++        )
++        effective = self.dns_resolver if apply_configuration else requested
++        self.resolver_policy.append(
++            {
++                "provider_tool_call_id": provider_tool_call_id,
++                "skill_id": invocation.skill_id,
++                "requested_present": requested_present,
++                "requested_value": requested,
++                "effective_value": effective,
++                "configuration_applied": apply_configuration,
++            }
++        )
++        if apply_configuration:
++            invocation = invocation.model_copy(
++                update={"arguments": {**arguments, "dns_resolver": self.dns_resolver}}
++            )
+         created = await self.service.invoke(
+             session_id,
+             invocation,
+@@ -257,7 +291,7 @@
+         if max_provider_requests < 1:
+             raise ValueError("provider request limit must be positive")
+         self._provider = _RecordedProvider(provider, trace_path, max_provider_requests)
+-        self._gateway = _SourceGateway(service, allow_once)
++        self._gateway = _SourceGateway(service, allow_once, dns_resolver=dns_resolver)
+         self._router = RuntimeSkillRouter(
+             lambda: [skill for skill in service.list() if skill.skill_id in _SOURCE_SKILLS]
+         )
+@@ -306,6 +340,7 @@
+         self._provider.calls = []
+         self._provider.sample_key = sample_key
+         self._gateway.runs = []
++        self._gateway.resolver_policy = []
+         sources = await self._gateway.service.load_source_context(session_id, source_generation_ids)
+         projections = self._agent.select_tools(
+             request.user_text,
+@@ -333,13 +368,14 @@
+             ),
+         )
+         self.last_trace = {
+-            "schema_version": "1.0",
++            "schema_version": "1.1",
+             "execution_path": "runtime_source_tools",
+             "permission_policy": "allow_once" if self._gateway.allow_once else "deny",
+             "dns_resolver": self._resolver,
+             "tools_digest": compute_tools_digest(projections),
+             "provider_calls": self._provider.calls,
+             "tool_runs": self._gateway.runs,
++            "source_resolver_policy": self._gateway.resolver_policy,
+             "reply_origin": None,
+             "source_decisions": self._decisions.records if self._decisions is not None else None,
+             "source_wire_budget_failures": self._decisions.budget_failures
+--- before/tools/evaluate_character_scenarios.py
++++ after/tools/evaluate_character_scenarios.py
+@@ -123,7 +123,7 @@
+     turns: list[TurnDefinition]
+ 
+ 
+-TOOL_VERSION = "1.32.1"
++TOOL_VERSION = "1.33.0"
+ 
+ 
+ def _utc_prompt_time(value: datetime) -> datetime:
+--- before/services/runtime/tests/test_runtime_source_evaluation.py
++++ after/services/runtime/tests/test_runtime_source_evaluation.py
+@@ -6,6 +6,7 @@
+ import json
+ from collections.abc import AsyncIterator
+ from pathlib import Path
++from typing import Literal
+ from uuid import UUID, uuid4
+ 
+ import httpx2
+@@ -39,6 +40,138 @@
+     RuntimeSourceEvaluation,
+ )
+ from tools.source_decision_evaluation import DECISION_NAME
++
++
++@pytest.mark.parametrize("configured", ["system", "cloudflare"])
++@pytest.mark.parametrize("requested", [None, "system", "cloudflare"])
++@pytest.mark.parametrize("allow_once", [True, False])
++async def test_source_resolver_configuration_controls_actual_permissioned_read(
++    runtime_settings: Settings,
++    monkeypatch: pytest.MonkeyPatch,
++    tmp_path: Path,
++    configured: Literal["system", "cloudflare"],
++    requested: str | None,
++    allow_once: bool,
++) -> None:
++    actual: list[JsonObject] = []
++
++    class RequestedResolver(_Provider):
++        async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
++            self.requests.append(request)
++            if not request.tool_exchanges:
++                tool = next(t for t in request.tools if t.input_schema.get("required") == ["url"])
++                arguments: JsonObject = {"url": "https://source.example/"}
++                if requested is not None:
++                    arguments["dns_resolver"] = requested
++                yield LlmToolCallRequested(LlmToolCall("read-source", tool.name, arguments))
++                yield LlmResponseCompleted("tool_calls")
++            else:
++                yield LlmTextDelta("Only the actual source result is used.")
++                yield LlmResponseCompleted("stop")
++
++    async def read(self: object, arguments: JsonObject) -> JsonObject:
++        actual.append(dict(arguments))
++        if arguments.get("dns_resolver", "system") != configured:
++            raise SkillExecutionError("web_url", "Controlled wrong-resolver failure")
++        return {
++            "provider": "builtin",
++            "url": "https://source.example/",
++            "title": "Source",
++            "text": "Actual source",
++            "retrieved_at": "2026-10-04T00:00:00+00:00",
++            "content_type": "text/plain",
++            "body_sha256": "d" * 64,
++            "total_characters": 13,
++            "text_offset": 0,
++            "truncated": False,
++            "focus_matched": None,
++            "dns_resolver": configured,
++            "extraction_method": "plain_text",
++            "document_characters": 13,
++        }
++
++    monkeypatch.setattr("chatwaifu_runtime.runtime_skills.public_web.PublicWebReader.read", read)
++    container = RuntimeContainer(runtime_settings)
++    await container.start()
++    try:
++        session = await container.sessions.create_session("ayachi_nene")
++        provider = RequestedResolver()
++        evaluation = RuntimeSourceEvaluation(
++            provider,
++            container.runtime_skills,
++            trace_path=tmp_path / "rounds.jsonl",
++            max_provider_requests=4,
++            allow_once=allow_once,
++            dns_resolver=configured,
++        )
++        outcome = await evaluation.run(
++            LlmRequest(uuid4(), "请读取 https://source.example/ 的原文", "Persona"),
++            session_id=session.session_id,
++            turn_id=uuid4(),
++            sample_key="resolver-policy",
++        )
++        run = outcome.trace["tool_runs"][0]
++        original = provider.requests[1].tool_exchanges[0].calls[0].arguments
++        assert original.get("dns_resolver") == requested
++        assert ("dns_resolver" in original) is (requested is not None)
++        assert actual == (
++            [{"url": "https://source.example/", "dns_resolver": configured}] if allow_once else []
++        )
++        assert run["state"] == ("succeeded" if allow_once else "failed")
++        if not allow_once:
++            assert run["error"]["code"] == "permission_denied"
++        assert outcome.trace["source_resolver_policy"] == [
++            {
++                "provider_tool_call_id": "read-source",
++                "skill_id": "web.read",
++                "requested_present": requested is not None,
++                "requested_value": requested,
++                "effective_value": configured,
++                "configuration_applied": True,
++            }
++        ]
++        assert await container.database.fetchall("SELECT * FROM permission_grants") == []
++    finally:
++        await container.stop()
++
++
++@pytest.mark.parametrize("invalid", [None, "invalid", 17, {}])
++async def test_source_resolver_policy_does_not_repair_invalid_model_arguments(
++    runtime_settings: Settings,
++    monkeypatch: pytest.MonkeyPatch,
++    invalid: object,
++) -> None:
++    from chatwaifu_protocol.skills import SkillInvocation
++
++    from tools.runtime_source_evaluation import _SourceGateway  # pyright: ignore[reportPrivateUsage]
++
++    entered = False
++
++    async def read(self: object, arguments: JsonObject) -> JsonObject:
++        nonlocal entered
++        entered = True
++        raise AssertionError("Invalid arguments must not reach the adapter")
++
++    monkeypatch.setattr("chatwaifu_runtime.runtime_skills.public_web.PublicWebReader.read", read)
++    container = RuntimeContainer(runtime_settings)
++    await container.start()
++    try:
++        session = await container.sessions.create_session("ayachi_nene")
++        gateway = _SourceGateway(container.runtime_skills, True, dns_resolver="cloudflare")
++        invocation = SkillInvocation.model_validate(
++            {
++                "skill_id": "web.read",
++                "capability": "read",
++                "arguments": {"url": "https://source.example/", "dns_resolver": invalid},
++            }
++        )
++        with pytest.raises(SkillExecutionError):
++            await gateway.invoke(session.session_id, invocation)
++        assert not entered
++        assert invocation.arguments["dns_resolver"] == invalid
++        assert gateway.resolver_policy[0]["configuration_applied"] is False
++    finally:
++        await container.stop()
+ 
+ 
+ class _Provider:

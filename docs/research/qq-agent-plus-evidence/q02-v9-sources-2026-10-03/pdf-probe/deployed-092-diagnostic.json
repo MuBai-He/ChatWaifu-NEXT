@@ -1,0 +1,9 @@
+{
+  "image": "dockerproxy.net/unclecode/crawl4ai:0.9.2",
+  "image_id": "sha256:a61d687f6f32e18452749504c38ea4a4389d8de05830521a0da0da526d0a0bf4",
+  "api_py_sha256": "5db478ad38282f16e475cbd41cb9b7f5403b29dbddd3c661a7411cf3e33552c6",
+  "md_uses_lxml_strategy": true,
+  "has_pdf_strategy_routing": false,
+  "pdf_strategy_initialization_exit": 1,
+  "pypdf_missing": true
+}

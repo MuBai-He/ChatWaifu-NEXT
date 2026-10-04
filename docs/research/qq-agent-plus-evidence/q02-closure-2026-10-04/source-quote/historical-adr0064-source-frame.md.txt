@@ -1,0 +1,82 @@
+# ADR 0064: Structured source-answer fidelity prototype
+
+Status: Proposed; isolated evaluation only
+
+## Evidence and scope
+
+The Q02 ledger records complete source bodies and complete previous answers on
+the wire, yet both final AirChina checklists lose the previously stated unresolved
+time scope. Existing one-pass revision and a single-factor removal of its finish
+clause also fail. This excludes missing input in those samples; it does not prove
+one universal model or prompt cause. READ receipts establish retrieval and have no
+typed representation of an answer's unresolved coverage.
+
+Two bounded requests to the configured Gemini 3.8 Flash High endpoint returned
+valid declared JSON Schema envelopes. This is observed compatibility, not a
+general guarantee of enforcement or semantic correctness.
+
+Before changing conversation lifecycle or provider contracts, test a pure Agent
+answer frame in isolation. It represents final prose blocks, their references to
+actual source identities, and separately declared unresolved evidence gaps. A
+source identity binds the actual URL and body hash. Gap text remains model output,
+never a verified fact, memory, instruction, permission or operation.
+
+## Prototype design
+
+- Versioned, immutable local frame contracts; strict bounded JSON parsing with
+  fixed error codes. No parsing of arbitrary assistant prose into system state.
+- No new facts, aviation thresholds, persona variants or task-specific checklist
+  patches. The only new model instruction describes the frame serialization.
+- Render newly declared gaps in their selected blocks. On a same-source
+  transformation, retain prior gap statements associated with the source identities
+  actually used. The model may choose placement; missing placement uses the last
+  relevant block. The renderer never treats silence as resolution.
+- Freeze supplied documents and already completed first/second-turn history. Run
+  the third/fourth-turn pair with actual rendered third-turn output in the fourth
+  wire. Preserve raw envelope, rendered reply, retained gaps, actual payload,
+  usage, latency, errors and omission audit. This is a diagnostic control, not a
+  full four-turn, live-retrieval or role A/B gate.
+- Do not dispatch tools, touch production services or add persistence. Bounded
+  prototype state lives inside one evaluator invocation. Cancellation propagates;
+  invalid/nonterminal frames are rejected before publishing any draft.
+- Count the actual `response_format` schema and frame data in wire estimates;
+  keep provider usage distinct from the reference estimate and unknown fields.
+
+The Agent owns frame validation and rendering; the evaluator owns this temporary
+state. If the control warrants implementation, Conversation must own a bounded
+completed-generation store selected by the existing same-route, redaction and
+completion fences. Runtime Skills continues to own READ results. Provider adapters
+would then map a neutral declared response schema and reject unsupported requests.
+That complete lifecycle slice is not implemented or accepted by this ADR.
+
+## Gates and rollback
+
+First validate strict parsing, source identities, placement, non-resolution,
+boundedness and the absence of source-less carry. Then directly review every raw
+and rendered answer against the frozen originals, the current task and prior
+scope; JSON validity, retained fields or keywords do not approve quality. If useful,
+implement and test the lifecycle slice before repeating the complete frozen group.
+Only after the source and role prerequisites pass may the original full 864-reply
+A/B begin. Existing accepted channel/playback evidence remains valid.
+
+Remove the isolated evaluator and pure frame module to roll back. Production
+behavior, configuration, database, permissions and existing receipts are unchanged.
+
+## Observed control result
+
+The 1.0 control completed two third/fourth-turn pairs after unchanged previously
+completed prefixes. Both rendered fourth turns retained the third-turn gap, but
+one merged the requested list into a single paragraph. Version 1.1 adds explicit
+paragraph/list-item kinds; the renderer owns numbering and continuation indentation.
+It still leaves factual prose to the model. Both layout controls preserve the gap
+and list, yet direct review finds a source-relation ambiguity in one and expanded
+charging-prohibition scope in the other. One existing revision per draft leaves
+the relation ambiguity in one response and produces one complete response.
+
+All ten HTTP attempts, including two schema capability checks, are complete. The
+prototype is **not adopted**. Fifteen local/server software checks do not approve
+semantic quality. See the single Q02 ledger for accounting, all visible replies,
+source comparisons, limitations and the next dependency. Before adding a completed-
+generation store or enabling this contract, investigate an explicit binding between
+the final claims and the original source conditions. Merely retaining gap text
+cannot fix unsupported factual paraphrases.

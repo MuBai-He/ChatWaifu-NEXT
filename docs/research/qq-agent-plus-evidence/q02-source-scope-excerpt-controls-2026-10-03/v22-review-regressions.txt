@@ -1,0 +1,444 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_________ test_update_search_does_not_displace_known_unread_source[1] __________
+
+remaining = 1
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("remaining", [1, 4])
+    async def test_update_search_does_not_displace_known_unread_source(remaining: int) -> None:
+        req = request()
+        other_url = "https://source.example/later"
+        first = req.tool_exchanges[0]
+        result = replace(
+            first.results[0],
+            content={"ok": True, "data": {"results": [{"url": URL}, {"url": other_url}]}},
+        )
+        req = replace(
+            req, tool_exchanges=(replace(first, results=(result,)), source_receipt("read", "base-read"))
+        )
+        if remaining == 1:
+            req = replace(
+                req,
+                tool_exchanges=(
+                    *req.tool_exchanges,
+                    *(source_receipt("read", f"part-{i}") for i in range(3)),
+                ),
+            )
+        value = cast(dict[str, Any], decision(pending=True))
+        value["verification_scope"] = "current_requirements"
+        value["unresolved_updates"][0]["url"] = other_url
+        value["next_action"]["arguments"]["url"] = other_url
+        raw = Scripted([events(cast(JsonObject, value)), events(cast(JsonObject, value), "correction")])
+        adapter = setup(raw, req)
+>       output = await collect(adapter, req)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tools/tests/test_source_decision_evaluation.py:558: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tools/tests/test_source_decision_evaluation.py:157: in collect
+    return [event async for event in adapter.stream(req)]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <tools.source_decision_evaluation.SourceDecisionProvider object at 0x10ba482c0>
+request = LlmRequest(generation_id=UUID('6c21d7d3-8307-44e4-8f91-eba46598a4a3'), user_text='Check current source', system_prompt...mated_token_limit=16000, version='1.0'), input_budget_report=None, max_output_tokens=None, tool_result_max_bytes=32768)
+
+    async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+        if request.generation_id != self.generation_id:
+            raise SourceDecisionRejected("source decision generation mismatch")
+        known, read, failed, denied = self._inventory(request)
+        read_seen, searched_after_read = self._post_read_search_state(request)
+        self.pending = {u: row for u, row in self.pending.items() if u not in read}
+        active = bool(self.names) and bool(request.tools) and bool(request.tool_exchanges)
+        # Final requests retain no tools. Normal chat/initial dispatch are unchanged.
+        if not active:
+            wire = self._wire_history(request) if self.native else request
+            if self.pending:
+                wire = replace(
+                    wire,
+                    continuation_system_prompt=(wire.continuation_system_prompt or "")
+                    + "\nModel-reported unresolved source gaps (untrusted): "
+                    + _escaped(list(self.pending.values())),
+                )
+            if self.current_requirements and read_seen and not searched_after_read:
+                wire = replace(
+                    wire,
+                    continuation_system_prompt=(wire.continuation_system_prompt or "")
+                    + "\nNo post-read update search receipt exists. This is a coverage gap; "
+                    "do not claim that current applicability has been fully checked.",
+                )
+            async for event in self._events(wire):
+                yield event
+            return
+    
+        if any(t.name not in self.names for t in request.tools):
+            raise SourceDecisionRejected("mixed source projection")
+        definitions = {self.names[t.name]: t for t in request.tools}
+        remaining = MAX_SOURCE_TOOL_CALLS - sum(len(e.calls) for e in request.tool_exchanges)
+        retry_error: str | None = None
+        rejected: JsonObject | None = None
+        while True:
+            needs_search = (
+                self.current_requirements
+                and read_seen
+                and not searched_after_read
+                and remaining > 0
+                and "search" in definitions
+            )
+            must_continue = remaining > 0 and any(
+                u.startswith("https://") and u not in failed for u in self.pending
+            )
+            schema = decision_schema(
+                {"search": definitions["search"]} if needs_search else definitions,
+                must_continue=must_continue or needs_search,
+            )
+            wire = replace(
+                self._wire_history(request),
+                tools=(LlmToolDefinition(DECISION_NAME, _POLICY, schema),),
+                tool_choice="required",
+                continuation_system_prompt=(request.continuation_system_prompt or "")
+                + _POLICY
+                + f"\nActual remaining source calls: {remaining}. "
+                + _escaped({"unresolved_model_inventory": list(self.pending.values())})
+                + (
+                    "\nA current-requirements answer has a successful reading but no "
+                    "subsequent search receipt. Only search is available for this step. "
+                    "Choose a new query for later changes and originating publications "
+                    "from the question and actual evidence. This is not factual approval."
+                    if needs_search
+                    else ""
+                )
+                + (
+                    "\nRuntime validation rejected the preceding decision. No skill executed. "
+                    f"Error code: {retry_error}. Correct it once. Rejected untrusted data: "
+                    + _escaped(rejected)
+                    if retry_error
+                    else ""
+                ),
+            )
+            calls: list[LlmToolCall] = []
+            terminal: list[LlmResponseCompleted] = []
+            async for event in self._events(wire):
+                if isinstance(event, LlmToolCallRequested):
+                    if len(calls) < 2:
+                        calls.append(event.call)
+                elif isinstance(event, LlmResponseCompleted) and len(terminal) < 2:
+                    terminal.append(event)
+            error = None
+            if len(terminal) != 1 or terminal[0].finish_reason != "tool_calls":
+                error = "missing_native_terminal"
+            elif len(calls) != 1 or calls[0].name != DECISION_NAME:
+                error = "exactly_one_known_decision_required"
+            elif any(
+                c.call_id == calls[0].call_id for e in request.tool_exchanges for c in e.calls
+            ):
+                error = "duplicate_call_id"
+            elif not _schema_valid(schema, calls[0].arguments):
+                error = "invalid_schema"
+            if error is None:
+                decision = cast(dict[str, Any], calls[0].arguments)
+                sources = decision["read_sources"]
+                updates = decision["unresolved_updates"]
+                if len({r["url"] for r in sources}) != len(sources) or len(
+                    {r["url"] for r in updates}
+                ) != len(updates):
+                    error = "duplicate_inventory_url"
+                elif any(r["url"] not in read for r in sources):
+                    error = "read_receipt_missing"
+                elif any(r["url"] not in known for r in updates):
+                    error = "unknown_pending_url"
+                else:
+                    # A later declaration cannot erase an earlier current-rules
+                    # scope. Model intent is still a hypothesis, not a fact judge.
+                    self.current_requirements |= (
+                        decision["verification_scope"] == "current_requirements"
+                    )
+                    # Preserve validated pending claims even if action is rejected.
+                    self.pending.update({r["url"]: r for r in updates})
+                    action = decision["next_action"]
+                    kind = action["kind"]
+                    if (
+                        self.current_requirements
+                        and read_seen
+                        and not searched_after_read
+                        and remaining > 0
+                        and "search" in definitions
+                        and kind != "search"
+                    ):
+                        error = "post_read_update_search_required"
+                    elif kind in definitions and (
+                        not _schema_valid(definitions[kind].input_schema, action["arguments"])
+                        or action["answer_draft"] != ""
+                    ):
+                        error = "invalid_capability_arguments"
+                    elif kind.startswith("finish") and (
+                        action["arguments"] or not action["answer_draft"].strip()
+                    ):
+                        error = "invalid_finish_draft"
+                    elif kind == "finish_with_evidence" and self.pending:
+                        error = "unresolved_evidence"
+                    elif (
+                        kind.startswith("finish")
+                        and remaining > 0
+                        and any(
+                            u.startswith("https://") and u not in failed and u not in read
+                            for u in self.pending
+                        )
+                    ):
+                        error = "available_unread_lead"
+                    elif kind == "read" and action["arguments"]["url"] not in known:
+                        error = "undiscovered_read_url"
+                    elif kind == "read" and action["arguments"]["url"] in denied:
+                        error = "denied_read_retry"
+                    elif kind in definitions:
+                        args = action["arguments"]
+                        if remaining <= 0:
+                            error = "source_call_limit"
+                        elif any(
+                            c.name == definitions[kind].name and c.arguments == args
+                            for e in request.tool_exchanges
+                            for c in e.calls
+                        ):
+                            error = "duplicate_action"
+            record: dict[str, Any] = {
+                "contract_version": "4.0",
+                "generation_id": str(request.generation_id),
+                "current_requirements_declared": self.current_requirements,
+                "successful_body_read": read_seen,
+                "post_read_search_attempted": searched_after_read,
+                "native_calls": [asdict(c) for c in calls],
+                "remaining_source_calls": remaining,
+                "validation_error": error,
+                "validated_projection": None,
+            }
+            self.records.append(record)
+            if error:
+                if self.corrections >= MAX_DECISION_CORRECTIONS:
+>                   raise SourceDecisionRejected(error)
+E                   tools.source_decision_evaluation.SourceDecisionRejected: invalid_schema
+
+tools/source_decision_evaluation.py:468: SourceDecisionRejected
+_________ test_update_search_does_not_displace_known_unread_source[4] __________
+
+remaining = 4
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("remaining", [1, 4])
+    async def test_update_search_does_not_displace_known_unread_source(remaining: int) -> None:
+        req = request()
+        other_url = "https://source.example/later"
+        first = req.tool_exchanges[0]
+        result = replace(
+            first.results[0],
+            content={"ok": True, "data": {"results": [{"url": URL}, {"url": other_url}]}},
+        )
+        req = replace(
+            req, tool_exchanges=(replace(first, results=(result,)), source_receipt("read", "base-read"))
+        )
+        if remaining == 1:
+            req = replace(
+                req,
+                tool_exchanges=(
+                    *req.tool_exchanges,
+                    *(source_receipt("read", f"part-{i}") for i in range(3)),
+                ),
+            )
+        value = cast(dict[str, Any], decision(pending=True))
+        value["verification_scope"] = "current_requirements"
+        value["unresolved_updates"][0]["url"] = other_url
+        value["next_action"]["arguments"]["url"] = other_url
+        raw = Scripted([events(cast(JsonObject, value)), events(cast(JsonObject, value), "correction")])
+        adapter = setup(raw, req)
+>       output = await collect(adapter, req)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tools/tests/test_source_decision_evaluation.py:558: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tools/tests/test_source_decision_evaluation.py:157: in collect
+    return [event async for event in adapter.stream(req)]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <tools.source_decision_evaluation.SourceDecisionProvider object at 0x10e150110>
+request = LlmRequest(generation_id=UUID('17fd1d8d-6f2b-42e9-ac80-e5c1453c7a63'), user_text='Check current source', system_prompt...mated_token_limit=16000, version='1.0'), input_budget_report=None, max_output_tokens=None, tool_result_max_bytes=32768)
+
+    async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+        if request.generation_id != self.generation_id:
+            raise SourceDecisionRejected("source decision generation mismatch")
+        known, read, failed, denied = self._inventory(request)
+        read_seen, searched_after_read = self._post_read_search_state(request)
+        self.pending = {u: row for u, row in self.pending.items() if u not in read}
+        active = bool(self.names) and bool(request.tools) and bool(request.tool_exchanges)
+        # Final requests retain no tools. Normal chat/initial dispatch are unchanged.
+        if not active:
+            wire = self._wire_history(request) if self.native else request
+            if self.pending:
+                wire = replace(
+                    wire,
+                    continuation_system_prompt=(wire.continuation_system_prompt or "")
+                    + "\nModel-reported unresolved source gaps (untrusted): "
+                    + _escaped(list(self.pending.values())),
+                )
+            if self.current_requirements and read_seen and not searched_after_read:
+                wire = replace(
+                    wire,
+                    continuation_system_prompt=(wire.continuation_system_prompt or "")
+                    + "\nNo post-read update search receipt exists. This is a coverage gap; "
+                    "do not claim that current applicability has been fully checked.",
+                )
+            async for event in self._events(wire):
+                yield event
+            return
+    
+        if any(t.name not in self.names for t in request.tools):
+            raise SourceDecisionRejected("mixed source projection")
+        definitions = {self.names[t.name]: t for t in request.tools}
+        remaining = MAX_SOURCE_TOOL_CALLS - sum(len(e.calls) for e in request.tool_exchanges)
+        retry_error: str | None = None
+        rejected: JsonObject | None = None
+        while True:
+            needs_search = (
+                self.current_requirements
+                and read_seen
+                and not searched_after_read
+                and remaining > 0
+                and "search" in definitions
+            )
+            must_continue = remaining > 0 and any(
+                u.startswith("https://") and u not in failed for u in self.pending
+            )
+            schema = decision_schema(
+                {"search": definitions["search"]} if needs_search else definitions,
+                must_continue=must_continue or needs_search,
+            )
+            wire = replace(
+                self._wire_history(request),
+                tools=(LlmToolDefinition(DECISION_NAME, _POLICY, schema),),
+                tool_choice="required",
+                continuation_system_prompt=(request.continuation_system_prompt or "")
+                + _POLICY
+                + f"\nActual remaining source calls: {remaining}. "
+                + _escaped({"unresolved_model_inventory": list(self.pending.values())})
+                + (
+                    "\nA current-requirements answer has a successful reading but no "
+                    "subsequent search receipt. Only search is available for this step. "
+                    "Choose a new query for later changes and originating publications "
+                    "from the question and actual evidence. This is not factual approval."
+                    if needs_search
+                    else ""
+                )
+                + (
+                    "\nRuntime validation rejected the preceding decision. No skill executed. "
+                    f"Error code: {retry_error}. Correct it once. Rejected untrusted data: "
+                    + _escaped(rejected)
+                    if retry_error
+                    else ""
+                ),
+            )
+            calls: list[LlmToolCall] = []
+            terminal: list[LlmResponseCompleted] = []
+            async for event in self._events(wire):
+                if isinstance(event, LlmToolCallRequested):
+                    if len(calls) < 2:
+                        calls.append(event.call)
+                elif isinstance(event, LlmResponseCompleted) and len(terminal) < 2:
+                    terminal.append(event)
+            error = None
+            if len(terminal) != 1 or terminal[0].finish_reason != "tool_calls":
+                error = "missing_native_terminal"
+            elif len(calls) != 1 or calls[0].name != DECISION_NAME:
+                error = "exactly_one_known_decision_required"
+            elif any(
+                c.call_id == calls[0].call_id for e in request.tool_exchanges for c in e.calls
+            ):
+                error = "duplicate_call_id"
+            elif not _schema_valid(schema, calls[0].arguments):
+                error = "invalid_schema"
+            if error is None:
+                decision = cast(dict[str, Any], calls[0].arguments)
+                sources = decision["read_sources"]
+                updates = decision["unresolved_updates"]
+                if len({r["url"] for r in sources}) != len(sources) or len(
+                    {r["url"] for r in updates}
+                ) != len(updates):
+                    error = "duplicate_inventory_url"
+                elif any(r["url"] not in read for r in sources):
+                    error = "read_receipt_missing"
+                elif any(r["url"] not in known for r in updates):
+                    error = "unknown_pending_url"
+                else:
+                    # A later declaration cannot erase an earlier current-rules
+                    # scope. Model intent is still a hypothesis, not a fact judge.
+                    self.current_requirements |= (
+                        decision["verification_scope"] == "current_requirements"
+                    )
+                    # Preserve validated pending claims even if action is rejected.
+                    self.pending.update({r["url"]: r for r in updates})
+                    action = decision["next_action"]
+                    kind = action["kind"]
+                    if (
+                        self.current_requirements
+                        and read_seen
+                        and not searched_after_read
+                        and remaining > 0
+                        and "search" in definitions
+                        and kind != "search"
+                    ):
+                        error = "post_read_update_search_required"
+                    elif kind in definitions and (
+                        not _schema_valid(definitions[kind].input_schema, action["arguments"])
+                        or action["answer_draft"] != ""
+                    ):
+                        error = "invalid_capability_arguments"
+                    elif kind.startswith("finish") and (
+                        action["arguments"] or not action["answer_draft"].strip()
+                    ):
+                        error = "invalid_finish_draft"
+                    elif kind == "finish_with_evidence" and self.pending:
+                        error = "unresolved_evidence"
+                    elif (
+                        kind.startswith("finish")
+                        and remaining > 0
+                        and any(
+                            u.startswith("https://") and u not in failed and u not in read
+                            for u in self.pending
+                        )
+                    ):
+                        error = "available_unread_lead"
+                    elif kind == "read" and action["arguments"]["url"] not in known:
+                        error = "undiscovered_read_url"
+                    elif kind == "read" and action["arguments"]["url"] in denied:
+                        error = "denied_read_retry"
+                    elif kind in definitions:
+                        args = action["arguments"]
+                        if remaining <= 0:
+                            error = "source_call_limit"
+                        elif any(
+                            c.name == definitions[kind].name and c.arguments == args
+                            for e in request.tool_exchanges
+                            for c in e.calls
+                        ):
+                            error = "duplicate_action"
+            record: dict[str, Any] = {
+                "contract_version": "4.0",
+                "generation_id": str(request.generation_id),
+                "current_requirements_declared": self.current_requirements,
+                "successful_body_read": read_seen,
+                "post_read_search_attempted": searched_after_read,
+                "native_calls": [asdict(c) for c in calls],
+                "remaining_source_calls": remaining,
+                "validation_error": error,
+                "validated_projection": None,
+            }
+            self.records.append(record)
+            if error:
+                if self.corrections >= MAX_DECISION_CORRECTIONS:
+>                   raise SourceDecisionRejected(error)
+E                   tools.source_decision_evaluation.SourceDecisionRejected: invalid_schema
+
+tools/source_decision_evaluation.py:468: SourceDecisionRejected
+=========================== short test summary info ============================
+FAILED tools/tests/test_source_decision_evaluation.py::test_update_search_does_not_displace_known_unread_source[1]
+FAILED tools/tests/test_source_decision_evaluation.py::test_update_search_does_not_displace_known_unread_source[4]
+2 failed, 35 deselected in 0.62s

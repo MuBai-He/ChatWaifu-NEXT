@@ -1,0 +1,32 @@
+[
+  {
+    "sample_key": "topic_switch:r0:t1:candidate",
+    "call_id": "e7df3031-d64c-4744-ac1b-e80ab71e2735",
+    "actual_prompt_tokens": 2317,
+    "reference_estimate": 2323,
+    "relative_error_pct": 0.2589555459646094,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  },
+  {
+    "sample_key": "topic_switch:r0:t1:candidate",
+    "call_id": "1064beaf-bd8d-4073-af09-159ed97c8a96",
+    "actual_prompt_tokens": 4878,
+    "reference_estimate": 5701,
+    "relative_error_pct": 16.871668716687168,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  },
+  {
+    "sample_key": "topic_switch:r0:t1:candidate",
+    "call_id": "df8d22a9-9361-4d41-bd7d-14235b0c9d8d",
+    "actual_prompt_tokens": 5020,
+    "reference_estimate": 5838,
+    "relative_error_pct": 16.294820717131476,
+    "omitted_history": [],
+    "omitted_tool_preambles": [],
+    "actual_http_attempts": 1
+  }
+]

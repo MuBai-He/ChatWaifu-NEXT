@@ -1,0 +1,84 @@
+{
+  "actual_reader_operations": 2,
+  "model_calls": 0,
+  "source_module_sha256": "9095b832c38f799b90eb1243c06f0690694e78fc9b2535604e5780047e51cf37",
+  "runtime_source_origin_verified": true,
+  "new_persona_or_model_config": false,
+  "results": [
+    {
+      "kind": "html",
+      "arguments": {
+        "url": "https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml",
+        "focus": "充电宝",
+        "max_characters": 6000,
+        "dns_resolver": "cloudflare",
+        "fresh": true
+      },
+      "origin": "specified_html",
+      "model_calls": 0,
+      "ok": true,
+      "result": {
+        "url": "https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml",
+        "provider": "crawl4ai",
+        "title": "",
+        "text": "图片标签\n关于加强充电宝、锂电池机上安全风险管控的提示\n按照中国民航局要求，为保障航班飞行安全，请您乘坐航班时严格遵守充电宝、锂电池运输相关要求：\n一、禁运要求：\n生产厂家召回（召回信息在“国家市场监督管理总局缺陷产品召回技术中心”官方网站“消费品召回”栏目查询）、鼓包、变形、开裂、标识不清、无法确认额定能量或锂金属含量的充电宝。\n二、数量限制：\n每位旅客最多携带2块充电宝。\n三、能量限制：\n1.单个充电宝的额定能量不得超过160Wh；\n2.100Wh及以下的充电宝，无需国航批准；\n3.超过100Wh但不超过160Wh的充电宝，须经国航批准。\n四、其他要求：\n1.乘坐中国境内航班须有清晰3C标识；\n2.充电宝只能随身携带，不允许托运；\n3.如果充电宝具备电源开关功能，需要将电源关闭；\n4.机上全程不得将充电宝放入行李架，不得使用充电宝给任何设备供电，不得使用机上电源给充电宝充电；\n5.充电宝做好绝缘防护，放置于前方座椅下方的手提行李或座椅靠背口袋内。\n中国国际航空股份有限公司\n二〇二六年八月四日\n[关于国航](https://webresource.airchina.com.cn/zh-CN/content/about_us/company/) | [运输总条件](https://webresource.airchina.com.cn/zh-CN/content/trans_conditions/general/) | [法律声明](https://www.airchina.com.cn/zh-CN/content/website/info/legal_statement/) | [隐私条款](https://www.airchina.com.cn/zh-CN/content/website/info/privacy_policy/) | [cookie声明](https://www.airchina.com.cn/zh-CN/content/website/info/cookie/) | [国货航](http://www.airchinacargo.com/) | [投资者关系](https://www.airchina.com.cn/investor-relations?type=HOME) | [中航集团](http://www.airchinagroup.com/cnah/) | [国家会议中心](https://www.cnccchina.com/) | [汉莎航空](https://www.lufthansa.com/cn/hk/homepage) | [星盟环球程产品](https://webresource.airchina.com.cn/zh-CN/content/about_us/solidarity/25054/) | [营业执照](https://www.airchina.com.cn/zh-CN/content/website/info/business_license/) |\nCopyright 2022 Air China, All Rights Reserved. | 京ICP证 030872号-1",
+        "retrieved_at": "2026-10-04T05:38:35.760687+00:00",
+        "content_type": "text/plain",
+        "body_sha256": "25eeb3bd9e5cf0bb50d42330a586d307257a3bd36b39e63bd4c50aaf781048c4",
+        "total_characters": 1339,
+        "text_offset": 0,
+        "truncated": false,
+        "focus_matched": true,
+        "dns_resolver": "cloudflare",
+        "extraction_method": "plain_text",
+        "document_characters": 1339,
+        "links": [],
+        "links_requested": false,
+        "links_truncated": false,
+        "links_scope": "selected_source",
+        "read_url_schemes": [
+          "https"
+        ]
+      },
+      "elapsed_ms": 3436
+    },
+    {
+      "kind": "pdf",
+      "arguments": {
+        "url": "https://raft.github.io/raft.pdf",
+        "focus": "randomized election timeouts",
+        "max_characters": 6000,
+        "dns_resolver": "cloudflare",
+        "fresh": true
+      },
+      "origin": "previous_production_search_rank4",
+      "model_calls": 0,
+      "ok": true,
+      "result": {
+        "url": "https://raft.github.io/raft.pdf",
+        "provider": "crawl4ai",
+        "title": "In Search of an Understandable Consensus Algorithm",
+        "text": "n by incre menting its term and initiating another round of Request V ote RPCs. However, without extra measures split votes could repeat indeﬁnitely. Raft uses randomized election timeouts to ensure that split votes are rare and that they are resolved quickly. To prevent split votes in the ﬁrst place, election timeouts are chosen randomly from a ﬁxed interval (e.g., 150–300ms). This spreads out the servers so that in most cases only a single server will time out; it wins the election and sends heartbeats before any other servers time out. The same mechanism is used to handle split votes. Each candidate restarts its randomized election timeout at the start of an election, and it waits for that timeout to elapse before starting the next election; this reduces the likelihood of another split vote in the new election. Section 9.3 shows that this approach elects a leader rapidly.\n* * *\n## _Figure 6: Logs are composed of entries, which are numbered_\nsequentially. Each entry contains the term in which it was\n* * *\ncreated (the number in each box) and a command for the state machine. An entry is considered committed if it is safe for that entry to be applied to state machines. Elections are an example of how understandability guided our choice between design alternatives. Initially we planned to use a ranking system: each candidate was assigned a unique rank, which was used to select between competing candidates. If a candidate discovered another candidate with higher rank, it would return to follower state so that the higher ranking candidate could more eas ily win the next election. We found that this approach created subtle issues around availability (a lower-ranked server might need to time out and become a candidate again if a higher-ranked server fails, but if it does so too soon, it can reset progress towards electing a leader). We made adjustments to the algorithm several times, but after each adjustment new corner cases appeared. Eventually we concluded that the randomized retry approach is more obvious and understandable. 5.3 Log replication Once a leader has been elected, it begins servicing client requests. Each client request contains a command to be executed by the replicated state machines. The leader appends the command to its log as a new entry, then is sues AppendEntries RPCs in parallel to each of the other servers to replicate the entry. When the entry has been safely replicated (as described below), the leader applies the entry to its state machine and returns the result of that execution to the client. If followers crash or run slowly, or if network packets are lost, the leader retries Append Entries RPCs indeﬁnitely (even after it has responded to the client) until all followers eventually store all log en tries. Logs are organized as shown in Figure 6. Each log en try stores a state machine command along with the term number when the entry was received by the leader. The term numbers in log entries are used to detect inconsis tencies between logs and to ensure some of the properties in Figure 3. Each log entry also has an integer index iden 6\n* * *\n## tifying its position in the log.\nThe leader decides when it is safe to apply a log en try to the state machines; such an entry is called commit ted. Raft guarantees that committed entries are durable and will eventually be executed by all of the available state machines. A log entry is committed once the leader that created the entry has replicated it on a majority of the servers (e.g., entry 7 in Figure 6). This also commits all preceding entries in the leader’s log, including entrie s created by previous leaders. Section 5.4 discusses some subtleties when applying this rule after leader changes, and it also shows that this deﬁnition of commitment is safe. The leader keeps track of the highest index it knows to be committed, and it includes that index in future AppendEntries RPCs (including heartbeats) so that the other servers eventually ﬁnd out. Once a follower learns that a log entry is committed, it applies the entry to its local state machine (in log order). We designed the Raft log mechanism to maintain a high level of coherency between the logs on different servers. Not only does this simplify the system’s behavior and make it more predictable, but it is an important component of ensuring safety. Raft maintains the following proper ties, which together constitute the Log Matching Property in Figure 3: • If two entries in different logs have the same index and term, then they store the same command. • If two entries in different logs have the same index and term, then the logs are identical in all preceding entries. The ﬁrst property follows from the fact that a leader creates at most one entry with a given log index in a given term, and log entries never change their position in the log. The second property is guaranteed by a simple con sistency check performed by AppendEntries. When send ing an AppendEntries RPC, the leader includes the index and term of the entry in its log that immediately precedes the new entries. If the follower does not ﬁnd an entry in its log with the same index and term, then it refuses the new entries. The consistency check acts as an induction step: the initial empty state of the logs satisﬁes the Log Matching Property, and the consistency check preserves the Log Matching Property whenever logs are extended. As a result, whenever AppendEntries returns successfully, the leader knows that the follower’s log is identical to its own log up through the new entries. During normal operation, the logs of the leader and followers stay consistent, so the AppendEntries consis tency check never fails. However, leader crashes can leave the logs inconsistent (the old leader may not have fully replicated all of the entries in its log). These inconsisten cies can compound over a series of leader and follower crashes. Figure 7 illustrates the ways in which followers’ logs may differ from that of a new leade",
+        "retrieved_at": "2026-10-04T05:38:40.086769+00:00",
+        "content_type": "text/plain",
+        "body_sha256": "f90482b8391f389ea75fabcabdd6d98b254f9e5b12b6f01138b0d448e01ab258",
+        "total_characters": 91168,
+        "text_offset": 26962,
+        "truncated": true,
+        "focus_matched": true,
+        "dns_resolver": "cloudflare",
+        "extraction_method": "plain_text",
+        "document_characters": 91168,
+        "links": [],
+        "links_requested": false,
+        "links_truncated": false,
+        "links_scope": "selected_source",
+        "read_url_schemes": [
+          "https"
+        ]
+      },
+      "elapsed_ms": 4331
+    }
+  ],
+  "q02_approval": false
+}

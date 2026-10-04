@@ -1,0 +1,25 @@
+import copy,hashlib,json
+from pathlib import Path
+base=Path('/Users/mubai/Desktop/CW2/.worktrees/qq-agent-plus-adoption/docs/research/qq-agent-plus-evidence/q02-v8-style-2026-10-03')
+out=Path('/tmp/cw2-q02-full-prepare/plan-length-control');out.mkdir(exist_ok=True)
+anchors=[]
+for profile in ['single_text','default_voice']:
+ root=base/profile
+ wires=[json.loads(x) for x in (root/'actual-provider-payloads.jsonl').read_text().splitlines()]
+ rounds=[json.loads(x) for x in (root/'provider-rounds.jsonl').read_text().splitlines()]
+ mapping=json.loads((root/'wire-attempt-map.json').read_text())
+ results={r['sample_key']:r for r in map(json.loads,(root/'results.jsonl').read_text().splitlines())}
+ for scene,turn in [('greeting',4),('stop_joking',4),('low_mood',4),('technical_help',3)]:
+  key=f'{scene}:r0:t{turn}:candidate';res=results[key]
+  calls=[r for r in rounds if r['sample_key']==key and r['event']=='started'];assert len(calls)==1
+  ids=mapping[calls[0]['call_id']];assert len(ids)==1
+  wire=wires[ids[0]];payload=copy.deepcopy(wire['payload'])
+  assert payload['model']=='gemini-3.8-flash-high' and not payload.get('tools')
+  assert payload['messages'][-1]['content']==res['user_text']
+  assert payload['messages'][0]['role']=='system'
+  assert payload['messages'][0]['content'].count('response length normal.')==1
+  payload['stream']=False;payload.pop('stream_options',None)
+  anchors.append({'anchor_id':f'{profile}:{key}','profile':profile,'kind':'task_guard' if scene=='technical_help' else 'closure','original_wire_sha256':wire['payload_sha256'],'payload':payload,'expected_behavior':res['expected_behavior'],'forbidden_behavior':res['forbidden_behavior'],'review_criteria':res['review_criteria']})
+(out/'anchors.json').write_text(json.dumps(anchors,ensure_ascii=False,indent=2)+'\n')
+print('anchors',len(anchors),'requests',len(anchors)*4)
+for x in anchors:print(x['anchor_id'],x['payload']['messages'][-1]['content'])

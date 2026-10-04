@@ -1,0 +1,24 @@
+"""Inspect full same-response candidates before CW2's five-result cap."""
+import hashlib,json,time
+from pathlib import Path
+import requests
+root=Path('/tmp/cw2-q02-search-cap-probe-20261003');root.mkdir(mode=0o700,exist_ok=True)
+wire=Path('/tmp/cw2-q02-v24-source-smoke-20261003/results/actual-provider-payloads.jsonl')
+queries=[]
+for row in map(json.loads,wire.read_text().splitlines()):
+ for msg in row['payload']['messages']:
+  if msg['role']!='tool':continue
+  try:r=json.loads(msg['content'])
+  except (ValueError,TypeError):continue
+  r=r.get('executed_result',r);d=r.get('data',{})
+  if r.get('ok') is True and d.get('provider')=='searxng' and d.get('query') not in queries:queries.append(d['query'])
+assert len(queries)==3
+assert not (root/'results.jsonl').exists(),'Inspect existing probe; do not overwrite'
+(root/'plan.json').write_text(json.dumps({'queries':queries,'source_wire_sha256':hashlib.sha256(wire.read_bytes()).hexdigest(),'endpoint':'http://127.0.0.1:18081/search','requests_max':3,'comparison':'Same raw response, first 5 versus first 20; no model runs','language_parameter_omitted_like_runtime':True},ensure_ascii=False,indent=2)+'\n')
+s=requests.Session();s.trust_env=False
+for i,q in enumerate(queries):
+ begin=time.monotonic();response=s.get('http://127.0.0.1:18081/search',params={'q':q,'format':'json'},timeout=30);data=response.json()
+ record={'index':i,'query':q,'status':response.status_code,'latency_ms':round((time.monotonic()-begin)*1000),'body_sha256':hashlib.sha256(response.content).hexdigest(),'response':data}
+ with (root/'results.jsonl').open('a') as f:f.write(json.dumps(record,ensure_ascii=False)+'\n')
+ print(json.dumps({'i':i,'status':response.status_code,'results':len(data.get('results',[])),'errors':data.get('unresponsive_engines')}),flush=True)
+(root/'exit-code.json').write_text('{"exit_code":0}\n')

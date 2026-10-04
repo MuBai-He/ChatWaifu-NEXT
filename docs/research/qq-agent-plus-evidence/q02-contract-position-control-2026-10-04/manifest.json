@@ -1,0 +1,28 @@
+{
+  "files_sha256": {
+    "actual-requests.jsonl": "c0efd12df428a7218e7cb6563897fe921dc78f48796ad4a1a7f3cbf6e440fd37",
+    "anchors.json": "62e5020fd2e900c176fd00a2df0a421af84a9c394910885e36983fba275cdda4",
+    "attempts.jsonl": "e3cf91c08515e36da1f3a2d23ff99123e8dfebdbdfe78b1ca14fcd3c74ba82c7",
+    "exit-code.json": "e89df0eae5ec7db81135aed16463968955c578bcc4f2ec43172eff351f080c17",
+    "mask_contract_position.py.txt": "969f3759aa4abc9a2086d73ce8aef9c14d9cdc28d6a92c4611e777565d3d2056",
+    "masked-packets.json": "e0803c6a7f2e8120dedace17e5fd5ae0695df67274273e051316e59df651a6fb",
+    "preflight-integrity.json": "1cec8aa766af9dc8b60d5708172116812c9138cb35f2de1b26764957ae435d6f",
+    "primary-judgments.json": "f3f745dafbf9a4eda43d2b60ffc77741e0c81a60e7c6d438d609c0091c7086ee",
+    "primary-review-freeze.json": "bd0e94b65ad0ba946cc4fa2e3dce733194f14e7c542e5dbd6d56f2efd2eb41d8",
+    "private-review-key.json": "08297a2ff374b639d11b709283fa64464a7098ae817310b831c86604a9aa6760",
+    "probe.py.txt": "fd753e0ed5961d552ebb76d0c225cc06566767661a41072db7b3fcb2625e103b",
+    "remote-files-sha256.json": "f03f6c25a039c89b1d1378944a191679c095a6dcd488c95d4a3c84297f8f9618",
+    "remote-integrity-status.json": "3143ccf8a3c8e5e62bc9660251ddc13b0986d181edf09cd065e1affd96abe7e4",
+    "results.jsonl": "5d210932e3da803a29659ec1f0ab5f62508e1c440e5128037ae5daddeda9d5c9",
+    "scope-and-gates.json": "ebdf08e2a9c41a49f8315b90889ff871f23bc61ba1d49bd9e72424d75e80787f",
+    "summary.json": "0b9dabfd185e1265d94e437b9e34f087aa84f2ac519a9e3fc45ea4a1b7d2c5fe",
+    "technical-code-execution.json": "b350d38b7bac1b3be02e19c3ba7763de173753b642fafce0d9f2326a5769e5e1",
+    "technical-code-runner.py.txt": "f43f7c00d2cb43265f27b24cb1fa4ac24f1897fb70e662a198018f310457c941",
+    "technical-programs.json": "f9a3b9ba1160e10fa250475bfe69913702e28bc38b23795bd38dae78239a1ff2",
+    "unmasked-rows.json": "4d870df0eb04bc1b65f8b86e30a63d8b9cfd1ca74a41f5e29e9a1ee23f88cc3d"
+  },
+  "actual_request_payloads_match_frozen_controls": true,
+  "separate_remote_hash_readback": true,
+  "quality_approved": false,
+  "files": 20
+}

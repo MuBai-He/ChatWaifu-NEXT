@@ -1,0 +1,109 @@
+"""Read-only component evidence audit, no retrieval/model calls or quality approval."""
+
+import argparse
+import hashlib
+import json
+from pathlib import Path
+
+
+def load(path):
+    return json.loads(path.read_text())
+
+
+def sha(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def text_sha(text):
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--write-report", action="store_true")
+parser.add_argument("--check-current", action="store_true")
+args = parser.parse_args()
+phase = Path(__file__).resolve().parent
+repo = phase.parents[4]
+previous = phase.parent / "scope-blocks"
+prior = load(phase / "prior-version.json")
+assert sha(previous / "manifest.json") == prior["manifest_sha256"]
+prior_files = load(previous / "manifest.json")["files"]
+assert len(prior_files) == 93
+for rel, expected in prior_files.items():
+    assert sha(previous / rel) == expected, rel
+assert load(phase / "plan.json")["model_calls"] == 0
+assert load(phase / "plan.json")["config_mutations"] == 0
+for rel, expected in load(phase / "document-sha256.json")["files"].items():
+    assert sha(phase / "final-documents" / (rel.replace("/", "__") + ".txt")) == expected
+    if args.check_current:
+        assert sha(repo / rel) == expected
+for rel, expected in load(phase / "reader-source-sha256.json")["files"].items():
+    assert sha(phase / "reader-code" / (rel.replace("/", "__") + ".txt")) == expected
+    if args.check_current:
+        assert sha(repo / rel) == expected
+queries = [load(phase / f"search-{i}.json") for i in range(3)]
+assert all(r["http"] == 200 and not r["unresponsive_engines"] for r in queries)
+assert all(r["endpoint"] == "http://127.0.0.1:18080/search" for r in queries)
+assert all(len(r["results"]) == 10 for r in queries)
+assert queries[2]["results"][3]["url"] == "https://raft.github.io/raft.pdf"
+read = load(phase / "discovered-read.json")
+assert not read["ok"] and read["error_code"] == "web_provider_unavailable"
+assert read["arguments"]["url"] == queries[2]["results"][3]["url"]
+assert read["arguments"]["dns_resolver"] == "cloudflare"
+assert read["search_result_rank"] == 4 and not read["builtin_fallback_enabled"]
+assert read["service_endpoint"] == "http://127.0.0.1:11235" and not read["model_calls"]
+packages = load(phase / "pdf-dependency-inventory.json")
+assert len(packages) == 2 and all(r["exit_code"] == 0 for r in packages)
+assert packages[0]["packages"]["crawl4ai"]["version"] == "0.9.2"
+assert not packages[0]["packages"]["pypdf"]["available"]
+assert packages[1]["packages"]["crawl4ai"]["version"] == "0.9.3"
+assert packages[1]["packages"]["pypdf"]["version"] == "6.16.2"
+assert any("ImportError: pypdf is required" in line
+           for line in load(phase / "reader-service-errors.json")["lines"])
+health = load(phase / "runtime-health-corrected.json")
+assert health["http"] == 200 and health["body"]["status"] == "ok"
+assert health["scheme"] == "https" and health["certificate_verification"]
+assert health["initial_probe_used_wrong_scheme_and_path"]
+assert all(row["exit_code"] == 1 for row in
+           load(phase / "pdf-dependency-inventory-initial-command-error.json"))
+review = load(phase / "review.json")
+assert not review["q02_approved"] and not review["production_config_changed"]
+assert not review["reader"]["html_operations"]
+assert review["source_calls"] == {
+    "search_operations": 3, "reader_operations": 1, "reader_http_attempts": "not_collected"}
+privacy = load(phase / "post-probe-integrity.json")
+assert not privacy["credential_leaks"] and not privacy["config_mutations"]
+assert privacy["credential_values_checked"] == 1 and privacy["files_scanned"] == 15
+assert not privacy["model_calls"] and privacy["reader_http_attempt_count"] == "not_collected"
+rounds = [json.loads(line) for line in (previous / "live/provider-rounds.jsonl").read_text().splitlines()]
+replies = [json.loads(line) for line in (previous / "live/results.jsonl").read_text().splitlines()]
+component = load(phase / "existing-batch-component-review.json")
+assert not component["model_calls"] and not component["reply_replacements"]
+items = component["items"]
+keys = {f"frozen_{source}:r{repeat}:t4" for source in ("icao", "airchina") for repeat in range(2)}
+assert len(items) == 4 and {row["sample_key"] for row in items} == keys
+for row in items:
+    key = row["sample_key"]
+    draft = next(r for r in rounds if r["sample_key"] == key and r["phase"] == "draft")
+    frame = next(r for r in rounds if r["sample_key"] == key and r["phase"] == "final_frame")
+    reply = next(r for r in replies if r["sample_key"] == key)
+    assert text_sha(draft["raw_frame"]) == row["draft_sha256"]
+    assert text_sha(frame["raw_frame"]) == row["final_raw_frame_sha256"]
+    assert text_sha(reply["reply_text"]) == row["published_reply_sha256"]
+    assert row["full_text_component_review"]
+report = {"quality_approval": False, "new_model_calls": 0, "production_mutations": 0,
+          "search_operations": 3, "reader_operations": 1, "reader_http_attempts": "not_collected",
+          "deployed_pdf_dependency_failure": True, "corrected_tls_health": True,
+          "new_answer_candidates": 0, "existing_final_turn_drafts_reviewed": 4,
+          "v39_manifest_entries_unchanged": 93, "raw_replies_replaced": 0,
+          "reader_code_snapshots": 3, "current_checkout_check_optional": True}
+out = phase / "final-artifact-audit.json"
+if args.write_report:
+    assert not out.exists()
+    out.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n")
+else:
+    assert load(out) == report
+    actual = {str(p.relative_to(phase)): sha(p) for p in phase.rglob("*")
+              if p.is_file() and p != phase / "manifest.json"}
+    assert actual == load(phase / "manifest.json")["files"]
+print(json.dumps(report, sort_keys=True))
