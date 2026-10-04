@@ -1170,3 +1170,31 @@ Private proof `root-phone-private-isolation-acceptance.json` references
 `private-isolation-actual-readback.json` and the preparation/preflight records in
 the current private acceptance directory. No operator memory decision, manual
 model/send call, deployment or policy change occurred during this case.
+
+## Unsupported file and working followup text (2026-10-04)
+
+The owner confirmed that the test media received no reply and the subsequent
+text received a normal answer. The requested test was a short video, but the
+actual NapCat receive log at 15:54:42 Asia/Shanghai and authenticated read-only
+provider history identify an MP4 delivered as one `file` segment. Provider
+metadata confirms the account and owner; the normalizer rejects that actual
+segment. SQLite has no admission for its external message ID. The sole fresh
+admission is the following text probe, completed at 15:54:52 with exactly one
+delivered TEXT part and provider receipt. This accepts that concrete unsupported
+file case, with no real `video` segment acceptance claimed.
+
+The bounded read-only observer matched only video and the exact text probe. It
+captured the real probe but no video; the file's type and identifier were instead
+read with [`get_friend_msg_history`](https://napneko.github.io/develop/api/doc)
+and matched to the NapCat receive log. The media payload was not downloaded or
+passed to a model by the verifier. Once the actual type was known, only the
+verified owned observer process received SIGINT; its finally block closed its
+own socket and its process is absent. The recorded SSH exit 255 with cancellation
+and KeyboardInterrupt is the deliberate observer stop, not a Runtime failure.
+
+Independent current management readback confirms the private connection ready,
+proactive policy unchanged off at revision six and group revision eleven.
+Private `root-phone-unsupported-file-acceptance.json` references the actual
+readback, selective receive log, provider history metadata, partial observer
+capture and stop request. No Runtime/NapCat stop, provider send, deployment or
+policy change occurred.
