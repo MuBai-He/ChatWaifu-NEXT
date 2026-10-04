@@ -1153,7 +1153,11 @@ class ChannelManagementService:
                         await self._set_connection_health(
                             connection_id,
                             error.code,
-                            "WeChat returned a response that cannot be processed.",
+                            (
+                                "The WeChat login has expired. Scan a new QR code to reconnect."
+                                if error.code == "weixin.session_expired"
+                                else "WeChat returned a response that cannot be processed."
+                            ),
                             status=ChannelConnectionStatus.ERROR,
                             retryable=False,
                         )
@@ -1885,6 +1889,11 @@ class ChannelManagementService:
                 part_id=str(part.part_id),
                 ordinal=part.ordinal,
                 send_elapsed_ms=round((perf_counter() - send_started) * 1000, 3),
+                receipt_kind=(
+                    "server_message_id"
+                    if provider_message_id is not None and provider_message_id != client_id
+                    else "client_id"
+                ),
             )
             return DeliveryPartExecutionResult(
                 outcome=DeliveryPartOutcome.DELIVERED,

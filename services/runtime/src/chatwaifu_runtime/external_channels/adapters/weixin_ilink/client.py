@@ -6,6 +6,7 @@ import asyncio
 import base64
 import hashlib
 import json
+import logging
 import secrets
 from collections.abc import Sequence
 from datetime import UTC, datetime
@@ -42,6 +43,7 @@ _APP_ID = "bot"
 _APP_CLIENT_VERSION = str((2 << 16) | (4 << 8) | 6)
 _MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 _MAX_UPDATE_MESSAGES = 64
+logger = logging.getLogger(__name__)
 
 
 class WeixinILinkError(RuntimeError):
@@ -271,7 +273,7 @@ class WeixinILinkClient:
             raise WeixinILinkError(
                 "weixin.send_failed", "WeChat rejected the reply.", retryable=True
             )
-        return client_id
+        return _server_message_id(payload.get("message_id")) or client_id
 
     async def send_image(
         self,
@@ -361,7 +363,7 @@ class WeixinILinkClient:
                     raise WeixinILinkError(
                         "weixin.send_failed", "WeChat rejected the reply.", retryable=True
                     )
-                return client_id
+                return _server_message_id(send_payload.get("message_id")) or client_id
         except TimeoutError:
             raise WeixinILinkError(
                 "weixin.request_timeout", "WeChat image send timed out.", retryable=True
@@ -628,7 +630,11 @@ class WeixinILinkClient:
                 timeout=timeout_seconds,
             ) as response:
                 response.raise_for_status()
-                return await _bounded_json(response)
+                payload = await _bounded_json(response)
+                if urlsplit(url).path == "/ilink/bot/sendmessage":
+                    _log_send_response(payload, body)
+                _check_api_error(payload)
+                return payload
         except WeixinILinkError:
             raise
         except httpx.TimeoutException:
@@ -678,6 +684,64 @@ def _base_info() -> dict[str, str]:
         "channel_version": "2.4.6",
         "bot_agent": "ChatWaifuNEXT/0.1.0",
     }
+
+
+def _check_api_error(payload: dict[str, object]) -> None:
+    # iLink can return HTTP 200 with errcode and no ret. In particular -14
+    # requires authorization, so it must never become a successful empty poll.
+    errcode = payload.get("errcode", 0)
+    if not isinstance(errcode, int) or isinstance(errcode, bool):
+        raise WeixinILinkError(
+            "weixin.response_invalid", "WeChat returned an invalid response.", retryable=True
+        )
+    ret = payload.get("ret")
+    if errcode == -14 or (isinstance(ret, int) and not isinstance(ret, bool) and ret == -14):
+        raise WeixinILinkError(
+            "weixin.session_expired",
+            "The WeChat login has expired. Scan a new QR code to reconnect.",
+            retryable=False,
+        )
+    if errcode != 0:
+        raise WeixinILinkError("weixin.api_error", "WeChat rejected the request.", retryable=True)
+
+
+def _server_message_id(value: object) -> str | None:
+    if isinstance(value, int) and not isinstance(value, bool):
+        number = value
+    elif isinstance(value, str) and 0 < len(value) <= 20 and value.isascii() and value.isdigit():
+        number = int(value)
+    else:
+        return None
+    return str(number) if 0 < number <= (1 << 64) - 1 else None
+
+
+def _log_send_response(payload: dict[str, object], body: dict[str, object] | None) -> None:
+    server_id = _server_message_id(payload.get("message_id"))
+    raw_message = body.get("msg") if body is not None else None
+    raw_client_id = (
+        cast(dict[str, object], raw_message).get("client_id")
+        if isinstance(raw_message, dict)
+        else None
+    )
+    ret, errcode = payload.get("ret"), payload.get("errcode")
+    # This is API acceptance, not phone receipt. Whitelist numeric codes and
+    # opaque caller identity; never log the response body or provider errmsg.
+    logger.info(
+        json.dumps(
+            {
+                "event": "weixin.send_response",
+                "client_id": raw_client_id if isinstance(raw_client_id, str) else None,
+                "ret_present": "ret" in payload,
+                "ret": ret if isinstance(ret, int) and not isinstance(ret, bool) else None,
+                "errcode_present": "errcode" in payload,
+                "errcode": (
+                    errcode if isinstance(errcode, int) and not isinstance(errcode, bool) else None
+                ),
+                "message_id_present": "message_id" in payload,
+                "receipt_kind": "server_message_id" if server_id is not None else "client_id",
+            }
+        )
+    )
 
 
 async def _bounded_json(response: httpx.Response) -> dict[str, object]:

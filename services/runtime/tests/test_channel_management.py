@@ -14,6 +14,7 @@ from functools import partial
 from typing import Any
 from uuid import UUID, uuid4
 
+import httpx
 import pytest
 from chatwaifu_protocol.channels import (
     ChannelAuthorizationMethod,
@@ -35,7 +36,10 @@ from chatwaifu_protocol.channels import (
 from chatwaifu_protocol.session import GenerationState
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.config.settings import Settings
-from chatwaifu_runtime.external_channels.adapters.weixin_ilink.client import WeixinILinkError
+from chatwaifu_runtime.external_channels.adapters.weixin_ilink.client import (
+    WeixinILinkClient,
+    WeixinILinkError,
+)
 from chatwaifu_runtime.external_channels.adapters.weixin_ilink.models import (
     WeixinAuthorizationPoll,
     WeixinAuthorizationStart,
@@ -442,6 +446,53 @@ async def test_connection_credential_read_failure_is_isolated_to_connection(
         assert snapshot.last_error.code == "channel_secure_store_unavailable"
     finally:
         await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_http_200_expired_session_stops_polling_and_reports_reauthorization(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    container = RuntimeContainer(runtime_settings)
+    store = InMemoryChannelCredentialStore()
+    transport = _FakeWeixin()
+    management = _replace_management(container, store, transport)
+    polls = 0
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        nonlocal polls
+        polls += 1
+        return httpx.Response(200, json={"errcode": -14, "errmsg": "session timeout"})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        client = WeixinILinkClient(http)
+        monkeypatch.setattr(transport, "get_updates", client.get_updates)
+        await container.start()
+        try:
+            connection_id = uuid4()
+            access_token = "g" * 43
+            credentials = _credentials(access_token).to_json()
+            created = await container.external_channels.create_connection(
+                _configuration(connection_id),
+                access_token=access_token,
+            )
+            await store.set(f"weixin_ilink:{connection_id}", credentials)
+            await management.connection_configuration_changed(created.snapshot)
+            await asyncio.wait_for(transport.stopped.wait(), timeout=3)
+            snapshot = await container.external_channels.get_connection(connection_id)
+            assert snapshot.status.value == "error"
+            assert snapshot.last_error is not None
+            assert snapshot.last_error.code == "weixin.session_expired"
+            assert snapshot.last_error.retryable is False
+            assert "QR code" in snapshot.last_error.message
+            assert polls == 1
+            assert (
+                await container.external_channel_repository.get_adapter_cursor(connection_id) == ""
+            )
+            assert await store.get(f"weixin_ilink:{connection_id}") == credentials
+            assert not transport.sent_messages
+        finally:
+            await container.stop()
 
 
 @pytest.mark.asyncio
