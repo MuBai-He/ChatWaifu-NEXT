@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-10-05
 - Scope: External messaging presentation; extends ADRs 0032, 0033 and 0069
-- Validation state: Deterministic and targeted model checks complete; main Runtime deployed; QQ platform login blocks group restoration; handset UX pending
+- Validation state: Deterministic and targeted model checks complete; main Runtime deployed; both connections ready and original group restored; handset UX pending
 
 ## Decision
 

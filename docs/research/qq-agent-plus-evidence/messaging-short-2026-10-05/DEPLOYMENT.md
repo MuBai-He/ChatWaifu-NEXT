@@ -4,6 +4,11 @@
 `bd0097048abe745d322ea2cb9b9f6dc1355bfaa3`。后续文档提交不改变该产品版本。
 本次由主代理实现、审查和验证，未使用 AGY，没有代用户向 QQ/微信发送测试消息。
 
+当前部署恢复已完成：2026-10-05 04:31:52（Asia/Shanghai）核对原账号登录、
+微信/QQ 连接 ready、原固定群 enabled/revision 21。新 Runtime 观察的两名非自身
+成员与原成员集合一致，原场景、participant/link 身份和 speaking grants 全部保留。
+真实手机短回复体验及 Q02 的完整质量验收仍未新增通过结论。
+
 ## 已部署的范围
 
 主服务器 `192.168.1.103` 的 main Runtime 已切到
@@ -36,7 +41,7 @@ SearXNG、Crawl4AI、模型凭据、Web 静态文件、STT/TTS 服务不变。
 角色/关系状态、成员身份/场景链接和记忆记录保留。
 24 条样本的具体失败和限制见 [定向对照](README.md)，不据此宣布 Q02 或手机 UX 通过。
 
-## QQ 群恢复过程与当前阻塞
+## QQ 群恢复过程
 
 首次重新观察成功后，部署脚本误将只含成员 ID 的 `member_fingerprint` 与含身份链接
 和发言授权的 `audience_fingerprint` 比较，阻止了恢复。这两个哈希不应比较；该错误
@@ -52,19 +57,24 @@ SearXNG、Crawl4AI、模型凭据、Web 静态文件、STT/TTS 服务不变。
 确认无 active generations/待投递消息后，仅重启原专用 NapCat 容器，容器身份和
 持久挂载保留，启动配置仍是原账号。快速登录明确报“登录态已失效，请重新登录”。
 QQ 因这次恢复操作暂时离线；该日志不能反证重启前空名单的具体原因。
-当前微信 ready，QQ degraded，原固定群 disabled/reconnect、revision 20；
+恢复前微信 ready，QQ degraded，原固定群 disabled/reconnect、revision 20；
 原 scene、账号、成员、participant/link 身份和 speaking grants 全部保留。
 
 已向用户提供临时登录二维码，二维码/令牌/账号 ID 不进入本证据目录。
 04:06:43 的 NapCat 日志确认二维码被扫描；04:06:50 返回 `serverErrorCode=168`，
 原文为“你的账号近期存在安全风险，部分功能使用受限，请登录最新手机QQ并根据提示恢复账号使用。”
 用户认为已经登录后，新的只读登录请求仍未建立有效 OneBot 连接；扫描成功不等于登录成功。
-这属于已经确认的 QQ 平台登录阻塞，不归为提示词、成员变更或 CW2 投递失败。
+这是当时已经确认的 QQ 平台登录阻塞，不归为提示词、成员变更或 CW2 投递失败。
 
-待用户在手机 QQ 按平台提示恢复账号并完成原账号登录后，先验证同账号及完整真实
-名单，再用新观察和最新 revision 恢复原群；名单不一致时保持暂停，不扩大参与者
-或发言权限。部署恢复尚未完全完成，真实手机短回复体验也没有新增通过记录。
-当前结构化状态见 [deployment.json](deployment.json)，恢复后的新结果须另行记录。
+随后通过 NapCat WebUI 的正常认证 API 读取到未登录状态；刷新二维码，没有再次
+重启 Provider。用户报告账号刚解封后，同账号 OneBot 登录和完整成员读取成功，
+返回原两名非自身成员。再通过主 Runtime 获取新观察，验证账号、连接 revision
+和真实成员集合，使用当前群 revision 20 及原 speaking grants 恢复到 revision 21。
+重新读取确认 enabled、无 pause reason、场景和全部成员链接/权限不变；数据库
+quick_check ok、0 FK errors，核对时无待投递消息。本次没有发送真实渠道测试消息。
+
+部署恢复完成，手机短回复 UX 和完整 Q02 质量门槛继续单独保留。
+当前结构化状态见 [deployment.json](deployment.json)，其中保留原错误 168 与恢复证据。
 
 ## 备份与回退
 

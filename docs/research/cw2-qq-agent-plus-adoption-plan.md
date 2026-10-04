@@ -1,6 +1,6 @@
 # CW2 借鉴 QQ Agent Plus：实施方案
 
-2026-10-05 消息体验切片：保持原始 v7，按当前 `external_channel` 来源选择短句约束，覆盖微信、QQ 私聊/固定群及后续消息 Provider；本地/Web/桌宠/语音编译保持相同。QQ 固定群接入已有无损分条与持久化节奏，数据库迁移到 41。24 个固定问题真实模型对照显示局部短消息改善，但追问上限和技术表述仍有缺口；[对照记录](qq-agent-plus-evidence/messaging-short-2026-10-05/README.md)保留原回复、实际 payload、usage、延迟与审查结论。冻结产品已部署主服务器；QQ 扫码后登录受平台限制，原群恢复仍待完成，见[部署记录](qq-agent-plus-evidence/messaging-short-2026-10-05/DEPLOYMENT.md)。此切片不改变 Q02 未通过的结论及原完整验收标准。
+2026-10-05 消息体验切片：保持原始 v7，按当前 `external_channel` 来源选择短句约束，覆盖微信、QQ 私聊/固定群及后续消息 Provider；本地/Web/桌宠/语音编译保持相同。QQ 固定群接入已有无损分条与持久化节奏，数据库迁移到 41。24 个固定问题真实模型对照显示局部短消息改善，但追问上限和技术表述仍有缺口；[对照记录](qq-agent-plus-evidence/messaging-short-2026-10-05/README.md)保留原回复、实际 payload、usage、延迟与审查结论。冻结产品已部署主服务器；微信、QQ 连接和原账号登录已核对，原群已用新观察恢复且原权限保留，见[部署记录](qq-agent-plus-evidence/messaging-short-2026-10-05/DEPLOYMENT.md)。此切片不改变 Q02 未通过的结论及原完整验收标准。
 
 2026-10-04 测试选择：按用户要求，本地 `mubai/q02-v7-test` 使用原始 v7 作为默认 persona，服务器保留其独立版本。此选择不改变 Q02 未通过的质量结论；版本、回退、主要文件与整体进度见 [v7 测试说明](qq-agent-plus-evidence/q02-v7-test-version-2026-10-04.md)。
 
