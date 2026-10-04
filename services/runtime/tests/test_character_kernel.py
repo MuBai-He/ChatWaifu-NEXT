@@ -32,6 +32,15 @@ from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 CHARACTERS_ROOT = Path(__file__).resolve().parents[3] / "characters"
 
 
+def _v4_reference_prompt() -> str:
+    reference = (
+        CHARACTERS_ROOT.parent
+        / "docs/research/qq-agent-plus-evidence"
+        / "persona-candidate-v4-evaluated-2026-09-30.md.txt"
+    )
+    return reference.read_text(encoding="utf-8").strip()
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("profile", ["instant_message", "single_text", "default_voice"])
 async def test_output_contract_can_move_without_losing_policy_or_budget(profile: str) -> None:
@@ -229,6 +238,8 @@ async def test_prompt_compiler_supplies_public_product_facts_without_private_dep
     character = characters.get("default")
     assert character is not None
     now = datetime(2026, 10, 2, tzinfo=UTC)
+    # Preserve the original small-window control; v7 coverage is tested separately.
+    character = character.model_copy(update={"system_prompt": _v4_reference_prompt()})
     result = await PromptCompiler(cast(ModelConfigurationService, models)).compile(
         character=character,
         kernel=CharacterKernelSnapshot(
@@ -584,11 +595,13 @@ async def test_character_kernel_service_revision_cas(runtime_settings: Settings)
 
 
 @pytest.mark.asyncio
-async def test_default_persona_package_budget_retains_critical_scene_rules() -> None:
+async def test_v4_reference_persona_budget_retains_critical_scene_rules() -> None:
     characters = CharacterService(CHARACTERS_ROOT)
     characters.start()
     nene = characters.get("default")
     assert nene is not None
+    # Keep the original v4/700-token control while this branch selects v7.
+    nene = nene.model_copy(update={"system_prompt": _v4_reference_prompt()})
 
     # Verify critical rules exist in persona
     assert "规则冲突时，严格遵循以下优先级" in nene.system_prompt
@@ -663,11 +676,12 @@ async def test_default_persona_package_budget_retains_critical_scene_rules() -> 
 
 
 @pytest.mark.asyncio
-async def test_prompt_compiler_presentation_profiles_im_single_text_and_voice() -> None:
+async def test_v4_reference_presentation_profiles_im_single_text_and_voice() -> None:
     characters = CharacterService(CHARACTERS_ROOT)
     characters.start()
     nene = characters.get("default")
     assert nene is not None
+    nene = nene.model_copy(update={"system_prompt": _v4_reference_prompt()})
 
     models = _PromptModels()
     compiler = PromptCompiler(cast(ModelConfigurationService, models))

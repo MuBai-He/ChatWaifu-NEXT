@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Select the frozen v7 persona on the local Q02 test branch at the user's request.
+  Preserve v4 controls and separately verify v7 loading and section-budget clipping
+  across three presentations. Retain the failed quality verdict and the independent
+  server version; record the optimization checkpoint, rollback and remaining gates.
+
 - Freeze the v44 Q02 conclusion with all attempts and four separate gates.
   Directed search/read controls and a real four-turn flow acquired the official
   missing conditions. An exact previously unsent review was admitted by a bounded
