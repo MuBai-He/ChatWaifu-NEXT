@@ -295,7 +295,7 @@ persona、32768/8192/15% 操作预算和服务器 SearXNG/Crawl4AI，公网读�
 
 上一目标轮是进展：修复指代路由并取得完整流程失败证据。检查现有契约后，确认
 READ 收据没有表示模型已陈述的依据缺口；没有新增事实库或从任意助手散文提取控制状态。
-先记录[ADR 0064 隔离方案](../../adr/0064-structured-source-answer-fidelity-prototype.md)，
+先记录[ADR 0070 隔离方案](../../adr/0070-structured-source-answer-fidelity-prototype.md)，
 再直接实现纯 Agent 原型。默认 persona、现有修订规则、生产 Provider/Conversation、
 配置和数据库均未改变，不使用 AGY。原型代码通过[独立指纹](q02-closure-2026-10-04/source-frame/prototype-sha256.json)
 冻结，当前真实 Runtime 路径仍为上方 v36，不将新增原型混作已部署功能。
@@ -363,7 +363,7 @@ Pyright 0 错误、Ruff/格式/diff 通过。修复过一个非标量 kind 的�
 ## 目标继续：原文引用控制冻结
 
 先检查已有句柄与终止记录，没有复测进程仍在运行，未重做已通过的正文获取、微信文字
-或桌面物理播放。按 ADR 0064 实现纯 Agent 行引用原型 2.0；模型只选择来源/行编号与
+或桌面物理播放。按 ADR 0070 实现纯 Agent 行引用原型 2.0；模型只选择来源/行编号与
 简短标题，渲染器从完整原始快照取回原句，复用既有缺口与列表边界。不添加航空关键词
 规则、不改 persona，不把模型缺口当事实或权限。行视图可恢复所有原字符，但一行不
 必然是一个完整语义条件；标题、选择覆盖、相关性与跨语言可读性仍须全文审查。
@@ -419,7 +419,7 @@ flash-n/control 等标识仍未验证。[逐请求审计](q02-closure-2026-10-04
 ## 冻结版本：有界未核实状态整链 v37
 
 先复用已完成的正文、closure-c1 和原生流程证据，未重跑旧验收；依据
-[ADR 0065](../../adr/0065-bounded-source-answer-coverage-candidate.md)直接实现默认关闭的
+[ADR 0071](../../adr/0071-bounded-source-answer-coverage-candidate.md)直接实现默认关闭的
 候选。Provider 只接受中立版本化 schema，Agent 有界解析并成文，Conversation 只在
 完成 generation 后暂存声明缺口及可见来源身份。未核实声明不是事实证明/长时记忆/
 权限，不从助手散文恢复控制状态。reset、stop、取消、发布失败、不同 principal/模型

@@ -32,10 +32,19 @@ NAPCAT_PROVIDER = ChannelProviderRegistration(
 )
 
 
-def channel_tool_policy(configuration: ChannelConnectionConfiguration, text: str) -> frozenset[str]:
+def channel_tool_policy(
+    configuration: ChannelConnectionConfiguration,
+    text: str,
+    *,
+    public_web_enabled: bool = False,
+) -> frozenset[str]:
     # Reply medium is chosen by the model. This grants only the current owner
-    # reply surface; the executor still checks live scope and generation.
+    # reply surface and opted-in public reads; execution checks live scope and generation.
     del text
     if configuration.provider_id == PROVIDER_ID:
-        return frozenset({VOICE_SKILL_ID})
+        return (
+            frozenset({VOICE_SKILL_ID, "web.search", "web.read"})
+            if public_web_enabled
+            else frozenset({VOICE_SKILL_ID})
+        )
     return frozenset()

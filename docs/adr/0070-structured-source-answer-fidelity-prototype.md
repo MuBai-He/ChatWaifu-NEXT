@@ -1,4 +1,4 @@
-# ADR 0064: Structured source-answer fidelity prototype
+# ADR 0070: Structured source-answer fidelity prototype
 
 Status: Proposed; isolated evaluation only
 

@@ -58,6 +58,7 @@ def test_qwen_is_default_and_both_neural_tts_workers_are_declared() -> None:
 
 
 def test_public_web_defaults_are_local_and_external_secrets_are_redacted() -> None:
+    assert PublicWebConfig().qq_owner_reads_enabled is False
     settings = Settings(
         public_web=PublicWebConfig(
             search_provider="firecrawl",

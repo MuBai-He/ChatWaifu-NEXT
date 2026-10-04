@@ -1,4 +1,4 @@
-# ADR 0065: Bounded source-answer coverage candidate
+# ADR 0071: Bounded source-answer coverage candidate
 
 Status: Proposed; default-off acceptance candidate
 

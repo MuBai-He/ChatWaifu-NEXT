@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Literal, NoReturn, cast
 from uuid import UUID, uuid4
 
-from chatwaifu_protocol.base import JsonObject, JsonValue, PrivacyLevel
+from chatwaifu_protocol.base import JsonObject, JsonValue, PrivacyLevel, SideEffect
 from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_protocol.events import GenericCoreEvent
 from chatwaifu_protocol.skills import (
@@ -46,6 +46,7 @@ from chatwaifu_runtime.providers.factory import ProviderSet
 from chatwaifu_runtime.runtime_skills.adapters import (
     AuthorizedGenerationHandler,
     BuiltinAdapter,
+    GenerationPermissionPolicy,
     GenerationSkillContext,
     McpConnectionAdapter,
     McpStdioAdapter,
@@ -124,6 +125,7 @@ class RuntimeSkillService:
         public_web_config: PublicWebConfig | None = None,
         session_builtin_handlers: dict[str, SessionBuiltinHandler] | None = None,
         authorized_generation_handlers: dict[str, AuthorizedGenerationHandler] | None = None,
+        generation_permission_policy: GenerationPermissionPolicy | None = None,
     ) -> None:
         self._root = root
         self._repository = repository
@@ -141,6 +143,8 @@ class RuntimeSkillService:
         self._permissions = PermissionBroker(repository)
         self._builtin = BuiltinAdapter()
         self._authorized_generation_handlers = authorized_generation_handlers or {}
+        self._generation_permission_policy = generation_permission_policy
+        self._policy_authorized_runs: set[UUID] = set()
         self._builtin.register("runtime_status", self._runtime_status)
         provider_config = public_web_config or PublicWebConfig()
         self._public_web = PublicWebReader(provider_config=provider_config)
@@ -414,6 +418,7 @@ class RuntimeSkillService:
             else None
         )
         generation_authorized = False
+        policy_authorized = False
         if generation_handler is not None:
             generation_authorized = await generation_handler.authorize(
                 GenerationSkillContext(session_id, turn_id, generation_id, origin)
@@ -422,6 +427,17 @@ class RuntimeSkillService:
                 raise PermissionError(
                     "This capability requires a current authorized channel request"
                 )
+        elif (
+            self._generation_permission_policy is not None
+            and entry.definition.source == "builtin"
+            and entry.adapter.kind == "builtin"
+            and capability.side_effect is SideEffect.READ
+        ):
+            policy_authorized = await self._generation_permission_policy(
+                GenerationSkillContext(session_id, turn_id, generation_id, origin),
+                entry.definition.skill_id,
+            )
+            generation_authorized = policy_authorized
         if require_cloud_readonly:
             from chatwaifu_runtime.runtime_skills.agent_router import cloud_realtime_eligible
 
@@ -512,6 +528,8 @@ class RuntimeSkillService:
                     run_id,
                 )
             else:
+                if policy_authorized:
+                    self._policy_authorized_runs.add(run_id)
                 self._schedule(run_id)
             # Admission includes returning its handle. Cancellation during this read
             # must stop the worker whose ID has not yet reached the caller.
@@ -879,6 +897,7 @@ class RuntimeSkillService:
                 )
 
     def _execution_finished(self, run_id: UUID, task: asyncio.Task[None]) -> None:
+        self._policy_authorized_runs.discard(run_id)
         self._tasks.pop(run_id, None)
         self._pending_arguments.pop(run_id, None)
         self._outcome_ready.discard(run_id)
@@ -1034,6 +1053,21 @@ class RuntimeSkillService:
                 session_id, run_id, entry, capability, arguments
             )
             if plan.adapter_kind == "builtin":
+                if run_id in self._policy_authorized_runs:
+                    run = await self.get_run(run_id)
+                    if (
+                        self._generation_permission_policy is None
+                        or not await self._generation_permission_policy(
+                            GenerationSkillContext(
+                                session_id, run.turn_id, run.generation_id, run.origin
+                            ),
+                            entry.definition.skill_id,
+                        )
+                    ):
+                        raise SkillExecutionError(
+                            "stale_channel_request",
+                            "The authorized owner request is no longer active",
+                        )
                 generation_handler = self._authorized_generation_handlers.get(plan.adapter_target)
                 if generation_handler is not None:
                     run = await self.get_run(run_id)
@@ -1278,6 +1312,7 @@ class RuntimeSkillService:
     ) -> NoReturn:
         """Never leave a created run nonterminal when permission setup fails."""
 
+        self._policy_authorized_runs.discard(run_id)
         self._pending_arguments.pop(run_id, None)
         failures: list[BaseException] = []
         try:

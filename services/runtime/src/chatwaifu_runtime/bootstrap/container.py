@@ -38,6 +38,7 @@ from chatwaifu_runtime.external_channels.encrypted_credentials import (
 from chatwaifu_runtime.external_channels.groups import ChannelGroupService
 from chatwaifu_runtime.external_channels.management import ChannelManagementService
 from chatwaifu_runtime.external_channels.proactive import ChannelProactiveService
+from chatwaifu_runtime.external_channels.public_web import ChannelPublicWebPolicy
 from chatwaifu_runtime.external_channels.service import (
     WEIXIN_ILINK_PROVIDER,
     ExternalChannelService,
@@ -229,6 +230,11 @@ class RuntimeContainer:
             mcp_private_origins=settings.security.mcp_private_origins,
             public_web_config=settings.public_web,
             authorized_generation_handlers={"channel_voice": self.channel_voice},
+            generation_permission_policy=ChannelPublicWebPolicy(
+                self.external_channel_repository,
+                lambda session_id: self.conversation.active_generation_id(session_id),
+                enabled=settings.public_web.qq_owner_reads_enabled,
+            ),
             session_builtin_handlers={
                 "calendar_read": CalendarReadSkill(self.personal_assistant),
                 "agenda_manage": AgendaManageSkill(self.personal_assistant),
@@ -322,7 +328,9 @@ class RuntimeContainer:
             self.event_hub,
             self.event_publisher,
             providers=(WEIXIN_ILINK_PROVIDER, NAPCAT_PROVIDER),
-            tool_policy=channel_tool_policy,
+            tool_policy=lambda configuration, text: channel_tool_policy(
+                configuration, text, public_web_enabled=settings.public_web.qq_owner_reads_enabled
+            ),
             sticker_catalog=self.sticker_catalog,
             sticker_library=self.sticker_library,
             photo_observer=self.photo_observer,

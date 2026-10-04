@@ -204,6 +204,16 @@ class ConversationService:
                 for tool in visible_tools
                 if not getattr(tool, "completes_channel_reply", False)
             )
+        if options.origin == "external_channel" and any(
+            tool.to_invocation({}).skill_id in {"web.search", "web.read"} for tool in visible_tools
+        ):
+            # Source retrieval completes as a reviewed text answer. An already
+            # composed voice call must not publish before the source-read loop.
+            visible_tools = tuple(
+                tool
+                for tool in visible_tools
+                if not getattr(tool, "completes_channel_reply", False)
+            )
         tools_digest = compute_tools_digest(visible_tools)
         chat_route = extract_nonsecret_route(chat_config)
         summary_route = extract_nonsecret_route(summary_config)
@@ -1190,7 +1200,7 @@ class ConversationService:
 
     def active_generation_id(self, session_id: UUID) -> UUID | None:
         active = self._active.get(session_id)
-        if active is None or (active.task is not None and active.task.done()):
+        if active is None or active.revoked or (active.task is not None and active.task.done()):
             return None
         return active.generation_id
 

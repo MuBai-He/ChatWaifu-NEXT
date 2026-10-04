@@ -14,6 +14,7 @@ busy_timeout_ms = 5000
 cloud_egress = "ask"
 
 [public_web]
+qq_owner_reads_enabled = false
 # Keep the local DuckDuckGo Lite/built-in path unless a provider is explicitly enabled.
 search_provider = "duckduckgo_lite"
 reader_provider = "builtin"

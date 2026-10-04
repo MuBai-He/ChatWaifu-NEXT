@@ -707,7 +707,7 @@ class ExternalChannelService:
             EXTERNAL_TEXT_TURN_OPTIONS,
             allow_tools=bool(allowed_skills),
             allowed_skill_ids=allowed_skills,
-            contextual_skill_ids=allowed_skills,
+            contextual_skill_ids=allowed_skills & frozenset({"channel.voice"}),
             source_context=source_context,
             presentation_profile=profile,
             failure_recovery_text=recovery_text,

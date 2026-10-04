@@ -226,6 +226,9 @@ class PublicWebConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    # Trusted host opt-in for current QQ owner requests; never grants group tools.
+    qq_owner_reads_enabled: bool = False
+
     search_provider: Literal["duckduckgo_lite", "firecrawl", "searxng", "so360", "jina_sogou"] = (
         "duckduckgo_lite"
     )

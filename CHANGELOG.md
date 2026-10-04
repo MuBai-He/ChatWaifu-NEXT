@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Merge the frozen QQ NapCat and Q02 v7 test branches for isolated server testing.
+  Add a default-off host policy for current-owner public reads, recheck it before
+  execution, preserve ordinary model-selected voice and shared-scene isolation,
+  and complete source retrieval as text. Keep the Q02 quality gate unapproved.
+
 - Select the frozen v7 persona on the local Q02 test branch at the user's request.
   Preserve v4 controls and separately verify v7 loading and section-budget clipping
   across three presentations. Retain the failed quality verdict and the independent
@@ -47,7 +52,7 @@
   Retain model-declared unresolved gaps across the same original URL/body identity
   and render typed list items; production behavior is unchanged. Ten server HTTP
   controls preserve gaps but expose condition ambiguity and an expanded prohibition;
-  the prototype is not adopted and full Q02 acceptance remains open. Record ADR 0064,
+  the prototype is not adopted and full Q02 acceptance remains open. Record ADR 0070,
   all raw/rendered replies, wire accounting and the source-condition dependency.
 
 - Route explicit “this document” follow-up summaries through the existing retained-source
