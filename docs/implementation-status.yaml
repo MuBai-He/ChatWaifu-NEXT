@@ -10,7 +10,7 @@ qq_napcat:
   proactive_text_adr: "0068"
   group_member_identity_adr: "0069"
   original_plan_stages:
-    A: owner_private_text_core_real_verified_additional_fault_acceptance_pending
+    A: owner_private_text_core_and_one_real_nonowner_denial_verified_additional_fault_acceptance_pending
     B: bounded_static_images_stickers_and_scoped_quotes_implemented_single_owner_private_image_preset_and_quote_phone_cases_verified
     C: model_selected_current_reply_voice_real_model_and_phone_playback_verified_additional_fault_acceptance_pending
     D: incoming_voice_stt_real_text_and_model_selected_voice_verified_proactive_default_off_controlled_group_two_member_at_text_real_verified_further_acceptance_pending
@@ -92,11 +92,12 @@ qq_napcat:
     - At the owner's request to avoid another chat's repository, subsequent work moved to an independent clone at /Users/mubai/Desktop/CW2-QQ-integration with its own Git common/object directories and no remotes or alternates; six owned uncommitted documentary files were hash-verified into that clone and only those transferred edits were restored from the old worktree, leaving the old owned worktree clean and its HEAD unchanged
     - The independent clone installed locked Python and Node dependencies from offline caches and verified all three project package origins in its own repository and virtual environment; 838 private QQ, group and proactive fixture regressions passed with zero failure/skip and normal exit, full strict Pyright, relevant Ruff, Web typecheck/build and documentary checks passed; no production source changed at this checkpoint, all three temporary controller units are inactive with no PID, and docs/qq-phone-acceptance.md records the remaining handset-only and operator-window checks
     - Added three complete Runtime and real loopback OneBot voice cases for successful responses with missing, invalid or boolean message IDs; 81 private Runtime and durable delivery tests passed, preserving one truthful text fallback in the same version-two plan, the unknown audio journal fence, canonical assistant history, duplicate-input rejection and no voice replay after Runtime restart with a fresh text reply; production source and server policy are unchanged, handset receipt-fault acceptance remains pending
+    - The owner confirmed the real nonowner private-access case with group member Mutsuki receiving no reply and the owner receiving a normal reply; NapCat logs show both actual inputs, no nonowner admission exists after the live preflight, and the owner input completed with one model-selected AUDIO part and provider receipt on the unchanged one-owner allowlist; exact-prompt observation and an operator TEXT-only assumption were corrected without changing Runtime behavior, and playback quality is not newly claimed
   remaining:
     - model_selected_voice_additional_semantic_preferences_and_fault_acceptance
     - phase_d2_real_new_input_cancellation_and_inflight_revocation_acceptance
     - phase_d3_additional_real_group_memory_isolation_membership_change_and_reconnect_acceptance
-    - real_qq_denied_sender_group_unsupported_media_interruption_audio_delivery_failure_and_uncertain_receipt_acceptance
+    - real_qq_additional_group_boundary_unsupported_media_interruption_audio_delivery_failure_and_uncertain_receipt_acceptance
     - automatic_qq_login_without_rescanning_and_long_term_session_recovery
     - real_character_voice_quality_answer_quality_and_long_term_memory_acceptance
     - integration_with_concurrent_search_workstream_and_explicit_read_only_search_tool_policy

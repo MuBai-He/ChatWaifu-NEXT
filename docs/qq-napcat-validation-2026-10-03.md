@@ -1060,3 +1060,34 @@ A read-only server check at **2026-10-04 07:20:29 Asia/Shanghai** again found th
 private channel ready, proactive policy off at revision six, exactly unchanged
 single-intent history, the selected group enabled at revision eleven, and all
 three completed temporary controllers inactive/not-found with zero PID.
+
+## Real nonowner private-access acceptance (2026-10-04)
+
+The fresh live preflight at 15:12:48 Asia/Shanghai found the private connection
+ready, unchanged disabled proactive policy revision six, selected two-member
+group enabled at revision eleven, one original intent and the expected source
+overlay hash. The owner then confirmed **"睦月无回复，主人正常收到回复"**.
+
+NapCat's actual receive logs show the linked nonowner's
+`私聊权限验收:我是睦月` at 15:16:19 and the owner's shortened
+`私聊权限验收` at 15:16:36. The nonowner has zero newly admitted turns on this
+connection since preflight. The owner input was admitted at
+`2026-10-04T07:16:36.884022+00:00` and completed at
+`2026-10-04T07:16:51.691526+00:00`, with exactly one delivered AUDIO part and
+provider message receipt on the same one-owner allowlist. This accepts this
+specific private refusal and continued owner reply availability; the phone
+confirmation does not newly establish audio playback quality.
+
+The passive observer had filtered for exact suggested text and did not match
+the half-width colon or owner's shortened input. The passing verification uses
+the actual provider receive logs and SQLite, not a fabricated wire capture.
+An initial root probe also incorrectly required TEXT-only output; its mismatch
+is retained, and the corrected requirement permits the implemented ADR 0067
+model-selected reply medium. No Runtime behavior, permissions or policy changed.
+
+Private evidence is under
+`/home/mubai/cw2-qq-napcat-stage/validation/phone-acceptance-session-tfbezc3q/`,
+including `private-preflight.json`, `private-access-provider-log-lines.json`,
+`root-first-access-probe-mismatch.json` and
+`root-phone-access-acceptance.json`. The pending group subject-correction and
+private-secret isolation cases remain separate real-phone gates.
