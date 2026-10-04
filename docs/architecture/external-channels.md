@@ -262,7 +262,7 @@ presentation guidance, not a model output cap. Explicit policy remains effective
 and structured detailed/code responses retain the existing bypass. Fixed QQ groups
 use the same ordered required-text plan, per-part receipts and bounded cadence under
 their unchanged immutable group target. Migration 41 permits this bounded plan and
-receipt-only scheduling while preserving migration 40 checksums. See ADR 0070.
+receipt-only scheduling while preserving migration 40 checksums. See ADR 0073.
 
 External direct text uses:
 

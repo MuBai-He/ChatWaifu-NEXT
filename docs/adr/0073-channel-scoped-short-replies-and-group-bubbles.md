@@ -1,9 +1,9 @@
-# ADR 0070: Channel-scoped short replies and QQ group bubbles
+# ADR 0073: Channel-scoped short replies and QQ group bubbles
 
 - Status: Accepted
 - Date: 2026-10-05
 - Scope: External messaging presentation; extends ADRs 0032, 0033 and 0069
-- Validation state: Implementation and deployment verification pending
+- Validation state: Deterministic and targeted model checks complete; main Runtime deployed; QQ platform login blocks group restoration; handset UX pending
 
 ## Decision
 

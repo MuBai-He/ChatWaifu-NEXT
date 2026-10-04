@@ -8,6 +8,9 @@
   Extend fixed QQ group delivery to lossless ordered text bubbles through SQLite
   migration 41, keeping authority, cancellation, cadence and send receipt fences.
   Record 24 fixed-context real Gemini samples without approving Q02 or handset UX.
+  Deploy frozen product bd00970 to the primary server with migration/state/source
+  verification. Record QQ platform login rejection 168 after a dedicated adapter
+  restart; retain original group authority pending authenticated fresh restoration.
 
 - Merge the frozen QQ NapCat and Q02 v7 test branches for isolated server testing.
   Add a default-off host policy for current-owner public reads, recheck it before
