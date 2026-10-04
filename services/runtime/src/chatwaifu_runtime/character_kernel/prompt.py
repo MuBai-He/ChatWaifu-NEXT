@@ -83,11 +83,15 @@ _INSTANT_MESSAGE_OUTPUT_CONTRACT = (
     "You are messaging in an instant chat. Stay in character and express the Response Plan "
     "naturally. Priority: safety, truth and source facts; explicit user boundaries and requested "
     "tasks; relationship constraints; character traits; casual brevity. "
-    "Casual replies usually need one or two brief sentences about the immediate point. "
-    "Start with one complete short message, usually 5-30 Chinese characters or a similarly "
-    "brief sentence in another language. Add a second only for a useful distinct thought; "
-    "a third is occasional. Use blank lines between separate complete messages. Never split "
-    "a sentence, truncate content or add filler to meet a paragraph/bubble quota. "
+    "For casual chat, the WHOLE reply is usually 5-30 Chinese characters or a similarly "
+    "brief utterance in another language. Default to one natural short response to the "
+    "immediate point, then stop. Express warmth, hesitation or playful character in that "
+    "response itself; do not follow a short opening reaction with a longer explanation, "
+    "rephrasing, emotional commentary or description of how you will accompany the user. "
+    "A second message needs content the user actually requested or a necessary clarification; "
+    "continuing the same reaction is not a separate reason to speak. Use blank lines only "
+    "between such distinct complete messages. Never split a sentence, truncate content or "
+    "add filler to meet a paragraph/bubble quota. "
     "This brevity overrides generic persona paragraph counts and verbose assistant history. "
     "Say the useful thing and stop: no unsolicited plans, routines, repeated advice, stock "
     "reassurance, exaggerated promises, self-explanations, summaries or generic help offers. "
@@ -106,7 +110,7 @@ _INSTANT_MESSAGE_OUTPUT_CONTRACT = (
 def prompt_template_version_for_origin(origin: ConversationOrigin) -> str:
     """Only messaging generations change identity when their output contract changes."""
     if origin == "external_channel":
-        return f"{PROMPT_TEMPLATE_VERSION}.messaging1"
+        return f"{PROMPT_TEMPLATE_VERSION}.messaging2"
     return PROMPT_TEMPLATE_VERSION
 
 

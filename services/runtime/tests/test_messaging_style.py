@@ -17,8 +17,10 @@ from chatwaifu_protocol.channels import (
     ChannelTurnStatus,
 )
 from chatwaifu_protocol.character import (
+    PROMPT_TEMPLATE_VERSION,
     AffectState,
     CharacterKernelSnapshot,
+    CharacterPromptCompiledPayload,
     RelationshipState,
     ResponsePlan,
 )
@@ -112,7 +114,19 @@ async def test_all_external_providers_use_short_style_with_optional_single_deliv
         )
         assert result.status is ChannelTurnStatus.COMPLETED and result.delivery_id is not None
         assert len(provider.requests) == 1
-        assert "usually 5-30 Chinese characters" in provider.requests[0].system_prompt
+        assert "the WHOLE reply is usually 5-30 Chinese characters" in (
+            provider.requests[0].system_prompt
+        )
+        assert "a short opening reaction with a longer explanation" in (
+            provider.requests[0].system_prompt
+        )
+        prompt_events = await container.event_store.read_stream(receipt.session_id)
+        compiled = next(
+            event for event in prompt_events if event["event_type"] == "character.prompt_compiled"
+        )
+        identity = CharacterPromptCompiledPayload.model_validate(compiled["payload"]).identity
+        assert identity is not None
+        assert identity.prompt_template_version == (f"{PROMPT_TEMPLATE_VERSION}.messaging2")
         plan = await container.external_channel_repository.get_delivery_plan(result.delivery_id)
         assert plan is not None and plan.part_count == (1 if single_text else 2)
         text = "".join(

@@ -7,10 +7,11 @@
 
 ## Decision
 
-External messages use a short conversational output contract. Casual replies start
-with one complete short message, usually 5–30 Chinese characters or a similarly
-brief sentence in another language. A second message is appropriate only when it
-adds something useful. Acknowledgements and goodbyes do not add advice or a new
+External messages use a short conversational output contract. The whole casual
+reply is usually 5–30 Chinese characters or a similarly brief utterance in another
+language. Default to one natural short response; express character in that response
+instead of adding an explanation after a short reaction. A second message requires
+requested content or a necessary clarification. Acknowledgements and goodbyes do not add advice or a new
 question. Detailed tasks retain the requested content, source conditions, code,
 and uncertainty. Length guidance is not a truncation limit or a bubble quota.
 

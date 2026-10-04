@@ -1,0 +1,36 @@
+{
+  "baseline": {
+    "completed_model_replies": 12,
+    "casual_replies": 8,
+    "casual_chars_median": 18.5,
+    "casual_chars_max": 33,
+    "casual_multiple_paragraphs": 4,
+    "casual_multiple_simulated_parts": 4,
+    "latency_p50_ms": 3710.0,
+    "latency_p95_ms": 7165,
+    "usage": {
+      "prompt_tokens": 26236,
+      "completion_tokens": 1470,
+      "reasoning_tokens": 6290,
+      "total_tokens": 33996
+    },
+    "wire_reference_tokens_range": [2788, 2979]
+  },
+  "candidate": {
+    "completed_model_replies": 12,
+    "casual_replies": 8,
+    "casual_chars_median": 17.0,
+    "casual_chars_max": 24,
+    "casual_multiple_paragraphs": 0,
+    "casual_multiple_simulated_parts": 0,
+    "latency_p50_ms": 4080.0,
+    "latency_p95_ms": 8101,
+    "usage": {
+      "prompt_tokens": 26908,
+      "completion_tokens": 1825,
+      "reasoning_tokens": 6727,
+      "total_tokens": 35460
+    },
+    "wire_reference_tokens_range": [2844, 3035]
+  }
+}
