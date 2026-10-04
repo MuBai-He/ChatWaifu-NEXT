@@ -1924,4 +1924,49 @@ CREATE TRIGGER channel_group_part_content_immutable BEFORE UPDATE OF kind,ordina
 BEGIN SELECT RAISE(ABORT,'group delivery content is immutable'); END;
 """
 
-MIGRATIONS = (*_BASE_MIGRATIONS, (40, GROUP_MIGRATION40_SQL))
+GROUP_BUBBLES_MIGRATION41_SQL = """
+DROP TRIGGER channel_group_text_only;
+DROP TRIGGER channel_group_part_content_immutable;
+CREATE TRIGGER channel_group_text_only BEFORE INSERT ON channel_delivery_parts
+ WHEN (SELECT group_target_json FROM channel_deliveries WHERE delivery_id=NEW.delivery_id)
+ IS NOT NULL
+ AND (NEW.kind!='text' OR NEW.ordinal<0 OR NEW.ordinal>=10 OR NEW.required!=1
+  OR NEW.ordinal!=(SELECT count(*) FROM channel_delivery_parts WHERE delivery_id=NEW.delivery_id)
+  OR NEW.delay_after_ms<0 OR NEW.delay_after_ms>30000 OR NEW.not_before_at IS NOT NULL
+  OR NEW.status!='pending' OR NEW.attempt!=0
+  OR NOT json_valid(NEW.payload_json)
+  OR json_extract(NEW.payload_json,'$.kind') IS NOT 'text'
+  OR json_type(NEW.payload_json,'$.text') IS NOT 'text'
+  OR length(trim(json_extract(NEW.payload_json,'$.text')))=0)
+BEGIN SELECT RAISE(ABORT,'group delivery requires bounded ordered text parts'); END;
+CREATE TRIGGER channel_group_part_content_immutable BEFORE UPDATE OF kind,ordinal,
+ required,delay_after_ms,payload_json,part_id,delivery_id,provider_client_id
+ ON channel_delivery_parts
+ WHEN (SELECT group_target_json FROM channel_deliveries WHERE delivery_id=OLD.delivery_id)
+ IS NOT NULL
+BEGIN SELECT RAISE(ABORT,'group delivery content is immutable'); END;
+CREATE TRIGGER channel_group_part_schedule_guard BEFORE UPDATE OF not_before_at
+ ON channel_delivery_parts
+ WHEN (SELECT group_target_json FROM channel_deliveries WHERE delivery_id=OLD.delivery_id)
+ IS NOT NULL AND OLD.not_before_at IS NOT NEW.not_before_at
+BEGIN
+ SELECT CASE WHEN NOT (
+  OLD.status='pending' AND NEW.status='pending' AND OLD.not_before_at IS NULL
+  AND NEW.ordinal>0 AND julianday(NEW.not_before_at) IS NOT NULL
+  AND EXISTS (
+   SELECT 1 FROM channel_delivery_parts previous
+   WHERE previous.delivery_id=OLD.delivery_id AND previous.ordinal=OLD.ordinal-1
+   AND previous.status='delivered' AND previous.delivered_at IS NOT NULL
+   AND previous.delay_after_ms>0
+   AND abs((julianday(NEW.not_before_at)-julianday(previous.delivered_at))*86400000
+           -previous.delay_after_ms)<1.0
+  )
+ ) THEN RAISE(ABORT,'group delivery schedule requires previous receipt') END;
+END;
+"""
+
+MIGRATIONS = (
+    *_BASE_MIGRATIONS,
+    (40, GROUP_MIGRATION40_SQL),
+    (41, GROUP_BUBBLES_MIGRATION41_SQL),
+)

@@ -673,8 +673,15 @@ async def test_native_adapter_delivers_reply_then_advances_cursor_and_clears_con
     await container.start()
     connection_id = uuid4()
     access_token = "g" * 43
+    configuration = _configuration(connection_id).model_copy(
+        update={
+            "presentation_policy": ChannelPresentationPolicy(
+                profile=ChannelPresentationProfile.SINGLE_TEXT
+            )
+        }
+    )
     created = await container.external_channels.create_connection(
-        _configuration(connection_id), access_token=access_token
+        configuration, access_token=access_token
     )
     await store.set(f"weixin_ilink:{connection_id}", _credentials(access_token).to_json())
     cursor_advanced = asyncio.Event()

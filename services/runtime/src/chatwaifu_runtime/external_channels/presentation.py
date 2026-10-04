@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -24,7 +25,48 @@ from chatwaifu_protocol.channels import (
 )
 from chatwaifu_protocol.character import ResponsePlan
 
+from chatwaifu_runtime.external_channels.models import ChannelDeliveryPartRecord
 from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
+
+
+def messaging_presentation_policy(
+    policy: ChannelPresentationPolicy | None = None,
+) -> ChannelPresentationPolicy:
+    """Channel-owned defaults; explicit operator policy and local conversations stay intact."""
+    return (
+        policy
+        if policy is not None
+        else ChannelPresentationPolicy(
+            profile=ChannelPresentationProfile.INSTANT_MESSAGE,
+            preferred_chars_per_part=30,
+            soft_max_chars_per_part=60,
+        )
+    )
+
+
+def group_text_parts_match_reply(
+    parts: Sequence[ChannelDeliveryPartDraft | ChannelDeliveryPartRecord], reply_text: str
+) -> bool:
+    """A bounded, ordered text-only plan must retain the complete canonical group reply."""
+    if not 1 <= len(parts) <= 10 or not reply_text.strip():
+        return False
+    texts: list[str] = []
+    for ordinal, part in enumerate(parts):
+        if (
+            part.ordinal != ordinal
+            or part.kind is not ChannelDeliveryPartKind.TEXT
+            or not isinstance(part.payload, ChannelTextDeliveryPartPayload)
+            or not part.payload.text.strip()
+            or not part.required
+            or not 0 <= part.delay_after_ms <= 30_000
+        ):
+            return False
+        texts.append(part.payload.text)
+    return (
+        parts[-1].delay_after_ms == 0
+        and sum(part.delay_after_ms for part in parts) <= 60_000
+        and unicodedata.normalize("NFC", "".join(texts)) == unicodedata.normalize("NFC", reply_text)
+    )
 
 
 def render_bubble_text(text: str, *, has_following_text_part: bool) -> str:

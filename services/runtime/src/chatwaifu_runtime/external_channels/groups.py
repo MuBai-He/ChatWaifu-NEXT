@@ -31,9 +31,8 @@ from chatwaifu_protocol.channel_groups import (
 )
 from chatwaifu_protocol.channels import (
     ChannelConnectionStatus,
-    ChannelDeliveryPartKind,
     ChannelDeliveryPartStatus,
-    ChannelTextDeliveryPartPayload,
+    ChannelPresentationPolicy,
     ChannelTurnReceipt,
     ChannelTurnSnapshot,
     ChannelTurnStatus,
@@ -65,6 +64,11 @@ from chatwaifu_runtime.external_channels.models import (
     ChannelTurnRecord,
 )
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
+from chatwaifu_runtime.external_channels.presentation import (
+    InstantMessageDeliveryPlanFactory,
+    group_text_parts_match_reply,
+    messaging_presentation_policy,
+)
 from chatwaifu_runtime.external_channels.service import (
     ChannelAuthenticationError,
     ChannelBusyError,
@@ -104,6 +108,7 @@ class _Input:
     message: ChannelGroupInboundDescriptor
     connection_epoch: int
     group_epoch: int
+    presentation_policy: ChannelPresentationPolicy
     revoked: bool = False
     task: asyncio.Task[None] | None = None
 
@@ -133,6 +138,7 @@ class ChannelGroupService:
         self._publisher = publisher
         self._conversation_repository = conversation_repository
         self._clock = clock
+        self._delivery_plan_factory = InstantMessageDeliveryPlanFactory()
         self._audience_reader: AudienceReader | None = None
         self._authenticator: Authenticator | None = None
         self._transport_ready: Callable[[UUID], bool] = lambda _: False
@@ -615,7 +621,13 @@ class ChannelGroupService:
                 self._check_admission(item)
                 if admitted.duplicate:
                     return _receipt(admitted.turn, duplicate=True)
-                pending = _Input(admitted, descriptor, item.connection_epoch, item.group_epoch)
+                pending = _Input(
+                    admitted,
+                    descriptor,
+                    item.connection_epoch,
+                    item.group_epoch,
+                    messaging_presentation_policy(connection.configuration.presentation_policy),
+                )
                 # Install the durable latest pending before an old actor can finish/release.
                 if admitted.dispatch_now:
                     self._launch(pending)
@@ -872,6 +884,7 @@ class ChannelGroupService:
                 generation_id=turn.generation_id,
                 options=ConversationTurnOptions(
                     origin="external_channel",
+                    presentation_profile=item.presentation_policy.profile.value,
                     output_modes=frozenset({"text"}),
                     allow_tools=False,
                     allowed_skill_ids=frozenset(),
@@ -1057,6 +1070,9 @@ class ChannelGroupService:
             reply_text=result.output_text,
             delivery_id=uuid4(),
             completed_at=self._clock(),
+            parts=self._delivery_plan_factory.create_parts(
+                result.output_text, policy=registered.presentation_policy
+            ),
         )
         if not self._live(registered):
             latest = await self._repository.get_group_turn(turn.channel_turn_id)
@@ -1086,13 +1102,7 @@ class ChannelGroupService:
             or plan.channel_turn_id is None
             or target.channel_turn_id != plan.channel_turn_id
             or target.connection_id != plan.connection_id
-            or plan.part_count != 1
-            or plan.parts[0].kind is not ChannelDeliveryPartKind.TEXT
-            or not isinstance(plan.parts[0].payload, ChannelTextDeliveryPartPayload)
-            or plan.parts[0].ordinal != 0
-            or not plan.parts[0].required
-            or plan.parts[0].delay_after_ms != 0
-            or plan.parts[0].not_before_at is not None
+            or not 1 <= plan.part_count <= 10
         ):
             return False
         connection_id = target.connection_id
@@ -1121,7 +1131,7 @@ class ChannelGroupService:
             record.turn.account_key != target.account_key
             or record.turn.conversation_key != f"group:{target.group_id}"
             or record.turn.delivery_id != plan.delivery_id
-            or record.turn.reply_text != plan.parts[0].payload.text
+            or not group_text_parts_match_reply(plan.parts, record.turn.reply_text or "")
             or lineage.route_id != target.route_id
             or lineage.route_revision != target.route_revision
             or lineage.scene_id != target.scene_id

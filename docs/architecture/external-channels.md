@@ -250,6 +250,20 @@ V1 excludes groups, media, voice, and proactive sends. Typing is an optional Pha
 
 ## Output and Runtime Skill policy
 
+Conversation selects the short messaging output contract by the current admitted
+`external_channel` origin, independently of delivery splitting. A connection's
+explicit single-text policy still receives messaging style. Local/Web/desktop and
+voice retain their standard contract even when earlier context came from a channel.
+The v7 persona and model budgets are shared and unchanged by this presentation slice.
+
+An absent channel presentation override resolves to instant-message defaults of
+30 preferred characters, 60 soft characters and up to three parts; this is lossless
+presentation guidance, not a model output cap. Explicit policy remains effective,
+and structured detailed/code responses retain the existing bypass. Fixed QQ groups
+use the same ordered required-text plan, per-part receipts and bounded cadence under
+their unchanged immutable group target. Migration 41 permits this bounded plan and
+receipt-only scheduling while preserving migration 40 checksums. See ADR 0070.
+
 External direct text uses:
 
 ```text

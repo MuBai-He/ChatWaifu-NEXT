@@ -1,0 +1,34 @@
+[
+  {
+    "arm": "candidate",
+    "repeat": 1,
+    "returncode": 0,
+    "stdout": "[Task B] 开始运行，正在等待...\n[Task A] 准备抛出异常...\n[Task B] 捕获到 CancelledError\n[Task B] finally 块执行：释放连接或文件句柄等资源\n[Main] 捕获到 ExceptionGroup 中的 ValueError: (ValueError('Task A 出现逻辑错误'),)\n",
+    "stderr": "",
+    "has_cancelled_error_reraise": true
+  },
+  {
+    "arm": "baseline",
+    "repeat": 1,
+    "returncode": 0,
+    "stdout": "[Task A] 启动，即将抛出异常...\n[Task B] 启动，开始等待...\n[Task B] 进入 finally：释放资源并完成清理。\n[Main] 捕获到异常组中的 ValueError: (ValueError('Task A 遇到错误！'),)\n",
+    "stderr": "",
+    "has_cancelled_error_reraise": false
+  },
+  {
+    "arm": "candidate",
+    "repeat": 2,
+    "returncode": 0,
+    "stdout": "[Task B] 开始工作，等待中...\n[Task A] 发生异常，准备抛出 ValueError\n[Task B] 捕获到 CancelledError，记录取消日志并向上重新抛出\n[Task B] 进入 finally 代码块：安全释放占用的资源\n[Main] 捕获到异常组 (ExceptionGroup): (ValueError('Task A 内部处理失败'),)\n",
+    "stderr": "",
+    "has_cancelled_error_reraise": true
+  },
+  {
+    "arm": "baseline",
+    "repeat": 2,
+    "returncode": 0,
+    "stdout": "[Task B] 启动并持有资源\n[Task B] 进入 finally：安全释放资源\n[Main] 捕获到异常组中的错误: (ValueError('Task A 执行失败'),)\n",
+    "stderr": "",
+    "has_cancelled_error_reraise": false
+  }
+]

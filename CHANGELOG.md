@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Scope short casual replies to external messaging origins while retaining the v7
+  persona and existing local/Web/desktop/voice output contracts. Apply channel
+  defaults of 30 preferred and 60 soft characters, with detailed/code bypass.
+  Extend fixed QQ group delivery to lossless ordered text bubbles through SQLite
+  migration 41, keeping authority, cancellation, cadence and send receipt fences.
+  Record 24 fixed-context real Gemini samples without approving Q02 or handset UX.
+
 - Merge the frozen QQ NapCat and Q02 v7 test branches for isolated server testing.
   Add a default-off host policy for current-owner public reads, recheck it before
   execution, preserve ordinary model-selected voice and shared-scene isolation,

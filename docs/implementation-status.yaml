@@ -1,6 +1,14 @@
 schema_version: "1.0"
-updated_at: "2026-10-04"
+updated_at: "2026-10-05"
 current_phase: "13.6"
+channel_short_replies:
+  status: implemented_targeted_model_compared_server_deployment_pending_phone_ux_pending
+  adr: "0070"
+  evidence:
+    - External origins select the short casual contract across providers; explicit local text, voice and proactive compilation remains byte-identical to the deployed v7 baseline
+    - Fixed QQ group text uses canonical lossless ordered delivery parts with receipt cadence, cancellation and unchanged authority; populated SQLite 40 to 41 migration preserves facts and earlier checksums
+    - Full Python suite passed 3537 checks with 46 platform skips; Ruff and strict Pyright passed; TypeScript, ESLint, 111 protocol, 22 avatar and 409 Web checks plus both UI builds passed
+    - Twenty-four fixed-context real Gemini 3.8 Flash High samples completed without Provider errors; shorter greeting and casual tendency recorded, detailed runnable code retained, question-limit and technical-phrasing gaps remain; Q02 is not approved
 qq_napcat:
   status: model_selected_voice_proactive_default_off_controlled_group_core_real_verified_acceptance_pending
   adr: "0064"

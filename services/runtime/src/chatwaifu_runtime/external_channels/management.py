@@ -29,8 +29,6 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryStatus,
     ChannelImageDeliveryPartPayload,
     ChannelInboundTextMessage,
-    ChannelPresentationPolicy,
-    ChannelPresentationProfile,
     ChannelTextDeliveryPartPayload,
     ChannelTurnStatus,
 )
@@ -64,7 +62,10 @@ from chatwaifu_runtime.external_channels.models import (
     ChannelTurnRecord,
 )
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
-from chatwaifu_runtime.external_channels.presentation import render_bubble_text
+from chatwaifu_runtime.external_channels.presentation import (
+    messaging_presentation_policy,
+    render_bubble_text,
+)
 from chatwaifu_runtime.external_channels.scheduler import (
     ChannelDeliveryScheduler,
     DeliveryPartExecutionResult,
@@ -854,9 +855,7 @@ class ChannelManagementService:
             account_key=bot_id,
             allowed_sender_keys=[user_id],
             enabled=True,
-            presentation_policy=ChannelPresentationPolicy(
-                profile=ChannelPresentationProfile.INSTANT_MESSAGE,
-            ),
+            presentation_policy=messaging_presentation_policy(),
         )
         gateway_access_token = secrets.token_urlsafe(32)
         credentials = WeixinCredentials(

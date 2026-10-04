@@ -13,7 +13,6 @@ from uuid import UUID, uuid4
 from chatwaifu_protocol.avatar import AvatarCue
 from chatwaifu_protocol.base import PrivacyLevel
 from chatwaifu_protocol.character import (
-    PROMPT_TEMPLATE_VERSION,
     CharacterPromptCompiledPayload,
     PromptContextIdentity,
     ResponsePlan,
@@ -43,7 +42,10 @@ from chatwaifu_runtime.agent.tool_calling import (
 from chatwaifu_runtime.audio.store import AudioAssetStore
 from chatwaifu_runtime.audio.streaming import AudioStreamHub
 from chatwaifu_runtime.avatar.planner import SemanticAvatarCuePlanner
-from chatwaifu_runtime.character_kernel.prompt import PromptCompiler
+from chatwaifu_runtime.character_kernel.prompt import (
+    PromptCompiler,
+    prompt_template_version_for_origin,
+)
 from chatwaifu_runtime.character_kernel.service import (
     CharacterKernelService,
     TurnCharacterContext,
@@ -231,7 +233,7 @@ class ConversationService:
         identity = PromptContextIdentity.create(
             character_id=character.character_id,
             character_package_hash=package_hash,
-            prompt_template_version=PROMPT_TEMPLATE_VERSION,
+            prompt_template_version=prompt_template_version_for_origin(options.origin),
             chat_route=chat_route,
             memory_summary_route=summary_route,
             tools_digest=tools_digest,
@@ -1560,6 +1562,7 @@ class ConversationService:
                 user_text=user_text,
                 source_context=options.source_context,
                 presentation_profile=options.presentation_profile,
+                conversation_origin=options.origin,
                 photo_evidence=photo_recall.evidence,
                 snapshot=snapshot,
             )

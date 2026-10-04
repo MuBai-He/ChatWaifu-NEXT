@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 from chatwaifu_runtime.config.settings import StorageConfig
 from chatwaifu_runtime.persistence.database import Database
+from chatwaifu_runtime.persistence.migrations import MIGRATIONS
 
 from tools.merge_qq_runtime_database import catalog, merge_database
 
@@ -95,7 +96,7 @@ def memory(db: sqlite3.Connection, identifier: str, session_id: str, *, shared: 
 async def databases(tmp_path: Path) -> tuple[Path, Path, Path]:
     paths = (tmp_path / "primary.sqlite", tmp_path / "qq.sqlite", tmp_path / "merged.sqlite")
     for path in paths[:2]:
-        db = Database(path, StorageConfig())
+        db = Database(path, StorageConfig(), migrations=tuple(m for m in MIGRATIONS if m[0] <= 40))
         await db.open()
         await db.close()
     with sqlite3.connect(paths[0]) as db:
