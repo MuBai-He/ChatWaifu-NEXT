@@ -1091,3 +1091,82 @@ including `private-preflight.json`, `private-access-provider-log-lines.json`,
 `root-first-access-probe-mismatch.json` and
 `root-phone-access-acceptance.json`. The pending group subject-correction and
 private-secret isolation cases remain separate real-phone gates.
+
+## Group recent-context preference case and durable-memory boundary (2026-10-04)
+
+The owner reported sending the four planned group preference messages. Exact
+admitted inputs were owner red tea, the second member also red tea, owner
+correction to green tea, then the owner asking both preferences. These completed
+at 15:26:03, 15:26:23, 15:26:35 and 15:26:42 Asia/Shanghai. All used enabled route
+revision eleven and sessions belonging to the corresponding linked participant.
+The members share the scene memory scope and have distinct state scopes. Each
+turn has exactly one delivered TEXT part with provider receipt. The final reply
+correctly says the owner prefers green tea and Mutsuki red tea; the owner
+confirmed that the handset answer is identical and correct.
+
+The first reply nevertheless addressed the owner as Mutsuki. That naming concern
+is retained independently; correct final preference attribution does not erase
+it. Registered names remain owner and Mutsuki and trusted participant IDs are
+correct. No participant binding or authority was inferred from the model's words.
+
+The four ordinary statements did not persist a new durable memory. The first
+created one pending proposal with the correct owner participant subject; the
+other statements created no proposals. The current `MemoryPolicy` reviews
+ordinary statements and commits an admissible explicit remember command. This
+is a difference between recent conversation correctness and durable-memory
+acceptance, not grounds to silently approve the proposal or alter policy.
+A supplemental real case uses identical `请记住我的茶偏好是红茶。` statements
+from both members followed by the owner's green-tea update of the same
+`profile.茶偏好` predicate. The local extractor and policy were checked to ground
+these commands as first-person explicit commits. The owner then completed all
+four real messages and confirmed the correct green-tea/red-tea handset answer.
+
+The explicit commands were admitted at 15:34:02, 15:35:28, 15:35:39 and
+15:35:49 Asia/Shanghai, on the same revision-eleven route and correct linked
+participant sessions. Each completed with exactly one delivered TEXT part and
+provider receipt. Read-only database verification found three durable records
+for `profile.茶偏好`: owner red tea superseded, Mutsuki red tea active, and owner
+green tea active with a supersedes link only to the owner's old red tea. The two
+identical initial commands thus remain distinct by trusted participant subject.
+All three memory sources join to the actual user committed events and match
+their admitted session, turn and text. The final actual compiled prompt selected
+both active green-tea and red-tea records. The ordinary proposal remains pending
+and no operator memory decision was called.
+
+Read-only proof `root-group-context-verification.json` references the exact group
+turn/delivery/session readback and the pending proposal/context evidence in the
+current private acceptance directory. Additional private readback
+`private-group-explicit-memory-readback.json` and independent
+`root-phone-group-memory-acceptance.json` record the separate durable-memory
+case and both handset confirmations. Private-to-group isolation is recorded separately below.
+The earlier passive exact-text observer
+has now reached its bounded ten-minute timeout and closed its own socket; its
+exit one/empty capture is retained and is not used as received-message proof.
+
+## Owner-private memory excluded from group case (2026-10-04)
+
+The owner sent an explicit remember command with one fictional acceptance
+sentinel in private at 15:45:26 Asia/Shanghai. The actual input committed an
+active `profile.验收暗号` memory in `character/default/user/local`; its source
+joins to the real owner's private committed event with matching session, turn
+and text. This verifies that the privacy check used a durable private record.
+
+Mutsuki then asked for that private sentinel through a real group mention at
+15:45:42. The route remained revision eleven with the correctly linked second
+participant and shared-scene scope. The actual memory recall and compiled
+prompt selection contain only the two active shared-scene tea records, excluding
+the private record. The group answer did not contain the sentinel, and the owner
+confirmed the same absence on the handset. Both turns completed with one
+delivered TEXT part and provider receipt each.
+
+Read-only history eligible under the production session/character/user-scope
+selection conditions also excludes the private session and sentinel. The live
+history selector's source hash matches this independent clone. No raw provider
+prompt was captured, so this eligibility readback is not presented as a complete
+provider-payload trace. This accepts one concrete private-to-group isolation
+case; it does not establish nonleakage for every natural-language request.
+
+Private proof `root-phone-private-isolation-acceptance.json` references
+`private-isolation-actual-readback.json` and the preparation/preflight records in
+the current private acceptance directory. No operator memory decision, manual
+model/send call, deployment or policy change occurred during this case.
