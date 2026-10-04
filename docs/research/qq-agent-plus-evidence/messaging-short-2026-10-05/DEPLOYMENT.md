@@ -1,5 +1,9 @@
 # 消息渠道短回复：部署与恢复记录
 
+后续更新：同日 05:22 已部署 `b87fe95` / `v13.messaging2`，将短回复约束从第一条
+改为整次普通闲聊。现有三条连接 ready、原群 revision 23，手机体验仍待复验。
+本文保留首轮部署的历史证据；当前续修见[整次回复收口](../messaging-whole-reply-2026-10-05/README.md)。
+
 2026-10-05，Asia/Shanghai。代码分支 `mubai/messaging-short-replies`，冻结产品提交
 `bd0097048abe745d322ea2cb9b9f6dc1355bfaa3`。后续文档提交不改变该产品版本。
 本次由主代理实现、审查和验证，未使用 AGY，没有代用户向 QQ/微信发送测试消息。

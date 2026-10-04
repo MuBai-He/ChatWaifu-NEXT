@@ -5,7 +5,7 @@ channel_short_replies:
   status: main_runtime_deployed_connections_ready_original_group_restored_phone_ux_pending
   adr: "0073"
   evidence:
-    - Weixin screenshot matched canonical model output and delivered parts; messaging2 scopes brevity to the whole casual reply rather than its first bubble, with 4 of 8 versus 0 of 8 multi-paragraph replies in fixed-history A/B; greeting follow-up and technical-phrasing gaps remain, updated handset UX and Q02 are not approved
+    - Weixin screenshot matched canonical model output and delivered parts; messaging2 scopes brevity to the whole casual reply rather than its first bubble, with 4 of 8 versus 0 of 8 multi-paragraph replies in fixed-history A/B; b87fe95 deployed with three preserved ready connections and original group revalidated to revision 23, greeting follow-up and technical-phrasing gaps remain, updated handset UX and Q02 are not approved
     - External origins select the short casual contract across providers; explicit local text, voice and proactive compilation remains byte-identical to the deployed v7 baseline
     - Fixed QQ group text uses canonical lossless ordered delivery parts with receipt cadence, cancellation and unchanged authority; populated SQLite 40 to 41 migration preserves facts and earlier checksums
     - Full Python suite passed 3537 checks with 46 platform skips; Ruff and strict Pyright passed; TypeScript, ESLint, 111 protocol, 22 avatar and 409 Web checks plus both UI builds passed

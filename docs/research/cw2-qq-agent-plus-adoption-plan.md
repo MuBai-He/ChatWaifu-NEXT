@@ -1,6 +1,6 @@
 # CW2 借鉴 QQ Agent Plus：实施方案
 
-2026-10-05 微信反馈续修：截图已核对为模型自身的两段输出，消息约束改为 `messaging2` 的整次闲聊收口；相同冻结历史定向 A/B 中，多段闲聊由 4/8 降为 0/8，详细请求仍保留完整代码，但问候追问和技术表述缺口仍记录。此结果不代替完整 Q02 或更新后手机体验验收，见[续修证据](qq-agent-plus-evidence/messaging-whole-reply-2026-10-05/README.md)。
+2026-10-05 微信反馈续修：截图已核对为模型自身的两段输出，消息约束改为 `messaging2` 的整次闲聊收口；相同冻结历史定向 A/B 中，多段闲聊由 4/8 降为 0/8，详细请求仍保留完整代码，但问候追问和技术表述缺口仍记录。`b87fe95` 已部署，三条原有连接 ready、原群用新观察恢复到 revision 23，配置/权限/持久资料保留。此结果不代替完整 Q02 或更新后手机体验验收，见[续修证据](qq-agent-plus-evidence/messaging-whole-reply-2026-10-05/README.md)。
 
 2026-10-05 消息体验切片：保持原始 v7，按当前 `external_channel` 来源选择短句约束，覆盖微信、QQ 私聊/固定群及后续消息 Provider；本地/Web/桌宠/语音编译保持相同。QQ 固定群接入已有无损分条与持久化节奏，数据库迁移到 41。24 个固定问题真实模型对照显示局部短消息改善，但追问上限和技术表述仍有缺口；[对照记录](qq-agent-plus-evidence/messaging-short-2026-10-05/README.md)保留原回复、实际 payload、usage、延迟与审查结论。冻结产品已部署主服务器；微信、QQ 连接和原账号登录已核对，原群已用新观察恢复且原权限保留，见[部署记录](qq-agent-plus-evidence/messaging-short-2026-10-05/DEPLOYMENT.md)。此切片不改变 Q02 未通过的结论及原完整验收标准。
 

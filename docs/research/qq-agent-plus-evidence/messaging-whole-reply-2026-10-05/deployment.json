@@ -1,0 +1,54 @@
+{
+  "product_commit": "b87fe95",
+  "source": "/home/mubai/chatwaifu-server/releases/messaging-whole-20261005-b87fe95/source",
+  "base_product_commit": "bd00970",
+  "verified_at": "2026-10-04T21:22:21.058683+00:00",
+  "health": "ok",
+  "schema": 41,
+  "changed_source_files": [
+    "docs/research/qq-agent-plus-evidence/persona-candidate-v4-evaluated-2026-09-30.md.txt",
+    "services/runtime/src/chatwaifu_runtime/character_kernel/prompt.py",
+    "services/runtime/tests/test_bubble_presentation.py",
+    "services/runtime/tests/test_character_kernel.py",
+    "services/runtime/tests/test_messaging_style.py"
+  ],
+  "production_changed_files": [
+    "services/runtime/src/chatwaifu_runtime/character_kernel/prompt.py"
+  ],
+  "prompt_sha256": "0c2fe4a5b12c5ae91780ca85b2e3a5a7d9e45101264f58ce28d6aeda9797a584",
+  "other_source_hashes_unchanged": true,
+  "connections": [
+    {
+      "provider": "weixin_ilink",
+      "status": "ready",
+      "revision": 2,
+      "configuration_preserved": true
+    },
+    {
+      "provider": "qq_napcat",
+      "status": "ready",
+      "revision": 3,
+      "configuration_preserved": true
+    },
+    {
+      "provider": "weixin_ilink",
+      "status": "ready",
+      "revision": 1,
+      "configuration_preserved": true
+    }
+  ],
+  "groups": [
+    {
+      "enabled": true,
+      "revision": 23,
+      "authority_unchanged": true,
+      "fresh_audience_matched": true
+    }
+  ],
+  "protected_configuration_and_vault_hashes_unchanged": true,
+  "model_route_unchanged": true,
+  "database_restored": false,
+  "real_channel_messages_sent_by_verifier": 0,
+  "phone_quality_acceptance": "pending",
+  "q02_acceptance": "not_passed"
+}

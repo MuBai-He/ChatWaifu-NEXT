@@ -1,0 +1,15 @@
+{
+  "process_cwd_matches_release": true,
+  "origin_prompt_version": "v13.messaging2",
+  "old_durable_rows_preserved": {
+    "turns": 120,
+    "generations": 62,
+    "channel_turns": 49,
+    "channel_deliveries": 48,
+    "channel_delivery_parts": 55,
+    "memory_items": 0,
+    "model_role_configs": 4
+  },
+  "model_configuration_rows_unchanged": true,
+  "new_phone_validation": "pending"
+}
