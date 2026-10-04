@@ -1,5 +1,9 @@
 # QQ 与 Q02 v7 临时服务器测试版
 
+> 后续已将 QQ 收拢到同一个主 Runtime；当前入口及配置请见
+> [统一 Runtime 记录](unified-qq-primary-runtime-2026-10-05.md)。下文保留初次独立
+> QQ 测试部署的核验事实。
+
 日期：2026-10-04。分支：`mubai/qq-v7-server-test-20261004`。
 本次由 Codex 直接整合，未使用 AGY。
 
