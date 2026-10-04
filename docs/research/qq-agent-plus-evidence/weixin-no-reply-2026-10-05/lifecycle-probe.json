@@ -1,0 +1,20 @@
+[
+  {
+    "operation": "getconfig",
+    "ret_present": true,
+    "ret": 0,
+    "errcode_present": false,
+    "errcode": null,
+    "typing_ticket_present": true,
+    "account_matches": true
+  },
+  {
+    "operation": "notify_start",
+    "ret_present": true,
+    "ret": 0,
+    "errcode_present": false,
+    "errcode": null,
+    "typing_ticket_present": false,
+    "account_matches": true
+  }
+]

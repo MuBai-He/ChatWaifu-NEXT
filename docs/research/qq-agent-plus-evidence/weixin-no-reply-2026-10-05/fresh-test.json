@@ -1,0 +1,33 @@
+{
+  "at": "2026-10-04T22:53:04.508845+00:00",
+  "input": "测试回复 0701",
+  "reply": "这是什么暗号吗……我不太明白诶。",
+  "status": "completed",
+  "generation_state": "completed",
+  "generation_error": null,
+  "generation_started_at": "2026-10-04T22:53:04.517127+00:00",
+  "generation_completed_at": "2026-10-04T22:53:08.117881+00:00",
+  "turn_error": null,
+  "parts": [
+    {
+      "ordinal": 0,
+      "status": "delivered",
+      "attempt": 1,
+      "receipt_is_client_id": true,
+      "error": null,
+      "delivered_at": "2026-10-04T22:53:08.420011+00:00"
+    }
+  ],
+  "send_responses": [
+    {
+      "event": "weixin.send_response",
+      "ret_present": true,
+      "ret": 0,
+      "errcode_present": false,
+      "errcode": null,
+      "message_id_present": false,
+      "receipt_kind": "client_id"
+    }
+  ],
+  "user_received_reply": false
+}

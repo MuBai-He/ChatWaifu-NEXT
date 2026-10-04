@@ -1,0 +1,55 @@
+{
+  "product_commit": "da1124f",
+  "source": "/home/mubai/chatwaifu-server/releases/weixin-receipt-20261005/source",
+  "started_at": "2026-10-04T22:50:44.471689+00:00",
+  "verified_at": "2026-10-04T22:51:21.827899+00:00",
+  "health": "ok",
+  "schema": 41,
+  "changed_source_files": [
+    "services/runtime/src/chatwaifu_runtime/external_channels/adapters/weixin_ilink/client.py",
+    "services/runtime/src/chatwaifu_runtime/external_channels/management.py",
+    "services/runtime/tests/test_channel_management.py",
+    "services/runtime/tests/test_weixin_ilink_client.py"
+  ],
+  "production_changed_files": [
+    "services/runtime/src/chatwaifu_runtime/external_channels/adapters/weixin_ilink/client.py",
+    "services/runtime/src/chatwaifu_runtime/external_channels/management.py"
+  ],
+  "other_source_hashes_unchanged": true,
+  "all_model_routes_unchanged": true,
+  "configuration_and_vault_hashes_unchanged": true,
+  "connections": [
+    {
+      "provider": "weixin_ilink",
+      "created_at": "2026-09-22T02:24:01.294427Z",
+      "status": "error",
+      "error_code": "weixin.session_expired",
+      "configuration_preserved": true
+    },
+    {
+      "provider": "qq_napcat",
+      "created_at": "2026-10-03T07:10:13.457338Z",
+      "status": "ready",
+      "error_code": null,
+      "configuration_preserved": true
+    },
+    {
+      "provider": "weixin_ilink",
+      "created_at": "2026-10-04T20:59:28.012501Z",
+      "status": "ready",
+      "error_code": null,
+      "configuration_preserved": true
+    }
+  ],
+  "qq_groups": [
+    {
+      "enabled": true,
+      "revision": 25,
+      "authority_unchanged": true,
+      "fresh_audience_matched": true
+    }
+  ],
+  "database_restored": false,
+  "manual_channel_messages_sent": 0,
+  "phone_receipt_acceptance": "pending"
+}
