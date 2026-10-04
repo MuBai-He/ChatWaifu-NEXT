@@ -1198,3 +1198,25 @@ Private `root-phone-unsupported-file-acceptance.json` references the actual
 readback, selective receive log, provider history metadata, partial observer
 capture and stop request. No Runtime/NapCat stop, provider send, deployment or
 policy change occurred.
+
+## Real new owner input cancels a compiled generation (2026-10-04)
+
+The owner sent the voice-story request at 16:13:56 Asia/Shanghai and immediately
+followed it with a stop/request-for-text message. The original generation started
+at 16:13:56.801920 and was invalidated at 16:13:57.558376, 0.756456 seconds later,
+with `superseded_by_new_inbound_message`. Its prompt had compiled before
+cancellation. Generation and channel turn both remain cancelled, with no output,
+delivery plan/part or assistant history for that generation.
+
+The replacement was admitted at 16:13:57.573918 on the same owner binding and
+session, completed with `收到就好。`, and delivered exactly one TEXT part with
+provider receipt at 16:13:59.233227. The owner confirmed receiving text. No voice
+skill or speech event preceded cancellation, so this verifies new-input
+interruption at the generation stage; it does not accept interruption of an
+already-running TTS job or external QQ send.
+
+Independent private `root-phone-generation-interruption-acceptance.json`
+references the exact turn/generation/event/plan/part readback. No fault was
+injected and no source or policy changed. Current authenticated management
+readback confirms private ready, proactive off at revision six and the same
+group route revision eleven.
