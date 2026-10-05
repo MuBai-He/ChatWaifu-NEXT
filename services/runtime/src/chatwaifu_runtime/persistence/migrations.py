@@ -1965,8 +1965,49 @@ BEGIN
 END;
 """
 
+GROUP_STICKERS_MIGRATION42_SQL = """
+DROP TRIGGER channel_group_text_only;
+CREATE TRIGGER channel_group_text_only BEFORE INSERT ON channel_delivery_parts
+ WHEN (SELECT group_target_json FROM channel_deliveries WHERE delivery_id=NEW.delivery_id)
+ IS NOT NULL
+BEGIN
+ SELECT CASE WHEN (
+  NEW.ordinal!=(SELECT count(*) FROM channel_delivery_parts WHERE delivery_id=NEW.delivery_id)
+  OR NEW.not_before_at IS NOT NULL OR NEW.status!='pending' OR NEW.attempt!=0
+  OR NOT json_valid(NEW.payload_json)
+  OR EXISTS (SELECT 1 FROM channel_delivery_parts
+             WHERE delivery_id=NEW.delivery_id AND kind!='text')
+  OR NOT (
+   (NEW.kind='text' AND NEW.ordinal>=0 AND NEW.ordinal<10 AND NEW.required=1
+    AND NEW.delay_after_ms>=0 AND NEW.delay_after_ms<=30000
+    AND json_extract(NEW.payload_json,'$.kind') IS 'text'
+    AND json_type(NEW.payload_json,'$.text') IS 'text'
+    AND length(trim(json_extract(NEW.payload_json,'$.text')))>0)
+   OR
+   (NEW.kind='image' AND NEW.ordinal>=1 AND NEW.ordinal<=10
+    AND NEW.required=0 AND NEW.delay_after_ms=0
+    AND json_extract(NEW.payload_json,'$.kind') IS 'image'
+    AND EXISTS (
+     SELECT 1 FROM channel_deliveries d
+     JOIN channel_group_routes r ON r.route_id=json_extract(d.group_target_json,'$.route_id')
+     JOIN learned_stickers s ON s.principal_scope='scene:'||r.scene_id
+       AND s.character_id=r.character_id
+     WHERE d.delivery_id=NEW.delivery_id
+       AND r.scene_id=json_extract(d.group_target_json,'$.scene_id')
+       AND r.revision=json_extract(d.group_target_json,'$.route_revision')
+       AND r.enabled=1 AND r.deleted_at IS NULL
+       AND s.sticker_id=json_extract(NEW.payload_json,'$.sticker_id')
+       AND s.sha256=json_extract(NEW.payload_json,'$.sha256')
+       AND s.mime_type=json_extract(NEW.payload_json,'$.mime_type')
+    ))
+  )
+ ) THEN RAISE(ABORT,'group delivery requires bounded ordered text and scoped optional image') END;
+END;
+"""
+
 MIGRATIONS = (
     *_BASE_MIGRATIONS,
     (40, GROUP_MIGRATION40_SQL),
     (41, GROUP_BUBBLES_MIGRATION41_SQL),
+    (42, GROUP_STICKERS_MIGRATION42_SQL),
 )

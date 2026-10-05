@@ -101,7 +101,7 @@ def test_group_identity_and_real_mention_are_required(key: str, value: JsonValue
     assert admit(event) is None
 
 
-@pytest.mark.parametrize("kind", ["image", "record", "file", "face", "forward"])
+@pytest.mark.parametrize("kind", ["record", "file", "forward"])
 def test_group_mixed_media_is_rejected(kind: str) -> None:
     event = message()
     event["message"] = [
@@ -155,11 +155,6 @@ def test_group_reply_envelope_rejects_invalid_reference(reference: JsonValue) ->
             {"type": "text", "data": {"text": "你好"}},
             {"type": "reply", "data": {"id": "90001"}},
         ],
-        [
-            {"type": "at", "data": {"qq": ACCOUNT}},
-            {"type": "text", "data": {"text": "你好"}},
-            {"type": "image", "data": {"file": "safe.png"}},
-        ],
     ],
 )
 def test_group_quote_does_not_grant_mention_text_or_media_authority(
@@ -168,6 +163,19 @@ def test_group_quote_does_not_grant_mention_text_or_media_authority(
     event = message()
     event["message"] = [{"type": "reply", "data": {"id": "90000"}}, *segments]
     assert admit(event) is None
+
+
+def test_group_quote_with_mention_does_not_verify_an_opaque_image_reference() -> None:
+    event = message()
+    event["message"] = [
+        {"type": "reply", "data": {"id": "90000"}},
+        {"type": "at", "data": {"qq": ACCOUNT}},
+        {"type": "image", "data": {"file": "safe.png"}},
+    ]
+    normalized = admit(event)
+    assert normalized is not None and normalized.text == "[图片]"
+    assert normalized.images[0].expected_md5 is None
+    assert normalized.images[0].invalid_reason == "unverifiable_reference"
 
 
 @pytest.mark.parametrize("text", ["", " \t\n", "x" * 20_001])

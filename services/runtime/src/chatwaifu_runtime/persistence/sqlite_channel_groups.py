@@ -12,7 +12,7 @@ from uuid import UUID, uuid4
 
 import aiosqlite
 from chatwaifu_protocol.channel_groups import ChannelGroupDeliveryTarget, ChannelGroupPauseReason
-from chatwaifu_protocol.channels import ChannelDeliveryPartDraft
+from chatwaifu_protocol.channels import ChannelDeliveryPartDraft, ChannelImageDeliveryPartPayload
 from chatwaifu_protocol.events import GenericCoreEvent, PrivacyLevel
 
 from chatwaifu_runtime.external_channels.group_models import (
@@ -1141,8 +1141,7 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
                     "ation_id,status,revision,accepted_at,created_at,updated_at,i"
                     "nput_kind,group_lineage_version,group_route_id,group_route_r"
                     "evision) "
-                    "VALUES(?,?,?,?,?,?,?,'group',?,?,?,?,?,'accepted',0,?,?,?,'t"
-                    "ext',1,?,?)"
+                    "VALUES(?,?,?,?,?,?,?,'group',?,?,?,?,?,'accepted',0,?,?,?,?,1,?,?)"
                 ),
                 (
                     str(admission.channel_turn_id),
@@ -1160,6 +1159,7 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
                     stamp.isoformat(),
                     stamp.isoformat(),
                     stamp.isoformat(),
+                    "image" if message.image_fingerprint is not None else "text",
                     str(route.route_id),
                     route.revision,
                 ),
@@ -1290,7 +1290,7 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
             raise ValueError("group reply must be nonempty and bounded")
         draft_parts = parts if parts is not None else _single_part_draft(reply_text)
         _validate_delivery_part_drafts(draft_parts)
-        if not group_text_parts_match_reply(draft_parts, reply_text) or any(
+        if not group_text_parts_match_reply(draft_parts, reply_text, allow_sticker=True) or any(
             part.not_before_at is not None for part in draft_parts
         ):
             raise ValueError(
@@ -1308,6 +1308,22 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
                 (str(lineage.channel_turn_id),),
             )
             assert turn is not None
+            if isinstance(draft_parts[-1].payload, ChannelImageDeliveryPartPayload):
+                image = draft_parts[-1].payload
+                asset = await _one(
+                    db,
+                    "SELECT 1 FROM learned_stickers WHERE principal_scope=? AND character_id=? "
+                    "AND sticker_id=? AND sha256=? AND mime_type=?",
+                    (
+                        f"scene:{route.scene_id}",
+                        route.character_id,
+                        image.sticker_id,
+                        image.sha256,
+                        image.mime_type,
+                    ),
+                )
+                if asset is None:
+                    raise ChannelPolicyError("Group image must belong to the current scene")
             existing = await _one(
                 db,
                 (
@@ -1374,13 +1390,15 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
                         "channel_delivery_parts(part_id,delivery_id,ordinal,kind,payl"
                         "oad_json,required,status,delay_after_ms,attempt,provider_cli"
                         "ent_id,created_at,updated_at) "
-                        "VALUES(?,?,?,'text',?,1,'pending',?,0,?,?,?)"
+                        "VALUES(?,?,?,?,?,?,'pending',?,0,?,?,?)"
                     ),
                     (
                         str(uuid4()),
                         str(delivery_id),
                         part.ordinal,
+                        part.kind.value,
                         part.payload.model_dump_json(),
+                        int(part.required),
                         part.delay_after_ms,
                         f"chatwaifu-{delivery_id.hex}-{part.ordinal:03d}",
                         stamp.isoformat(),

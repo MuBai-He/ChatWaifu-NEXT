@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -11,6 +11,7 @@ from chatwaifu_protocol.base import JsonObject
 from chatwaifu_protocol.channels import ChannelInboundTextMessage
 
 from .client import validate_image_file_ref
+from .expressions import face_context
 from .groups import NapCatGroupInboundMessage, qq_group_identifier
 
 
@@ -19,6 +20,7 @@ class NapCatImageReference:
     file_ref: str = field(repr=False)
     file_size: int | None = None
     invalid_reason: str | None = None
+    expected_md5: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,6 +79,7 @@ def normalize_group_inbound(
     if not isinstance(segments, list) or not 1 <= len(segments) <= 128:
         return None
     texts: list[str] = []
+    images: list[NapCatImageReference] = []
     mentions = 0
     has_reply = False
     size = 0
@@ -107,13 +110,47 @@ def normalize_group_inbound(
             ):
                 return None
             has_reply = True
+        elif segment.get("type") == "face":
+            context = face_context(data)
+            if context is None:
+                return None
+            texts.append(context)
+        elif segment.get("type") == "image":
+            image = _image_reference(data)
+            if image is None or len(images) >= 4:
+                return None
+            # NapCat's filename lookup is account-global. Group media must prove
+            # its own provider checksum; an opaque name must never read a private asset.
+            checksum = re.fullmatch(
+                r"(?:([0-9a-fA-F]{32})|\{([0-9a-fA-F]{32})\})(?:\.[a-zA-Z0-9]{1,8})?",
+                image.file_ref,
+            )
+            image = replace(
+                image,
+                expected_md5=(checksum.group(1) or checksum.group(2)).lower()
+                if checksum is not None
+                else None,
+                invalid_reason=image.invalid_reason
+                if checksum is not None
+                else "unverifiable_reference",
+            )
+            images.append(image)
         else:
             return None
     text = "".join(texts).strip()
-    if mentions != 1 or not text:
+    if not text and images:
+        text = "[图片]"
+    if mentions != 1 or not text or len(text) > 20_000:
         return None
     return NapCatGroupInboundMessage(
-        connection_id, account, group_id, sender, str(message_id), text, datetime.now(UTC)
+        connection_id,
+        account,
+        group_id,
+        sender,
+        str(message_id),
+        text,
+        datetime.now(UTC),
+        tuple(images),
     )
 
 
@@ -185,22 +222,15 @@ def _normalize(
             if not re.fullmatch(r"-?[0-9]{1,20}", reply):
                 return None
         elif allow_media and segment.get("type") == "image":
-            file_ref = data.get("file")
-            if not isinstance(file_ref, str):
+            image = _image_reference(data)
+            if image is None:
                 return None
-            try:
-                validate_image_file_ref(file_ref)
-            except ValueError:
+            images.append(image)
+        elif allow_media and segment.get("type") == "face":
+            context = face_context(data)
+            if context is None:
                 return None
-            raw_size = data.get("file_size")
-            file_size: int | None = None
-            invalid_reason: str | None = None
-            if raw_size is not None:
-                if type(raw_size) in {str, int} and re.fullmatch(r"[0-9]{1,12}", str(raw_size)):
-                    file_size = int(str(raw_size))
-                else:
-                    invalid_reason = "invalid_size"
-            images.append(NapCatImageReference(file_ref, file_size, invalid_reason))
+            texts.append(context)
         elif allow_media and segment.get("type") == "record":
             if record is not None:
                 return None
@@ -242,3 +272,22 @@ def _normalize(
         reply_to_external_message_id=reply,
     )
     return NapCatInboundMessage(message=message, images=tuple(images), record=record)
+
+
+def _image_reference(data: JsonObject) -> NapCatImageReference | None:
+    file_ref = data.get("file")
+    if not isinstance(file_ref, str) or file_ref == "marketface":
+        return None
+    try:
+        validate_image_file_ref(file_ref)
+    except ValueError:
+        return None
+    raw_size = data.get("file_size")
+    file_size: int | None = None
+    invalid_reason: str | None = None
+    if raw_size is not None:
+        if type(raw_size) in {str, int} and re.fullmatch(r"[0-9]{1,12}", str(raw_size)):
+            file_size = int(str(raw_size))
+        else:
+            invalid_reason = "invalid_size"
+    return NapCatImageReference(file_ref, file_size, invalid_reason)

@@ -17,6 +17,7 @@ from chatwaifu_runtime.external_channels.adapters.weixin_ilink.image import (
 from chatwaifu_runtime.external_channels.models import ChannelInboundImageInput
 from chatwaifu_runtime.photo_memory.metadata import strip_image_exif
 from chatwaifu_runtime.providers.contracts import LlmInputImage
+from chatwaifu_runtime.sticker_library.models import StickerSavedObserver
 
 from .client import NapCatError, validate_image_file_ref
 from .messages import NapCatImageReference
@@ -29,7 +30,10 @@ class NapCatImageTransport(Protocol):
 
 
 def image_input(
-    transport: NapCatImageTransport, images: tuple[NapCatImageReference, ...]
+    transport: NapCatImageTransport,
+    images: tuple[NapCatImageReference, ...],
+    *,
+    on_sticker_saved: StickerSavedObserver | None = None,
 ) -> ChannelInboundImageInput:
     """Freeze only the source digest; download happens after durable admission."""
     references = [
@@ -37,6 +41,7 @@ def image_input(
             "file": image.file_ref,
             "file_size": image.file_size,
             "invalid_reason": image.invalid_reason,
+            **({"expected_md5": image.expected_md5} if image.expected_md5 is not None else {}),
         }
         for image in images
     ]
@@ -60,6 +65,10 @@ def image_input(
                 total_bytes = 0
                 for image in images:
                     data = await transport.download_image(image.file_ref, max_bytes=MAX_IMAGE_BYTES)
+                    if image.expected_md5 is not None and (
+                        hashlib.md5(data, usedforsecurity=False).hexdigest() != image.expected_md5
+                    ):
+                        raise NapCatError("QQ group image checksum does not match its source")
                     detected = sniff_image_mime_type(data)
                     mime_type: Literal["image/png", "image/jpeg"] = (
                         "image/png" if detected == "image/png" else "image/jpeg"
@@ -76,4 +85,6 @@ def image_input(
             # Provider errors must not leak a filename, signed URL or image content.
             raise NapCatError("QQ image is unavailable; please send it again") from None
 
-    return ChannelInboundImageInput(source_fingerprint=fingerprint, load=load)
+    return ChannelInboundImageInput(
+        source_fingerprint=fingerprint, load=load, on_sticker_saved=on_sticker_saved
+    )

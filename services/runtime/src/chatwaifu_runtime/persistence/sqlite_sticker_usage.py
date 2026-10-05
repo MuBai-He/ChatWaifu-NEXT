@@ -48,7 +48,10 @@ class SQLiteStickerUsageRepository:
                     AND b.connection_id = t.connection_id AND b.session_id = t.session_id
                     AND b.sender_key = t.sender_key AND b.conversation_key = t.conversation_key
                 WHERE t.principal_scope = ? AND s.character_id = ?
-                    AND t.chat_type = 'direct' AND u.role = 'user' AND p.kind = 'image'
+                    AND (t.chat_type = 'direct' OR
+                        (t.chat_type = 'group' AND t.group_lineage_version = 1
+                         AND b.scene_id = s.scene_id AND t.principal_scope = 'scene:'||s.scene_id))
+                    AND u.role = 'user' AND p.kind = 'image'
                 ORDER BY p.created_at DESC, p.part_id DESC
                 LIMIT ?
                 """,

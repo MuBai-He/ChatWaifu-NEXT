@@ -175,7 +175,7 @@ _IMAGE_FAILURE_RECOVERY_TEXT = "刚才发来的图片我没看清，能再发一
 _AUDIO_FAILURE_RECOVERY_TEXT = "刚才发来的语音我没听清，能再说一次或发文字吗？"
 
 
-def _normalize_and_sanitize_inbound_images(
+def normalize_and_sanitize_inbound_images(
     raw_loaded: object,
 ) -> tuple[LlmInputImage, ...]:
     if isinstance(raw_loaded, tuple):
@@ -542,6 +542,7 @@ class ExternalChannelService:
         image_input: ChannelInboundImageInput | None = None,
         audio_input: ChannelInboundAudioInput | None = None,
         image_retention_allowed: bool = True,
+        sticker_learning_allowed: bool | None = None,
         burst_intake: bool = False,
         raw_images: tuple[object, ...] = (),
         context_token: str | None = None,
@@ -595,6 +596,7 @@ class ExternalChannelService:
             access_token=access_token,
             image_input=image_input,
             image_retention_allowed=image_retention_allowed,
+            sticker_learning_allowed=sticker_learning_allowed,
         )
 
     async def _submit_admitted(
@@ -607,6 +609,7 @@ class ExternalChannelService:
         access_token: str,
         image_input: ChannelInboundImageInput | None = None,
         image_retention_allowed: bool = True,
+        sticker_learning_allowed: bool | None = None,
     ) -> ChannelTurnReceipt:
         source_context = ConversationSourceContext(
             provider_id=connection.configuration.provider_id,
@@ -631,10 +634,17 @@ class ExternalChannelService:
         image_loader = image_input.load if image_input is not None else None
         library = self._sticker_library
         photos = self._photo_observer
+        learn_stickers = (
+            image_retention_allowed
+            if sticker_learning_allowed is None
+            else sticker_learning_allowed
+        )
         if (
             image_loader is not None
-            and image_retention_allowed
-            and (library is not None or photos is not None)
+            and (
+                (learn_stickers and library is not None)
+                or (image_retention_allowed and photos is not None)
+            )
             and connection.configuration.character_id == "default"
             and message.chat_type is ChannelChatType.DIRECT
         ):
@@ -648,10 +658,10 @@ class ExternalChannelService:
 
             async def learning_loader() -> tuple[LlmInputImage, ...]:
                 raw_loaded = await original_loader()
-                sanitized_images = _normalize_and_sanitize_inbound_images(raw_loaded)
+                sanitized_images = normalize_and_sanitize_inbound_images(raw_loaded)
                 original_images = raw_loaded if isinstance(raw_loaded, tuple) else (raw_loaded,)
                 try:
-                    if library is not None:
+                    if library is not None and learn_stickers:
                         await library.observe_batch(
                             StickerLearningSource(
                                 principal_scope=connection.configuration.principal_scope,
@@ -661,6 +671,9 @@ class ExternalChannelService:
                             ),
                             original_images,
                             wait_for_completion=wait_for_completion,
+                            on_saved=image_input.on_sticker_saved
+                            if image_input is not None
+                            else None,
                         )
                 except asyncio.CancelledError:
                     raise
@@ -669,7 +682,7 @@ class ExternalChannelService:
                         "sticker learning observation skipped generation_id=%s", turn.generation_id
                     )
                 try:
-                    if photos is not None:
+                    if photos is not None and image_retention_allowed:
                         await photos.observe_batch(
                             PhotoObservationSource(
                                 principal_scope=connection.configuration.principal_scope,
@@ -692,7 +705,7 @@ class ExternalChannelService:
 
             async def sanitized_image_loader() -> tuple[LlmInputImage, ...]:
                 raw_loaded = await raw_base_loader()
-                return _normalize_and_sanitize_inbound_images(raw_loaded)
+                return normalize_and_sanitize_inbound_images(raw_loaded)
 
             image_loader = sanitized_image_loader
         allowed_skills: frozenset[str] = (
@@ -1136,7 +1149,7 @@ class ExternalChannelService:
 
             async def learning_loader() -> tuple[LlmInputImage, ...]:
                 raw_loaded = await combined_base_loader()
-                sanitized_images = _normalize_and_sanitize_inbound_images(raw_loaded)
+                sanitized_images = normalize_and_sanitize_inbound_images(raw_loaded)
                 original_images = raw_loaded
                 try:
                     if library is not None:
@@ -1183,7 +1196,7 @@ class ExternalChannelService:
 
             async def sanitized_image_loader() -> tuple[LlmInputImage, ...]:
                 raw_loaded = await combined_base_loader()
-                return _normalize_and_sanitize_inbound_images(raw_loaded)
+                return normalize_and_sanitize_inbound_images(raw_loaded)
 
             image_loader = sanitized_image_loader
 

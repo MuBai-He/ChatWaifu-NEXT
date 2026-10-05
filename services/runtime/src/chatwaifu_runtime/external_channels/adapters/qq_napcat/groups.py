@@ -5,10 +5,13 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Literal, cast
 from uuid import UUID
 
 from chatwaifu_protocol.base import JsonObject
+
+if TYPE_CHECKING:
+    from .messages import NapCatImageReference
 
 GroupNoticeType = Literal["group_increase", "group_decrease", "group_admin"]
 GroupNoticeSubtype = Literal["approve", "invite", "leave", "kick", "kick_me", "set", "unset"]
@@ -36,6 +39,7 @@ class NapCatGroupInboundMessage:
     external_message_id: str
     text: str = field(repr=False)
     received_at: datetime
+    images: tuple[NapCatImageReference, ...] = field(default=(), repr=False)
 
 
 @dataclass(frozen=True, slots=True)

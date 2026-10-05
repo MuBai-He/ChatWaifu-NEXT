@@ -900,7 +900,7 @@ async def test_owner_image_reaches_vision_once_without_retention_or_voice_escala
 
         monkeypatch.setattr(NapCatClient, "download_image", download)
         monkeypatch.setattr(harness.container.photo_observer, "observe_batch", observe)
-        monkeypatch.setattr(harness.container.sticker_library, "observe_batch", observe)
+        monkeypatch.setattr(harness.container.sticker_library._classifier, "classify", observe)
         event = _image_event(caption, 40, reply_id=999)
         await harness.peer.peers[-1].send(json.dumps(event))
         request = await asyncio.wait_for(harness.model.received.get(), timeout=5)
@@ -918,6 +918,7 @@ async def test_owner_image_reaches_vision_once_without_retention_or_voice_escala
         result = await _terminal(harness, connection_id, turn.channel_turn_id)
         assert result.status is ChannelTurnStatus.COMPLETED
         assert not observations
+        assert not (await harness.container.sticker_repository.snapshot("local", "default")).items
         assert downloads == ["photo.png"]
         assert len(harness.synthesis) == int(bool(caption))
 

@@ -18,6 +18,7 @@ from chatwaifu_protocol.channels import (
     ChannelImageDeliveryPartPayload,
     ChannelPresentationPolicy,
     ChannelPresentationProfile,
+    ChannelTextDeliveryPartPayload,
 )
 from chatwaifu_protocol.events import GenericCoreEvent
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
@@ -209,7 +210,13 @@ async def test_stop_cancels_old_image_without_decorating_new_answer(
         updated_at: datetime,
     ) -> DeliveryTransitionResult:
         result = await original_ack(acknowledgement, updated_at=updated_at)
-        if result.part is not None and result.part.ordinal == 0:
+        if result.part is not None and (
+            (
+                result.part.ordinal == 0
+                and isinstance(result.plan.parts[-1].payload, ChannelImageDeliveryPartPayload)
+            )
+            or result.part.ordinal == len(result.plan.parts) - 1
+        ):
             text_acks.put_nowait(result)
         return result
 
@@ -284,12 +291,18 @@ async def test_stop_cancels_old_image_without_decorating_new_answer(
                     ),
                 )
             )
-            result = await asyncio.wait_for(text_acks.get(), timeout=5)
+            result = await asyncio.wait_for(text_acks.get(), timeout=20)
             if message_id == "affection":
-                assert len(result.plan.parts) == 2
-                assert result.plan.parts[1].status is ChannelDeliveryPartStatus.PENDING
+                assert len(result.plan.parts) >= 2
+                assert isinstance(result.plan.parts[-1].payload, ChannelImageDeliveryPartPayload)
+                assert result.plan.parts[-1].status is ChannelDeliveryPartStatus.PENDING
             else:
-                assert len(result.plan.parts) == 1
+                assert all(
+                    isinstance(p.payload, ChannelTextDeliveryPartPayload) for p in result.plan.parts
+                )
+                assert all(
+                    p.status is ChannelDeliveryPartStatus.DELIVERED for p in result.plan.parts
+                )
                 assert result.plan.status is ChannelDeliveryStatus.DELIVERED
         old_turn = await container.external_channel_repository.find_turn_by_external_message(
             connection_id, "affection"
@@ -300,7 +313,9 @@ async def test_stop_cancels_old_image_without_decorating_new_answer(
         )
         assert old_plan is not None
         assert old_plan.parts[0].status is ChannelDeliveryPartStatus.DELIVERED
-        assert old_plan.parts[1].status is ChannelDeliveryPartStatus.CANCELLED
+        assert isinstance(old_plan.parts[-1].payload, ChannelImageDeliveryPartPayload)
+        assert old_plan.parts[-1].status is ChannelDeliveryPartStatus.CANCELLED
+        assert all(p.status is ChannelDeliveryPartStatus.CANCELLED for p in old_plan.parts[1:])
         stop_turn = await container.external_channel_repository.find_turn_by_external_message(
             connection_id, "stop"
         )

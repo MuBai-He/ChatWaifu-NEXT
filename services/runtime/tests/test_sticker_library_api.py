@@ -11,6 +11,21 @@ from fastapi.testclient import TestClient
 from test_sticker_repository import PNG_1X1, _seed_source_chain
 
 
+def test_group_library_never_silently_falls_back_to_private(client: TestClient) -> None:
+    route = "/v1/sticker-library"
+    assert client.get(route + "?group_route_id=not-a-uuid").status_code == 422
+    missing = "00000000-0000-0000-0000-000000000001"
+    assert client.get(route + "?group_route_id=" + missing).status_code == 404
+    assert (
+        client.put(
+            route + "/settings?group_route_id=" + missing,
+            json={"learning_enabled": True, "expected_revision": 0},
+        ).status_code
+        == 404
+    )
+    assert client.get(route).json()["settings"]["learning_enabled"] is False
+
+
 def test_sticker_api_auth_settings_preview_delete(client: TestClient) -> None:
     route = "/v1/sticker-library"
     assert client.get(route, headers={"Authorization": "Bearer invalid"}).status_code == 401
