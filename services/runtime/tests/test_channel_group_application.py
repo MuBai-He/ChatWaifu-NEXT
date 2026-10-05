@@ -288,9 +288,14 @@ async def test_actual_conversation_fixed_target_no_tools_or_audio_and_distinct_m
     assert not list(app.container.settings.data_dir.glob("audio/*.wav"))
 
 
-async def test_group_short_contract_and_bubbles_preserve_one_canonical_turn(app: App) -> None:
+@pytest.mark.parametrize(
+    "reply", ["嗯，在呀。\n\n怎么啦？", "你怎么还在纠结这个呀……！真是拿你没办法。"]
+)
+async def test_group_short_contract_and_bubbles_preserve_one_canonical_turn(
+    app: App, reply: str
+) -> None:
     await app.enable()
-    app.provider.reply_text = "嗯，在呀。\n\n怎么啦？"
+    app.provider.reply_text = reply
     receipt = await app.ingest(text="在吗？")
     await app.join(receipt.channel_turn_id)
     assert "usually 5-30 Chinese characters" in app.provider.requests[0].system_prompt
@@ -317,11 +322,15 @@ async def test_group_short_contract_and_bubbles_preserve_one_canonical_turn(app:
     assert row is not None and row[0] == 1
 
 
+@pytest.mark.parametrize(
+    "reply", ["嗯，在呀。\n\n怎么啦？", "你怎么还在纠结这个呀……！真是拿你没办法。"]
+)
 async def test_group_receipt_schedules_tail_and_new_mention_cancels_only_unsent_bubbles(
     app: App,
+    reply: str,
 ) -> None:
     await app.enable()
-    app.provider.reply_text = "嗯，在呀。\n\n怎么啦？"
+    app.provider.reply_text = reply
     receipt = await app.ingest()
     await app.join(receipt.channel_turn_id)
     turn = await app.container.external_channel_repository.get_turn(receipt.channel_turn_id)

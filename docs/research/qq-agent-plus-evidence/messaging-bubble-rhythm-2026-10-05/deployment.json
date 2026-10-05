@@ -1,0 +1,67 @@
+{
+  "verified_at": "2026-10-05T07:53:55.967928+00:00",
+  "affected_files": [
+    "services/runtime/src/chatwaifu_runtime/external_channels/presentation.py",
+    "services/runtime/tests/test_bubble_presentation.py",
+    "services/runtime/tests/test_messaging_style.py",
+    "services/runtime/tests/test_channel_group_application.py",
+    "services/runtime/tests/test_qq_group_runtime.py"
+  ],
+  "other_source_unchanged": true,
+  "runtime_active": true,
+  "napcat_restarted": false,
+  "all_model_routes_unchanged": true,
+  "chat_model": "gemini-3.8-flash-high",
+  "connection_configurations_unchanged": true,
+  "credential_and_configuration_files_unchanged": true,
+  "restored_groups": [
+    {
+      "is_requested_group": true,
+      "members": 5,
+      "revision": 6,
+      "same_scene_and_grants": true
+    },
+    {
+      "is_requested_group": false,
+      "members": 2,
+      "revision": 29,
+      "same_scene_and_grants": true
+    }
+  ],
+  "sqlite_checks_passed": true,
+  "manual_external_messages_sent": 0,
+  "previously_dropped_inputs_replayed": 0,
+  "fresh_handset_pacing": "pending",
+  "checks": {
+    "local_related_pytest_passed": 785,
+    "linux_targeted_pytest_passed": 143,
+    "strict_pyright": "passed",
+    "ruff": "passed",
+    "ruff_format": "passed",
+    "git_diff_check": "passed",
+    "web_build": "passed_with_existing_bundle_warning"
+  },
+  "patch_hashes": {
+    "services/runtime/src/chatwaifu_runtime/external_channels/presentation.py": {
+      "old_sha256": "e67b70e20fa3b7c9d5a9384ec9b3ba924193129e9b1d8388fc319b0d1ae9c9d0",
+      "new_sha256": "c9e5882b3712e13d7fcda6305ff7bafe056250f645b4e6db77443e9acddd743d"
+    },
+    "services/runtime/tests/test_bubble_presentation.py": {
+      "old_sha256": "13478ce99773ac2e2a9744451e10a84907599fad6c8cf0202fced09a51df6744",
+      "new_sha256": "4a8794497088a857ecf9cf7583734e260e24b1b6f0b0bc47b4aac3f1ed3e06fc"
+    },
+    "services/runtime/tests/test_messaging_style.py": {
+      "old_sha256": "f820b1e928a081dee75c34e5a8446e3e619a06dc2b10ff50b4161e3ea6e9794e",
+      "new_sha256": "eca728e3720e6cc9eb1b93b0892431384712c01336d4e9bc9561f3ee74f06342"
+    },
+    "services/runtime/tests/test_channel_group_application.py": {
+      "old_sha256": "28374d108a445f30c393acafa87078e00d7404a791c0f9adb2261ec0d349ab32",
+      "new_sha256": "3fa6a3821171a62420cc485cba410741cd001c47a3dfc87e62751df449c2cdd4"
+    },
+    "services/runtime/tests/test_qq_group_runtime.py": {
+      "old_sha256": "f57dbf19f8d98cf8de0ea4ffb60a006e23a19548bf1503569ea1799ac95a798c",
+      "new_sha256": "2e76cd7b11b8454be7f9cc7d04d39bf9783914324fb05aded53fdd5a58ce891a"
+    }
+  },
+  "new_model_requests_by_verifier": 0
+}

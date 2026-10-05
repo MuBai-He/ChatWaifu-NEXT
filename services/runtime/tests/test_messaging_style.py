@@ -44,27 +44,32 @@ class _Answer:
     kind = "demo"
     supports_tool_calling = True
 
-    def __init__(self) -> None:
+    def __init__(self, reply: str = "嗯，在呀。\n\n怎么啦？") -> None:
         self.requests: list[LlmRequest] = []
+        self.reply = reply
 
     async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
         self.requests.append(request)
-        yield LlmTextDelta("嗯，在呀。\n\n怎么啦？")
+        yield LlmTextDelta(self.reply)
         yield LlmResponseCompleted("stop")
 
 
 @pytest.mark.parametrize("provider_id", ["weixin_ilink", "qq_napcat", "future_chat"])
 @pytest.mark.parametrize("single_text", [False, True])
+@pytest.mark.parametrize(
+    "reply", ["嗯，在呀。\n\n怎么啦？", "你怎么还在纠结这个呀……！真是拿你没办法。"]
+)
 async def test_all_external_providers_use_short_style_with_optional_single_delivery(
     runtime_settings: Settings,
     monkeypatch: pytest.MonkeyPatch,
     provider_id: str,
     single_text: bool,
+    reply: str,
 ) -> None:
     container = RuntimeContainer(runtime_settings)
     await container.start()
     try:
-        provider = _Answer()
+        provider = _Answer(reply)
 
         def create(_configuration: ModelRoleConfig) -> LlmProvider:
             return provider
@@ -134,7 +139,7 @@ async def test_all_external_providers_use_short_style_with_optional_single_deliv
             for part in plan.parts
             if isinstance(part.payload, ChannelTextDeliveryPartPayload)
         )
-        assert text == result.reply_text == "嗯，在呀。\n\n怎么啦？"
+        assert text == result.reply_text == reply
     finally:
         await container.stop()
 

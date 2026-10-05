@@ -498,6 +498,30 @@ async def test_quoted_mention_reaches_model_and_fixed_delivery_once(
     assert not runtime.base.synthesis
 
 
+async def test_short_group_sentences_reach_qq_as_separate_ordered_parts(runtime: _Runtime) -> None:
+    route = await runtime.route()
+    text = "你怎么还在纠结这个呀……！真是拿你没办法。"
+    await runtime.send(_group_event(33, text, reply_id=90000))
+    expected = ("reply:你怎么还在纠结这个呀……！", "真是拿你没办法。")
+    for part in expected:
+        sent = await asyncio.wait_for(runtime.peer.group_sends.get(), 5)
+        assert sent == {"group_id": GROUP, "message": [{"type": "text", "data": {"text": part}}]}
+    snapshot = await runtime.terminal(route, 33)
+    assert snapshot.turn.delivery_status is ChannelDeliveryStatus.DELIVERED
+    assert snapshot.turn.reply_text == "reply:" + text
+    assert len(runtime.model.requests) == 1
+    record = await runtime.container.external_channel_repository.get_turn(
+        snapshot.turn.channel_turn_id
+    )
+    assert record is not None and record.delivery_id is not None
+    plan = await runtime.container.external_channel_repository.get_delivery_plan(record.delivery_id)
+    assert plan is not None and plan.part_count == 2
+    assert all(part.provider_message_id for part in plan.parts)
+    assert plan.parts[0].delay_after_ms > 0 and plan.parts[1].delay_after_ms == 0
+    assert runtime.peer.sends.empty() and runtime.peer.group_sends.empty()
+    assert not runtime.base.synthesis
+
+
 async def test_wire_rejections_dedup_and_raw_ids_are_scoped_to_the_fixed_group(
     runtime: _Runtime,
 ) -> None:

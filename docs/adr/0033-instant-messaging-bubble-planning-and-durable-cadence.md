@@ -55,7 +55,8 @@ The bubble splitter divides canonical text into 1~3 natural parts while enforcin
   - Quoted phrases and paired brackets/parentheses (`“”`, `「」`, `()`, `（）`, `【】`, `《》`, `[]`)
   - Emoji grapheme clusters (extended grapheme clusters with ZWJ and modifiers)
 - **Long-Form / Technical Bypass**: If the reply contains code blocks, extensive markdown lists/tables, or safety disclaimers, splitting is bypassed to preserve technical clarity.
-- **Candidate Boundaries**: Natural splits follow line breaks, then strong sentence punctuation (`。！？～` and `.!?~`), then weak clause punctuation (`；，; ,`) when necessary.
+- **Candidate Boundaries**: Natural splits follow line breaks, then strong sentence punctuation (`。！？；～…` and `.!?;~`), then weak comma boundaries when necessary.
+- **Short Sentence Pauses (2026-10-05)**: A reply below the preferred character count still splits at complete sentence and line boundaries. These pauses are preserved until the configured part cap requires merging. Preferred/soft length merging applies to weaker clause cuts. Leading/trailing punctuation runs stay attached to meaningful text; the planner does not produce an ellipsis-only fragment. Atomic spans, single-text selection, long-form bypass and canonical reconstruction remain unchanged.
 
 ### 4. Durable Cadence State Transitions
 

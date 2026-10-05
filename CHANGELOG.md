@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Preserve complete sentence pauses in short instant-message replies instead of
+  bypassing or merging them below the preferred length. Retain canonical text,
+  atomic spans, technical/single-text bypass, three-part cadence and tail
+  cancellation. Replay nine frozen live Gemini replies without new model calls.
+
 - Accept a valid QQ group reply envelope together with a real bot mention and
   nonempty text. Preserve scoped group history, operator grants, deduplication,
   cancellation and delivery fences. Record two actual pre-admission drops;

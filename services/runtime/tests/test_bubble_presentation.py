@@ -45,6 +45,7 @@ from chatwaifu_runtime.external_channels.presentation import (
     CadenceCalculator,
     InstantMessageDeliveryPlanFactory,
     SingleTextDeliveryPlanFactory,
+    messaging_presentation_policy,
     render_bubble_text,
 )
 from chatwaifu_runtime.external_channels.scheduler import (
@@ -120,6 +121,56 @@ def test_casual_chinese_splitting_into_natural_bubbles() -> None:
     # Check lossless preservation (rejoining reproduces text exactly with NFC equivalence)
     rejoined = "".join(res.parts)
     assert unicodedata.normalize("NFC", rejoined) == unicodedata.normalize("NFC", text)
+
+
+@pytest.mark.parametrize(
+    "parts",
+    [
+        ("你怎么还在纠结这个呀……！", "真是拿你没办法。"),
+        ("桌饺……？", "把饺子直接倒在桌上吃吗，感觉怪怪的……"),
+        ("都说了不要乱给人家安这种设定啦……", "小心当事人来找你算账哦！"),
+        ("才不要大声喊呢！", "我是绫地宁宁，他们也才不是你说的那样啦。"),
+        ("记是记下了啦……", "但等大家来找你算账的时候我可不管哦。"),
+        ("诶？", "我没有不尊重大家啦！", "只是在解释我自己不是而已……"),
+        ("怎么又变回去了……！", "都说了不是啦，别一直逗我了。"),
+        ("嗯，在呀。", "怎么啦？"),
+        ("先别着急；", "我陪你慢慢看。"),
+        ("嗯，在呀。\n", "怎么啦？"),
+    ],
+)
+def test_short_complete_sentences_keep_their_message_pauses(parts: tuple[str, ...]) -> None:
+    text = "".join(parts)
+    assert len(text) <= 30
+    result = BubbleSplitter().split(text, messaging_presentation_policy())
+    assert result.parts == parts
+    assert "".join(result.parts) == text
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "就算人家不在意，我也不会跟着你胡闹的啦……",
+        "……为什么这么执着这个设定呀，大家听到真的不会抗议吗？",
+        "……你好呀。",
+        "你好呀！……",
+        "嗯，好呀。",
+        "他说“你好。你好吗？”我说还行。",
+        "等 3.14 秒再试。",
+        "访问 https://example.test/a?x=3.14",
+    ],
+)
+def test_one_complete_utterance_and_protected_content_do_not_become_fragments(text: str) -> None:
+    result = BubbleSplitter().split(text, messaging_presentation_policy())
+    assert result.parts == (text,)
+
+
+def test_short_sentence_pauses_keep_graphemes_and_the_existing_bubble_cap() -> None:
+    text = "你好👨‍👩‍👧‍👦！\n我在。放心吧。慢慢说。"
+    result = BubbleSplitter().split(text, messaging_presentation_policy())
+    assert result.part_count == 3
+    assert "".join(result.parts) == text
+    assert any("👨‍👩‍👧‍👦" in part for part in result.parts)
+    assert all(any(character.isalnum() for character in part) for part in result.parts)
 
 
 @pytest.mark.parametrize("separator", ["\n\n", "\r\n\r\n", "\n \t\n"])

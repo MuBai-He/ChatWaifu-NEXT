@@ -250,11 +250,6 @@ class BubbleSplitter:
             if any(marker in clean_text for marker in self._SAFETY_MARKERS):
                 return True, "safety_disclaimer_detected"
 
-        if len(clean_text) <= policy.preferred_chars_per_part and not (
-            self._PARAGRAPH_BREAK_PATTERN.search(clean_text)
-        ):
-            return True, "below_preferred_chars"
-
         return False, None
 
     def split(self, text: str, policy: ChannelPresentationPolicy) -> BubbleSplitResult:
@@ -276,6 +271,14 @@ class BubbleSplitter:
                     return True
             return False
 
+        def has_content(value: str) -> bool:
+            # Leading/trailing ellipses or punctuation runs stay with an utterance;
+            # a standalone emoji is meaningful, while punctuation alone is not.
+            return any(
+                unicodedata.category(character)[0] not in {"P", "Z", "C"} and character not in "~～"  # noqa: RUF001
+                for character in value
+            )
+
         # Explicit paragraphs survive length-based merging unless the part cap requires it.
         paragraph_cuts = {
             match.end()
@@ -295,7 +298,7 @@ class BubbleSplitter:
 
         # Priority 2: strong sentence punctuation (with trailing whitespace/newlines)
         strong_punct_pattern = regex.compile(
-            r"(?:[。！？～…]+|(?<=[a-zA-Z0-9])[.!?~]+)(?:[ \t\r\n]*)"  # noqa: RUF001
+            r"(?:[。！？；～…]+|(?<=[a-zA-Z0-9])[.!?;~]+)(?:[ \t\r\n]*)"  # noqa: RUF001
         )
         for m in strong_punct_pattern.finditer(normalized):
             cut = m.end()
@@ -303,6 +306,7 @@ class BubbleSplitter:
                 boundaries.append(cut)
 
         boundaries = sorted(set(boundaries))
+        sentence_cuts = set(boundaries)
 
         if not boundaries:
             # Check weak clause punctuation if text is long
@@ -319,14 +323,14 @@ class BubbleSplitter:
         if not boundaries:
             return BubbleSplitResult(parts=(normalized,), fallback_reason="no_natural_boundaries")
 
-        # Filter candidate cuts so neither side is whitespace-only
+        # Never create punctuation-only or whitespace-only fragments.
         candidate_cuts = [
             c
             for c in boundaries
             if 0 < c < len(normalized)
             and not is_index_protected(c)
-            and bool(normalized[:c].strip())
-            and bool(normalized[c:].strip())
+            and has_content(normalized[:c])
+            and has_content(normalized[c:])
         ]
         if not candidate_cuts:
             return BubbleSplitResult(parts=(normalized,), fallback_reason="no_natural_boundaries")
@@ -335,11 +339,11 @@ class BubbleSplitter:
         valid_cuts: list[int] = []
         last_cut = 0
         for c in candidate_cuts:
-            if normalized[last_cut:c].strip():
+            if has_content(normalized[last_cut:c]):
                 valid_cuts.append(c)
                 last_cut = c
 
-        while valid_cuts and not normalized[valid_cuts[-1] :].strip():
+        while valid_cuts and not has_content(normalized[valid_cuts[-1] :]):
             valid_cuts.pop()
 
         if not valid_cuts:
@@ -347,7 +351,8 @@ class BubbleSplitter:
 
         cuts = [0, *valid_cuts, len(normalized)]
 
-        # Step 1: Merge adjacent segments greedily up to preferred / soft_max
+        # Step 1: Keep sentence pauses even in short replies. Length-based merging
+        # applies only to weaker clause cuts, never complete sentences or lines.
         merged_cuts: list[int] = [0]
         i = 1
         while i < len(cuts) - 1:
@@ -358,6 +363,7 @@ class BubbleSplitter:
             combined_len = next_cut - current_start
             if (
                 cand_cut not in paragraph_cuts
+                and cand_cut not in sentence_cuts
                 and current_len < policy.preferred_chars_per_part
                 and combined_len <= policy.soft_max_chars_per_part
             ):
@@ -373,6 +379,7 @@ class BubbleSplitter:
                 range(1, len(merged_cuts) - 1),
                 key=lambda j: (
                     merged_cuts[j] in paragraph_cuts,
+                    merged_cuts[j] in sentence_cuts,
                     merged_cuts[j + 1] - merged_cuts[j - 1],
                 ),
             )

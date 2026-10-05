@@ -29,6 +29,16 @@ and existing bounded durable cadence. Explicit operator policy remains effective
 Separate complete message ideas may use paragraph boundaries; a sole useful
 sentence remains one message. Structured technical replies retain their bypass.
 
+The 2026-10-05 rhythm adjustment also preserves complete sentence/line pauses in
+short replies. Do not skip segmentation solely because the whole reply is below
+30 characters, or greedily merge distinct sentence pauses back together below
+the 60-character soft limit. Keep the configured three-part cap, atomic spans,
+full conditional utterances and punctuation-only fragment protection. Nine
+frozen, already-delivered Gemini replies provide a presentation-only control:
+seven split into two or three bubbles, with all canonical text retained. This
+does not add a prompt rule, change a model, or approve new handset UX; see the
+[rhythm evidence](../research/qq-agent-plus-evidence/messaging-bubble-rhythm-2026-10-05.md).
+
 QQ fixed-group replies may contain ordered required text parts under the same
 immutable admitted group target. No group tools, media, quotes, new participation
 grants or proactive messages are added. Each actual send rechecks group authority,
