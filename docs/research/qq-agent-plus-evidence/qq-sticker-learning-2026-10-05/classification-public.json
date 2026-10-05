@@ -1,0 +1,34 @@
+{
+  "model": "gemini-3.8-flash-high",
+  "samples": [
+    {
+      "fixture": "public_kitten_happy",
+      "sha256": "760e4ac2b7c4955a045d507e1b0c1ae884cdf6b9753ef00bb7ac58a77b7d8714",
+      "expected_suitable": true,
+      "accepted": true,
+      "classification": {
+        "schema_version": "1.0",
+        "suitable": true,
+        "confidence": 0.98,
+        "label": "开心欢呼的小白猫",
+        "description": "一只戴着粉色围巾的卡通小白猫欢快地举起双爪跳跃，眼睛眯起开怀大笑，周围有闪烁的星星点缀。",
+        "expression": "happy"
+      },
+      "latency_seconds": 4.432,
+      "usage": [],
+      "matches_expected": true
+    },
+    {
+      "fixture": "synthetic_red_square",
+      "sha256": "1349b0f07a16e6747ef1ee93a9c784646ea3c54ca70e319b9d7a137bdafb3c23",
+      "expected_suitable": false,
+      "accepted": false,
+      "classification": null,
+      "latency_seconds": 4.0,
+      "usage": [],
+      "matches_expected": true
+    }
+  ],
+  "passed": true,
+  "usage_capture_status": "not_recorded: observer inspected separate LlmUsage events; this adapter attaches usage to LlmCompletion. Empty arrays are not zero usage or evidence that the provider omitted it."
+}

@@ -1,0 +1,20 @@
+{
+  "model": "gemini-3.8-flash-high",
+  "source_case": "owner_reported_gif_labeled_png",
+  "source_loaded_in_memory_only": true,
+  "preview_format": "image/png",
+  "preview_sent_count": 1,
+  "animation_learning_excluded": true,
+  "description": "画面中是一只呈侧向站立的卡通像素风格粉色小猪，带有圆圆的黑眼睛、粉色的大鼻子和卷翘的尾巴。",
+  "provider_usage": {
+    "prompt_tokens": 1118,
+    "completion_tokens": 36,
+    "total_tokens": 1475,
+    "reasoning_tokens": 321
+  },
+  "latency_seconds": 5.702,
+  "requests": 1,
+  "manual_external_messages_sent": 0,
+  "conversation_or_library_rows_written": 0,
+  "scope": "adapter/provider diagnostic, not frozen Runtime persona or handset acceptance"
+}
