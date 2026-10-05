@@ -1,0 +1,17 @@
+{
+  "reviewer": "Codex direct manual review",
+  "product_commit": "50a30a3",
+  "current_reference_trials": 4,
+  "current_reference_trials_explicitly_distinguishing_latest_speaker_claim": 4,
+  "bare_with_current_discussion_trials": 2,
+  "bare_with_current_discussion_topic_and_attribution_correct": 2,
+  "bare_without_current_discussion_trials": 1,
+  "bare_without_current_discussion_asked_for_topic": 1,
+  "exact_old_missing_image_reply_reproduced_in_control": false,
+  "limits": [
+    "Control replies were generic, not all incorrect; this is not a 0-to-100 percent improvement claim.",
+    "The synthetic analogue substitutes fictional names and omits real QQ/member/connection identifiers.",
+    "The original live 20:18:12 reply and a pure @ drop were verified separately from these model samples.",
+    "No post-deployment phone confirmation yet; broader source-fidelity and original Q02 A/B gates remain open."
+  ]
+}

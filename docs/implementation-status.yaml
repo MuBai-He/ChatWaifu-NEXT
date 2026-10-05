@@ -4,12 +4,14 @@ current_phase: "13.6"
 qq_group_discussion:
   status: source_and_deployment_verified_phone_pending_strict_model_fidelity_open
   adr: "0075"
-  product_commit: "c2e6790"
+  product_commit: "50a30a3"
+  baseline_commit: "c2e6790"
   evidence:
     - Authorized unmentioned text remains volatile and silent; at-only replies retain current speaker grants and text-only delivery. Fair quotas, TTL, dedup and complete-wire model limits bound collection and on-demand extractive compression.
-    - Final local Python 3723 passes and 46 platform skips; Linux candidate 206 passes. Strict types, lint, format, architecture and unchanged Web build pass. Raw snapshots never enter transcript or memory extraction; lifecycle fences revoke stale work and context.
-    - Main Runtime deployed with 15 reviewed files, all unrelated source/config/model routes preserved, same original group scenes/grants restored, old schema-42 facts retained, seven original Web assets matched and all 13 observed containers unchanged. Phone context/receipt remains pending.
-    - Four final real Gemini samples preserve discussion facts and references, but both long answers infer a preference and one adds an unrecorded unresolved question. Strict final-answer fidelity and original full Q02 are not accepted; see docs/research/qq-agent-plus-evidence/qq-group-discussion-2026-10-05/README.md.
+    - Final local Python 3740 passes and 46 platform skips; Linux candidate 308 passes. Strict types, lint, format, architecture and unchanged Web build pass. Current-turn evidence follows older history and remains separate from transcript and memory extraction; lifecycle fences revoke stale work and context.
+    - Main Runtime deployed with 16 reviewed source/test files, all unrelated source/config/model routes preserved, same original group scenes/grants restored, old schema-42 facts retained, seven original Web assets matched and all 13 observed containers unchanged. Phone context/receipt remains pending.
+    - Genuine bare mentions retain a structured trigger, use current admitted discussion or ask for a topic, and skip cache/memory projection. Frozen Gemini reference A/B and a raw-usage supplement retain 11 actual payloads; four current-position replies distinguish the latest speaker claim. The control did not reproduce the exact old missing-image sentence; see docs/research/qq-agent-plus-evidence/qq-mention-reference-fix-2026-10-05/README.md.
+    - Earlier c2e6790 long-material samples inferred a preference and an unrecorded unresolved question. This targeted reference fix does not reaccept broader fidelity or original full Q02; see docs/research/qq-agent-plus-evidence/qq-group-discussion-2026-10-05/README.md.
 channel_short_replies:
   status: main_runtime_deployed_connections_ready_original_group_restored_phone_ux_pending
   adr: "0073"
