@@ -704,7 +704,11 @@ class ChannelGroupService:
                 if context.expires_at <= now:
                     self._image_context.pop(key, None)
             context_key = (descriptor.connection_id, descriptor.group_id, descriptor.sender_key)
-            cached = self._image_context.get(context_key) if not observe_only else None
+            cached = (
+                self._image_context.get(context_key)
+                if not observe_only and not descriptor.mention_only
+                else None
+            )
             if (
                 image_input is None
                 and cached is not None
@@ -837,10 +841,14 @@ class ChannelGroupService:
                     image_input,
                     learning_revision,
                     self._discussion.snapshot(
-                        fresh, connection.revision, descriptor.external_message_id, self._clock()
+                        fresh,
+                        connection.revision,
+                        descriptor.external_message_id,
+                        self._clock(),
+                        mention_only=descriptor.mention_only,
                     ),
                 )
-                if image_input is None:
+                if image_input is None and not descriptor.mention_only:
                     self._discussion.observe(descriptor, fresh, connection.revision, self._clock())
                 # Install the durable latest pending before an old actor can finish/release.
                 if admitted.dispatch_now:

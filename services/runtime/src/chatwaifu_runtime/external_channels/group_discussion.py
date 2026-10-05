@@ -108,6 +108,8 @@ class GroupDiscussionCache:
         connection_revision: int,
         now: datetime,
     ) -> str:
+        if descriptor.mention_only:
+            return "mention_only"
         cache = self._cache(route, connection_revision, now)
         if cache is None:
             return "disabled_or_capacity"
@@ -161,9 +163,11 @@ class GroupDiscussionCache:
         connection_revision: int,
         current_message_id: str,
         now: datetime,
+        *,
+        mention_only: bool = False,
     ) -> GroupDiscussionContext | None:
         cache = self._cache(route, connection_revision, now)
-        if cache is None or not cache.messages:
+        if not mention_only and (cache is None or not cache.messages):
             return None
         return GroupDiscussionContext(
             route.connection_id,
@@ -173,6 +177,9 @@ class GroupDiscussionCache:
             route.revision,
             route.scene_id,
             tuple(sorted(m.participant_id for m in route.members)),
-            tuple(m for m in cache.messages if m.message_id != current_message_id),
+            tuple(m for m in cache.messages if m.message_id != current_message_id)
+            if cache is not None
+            else (),
             self.policy,
+            mention_only=mention_only,
         )

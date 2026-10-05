@@ -14,6 +14,7 @@ from chatwaifu_protocol.channel_groups import ChannelGroupPauseReason
 from chatwaifu_protocol.channels import ChannelTurnStatus
 from chatwaifu_runtime.external_channels.models import ChannelConnectionRecord
 from chatwaifu_runtime.memory.service import UserTurnMemoryObservation
+from chatwaifu_runtime.providers.openai_compatible import build_messages
 from test_qq_group_runtime import ALICE, BOB, GROUP, OTHER_GROUP, _group_event, _Runtime
 from test_qq_group_runtime import runtime as runtime
 
@@ -62,7 +63,7 @@ async def test_listening_is_silent_ephemeral_attributed_and_carries_final_refere
     assert (await runtime.terminal(route, 4004)).turn.status is ChannelTurnStatus.COMPLETED
     assert request.user_text == "刚才这个选择，你怎么看？"
     assert not request.tools and not request.images and not runtime.base.synthesis
-    packet = cast(JsonObject, json.loads(request.context[-1][1]))
+    packet = cast(JsonObject, json.loads(request.current_turn_evidence[-1]))
     records = cast(list[JsonObject], packet["recent_originals"])
     assert [r["message_id"] for r in records] == ["4001", "4002", "4003"]
     assert [r["participant_id"] for r in records] == [
@@ -77,6 +78,73 @@ async def test_listening_is_silent_ephemeral_attributed_and_carries_final_refere
         "SELECT committed_text FROM turns WHERE role='user'"
     )
     assert [row["committed_text"] for row in rows] == [request.user_text]
+
+
+@pytest.mark.parametrize("with_discussion", [True, False])
+async def test_bare_mention_reaches_text_delivery_without_cache_or_memory_pollution(
+    runtime: _Runtime,
+    monkeypatch: pytest.MonkeyPatch,
+    with_discussion: bool,
+) -> None:
+    route = await runtime.route()
+    if with_discussion:
+        await runtime.send(_ordinary(4051, "我倾向本地部署，资料不上传", ALICE))
+        await runtime.send(_ordinary(4052, "我倾向云端，维护负责人还没定", BOB))
+    projected: list[UserTurnMemoryObservation] = []
+
+    async def observe(observation: UserTurnMemoryObservation) -> None:
+        projected.append(observation)
+
+    monkeypatch.setattr(runtime.container.memory, "enqueue_user_turn", observe)
+    event = _group_event(4053, "")
+    event["message"] = [{"type": "at", "data": {"qq": runtime.peer.account}}]
+    await runtime.send(event)
+    request = await asyncio.wait_for(runtime.model.started.get(), 5)
+    await asyncio.wait_for(runtime.peer.group_sends.get(), 5)
+    assert (await runtime.terminal(route, 4053)).turn.status is ChannelTurnStatus.COMPLETED
+    assert not request.tools and not request.images and not runtime.base.synthesis
+    assert not projected
+    formal = await runtime.container.database.fetchall(
+        "SELECT committed_text FROM turns WHERE role='user'"
+    )
+    assert [r["committed_text"] for r in formal] == ["[仅 @ 角色]"]
+    assert all(
+        message.message_id != "4053"
+        for cache in runtime.container.channel_groups._discussion._groups.values()
+        for message in cache.messages
+    )
+    if with_discussion:
+        packet = cast(JsonObject, json.loads(request.current_turn_evidence[-1]))
+        records = cast(list[JsonObject], packet["recent_originals"])
+        assert [m["message_id"] for m in records] == ["4051", "4052"]
+        assert "接着群里最近的话题" in request.user_text
+    else:
+        assert not request.current_turn_evidence
+        assert "问我想聊什么" in request.user_text
+    await runtime.send(event)
+    assert len(runtime.model.requests) == 1  # provider redelivery is still deduplicated
+
+
+async def test_latest_discussion_is_after_previous_missing_image_replies(
+    runtime: _Runtime,
+) -> None:
+    route = await runtime.route()
+    runtime.model.responses["你看看图片"] = "明明连图片都没有发……"
+    runtime.model.responses["你看看"] = "可这里真的什么都没有啊……"
+    for mid, text in ((4061, "你看看图片"), (4062, "你看看")):
+        await runtime.send(_group_event(mid, text))
+        await asyncio.wait_for(runtime.model.started.get(), 5)
+        await asyncio.wait_for(runtime.peer.group_sends.get(), 5)
+        await runtime.terminal(route, mid)
+    await runtime.send(_ordinary(4063, "有人说小林是夜猫子", BOB))
+    await runtime.send(_group_event(4064, "你怎么看"))
+    request = await asyncio.wait_for(runtime.model.started.get(), 5)
+    await asyncio.wait_for(runtime.peer.group_sends.get(), 5)
+    await runtime.terminal(route, 4064)
+    wire = build_messages(request)
+    assert "有人说小林是夜猫子" in str(wire[-2]["content"])
+    assert wire[-2]["role"] == "user" and wire[-1]["content"] == "你怎么看"
+    assert any("可这里真的什么都没有" in str(m["content"]) for m in wire[:-2])
 
 
 async def test_unknown_off_group_and_non_speaker_never_gain_reply_permissions(
@@ -105,9 +173,9 @@ async def test_unknown_off_group_and_non_speaker_never_gain_reply_permissions(
     request = await asyncio.wait_for(runtime.model.started.get(), 5)
     await asyncio.wait_for(runtime.peer.group_sends.get(), 5)
     await runtime.terminal(route, 4105)
-    assert "authorized listener opinion" in str(request.context)
-    assert "unknown sentinel" not in str(request.context)
-    assert "off group sentinel" not in str(request.context)
+    assert "authorized listener opinion" in str(request.current_turn_evidence)
+    assert "unknown sentinel" not in str(build_messages(request))
+    assert "off group sentinel" not in str(build_messages(request))
     assert off.route_id != route.route_id
 
 
@@ -153,8 +221,8 @@ async def test_group_lifecycle_clears_context_and_requires_revalidation(
     request = await asyncio.wait_for(runtime.model.started.get(), 5)
     await asyncio.wait_for(runtime.peer.group_sends.get(), 5)
     await runtime.terminal(route, 4204)
-    assert "old audience sentinel" not in str(request.context)
-    assert "paused sentinel" not in str(request.context)
+    assert "old audience sentinel" not in str(build_messages(request))
+    assert "paused sentinel" not in str(build_messages(request))
 
 
 async def test_late_summary_after_reconnect_cannot_reach_chat_or_delivery(

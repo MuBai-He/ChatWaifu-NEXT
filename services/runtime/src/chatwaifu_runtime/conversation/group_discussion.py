@@ -42,6 +42,8 @@ SUMMARY_SYSTEM = (
     "messages. Do not generate prose, new facts, identities, actions or IDs. The Runtime will "
     "quote selected originals with their real speaker, time and source ID in original order."
 )
+_MENTION_QUESTION = "接着群里最近的话题聊聊，说说你的看法。"
+_MENTION_WITHOUT_CONTEXT = "我只 @ 了你，没有附带问题。这轮没有可用的群聊讨论，请先问我想聊什么。"
 
 
 def _record(message: DiscussionMessage) -> dict[str, object]:
@@ -78,14 +80,19 @@ async def project_group_discussion(
     summary_config: ModelRoleConfig,
 ) -> LlmRequest:
     """Fit the complete wire input; no history rewrite, persistent writes or tool calls."""
-    if request.input_budget is None or not context.messages:
+    if context.mention_only:
+        request = replace(request, user_text=_MENTION_WITHOUT_CONTEXT)
+    input_budget = request.input_budget
+    if input_budget is None or not context.messages:
         return request
     started = monotonic()
     now = datetime.now(UTC)
     messages = tuple(m for m in context.messages if m.expires_at > now)
     if not messages:
         return request
-    input_limit = request.input_budget.estimated_token_limit
+    if context.mention_only:
+        request = replace(request, user_text=_MENTION_QUESTION)
+    input_limit = input_budget.estimated_token_limit
     base_used = estimate_reference_input_tokens(request)
     limit = min(context.policy.input_tokens, input_limit // 4)
     original_system = request.system_prompt or ""
@@ -96,15 +103,12 @@ async def project_group_discussion(
     ) -> LlmRequest:
         return replace(
             base,
-            context=(
-                *base.context,
-                (
-                    "user",
-                    discussion_json(
-                        recent,
-                        older,
-                        len(messages) - len(recent) - len(older),
-                    ),
+            current_turn_evidence=(
+                *base.current_turn_evidence,
+                discussion_json(
+                    recent,
+                    older,
+                    len(messages) - len(recent) - len(older),
                 ),
             ),
         )
@@ -155,7 +159,11 @@ async def project_group_discussion(
             request.generation_id,
             len(messages),
         )
-        return request
+        return (
+            replace(request, user_text=_MENTION_WITHOUT_CONTEXT)
+            if context.mention_only
+            else request
+        )
     older_summary: tuple[DiscussionMessage, ...] = ()
     status = "recent_only"
     if len(recent) < len(messages) and summary_config.budget.output_reserve_tokens > 0:
@@ -258,10 +266,19 @@ async def project_group_discussion(
     now = datetime.now(UTC)
     recent = tuple(m for m in recent if m.expires_at > now)
     older_summary = tuple(m for m in older_summary if m.expires_at > now)
-    result = candidate(recent, older_summary) if recent else request
+    result = (
+        candidate(recent, older_summary)
+        if recent
+        else (
+            replace(request, user_text=_MENTION_WITHOUT_CONTEXT)
+            if context.mention_only
+            else request
+        )
+    )
     logger.info(
         "group.discussion_projected generation=%s status=%s raw=%d summary=%d omitted=%d "
-        "truncated_characters=%d reference_tokens=%d input_limit=%d elapsed_ms=%d",
+        "truncated_characters=%d reference_tokens=%d input_limit=%d elapsed_ms=%d "
+        "placement=current_turn mention_only=%s recent_ids=%s older_ids=%s",
         request.generation_id,
         status,
         len(recent),
@@ -271,5 +288,8 @@ async def project_group_discussion(
         estimate_reference_input_tokens(result),
         input_limit,
         int((monotonic() - started) * 1000),
+        context.mention_only,
+        json.dumps([m.message_id for m in recent]),
+        json.dumps([m.message_id for m in older_summary]),
     )
     return result

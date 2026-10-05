@@ -117,6 +117,7 @@ class _GroupModel:
 
     def __init__(self) -> None:
         self.requests: list[LlmRequest] = []
+        self.responses: dict[str, str] = {}
         self.started: asyncio.Queue[LlmRequest] = asyncio.Queue()
         self.holds: dict[str, asyncio.Event] = {}
         self.cancelled: asyncio.Queue[UUID] = asyncio.Queue()
@@ -137,7 +138,7 @@ class _GroupModel:
                 assert current is not None
                 current.uncancel()
                 await hold.wait()
-        yield LlmTextDelta(f"reply:{request.user_text}")
+        yield LlmTextDelta(self.responses.get(request.user_text, f"reply:{request.user_text}"))
         yield LlmResponseCompleted("stop")
 
 

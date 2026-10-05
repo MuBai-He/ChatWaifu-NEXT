@@ -26,6 +26,7 @@ from chatwaifu_runtime.external_channels.group_models import (
 from chatwaifu_runtime.providers.contracts import LlmInputBudget, LlmRequest
 from chatwaifu_runtime.providers.input_estimation import estimate_reference_input_tokens
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService, ModelRoleConfig
+from chatwaifu_runtime.providers.openai_compatible import build_messages
 
 
 def _route() -> ChannelGroupRouteRecord:
@@ -210,7 +211,7 @@ class _Packet(TypedDict):
 
 
 def _packet(request: LlmRequest) -> _Packet:
-    return cast(_Packet, json.loads(request.context[-1][1]))
+    return cast(_Packet, json.loads(request.current_turn_evidence[-1]))
 
 
 async def test_short_discussion_keeps_speakers_refs_without_summary_call() -> None:
@@ -233,13 +234,123 @@ async def test_short_discussion_keeps_speakers_refs_without_summary_call() -> No
         and result.user_text == request.user_text
         and result.history == request.history
     )
-    assert result.context[-1][0] == "user"
+    assert result.context == request.context
     assert [m["participant_id"] for m in _packet(result)["recent_originals"]] == [
         "alice",
         "bob",
         "bob",
     ]
     assert estimate_reference_input_tokens(result) <= 8192
+
+
+async def test_current_discussion_follows_old_photo_history_and_precedes_current_question() -> None:
+    request = replace(
+        _request(),
+        history=(
+            ("user", "你看看图片"),
+            ("assistant", "明明连图片都没有发……"),
+            ("user", "你看看"),
+            ("assistant", "可这里真的什么都没有啊……"),
+        ),
+        pre_user_system_prompt="Trusted text-only output policy.",
+    )
+    result = await project_group_discussion(
+        request,
+        _context(),
+        cast(ModelConfigurationService, _Summary()),
+        ModelRoleConfig(
+            role="memory_summary", provider="demo", model="fixture", updated_at=datetime.now(UTC)
+        ),
+    )
+    wire = build_messages(result)
+    assert result.history == request.history and result.context == request.context
+    assert wire[-3] == {"role": "user", "content": result.current_turn_evidence[0]}
+    assert wire[-2] == {"role": "system", "content": request.pre_user_system_prompt}
+    assert wire[-1] == {"role": "user", "content": "你怎么看？"}
+    assert "可这里真的什么都没有" in str(wire[-4]["content"])
+    assert "反对上传数据" in str(wire[-3]["content"])
+
+
+@pytest.mark.parametrize("available", [True, False])
+async def test_bare_mention_uses_only_available_current_discussion(available: bool) -> None:
+    context = replace(_context(), mention_only=True)
+    if not available:
+        context = replace(context, messages=())
+    request = replace(_request(), user_text="[仅 @ 角色]")
+    result = await project_group_discussion(
+        request,
+        context,
+        cast(ModelConfigurationService, _Summary()),
+        ModelRoleConfig(
+            role="memory_summary", provider="demo", model="fixture", updated_at=datetime.now(UTC)
+        ),
+    )
+    if available:
+        assert "接着群里最近的话题" in result.user_text
+        assert result.current_turn_evidence
+    else:
+        assert "没有可用的群聊讨论" in result.user_text and "问我想聊什么" in result.user_text
+        assert not result.current_turn_evidence
+    assert request.user_text == "[仅 @ 角色]"  # projection never changes the formal turn
+
+
+@pytest.mark.parametrize("missing", ["expired", "no_headroom", "no_input_budget"])
+async def test_bare_mention_without_admitted_evidence_never_guesses_from_old_history(
+    missing: str,
+) -> None:
+    context = replace(_context(), mention_only=True)
+    request = replace(_request(), user_text="[仅 @ 角色]", history=(("assistant", "没有图片"),))
+    if missing == "expired":
+        now = datetime.now(UTC)
+        context = replace(
+            context,
+            messages=tuple(
+                replace(
+                    m,
+                    received_at=now - timedelta(minutes=20),
+                    expires_at=now - timedelta(minutes=5),
+                )
+                for m in context.messages
+            ),
+        )
+    elif missing == "no_headroom":
+        request = replace(
+            request, input_budget=LlmInputBudget(estimate_reference_input_tokens(request))
+        )
+    else:
+        request = replace(request, input_budget=None)
+    summary = _Summary()
+    result = await project_group_discussion(
+        request,
+        context,
+        cast(ModelConfigurationService, summary),
+        ModelRoleConfig(
+            role="memory_summary", provider="demo", model="fixture", updated_at=datetime.now(UTC)
+        ),
+    )
+    assert not result.current_turn_evidence and not summary.calls
+    assert "没有可用的群聊讨论" in result.user_text and "问我想聊什么" in result.user_text
+
+
+def test_bare_mention_does_not_become_cached_dialogue_or_collide_with_literal_marker() -> None:
+    from chatwaifu_runtime.external_channels.group_models import GROUP_MENTION_ONLY_TEXT
+
+    route = _route()
+    now = datetime.now(UTC)
+    literal = _message(route, 500, GROUP_MENTION_ONLY_TEXT, now)
+    bare = replace(literal, mention_only=True)
+    assert literal.content_sha256 != bare.content_sha256
+    cache = GroupDiscussionCache(GroupDiscussionConfig())
+    assert cache.observe(bare, route, 1, now) == "mention_only"
+    assert not cache._groups
+
+
+def test_disabled_listening_still_preserves_bare_mention_trigger_without_any_evidence() -> None:
+    route = _route()
+    cache = GroupDiscussionCache(GroupDiscussionConfig(enabled=False))
+    context = cache.snapshot(route, 1, "600", datetime.now(UTC), mention_only=True)
+    assert context is not None and context.mention_only and not context.messages
+    assert not cache._groups
 
 
 async def test_compression_quotes_facts_disagreement_and_open_question_with_traceability() -> None:

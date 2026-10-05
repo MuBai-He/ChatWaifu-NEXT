@@ -152,7 +152,7 @@ def normalize_group_inbound(
                 )
             )
         )
-        or not text
+        or (not text and mentions != 1)
         or len(text) > 20_000
     ):
         return None
@@ -166,6 +166,7 @@ def normalize_group_inbound(
         datetime.now(UTC),
         tuple(images),
         mentions == 1,
+        mentions == 1 and not text,
     )
 
 

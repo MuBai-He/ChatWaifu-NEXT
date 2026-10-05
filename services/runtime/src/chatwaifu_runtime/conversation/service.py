@@ -1064,7 +1064,10 @@ class ConversationService:
             for event in events:
                 await self._publisher.publish_persisted(event)
             observation: UserTurnMemoryObservation | None = None
-            if self._memory.parse_explicit_command(text) is not None:
+            mention_only = (
+                options.group_discussion is not None and options.group_discussion.mention_only
+            )
+            if not mention_only and self._memory.parse_explicit_command(text) is not None:
                 await self._memory.observe_user_turn(
                     accepted.session_id,
                     accepted.turn_id,
@@ -1072,7 +1075,7 @@ class ConversationService:
                     character.character_id,
                     text,
                 )
-            else:
+            elif not mention_only:
                 observation = UserTurnMemoryObservation(
                     session_id=accepted.session_id,
                     turn_id=accepted.turn_id,

@@ -41,6 +41,7 @@ class NapCatGroupInboundMessage:
     received_at: datetime
     images: tuple[NapCatImageReference, ...] = field(default=(), repr=False)
     bot_mentioned: bool = True
+    mention_only: bool = False
 
 
 @dataclass(frozen=True, slots=True)

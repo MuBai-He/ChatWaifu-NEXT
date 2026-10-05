@@ -32,7 +32,10 @@ from chatwaifu_runtime.characters.service import CharacterService
 from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.external_channels.credentials import ChannelCredentialStore
-from chatwaifu_runtime.external_channels.group_models import ChannelGroupInboundDescriptor
+from chatwaifu_runtime.external_channels.group_models import (
+    GROUP_MENTION_ONLY_TEXT,
+    ChannelGroupInboundDescriptor,
+)
 from chatwaifu_runtime.external_channels.models import (
     ChannelDeliveryPlanRecord,
     ChannelInboundImageInput,
@@ -222,9 +225,10 @@ class NapCatManagement:
             message.group_id,
             message.sender_key,
             message.external_message_id,
-            message.text,
+            GROUP_MENTION_ONLY_TEXT if message.mention_only else message.text,
             message.received_at,
             incoming_image.source_fingerprint if incoming_image is not None else None,
+            mention_only=message.mention_only,
         )
         key = (connection_id, group_id)
         predecessor = self._group_ingress_order.get(key)

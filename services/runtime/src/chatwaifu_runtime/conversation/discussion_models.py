@@ -29,8 +29,11 @@ class GroupDiscussionContext:
     messages: tuple[DiscussionMessage, ...] = field(repr=False)
     policy: GroupDiscussionConfig
     version: int = 1
+    mention_only: bool = False
 
     def __post_init__(self) -> None:
+        if type(self.mention_only) is not bool:
+            raise ValueError("mention-only trigger must be boolean")
         if self.version != 1 or not self.scene_id or not 2 <= len(self.audience_ids) <= 32:
             raise ValueError("unsupported discussion scope")
         if len(self.messages) > self.policy.cache_messages:

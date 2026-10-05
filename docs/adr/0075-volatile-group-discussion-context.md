@@ -16,6 +16,16 @@ Unknown, self, anonymous, wrong-account, disabled and unsupported media inputs
 remain outside this collection path. Receiving an image still uses ADR 0074's
 separate bounded reference and opt-in learning path.
 
+2026-10-05 follow-up: one genuine bot mention without text is an invitation to join
+the recent discussion. The adapter retains a structured mention_only flag; the
+application commits the visible marker `[仅 @ 角色]`, never an invented user
+question. With admitted current evidence, only the model projection asks to join
+the latest topic; when evidence is absent, expired, disabled or cannot fit, it asks
+what the user wants to discuss. This marker is not collected or sent to memory
+extraction. Typing the marker literally does not set the flag; its content digest
+differs from the structured trigger. Existing route/speaker and lifecycle gates
+still apply. A bare mention does not implicitly load a previous image.
+
 The application-owned GroupDiscussionCache contains only volatile raw text.
 Conversation receives a version-1 immutable scope/snapshot and verifies it against
 the persisted shared identity before cancelling or admitting another generation.
@@ -27,6 +37,16 @@ extraction/privacy policies remain in force. Discussion text/selection is not
 submitted to memory extraction. The assistant's normal reply remains formal
 history; this is not a promise to erase facts a user subsequently explicitly
 submits in an authorized turn.
+
+Current discussion must follow older formal history on the model wire. The
+optional internal LlmRequest.current_turn_evidence field emits only user-role
+material between history and the trusted pre-user output policy/current question.
+Its empty default leaves other conversation surfaces unchanged; shared wire
+estimation includes its complete serialized content. This corrects the older
+placement in pre-history context, where recent discussion appeared before old
+missing-image replies. Neither history nor source text is rewritten to improve
+the result. Projection logs retain selected source IDs and placement, without raw
+discussion text.
 
 ## Limits and lifecycle
 

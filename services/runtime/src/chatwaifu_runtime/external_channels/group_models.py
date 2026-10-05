@@ -44,6 +44,9 @@ def strict_bool(value: object) -> bool:
     return value
 
 
+GROUP_MENTION_ONLY_TEXT = "[仅 @ 角色]"
+
+
 @dataclass(frozen=True, slots=True)
 class ChannelGroupInboundDescriptor:
     connection_id: UUID
@@ -54,6 +57,7 @@ class ChannelGroupInboundDescriptor:
     text: str
     received_at: datetime
     image_fingerprint: str | None = None
+    mention_only: bool = False
 
     def __post_init__(self) -> None:
         raw = cast(object, self.connection_id)
@@ -73,6 +77,11 @@ class ChannelGroupInboundDescriptor:
         if self.sender_key == self.account_key:
             raise ValueError("self messages cannot be admitted")
         aware(self.received_at)
+        if type(self.mention_only) is not bool or (
+            self.mention_only
+            and (self.text != GROUP_MENTION_ONLY_TEXT or self.image_fingerprint is not None)
+        ):
+            raise ValueError("bare mention must retain its explicit, text-only marker")
         if self.image_fingerprint is not None and (
             type(self.image_fingerprint) is not str
             or not re.fullmatch(r"[0-9a-f]{64}", self.image_fingerprint)
@@ -90,6 +99,8 @@ class ChannelGroupInboundDescriptor:
         )
         if self.image_fingerprint is not None:
             payload += (self.image_fingerprint,)
+        if self.mention_only:
+            payload += ("mention_only_v1",)
         return hashlib.sha256(json.dumps(payload, ensure_ascii=False).encode()).hexdigest()
 
 
