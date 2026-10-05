@@ -4,6 +4,8 @@ Status: Accepted; deployed implementation, handset learning/reuse acceptance pen
 
 ## Decision
 
+2026-10-05 follow-up: ADR 0075 restores the explicitly requested text-only group output. Group input understanding/learning and private sticker output retain this ADR; optional group image output is superseded.
+
 Extend ADRs 0036 and 0065 to the paired QQ owner and individually opted-in fixed QQ
 groups. Reuse the existing conservative static-image classifier, normalized PNG
 library, cancellation, immutable delivery payloads and receipt scheduler. Keep

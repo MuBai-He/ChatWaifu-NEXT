@@ -1,0 +1,43 @@
+{
+  "input_limit": 64636,
+  "operational_window": 65536,
+  "output_reservation": 900,
+  "estimate_margin_ratio": 0,
+  "group_evidence_limit": 1536,
+  "estimator": "cl100k_chat_json_v1",
+  "samples": [
+    {
+      "case": "short",
+      "repeat": 0,
+      "reference_tokens": 3465,
+      "provider_prompt_tokens": 2919,
+      "provider_minus_reference_percent": -15.76,
+      "elapsed_ms": 5547
+    },
+    {
+      "case": "short",
+      "repeat": 1,
+      "reference_tokens": 3465,
+      "provider_prompt_tokens": 2919,
+      "provider_minus_reference_percent": -15.76,
+      "elapsed_ms": 15629
+    },
+    {
+      "case": "long_compressed",
+      "repeat": 0,
+      "reference_tokens": 4313,
+      "provider_prompt_tokens": 3765,
+      "provider_minus_reference_percent": -12.71,
+      "elapsed_ms": 6156
+    },
+    {
+      "case": "long_compressed",
+      "repeat": 1,
+      "reference_tokens": 4313,
+      "provider_prompt_tokens": 3765,
+      "provider_minus_reference_percent": -12.71,
+      "elapsed_ms": 14779
+    }
+  ],
+  "native_limit_verified_by_this_probe": false
+}

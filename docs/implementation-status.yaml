@@ -1,6 +1,15 @@
 schema_version: "1.0"
 updated_at: "2026-10-05"
 current_phase: "13.6"
+qq_group_discussion:
+  status: source_and_deployment_verified_phone_pending_strict_model_fidelity_open
+  adr: "0075"
+  product_commit: "c2e6790"
+  evidence:
+    - Authorized unmentioned text remains volatile and silent; at-only replies retain current speaker grants and text-only delivery. Fair quotas, TTL, dedup and complete-wire model limits bound collection and on-demand extractive compression.
+    - Final local Python 3723 passes and 46 platform skips; Linux candidate 206 passes. Strict types, lint, format, architecture and unchanged Web build pass. Raw snapshots never enter transcript or memory extraction; lifecycle fences revoke stale work and context.
+    - Main Runtime deployed with 15 reviewed files, all unrelated source/config/model routes preserved, same original group scenes/grants restored, old schema-42 facts retained, seven original Web assets matched and all 13 observed containers unchanged. Phone context/receipt remains pending.
+    - Four final real Gemini samples preserve discussion facts and references, but both long answers infer a preference and one adds an unrecorded unresolved question. Strict final-answer fidelity and original full Q02 are not accepted; see docs/research/qq-agent-plus-evidence/qq-group-discussion-2026-10-05/README.md.
 channel_short_replies:
   status: main_runtime_deployed_connections_ready_original_group_restored_phone_ux_pending
   adr: "0073"

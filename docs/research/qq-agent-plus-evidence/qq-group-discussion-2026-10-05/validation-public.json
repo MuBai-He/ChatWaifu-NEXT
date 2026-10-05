@@ -1,0 +1,27 @@
+{
+  "local": {
+    "tests": 3769,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 46,
+    "passed": 3723
+  },
+  "linux": {
+    "tests": 206,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0,
+    "passed": 206
+  },
+  "product_commit": "c2e6790",
+  "pyright": "0 errors",
+  "ruff": "passed",
+  "format": "passed",
+  "architecture": "passed",
+  "web_build": "passed, unchanged frontend sources",
+  "all_13_observed_containers_unchanged": true,
+  "phone_acceptance": "pending",
+  "running_launcher_path_verified": true,
+  "launcher_source_and_candidate_module_origins_verified": true,
+  "live_module_introspection_performed": false
+}
