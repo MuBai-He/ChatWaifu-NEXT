@@ -142,8 +142,19 @@ class _GroupModel:
 
 
 def _group_event(
-    raw_id: int, text: str = "group text", *, sender: str = ALICE, group: str = GROUP
+    raw_id: int,
+    text: str = "group text",
+    *,
+    sender: str = ALICE,
+    group: str = GROUP,
+    reply_id: int | None = None,
 ) -> JsonObject:
+    segments: list[JsonValue] = [
+        {"type": "at", "data": {"qq": private.ACCOUNT}},
+        {"type": "text", "data": {"text": text}},
+    ]
+    if reply_id is not None:
+        segments.insert(0, {"type": "reply", "data": {"id": str(reply_id)}})
     return {
         "post_type": "message",
         "message_type": "group",
@@ -153,10 +164,7 @@ def _group_event(
         "user_id": int(sender),
         "message_id": raw_id,
         "sender": {"user_id": int(sender), "nickname": "same name"},
-        "message": [
-            {"type": "at", "data": {"qq": private.ACCOUNT}},
-            {"type": "text", "data": {"text": text}},
-        ],
+        "message": segments,
     }
 
 
@@ -460,6 +468,36 @@ async def test_operator_apis_default_off_two_members_fixed_text_and_isolated_sta
     assert all(source["scene_id"] == route.scene_id for source in sources)
 
 
+@pytest.mark.parametrize("reply_id", [90000, -90000])
+async def test_quoted_mention_reaches_model_and_fixed_delivery_once(
+    runtime: _Runtime, reply_id: int
+) -> None:
+    route = await runtime.route(enable=False)
+    await runtime.send(_group_event(31, "disabled quote", reply_id=reply_id))
+    assert not runtime.model.requests and runtime.peer.group_sends.empty()
+    route = await runtime.enable(route)
+    event = _group_event(32, "为什么呀", reply_id=reply_id)
+    await runtime.send(event)
+    sent = await asyncio.wait_for(runtime.peer.group_sends.get(), 5)
+    assert sent == {
+        "group_id": GROUP,
+        "message": [{"type": "text", "data": {"text": "reply:为什么呀"}}],
+    }
+    snapshot = await runtime.terminal(route, 32)
+    assert snapshot.turn.status is ChannelTurnStatus.COMPLETED
+    assert snapshot.turn.delivery_status is ChannelDeliveryStatus.DELIVERED
+    assert snapshot.provider_receipt_present
+    assert snapshot.scene_id == route.scene_id
+    assert snapshot.participant_id == runtime.participants[ALICE]
+    await runtime.send(event)
+    assert len(runtime.model.requests) == 1
+    request = runtime.model.requests[0]
+    assert request.user_text == "为什么呀" and not request.tools and not request.images
+    assert not any(call["action"] == "get_msg" for call in runtime.peer.calls)
+    assert runtime.peer.group_sends.empty() and runtime.peer.sends.empty()
+    assert not runtime.base.synthesis
+
+
 async def test_wire_rejections_dedup_and_raw_ids_are_scoped_to_the_fixed_group(
     runtime: _Runtime,
 ) -> None:
@@ -624,14 +662,15 @@ async def test_membership_reader_revokes_during_private_prepare_and_rejects_unca
 
 
 @pytest.mark.parametrize("action", ["route_disable", "reset", "reconnect"])
+@pytest.mark.parametrize("quoted", [False, True])
 async def test_stale_cas_preserves_live_group_then_successful_pause_cancels_without_late_send(
-    runtime: _Runtime, action: str
+    runtime: _Runtime, action: str, quoted: bool
 ) -> None:
     route = await runtime.route()
     hold = asyncio.Event()
     runtime.model.holds["active"] = hold
     runtime.model.swallow_cancel.add("active")
-    await runtime.send(_group_event(50, "active"))
+    await runtime.send(_group_event(50, "active", reply_id=90000 if quoted else None))
     request = await asyncio.wait_for(runtime.model.started.get(), 3)
     snapshot = await runtime.turn(route, 50)
     await runtime.update(route, enabled=False, revision=route.revision - 1, status=409)

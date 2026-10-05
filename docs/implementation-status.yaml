@@ -29,6 +29,7 @@ qq_napcat:
     D2: fixed_owner_proactive_text_real_single_idle_quiet_hours_and_disabled_restart_verified_new_input_cancellation_and_revocation_pending
     D3: group_source_linux_and_deployment_verified_two_member_real_at_text_disable_and_fresh_restart_resume_phone_verified_additional_privacy_fault_acceptance_pending
   evidence:
+    - QQ group quote-plus-mention inputs were dropped before Runtime admission; bounded envelope compatibility passed 722 local and 103 Linux checks and was deployed with both previous group audiences/scenes/grants revalidated unchanged; exact old shapes now pass read-only parser replay, while fresh handset quote acceptance remains pending
     - Native OneBot WebSocket adapter, secure pairing, connection supervision and durable send fences implemented in an isolated branch based on e609345
     - Default text and current-generation channel.voice authorization use the existing character, conversation, memory and Runtime Skill path
     - Local full Python suite passed with 2063 checks and 46 platform skips, including the 109-case adapter suite and three independent review regressions

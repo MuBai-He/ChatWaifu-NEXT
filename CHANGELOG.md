@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Accept a valid QQ group reply envelope together with a real bot mention and
+  nonempty text. Preserve scoped group history, operator grants, deduplication,
+  cancellation and delivery fences. Record two actual pre-admission drops;
+  do not enable quote-only triggers or load arbitrary provider quote bodies.
+
 - Scope short casual replies to external messaging origins while retaining the v7
   persona and existing local/Web/desktop/voice output contracts. Apply channel
   defaults of 30 preferred and 60 soft characters, with detailed/code bypass.

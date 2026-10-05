@@ -101,14 +101,72 @@ def test_group_identity_and_real_mention_are_required(key: str, value: JsonValue
     assert admit(event) is None
 
 
-@pytest.mark.parametrize("kind", ["image", "record", "reply", "file", "face", "forward"])
-def test_group_mixed_media_and_quotes_are_rejected(kind: str) -> None:
+@pytest.mark.parametrize("kind", ["image", "record", "file", "face", "forward"])
+def test_group_mixed_media_is_rejected(kind: str) -> None:
     event = message()
     event["message"] = [
         {"type": "at", "data": {"qq": ACCOUNT}},
         {"type": "text", "data": {"text": "你好"}},
         {"type": kind, "data": {"file": "safe.png", "id": "90000"}},
     ]
+    assert admit(event) is None
+
+
+@pytest.mark.parametrize("reference", [90000, -90000, "90000", "-90000"])
+def test_group_reply_envelope_with_real_bot_mention_reaches_admission(
+    reference: str | int,
+) -> None:
+    event = message()
+    event["message"] = [
+        {"type": "reply", "data": {"id": reference, "text": "untrusted quoted body"}},
+        {"type": "at", "data": {"qq": ACCOUNT}},
+        {"type": "text", "data": {"text": " "}},
+        {"type": "text", "data": {"text": "为什么呀"}},
+    ]
+    result = admit(event)
+    assert result is not None
+    assert result.external_message_id == "-90001"
+    assert result.text == "为什么呀"
+    assert result.sender_key == SPEAKER and result.group_id == GROUP
+
+
+@pytest.mark.parametrize(
+    "reference",
+    [None, True, False, 1.5, 0, "0", "-0", "090000", "-090000", "+90000", "bad", "", "1" * 21],
+)
+def test_group_reply_envelope_rejects_invalid_reference(reference: JsonValue) -> None:
+    event = message()
+    event["message"] = [
+        {"type": "reply", "data": {"id": reference}},
+        {"type": "at", "data": {"qq": ACCOUNT}},
+        {"type": "text", "data": {"text": "为什么呀"}},
+    ]
+    assert admit(event) is None
+
+
+@pytest.mark.parametrize(
+    "segments",
+    [
+        [{"type": "text", "data": {"text": "为什么呀"}}],
+        [{"type": "at", "data": {"qq": "10003"}}, {"type": "text", "data": {"text": "你好"}}],
+        [{"type": "at", "data": {"qq": ACCOUNT}}],
+        [
+            {"type": "at", "data": {"qq": ACCOUNT}},
+            {"type": "text", "data": {"text": "你好"}},
+            {"type": "reply", "data": {"id": "90001"}},
+        ],
+        [
+            {"type": "at", "data": {"qq": ACCOUNT}},
+            {"type": "text", "data": {"text": "你好"}},
+            {"type": "image", "data": {"file": "safe.png"}},
+        ],
+    ],
+)
+def test_group_quote_does_not_grant_mention_text_or_media_authority(
+    segments: list[JsonValue],
+) -> None:
+    event = message()
+    event["message"] = [{"type": "reply", "data": {"id": "90000"}}, *segments]
     assert admit(event) is None
 
 
