@@ -2005,9 +2005,107 @@ BEGIN
 END;
 """
 
+GROUP_VOICE_MIGRATION43_SQL = """
+ALTER TABLE channel_group_routes ADD COLUMN allow_requested_voice INTEGER NOT NULL
+ DEFAULT 0 CHECK(allow_requested_voice IN (0,1));
+ALTER TABLE channel_group_route_versions ADD COLUMN allow_requested_voice INTEGER NOT NULL
+ DEFAULT 0 CHECK(allow_requested_voice IN (0,1));
+DROP TRIGGER channel_group_text_only;
+CREATE TRIGGER channel_group_text_only BEFORE INSERT ON channel_delivery_parts
+ WHEN (SELECT group_target_json FROM channel_deliveries WHERE delivery_id=NEW.delivery_id)
+ IS NOT NULL
+BEGIN
+ SELECT CASE WHEN (
+  NEW.ordinal!=(SELECT count(*) FROM channel_delivery_parts WHERE delivery_id=NEW.delivery_id)
+  OR NEW.not_before_at IS NOT NULL OR NEW.status!='pending' OR NEW.attempt!=0
+  OR NOT json_valid(NEW.payload_json)
+  OR NOT COALESCE((
+   (NOT EXISTS (SELECT 1 FROM channel_delivery_parts
+                WHERE delivery_id=NEW.delivery_id AND kind!='text')
+    AND (
+     (NEW.kind='text' AND NEW.ordinal>=0 AND NEW.ordinal<10 AND NEW.required=1
+      AND NEW.delay_after_ms>=0 AND NEW.delay_after_ms<=30000
+      AND json_extract(NEW.payload_json,'$.kind') IS 'text'
+      AND json_type(NEW.payload_json,'$.text') IS 'text'
+      AND length(trim(json_extract(NEW.payload_json,'$.text')))>0)
+     OR
+     (NEW.kind='image' AND NEW.ordinal>=1 AND NEW.ordinal<=10
+      AND NEW.required=0 AND NEW.delay_after_ms=0
+      AND json_extract(NEW.payload_json,'$.kind') IS 'image'
+      AND EXISTS (
+       SELECT 1 FROM channel_deliveries d
+       JOIN channel_group_routes r ON r.route_id=d.group_route_id
+       JOIN learned_stickers s ON s.principal_scope='scene:'||r.scene_id
+         AND s.character_id=r.character_id
+       WHERE d.delivery_id=NEW.delivery_id
+         AND r.scene_id=json_extract(d.group_target_json,'$.scene_id')
+         AND r.revision=d.group_route_revision AND r.enabled=1 AND r.deleted_at IS NULL
+         AND s.sticker_id=json_extract(NEW.payload_json,'$.sticker_id')
+         AND s.sha256=json_extract(NEW.payload_json,'$.sha256')
+         AND s.mime_type=json_extract(NEW.payload_json,'$.mime_type')
+      ))
+    ))
+   OR
+   (NEW.kind='audio' AND NEW.ordinal=0 AND NEW.required=1 AND NEW.delay_after_ms=0
+    AND json_extract(NEW.payload_json,'$.kind') IS 'audio'
+    AND json_extract(NEW.payload_json,'$.mime_type') IS 'audio/wav'
+    AND json_type(NEW.payload_json,'$.text') IS 'text'
+    AND length(trim(json_extract(NEW.payload_json,'$.text'))) BETWEEN 1 AND 2000
+    AND json_type(NEW.payload_json,'$.duration_ms') IS 'integer'
+    AND json_extract(NEW.payload_json,'$.duration_ms') BETWEEN 1 AND 120000
+    AND length(json_extract(NEW.payload_json,'$.asset_id'))=36
+    AND length(json_extract(NEW.payload_json,'$.sha256'))=64
+    AND json_extract(NEW.payload_json,'$.sha256') NOT GLOB '*[^0-9a-f]*'
+    AND EXISTS (
+     SELECT 1 FROM channel_deliveries d
+     JOIN channel_group_routes r ON r.route_id=d.group_route_id
+     JOIN channel_turns t ON t.channel_turn_id=d.channel_turn_id
+     JOIN generations g ON g.generation_id=t.generation_id
+     WHERE d.delivery_id=NEW.delivery_id AND r.allow_requested_voice=1
+      AND r.revision=d.group_route_revision AND r.enabled=1 AND r.pause_reason IS NULL
+      AND r.deleted_at IS NULL AND t.status='processing' AND g.state='running'
+      AND g.invalidated_at IS NULL AND t.reply_text=json_extract(NEW.payload_json,'$.text')
+    ))
+   OR
+   (NEW.kind='text' AND NEW.ordinal=1 AND NEW.required=1 AND NEW.delay_after_ms=0
+    AND json_extract(NEW.payload_json,'$.kind') IS 'text'
+    AND json_type(NEW.payload_json,'$.text') IS 'text'
+    AND length(trim(json_extract(NEW.payload_json,'$.text')))>0
+    AND EXISTS (
+     SELECT 1 FROM channel_delivery_parts p JOIN channel_deliveries d ON d.delivery_id=p.delivery_id
+     JOIN channel_group_routes r ON r.route_id=d.group_route_id
+     JOIN channel_turns t ON t.channel_turn_id=d.channel_turn_id
+     JOIN generations g ON g.generation_id=t.generation_id
+     WHERE p.delivery_id=NEW.delivery_id AND p.ordinal=0 AND p.kind='audio'
+      AND p.required=0 AND p.status IN ('failed','cancelled')
+      AND r.allow_requested_voice=1 AND r.revision=d.group_route_revision AND r.enabled=1
+      AND r.pause_reason IS NULL AND r.deleted_at IS NULL
+      AND g.state='completed' AND g.invalidated_at IS NULL
+      AND g.output_text=json_extract(NEW.payload_json,'$.text')
+    ))
+  ),0)
+ ) THEN RAISE(ABORT,'group delivery requires authorized bounded reply parts') END;
+END;
+DROP TRIGGER channel_group_part_content_immutable;
+CREATE TRIGGER channel_group_part_content_immutable BEFORE UPDATE OF kind,ordinal,
+ required,delay_after_ms,payload_json,part_id,delivery_id,provider_client_id
+ ON channel_delivery_parts
+ WHEN (SELECT group_target_json FROM channel_deliveries WHERE delivery_id=OLD.delivery_id)
+ IS NOT NULL AND NOT (
+  OLD.kind='audio' AND OLD.ordinal=0 AND OLD.required=1 AND NEW.required=0
+  AND OLD.status IN ('failed','cancelled') AND NEW.status IS OLD.status
+  AND NEW.kind IS OLD.kind AND NEW.ordinal IS OLD.ordinal
+  AND NEW.delay_after_ms IS OLD.delay_after_ms AND NEW.payload_json IS OLD.payload_json
+  AND NEW.part_id IS OLD.part_id AND NEW.delivery_id IS OLD.delivery_id
+  AND NEW.provider_client_id IS OLD.provider_client_id
+ )
+BEGIN SELECT RAISE(ABORT,'group delivery content is immutable'); END;
+"""
+
 MIGRATIONS = (
     *_BASE_MIGRATIONS,
     (40, GROUP_MIGRATION40_SQL),
     (41, GROUP_BUBBLES_MIGRATION41_SQL),
     (42, GROUP_STICKERS_MIGRATION42_SQL),
+    (43, GROUP_VOICE_MIGRATION43_SQL),
 )

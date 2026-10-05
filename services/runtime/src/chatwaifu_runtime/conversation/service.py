@@ -986,12 +986,19 @@ class ConversationService:
             character = self._characters.get(session.character_id)
             if character is None:
                 raise RuntimeError(f"character is not installed: {session.character_id}")
+            shared_voice_skills: frozenset[str] = (
+                frozenset({"channel.voice"})
+                if options.allow_shared_voice
+                and options.allow_tools
+                and options.allowed_skill_ids == frozenset({"channel.voice"})
+                else frozenset()
+            )
             options = replace(
                 options,
                 output_modes=frozenset({"text"}),
-                allow_tools=False,
-                allowed_skill_ids=frozenset(),
-                contextual_skill_ids=frozenset(),
+                allow_tools=bool(shared_voice_skills),
+                allowed_skill_ids=shared_voice_skills,
+                contextual_skill_ids=shared_voice_skills,
             )
             # Invalid identity never cancels another valid generation. Cancellation
             # joins owned work before replacing its active-generation entry.

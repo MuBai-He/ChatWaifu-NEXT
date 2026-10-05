@@ -369,6 +369,7 @@ export type MemberIds = [string, string, ...string[]]
 export type ObservationId = string
 export type ObservedAt = string
 export type SchemaVersion20 = '1.0'
+export type AllowRequestedVoice = boolean
 export type DisplayName = string
 export type ObservationId1 = string
 export type SchemaVersion21 = '1.0'
@@ -382,6 +383,7 @@ export type ParticipantId = string
 export type SchemaVersion22 = '1.0'
 export type SenderKey = string
 export type AccountKey3 = string
+export type AllowRequestedVoice1 = boolean
 export type AudienceFingerprint1 = string
 export type CharacterId2 = string
 export type ConnectionId5 = string
@@ -422,6 +424,7 @@ export type UpdatedAt5 = string
 export type Items = ChannelGroupRouteSnapshot[]
 export type NextCursor = string | null
 export type SchemaVersion24 = '1.0'
+export type AllowRequestedVoice2 = boolean | null
 export type Enabled2 = boolean
 export type ExpectedRevision = number
 export type ObservationId3 = string | null
@@ -2112,6 +2115,7 @@ export interface ChannelGroupAudienceSnapshot {
   [k: string]: unknown
 }
 export interface ChannelGroupRouteCreate {
+  allow_requested_voice?: AllowRequestedVoice
   display_name: DisplayName
   observation_id: ObservationId1
   schema_version?: SchemaVersion21
@@ -2133,6 +2137,7 @@ export interface ChannelGroupRoutePage {
 }
 export interface ChannelGroupRouteSnapshot {
   account_key: AccountKey3
+  allow_requested_voice?: AllowRequestedVoice1
   audience_fingerprint: AudienceFingerprint1
   character_id: CharacterId2
   connection_id: ConnectionId5
@@ -2152,6 +2157,7 @@ export interface ChannelGroupRouteSnapshot {
   [k: string]: unknown
 }
 export interface ChannelGroupRouteUpdate {
+  allow_requested_voice?: AllowRequestedVoice2
   enabled: Enabled2
   expected_revision: ExpectedRevision
   observation_id?: ObservationId3

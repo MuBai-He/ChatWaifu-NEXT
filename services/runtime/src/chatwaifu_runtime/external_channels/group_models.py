@@ -200,12 +200,14 @@ class ChannelGroupRouteRecord:
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None = None
+    allow_requested_voice: bool = False
 
     def __post_init__(self) -> None:
         qq_id(self.account_key)
         qq_id(self.group_id)
         revision(self.revision)
         strict_bool(self.enabled)
+        strict_bool(self.allow_requested_voice)
         audience_fingerprint(self.members)
         if self.enabled and (
             self.pause_reason is not None or not any(m.can_speak for m in self.members)

@@ -269,6 +269,7 @@ class ConversationTurnOptions:
         default=None, repr=False, compare=False
     )
     allow_shared_images: bool = False
+    allow_shared_voice: bool = False
     group_discussion: GroupDiscussionContext | None = field(default=None, repr=False)
     quoted_message_loader: Callable[[], Awaitable[ConversationQuotedMessage | None]] | None = field(
         default=None, repr=False, compare=False

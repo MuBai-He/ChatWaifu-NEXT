@@ -248,7 +248,7 @@ describe("QQ group operator management", () => {
     render(<QQGroupRoutesPanel {...props} />);
     await ready();
     expect(screen.getByText(/新加入的人可能/u)).toBeTruthy();
-    expect(screen.getByText(/群聊不支持主动消息/u)).toBeTruthy();
+    expect(screen.getByText(/不支持主动消息或其他工具/u)).toBeTruthy();
     expect(client.observeChannelGroupAudience).not.toHaveBeenCalled();
     expect(client.createChannelParticipantLink).not.toHaveBeenCalled();
     expect(client.createChannelGroupRoute).not.toHaveBeenCalled();

@@ -126,6 +126,7 @@ class RuntimeSkillService:
         session_builtin_handlers: dict[str, SessionBuiltinHandler] | None = None,
         authorized_generation_handlers: dict[str, AuthorizedGenerationHandler] | None = None,
         generation_permission_policy: GenerationPermissionPolicy | None = None,
+        shared_generation_handler_targets: frozenset[str] = frozenset(),
     ) -> None:
         self._root = root
         self._repository = repository
@@ -143,6 +144,7 @@ class RuntimeSkillService:
         self._permissions = PermissionBroker(repository)
         self._builtin = BuiltinAdapter()
         self._authorized_generation_handlers = authorized_generation_handlers or {}
+        self._shared_generation_handler_targets = shared_generation_handler_targets
         self._generation_permission_policy = generation_permission_policy
         self._policy_authorized_runs: set[UUID] = set()
         self._builtin.register("runtime_status", self._runtime_status)
@@ -402,10 +404,7 @@ class RuntimeSkillService:
             and len(provider_tool_call_id) > MAX_PROVIDER_TOOL_CALL_ID_CHARACTERS
         ):
             raise ValueError("provider tool call id exceeded the size limit")
-        if await self._repository.session_user_scope(session_id) != "local":
-            raise ValueError(
-                "Owner skill permissions are not available in participant or shared scenes"
-            )
+        owner_scope = await self._repository.session_user_scope(session_id) == "local"
         entry = self._registry.get(invocation.skill_id)
         if entry is None:
             raise KeyError("skill not found")
@@ -417,6 +416,13 @@ class RuntimeSkillService:
             if entry.definition.source == "builtin" and entry.adapter.kind == "builtin"
             else None
         )
+        if not owner_scope and (
+            generation_handler is None
+            or entry.adapter.target not in self._shared_generation_handler_targets
+        ):
+            raise ValueError(
+                "Owner skill permissions are not available in participant or shared scenes"
+            )
         generation_authorized = False
         policy_authorized = False
         if generation_handler is not None:

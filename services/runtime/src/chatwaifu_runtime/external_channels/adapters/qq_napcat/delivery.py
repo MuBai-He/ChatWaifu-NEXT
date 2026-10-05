@@ -311,7 +311,7 @@ class NapCatDelivery:
         part: ChannelDeliveryPartRecord,
         journal: dict[str, str],
     ) -> DeliveryPartExecutionResult:
-        """A fixed group path with canonical text and one optional scoped image."""
+        """A fixed group path with canonical text or one authorized voice reply."""
         target = plan.group_target
         assert target is not None
         key = part.provider_client_id
@@ -323,7 +323,20 @@ class NapCatDelivery:
                 return _failed("qq_send_journal_full", "请处理未完成的 QQ 投递后重试。")
             if isinstance(part.payload, ChannelTextDeliveryPartPayload):
                 segments = native_text_segments(self._render_text(plan, part))
-            elif isinstance(part.payload, ChannelImageDeliveryPartPayload):
+            elif isinstance(part.payload, ChannelAudioDeliveryPartPayload):
+                path = self._audio_root / f"{part.payload.asset_id}.wav"
+                if path.is_symlink() or not path.is_file() or path.stat().st_size > 8 * 1024 * 1024:
+                    return _failed("qq_audio_unavailable", "群语音文件不可用，请重新请求。")
+                audio = await asyncio.to_thread(path.read_bytes)
+                if hashlib.sha256(audio).hexdigest() != part.payload.sha256:
+                    return _failed("qq_audio_changed", "群语音文件校验失败。")
+                segments = [
+                    {
+                        "type": "record",
+                        "data": {"file": "base64://" + base64.b64encode(audio).decode("ascii")},
+                    }
+                ]
+            else:
                 if self._sticker_library is None:
                     return _failed("qq_image_unavailable", "群表情图片不可用。")
                 image = await self._sticker_library.image_for_delivery(
@@ -344,16 +357,22 @@ class NapCatDelivery:
                 ]
                 if not await self._group_allowed(plan, part):
                     return _failed("qq_group_delivery_cancelled", "群表情投递已停止。")
-            else:
-                return _failed("qq_group_delivery_cancelled", "群表情投递不受支持。")
             journal[key] = "unknown"
             await self._save(journal)
             try:
-                message_id = await self._client.send_group(
-                    target.group_id,
-                    segments,
-                    before_send=lambda: self._group_allowed(plan, part),
-                )
+                if isinstance(part.payload, ChannelAudioDeliveryPartPayload):
+                    message_id = await self._client.send_group(
+                        target.group_id,
+                        segments,
+                        allow_voice=True,
+                        before_send=lambda: self._group_allowed(plan, part),
+                    )
+                else:
+                    message_id = await self._client.send_group(
+                        target.group_id,
+                        segments,
+                        before_send=lambda: self._group_allowed(plan, part),
+                    )
             except NapCatRejected:
                 journal.pop(key, None)
                 await self._save(journal)
@@ -435,7 +454,14 @@ class NapCatDelivery:
             or source.channel_turn_id != target.channel_turn_id
             or source.connection_id != self._connection_id
             or source.chat_type is not ChannelChatType.GROUP
-            or source.status is not ChannelTurnStatus.COMPLETED
+            or (
+                source.status is not ChannelTurnStatus.COMPLETED
+                and not (
+                    source.status is ChannelTurnStatus.PROCESSING
+                    and len(plan.parts) == 1
+                    and isinstance(plan.parts[0].payload, ChannelAudioDeliveryPartPayload)
+                )
+            )
             or source.input_kind not in {ChannelMessageKind.TEXT, ChannelMessageKind.IMAGE}
             or source.account_key != target.account_key
             or source.conversation_key != f"group:{target.group_id}"
@@ -447,10 +473,10 @@ class NapCatDelivery:
             or current.delivery.part_count != len(current.parts)
             or len(plan.parts) != len(current.parts)
             or not group_text_parts_match_reply(
-                plan.parts, source.reply_text or "", allow_sticker=True
+                plan.parts, source.reply_text or "", allow_sticker=True, allow_voice=True
             )
             or not group_text_parts_match_reply(
-                current.parts, source.reply_text or "", allow_sticker=True
+                current.parts, source.reply_text or "", allow_sticker=True, allow_voice=True
             )
             or not 0 <= part.ordinal < len(current.parts)
         ):
@@ -466,7 +492,7 @@ class NapCatDelivery:
             ):
                 return False
         if any(
-            previous.status is not ChannelDeliveryPartStatus.DELIVERED
+            previous.required and previous.status is not ChannelDeliveryPartStatus.DELIVERED
             for previous in current.parts[: part.ordinal]
         ):
             return False
@@ -480,6 +506,14 @@ class NapCatDelivery:
             and (
                 (
                     isinstance(part.payload, ChannelTextDeliveryPartPayload)
+                    and bool(part.payload.text.strip())
+                    and part.required
+                    and original.required
+                    and claimed.required
+                )
+                or (
+                    isinstance(part.payload, ChannelAudioDeliveryPartPayload)
+                    and part.payload.mime_type == "audio/wav"
                     and bool(part.payload.text.strip())
                     and part.required
                     and original.required

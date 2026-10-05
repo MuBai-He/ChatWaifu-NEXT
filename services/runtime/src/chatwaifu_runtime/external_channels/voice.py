@@ -7,11 +7,13 @@ import hashlib
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Protocol
 from uuid import UUID, uuid4
 
 from chatwaifu_protocol.base import JsonObject
 from chatwaifu_protocol.channels import (
     ChannelAudioDeliveryPartPayload,
+    ChannelChatType,
     ChannelConnectionConfiguration,
     ChannelDeliveryPartDraft,
     ChannelDeliveryPartKind,
@@ -37,6 +39,18 @@ from chatwaifu_runtime.runtime_skills.adapters import GenerationSkillContext
 from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
 
 
+class GroupReplyVoicePort(Protocol):
+    async def authorize_reply_voice(self, turn: ChannelTurnRecord) -> bool: ...
+
+    async def publish_reply_voice(
+        self,
+        turn: ChannelTurnRecord,
+        payload: ChannelAudioDeliveryPartPayload,
+        delivery_id: UUID,
+        created_at: datetime,
+    ) -> None: ...
+
+
 class ChannelVoiceSkill:
     def __init__(
         self,
@@ -59,6 +73,10 @@ class ChannelVoiceSkill:
         self._supports_audio = supports_audio
         self._changed = asyncio.Condition()
         self._executing: set[UUID] = set()
+        self._groups: GroupReplyVoicePort | None = None
+
+    def set_group_service(self, groups: GroupReplyVoicePort) -> None:
+        self._groups = groups
 
     async def _turn(self, context: GenerationSkillContext) -> ChannelTurnRecord | None:
         if context.origin != "agent" or context.generation_id is None or context.turn_id is None:
@@ -78,9 +96,14 @@ class ChannelVoiceSkill:
                     and connection.configuration.enabled
                     and connection.configuration.provider_id == "qq_napcat"
                     and self._supports_audio(connection.configuration.provider_id)
-                    and turn.sender_key in connection.configuration.allowed_sender_keys
                 ):
-                    return turn
+                    if turn.chat_type is ChannelChatType.DIRECT:
+                        if turn.sender_key in connection.configuration.allowed_sender_keys:
+                            return turn
+                    elif self._groups is not None and await self._groups.authorize_reply_voice(
+                        turn
+                    ):
+                        return turn
         return None
 
     async def authorize(self, context: GenerationSkillContext) -> bool:
@@ -93,7 +116,7 @@ class ChannelVoiceSkill:
         turn = await self._turn(context)
         text = arguments.get("text")
         if turn is None or not await self.authorize(context):
-            raise SkillExecutionError("voice_not_authorized", "当前轮次没有有效的私聊回复权限。")
+            raise SkillExecutionError("voice_not_authorized", "当前轮次没有有效的语音回复权限。")
         if not isinstance(text, str) or not text.strip() or len(text) > 2000:
             raise SkillExecutionError("voice_text_invalid", "语音内容须为 1-2000 字。")
         if turn.delivery_id is not None or turn.generation_id in self._executing:
@@ -146,19 +169,26 @@ class ChannelVoiceSkill:
                 text=text.strip(),
             )
             delivery_id = uuid4()
-            transition = await self._repository.create_delivery_plan(
-                turn.channel_turn_id,
-                delivery_id=delivery_id,
-                parts=[
-                    ChannelDeliveryPartDraft(
-                        ordinal=0, kind=ChannelDeliveryPartKind.AUDIO, payload=payload
-                    )
-                ],
-                created_at=datetime.now(UTC),
-            )
-            if isinstance(transition, DeliveryTransitionResult):
-                for event in transition.persisted_events:
-                    await self._publisher.publish_persisted(event)
+            if turn.chat_type is ChannelChatType.GROUP:
+                if self._groups is None:
+                    raise SkillExecutionError("voice_not_authorized", "群语音回复不可用。")
+                await self._groups.publish_reply_voice(
+                    turn, payload, delivery_id, datetime.now(UTC)
+                )
+            else:
+                transition = await self._repository.create_delivery_plan(
+                    turn.channel_turn_id,
+                    delivery_id=delivery_id,
+                    parts=[
+                        ChannelDeliveryPartDraft(
+                            ordinal=0, kind=ChannelDeliveryPartKind.AUDIO, payload=payload
+                        )
+                    ],
+                    created_at=datetime.now(UTC),
+                )
+                if isinstance(transition, DeliveryTransitionResult):
+                    for event in transition.persisted_events:
+                        await self._publisher.publish_persisted(event)
             timed_out = False
             try:
                 async with asyncio.timeout(45):

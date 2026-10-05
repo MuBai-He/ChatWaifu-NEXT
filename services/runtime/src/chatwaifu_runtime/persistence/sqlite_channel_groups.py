@@ -12,7 +12,13 @@ from uuid import UUID, uuid4
 
 import aiosqlite
 from chatwaifu_protocol.channel_groups import ChannelGroupDeliveryTarget, ChannelGroupPauseReason
-from chatwaifu_protocol.channels import ChannelDeliveryPartDraft, ChannelImageDeliveryPartPayload
+from chatwaifu_protocol.channels import (
+    ChannelAudioDeliveryPartPayload,
+    ChannelDeliveryPartDraft,
+    ChannelDeliveryPartKind,
+    ChannelImageDeliveryPartPayload,
+    ChannelTextDeliveryPartPayload,
+)
 from chatwaifu_protocol.events import GenericCoreEvent, PrivacyLevel
 
 from chatwaifu_runtime.external_channels.group_models import (
@@ -33,6 +39,7 @@ from chatwaifu_runtime.external_channels.group_models import (
     strict_bool,
 )
 from chatwaifu_runtime.external_channels.group_ports import ChannelGroupRepository
+from chatwaifu_runtime.external_channels.group_voice import requests_group_voice
 from chatwaifu_runtime.external_channels.models import ChannelBindingRecord
 from chatwaifu_runtime.external_channels.presentation import group_text_parts_match_reply
 from chatwaifu_runtime.external_channels.service import (
@@ -356,6 +363,9 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),
             deleted_at=datetime.fromisoformat(row["deleted_at"]) if row["deleted_at"] else None,
+            allow_requested_voice=bool(row["allow_requested_voice"])
+            if "allow_requested_voice" in row.keys()
+            else False,
         )
 
     async def get_route(self, route_id: UUID) -> ChannelGroupRouteRecord | None:
@@ -433,8 +443,19 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
                 raise ChannelPolicyError("newly created unused scene required")
 
     async def _version_tx(self, db: aiosqlite.Connection, route: ChannelGroupRouteRecord) -> None:
+        has_voice = (
+            await _one(
+                db,
+                "SELECT 1 FROM pragma_table_info('channel_group_route_versions') "
+                "WHERE name='allow_requested_voice'",
+            )
+            is not None
+        )
         await db.execute(
-            "INSERT INTO channel_group_route_versions VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO channel_group_route_versions(route_id,revision,connection_id,account_key,"
+            "group_id,character_id,scene_id,observation_id,audience_fingerprint,enabled,"
+            "pause_reason,created_at" + (",allow_requested_voice" if has_voice else "") + ") "
+            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?" + (",?" if has_voice else "") + ")",
             (
                 str(route.route_id),
                 route.revision,
@@ -448,7 +469,8 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
                 int(route.enabled),
                 route.pause_reason.value if route.pause_reason else None,
                 route.updated_at.isoformat(),
-            ),
+            )
+            + ((int(route.allow_requested_voice),) if has_voice else ()),
         )
         for member in route.members:
             await db.execute(
@@ -483,7 +505,10 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
             observation = await self._fresh_observation_tx(db, route.observation_id, stamp)
             await self._validate_members_tx(db, route, observation, new_scene=True)
             await db.execute(
-                "INSERT INTO channel_group_routes VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO channel_group_routes(route_id,connection_id,account_key,group_id,"
+                "character_id,scene_id,display_name,revision,enabled,pause_reason,observation_id,"
+                "audience_fingerprint,created_at,updated_at,deleted_at) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     str(route.route_id),
                     str(route.connection_id),
@@ -502,6 +527,8 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
                     None,
                 ),
             )
+            if route.allow_requested_voice:
+                await self._voice_setting_tx(db, route.route_id, True)
             await self._version_tx(db, route)
             await db.execute(
                 "INSERT INTO channel_group_route_heads VALUES(?,NULL,NULL,NULL,?)",
@@ -610,9 +637,12 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
         members: tuple[ChannelGroupRouteMember, ...],
         scene_id: str,
         updated_at: datetime,
+        allow_requested_voice: bool | None = None,
     ) -> ChannelGroupTransition:
         revision(expected_revision)
         strict_bool(enabled)
+        if allow_requested_voice is not None:
+            strict_bool(allow_requested_voice)
         audience_fingerprint(members)
         stamp = _stamp(updated_at)
         async with self._database.transaction() as db:
@@ -632,6 +662,9 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
                 observation_id=observation_id or old.observation_id,
                 updated_at=stamp,
                 pause_reason=None if enabled else ChannelGroupPauseReason.OPERATOR_DISABLED,
+                allow_requested_voice=old.allow_requested_voice
+                if allow_requested_voice is None
+                else allow_requested_voice,
             )
             changed_audience = old.audience_fingerprint != new.audience_fingerprint
             if changed_audience and scene_id == old.scene_id:
@@ -673,7 +706,27 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
                 str(route.route_id),
             ),
         )
+        await self._voice_setting_tx(db, route.route_id, route.allow_requested_voice)
         await self._version_tx(db, route)
+
+    async def _voice_setting_tx(
+        self, db: aiosqlite.Connection, route_id: UUID, enabled: bool
+    ) -> None:
+        has_voice = (
+            await _one(
+                db,
+                "SELECT 1 FROM pragma_table_info('channel_group_routes') "
+                "WHERE name='allow_requested_voice'",
+            )
+            is not None
+        )
+        if has_voice:
+            await db.execute(
+                "UPDATE channel_group_routes SET allow_requested_voice=? WHERE route_id=?",
+                (int(enabled), str(route_id)),
+            )
+        elif enabled:
+            raise ChannelPolicyError("group voice schema is unavailable")
 
     async def _pause_tx(
         self,
@@ -1288,10 +1341,10 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
     ) -> ChannelGroupPlanResult:
         if type(reply_text) is not str or not reply_text.strip() or len(reply_text) > 20000:
             raise ValueError("group reply must be nonempty and bounded")
-        draft_parts = parts if parts is not None else _single_part_draft(reply_text)
-        _validate_delivery_part_drafts(draft_parts)
-        if not group_text_parts_match_reply(draft_parts, reply_text, allow_sticker=True) or any(
-            part.not_before_at is not None for part in draft_parts
+        drafts = parts if parts is not None else _single_part_draft(reply_text)
+        _validate_delivery_part_drafts(drafts)
+        if not group_text_parts_match_reply(drafts, reply_text, allow_sticker=True) or any(
+            part.not_before_at is not None for part in drafts
         ):
             raise ValueError(
                 "group parts require ordered complete text and receipt-based scheduling"
@@ -1308,12 +1361,12 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
                 (str(lineage.channel_turn_id),),
             )
             assert turn is not None
-            if isinstance(draft_parts[-1].payload, ChannelImageDeliveryPartPayload):
-                image = draft_parts[-1].payload
+            if isinstance(drafts[-1].payload, ChannelImageDeliveryPartPayload):
+                image = drafts[-1].payload
                 asset = await _one(
                     db,
-                    "SELECT 1 FROM learned_stickers WHERE principal_scope=? AND character_id=? "
-                    "AND sticker_id=? AND sha256=? AND mime_type=?",
+                    "SELECT 1 FROM learned_stickers WHERE principal_scope=? "
+                    "AND character_id=? AND sticker_id=? AND sha256=? AND mime_type=?",
                     (
                         f"scene:{route.scene_id}",
                         route.character_id,
@@ -1326,21 +1379,24 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
                     raise ChannelPolicyError("Group image must belong to the current scene")
             existing = await _one(
                 db,
-                (
-                    "SELECT delivery_id,group_target_json FROM "
-                    "channel_deliveries WHERE channel_turn_id=?"
-                ),
+                "SELECT * FROM channel_deliveries WHERE channel_turn_id=?",
                 (str(lineage.channel_turn_id),),
             )
-            if existing:
-                if turn["reply_text"] != reply_text:
-                    raise ChannelConflictError("group plan reply differs from its fixed generation")
-                return ChannelGroupPlanResult(
-                    UUID(existing["delivery_id"]),
-                    ChannelGroupDeliveryTarget.model_validate_json(existing["group_target_json"]),
+            first = (
+                await _one(
+                    db,
+                    "SELECT * FROM channel_delivery_parts WHERE delivery_id=? AND ordinal=0",
+                    (existing["delivery_id"],),
                 )
-            if turn["status"] != "processing":
-                raise ChannelPolicyError("group plan requires a processing turn")
+                if existing is not None
+                else None
+            )
+            if (
+                existing is not None
+                and (first is None or first["kind"] != "audio")
+                and turn["reply_text"] != reply_text
+            ):
+                raise ChannelConflictError("group plan reply differs from its fixed generation")
             generation = await _one(
                 db, "SELECT * FROM generations WHERE generation_id=?", (turn["generation_id"],)
             )
@@ -1353,71 +1409,228 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
                 or generation["output_text"] != reply_text
             ):
                 raise ChannelPolicyError("group reply requires the matching completed generation")
-            target = ChannelGroupDeliveryTarget(
-                connection_id=route.connection_id,
-                account_key=route.account_key,
-                group_id=route.group_id,
-                route_id=route.route_id,
-                route_revision=route.revision,
-                channel_turn_id=lineage.channel_turn_id,
-                scene_id=route.scene_id,
-                audience_fingerprint=route.audience_fingerprint,
-            )
-            await db.execute(
-                (
-                    "INSERT INTO "
-                    "channel_deliveries(delivery_id,channel_turn_id,connection_id"
-                    ",binding_id,status,attempt,created_at,updated_at,group_targe"
-                    "t_json,group_route_id,group_route_revision) "
-                    "VALUES(?,?,?,?,'pending',1,?,?,?,?,?)"
-                ),
-                (
-                    str(delivery_id),
-                    str(lineage.channel_turn_id),
-                    str(route.connection_id),
-                    str(lineage.binding_id),
-                    stamp.isoformat(),
-                    stamp.isoformat(),
-                    target.model_dump_json(),
-                    str(route.route_id),
-                    route.revision,
-                ),
-            )
-            for part in draft_parts:
-                await db.execute(
-                    (
-                        "INSERT INTO "
-                        "channel_delivery_parts(part_id,delivery_id,ordinal,kind,payl"
-                        "oad_json,required,status,delay_after_ms,attempt,provider_cli"
-                        "ent_id,created_at,updated_at) "
-                        "VALUES(?,?,?,?,?,?,'pending',?,0,?,?,?)"
-                    ),
-                    (
-                        str(uuid4()),
-                        str(delivery_id),
-                        part.ordinal,
-                        part.kind.value,
-                        part.payload.model_dump_json(),
-                        int(part.required),
-                        part.delay_after_ms,
-                        f"chatwaifu-{delivery_id.hex}-{part.ordinal:03d}",
-                        stamp.isoformat(),
-                        stamp.isoformat(),
-                    ),
+            if existing:
+                if first is not None and first["kind"] == "audio":
+                    return await self._finish_group_voice_tx(
+                        db, route, turn, existing, first, reply_text, stamp
+                    )
+                return ChannelGroupPlanResult(
+                    UUID(existing["delivery_id"]),
+                    ChannelGroupDeliveryTarget.model_validate_json(existing["group_target_json"]),
                 )
+            if turn["status"] != "processing":
+                raise ChannelPolicyError("group plan requires a processing turn")
+            return await self._insert_group_plan_tx(
+                db, lineage, route, turn, drafts, reply_text, delivery_id, stamp, finish_turn=True
+            )
+
+    async def create_group_voice_plan(
+        self,
+        lineage: ChannelGroupRouteLineage,
+        *,
+        payload: ChannelAudioDeliveryPartPayload,
+        delivery_id: UUID,
+        created_at: datetime,
+    ) -> ChannelGroupPlanResult:
+        stamp = _stamp(created_at)
+        if payload.mime_type != "audio/wav" or not payload.text.strip():
+            raise ChannelPolicyError("group voice requires a bounded WAV reply")
+        async with self._database.transaction() as db:
+            auth = await self._authorization_tx(db, lineage)
+            if not auth.allowed:
+                raise ChannelPolicyError(auth.reason)
+            route = await self._route_tx(db, lineage.route_id)
+            turn = await _one(
+                db,
+                "SELECT * FROM channel_turns WHERE channel_turn_id=?",
+                (str(lineage.channel_turn_id),),
+            )
+            assert turn is not None
+            user = await _one(
+                db,
+                "SELECT committed_text FROM turns WHERE turn_id=? AND role='user' AND session_id=?",
+                (turn["turn_id"], turn["session_id"]),
+            )
+            generation = await _one(
+                db, "SELECT * FROM generations WHERE generation_id=?", (turn["generation_id"],)
+            )
+            if (
+                not route.allow_requested_voice
+                or user is None
+                or not requests_group_voice(user["committed_text"])
+                or turn["status"] != "processing"
+                or turn["delivery_id"] is not None
+                or generation is None
+                or generation["state"] != "running"
+                or generation["invalidated_at"] is not None
+                or generation["session_id"] != turn["session_id"]
+                or generation["turn_id"] != turn["turn_id"]
+            ):
+                raise ChannelPolicyError("group voice requires a current requested active reply")
+            return await self._insert_group_plan_tx(
+                db,
+                lineage,
+                route,
+                turn,
+                (
+                    ChannelDeliveryPartDraft(
+                        ordinal=0, kind=ChannelDeliveryPartKind.AUDIO, payload=payload
+                    ),
+                ),
+                payload.text,
+                delivery_id,
+                stamp,
+                finish_turn=False,
+            )
+
+    async def _insert_group_plan_tx(
+        self,
+        db: aiosqlite.Connection,
+        lineage: ChannelGroupRouteLineage,
+        route: ChannelGroupRouteRecord,
+        turn: aiosqlite.Row,
+        parts: tuple[ChannelDeliveryPartDraft, ...],
+        reply_text: str,
+        delivery_id: UUID,
+        stamp: datetime,
+        *,
+        finish_turn: bool,
+    ) -> ChannelGroupPlanResult:
+        target = ChannelGroupDeliveryTarget(
+            connection_id=route.connection_id,
+            account_key=route.account_key,
+            group_id=route.group_id,
+            route_id=route.route_id,
+            route_revision=route.revision,
+            channel_turn_id=lineage.channel_turn_id,
+            scene_id=route.scene_id,
+            audience_fingerprint=route.audience_fingerprint,
+        )
+        # The audio trigger compares canonical text while its source remains processing.
+        await db.execute(
+            "UPDATE channel_turns SET reply_text=?,updated_at=?,revision=revision+1 "
+            "WHERE channel_turn_id=?",
+            (reply_text, stamp.isoformat(), str(lineage.channel_turn_id)),
+        )
+        await db.execute(
+            "INSERT INTO channel_deliveries(delivery_id,channel_turn_id,connection_id,"
+            "binding_id,status,attempt,created_at,updated_at,group_target_json,group_route_id,"
+            "group_route_revision) VALUES(?,?,?,?,'pending',1,?,?,?,?,?)",
+            (
+                str(delivery_id),
+                str(lineage.channel_turn_id),
+                str(route.connection_id),
+                str(lineage.binding_id),
+                stamp.isoformat(),
+                stamp.isoformat(),
+                target.model_dump_json(),
+                str(route.route_id),
+                route.revision,
+            ),
+        )
+        for part in parts:
             await db.execute(
+                "INSERT INTO channel_delivery_parts(part_id,delivery_id,ordinal,kind,"
+                "payload_json,required,status,delay_after_ms,attempt,provider_client_id,created_at,"
+                "updated_at) VALUES(?,?,?,?,?,?,'pending',?,0,?,?,?)",
                 (
-                    "UPDATE channel_turns SET "
-                    "status='completed',reply_text=?,delivery_id=?,completed_at=?"
-                    ",updated_at=?,revision=revision+1 WHERE channel_turn_id=?"
-                ),
-                (
-                    reply_text,
+                    str(uuid4()),
                     str(delivery_id),
+                    part.ordinal,
+                    part.kind.value,
+                    part.payload.model_dump_json(),
+                    int(part.required),
+                    part.delay_after_ms,
+                    f"chatwaifu-{delivery_id.hex}-{part.ordinal:03d}",
                     stamp.isoformat(),
                     stamp.isoformat(),
-                    str(lineage.channel_turn_id),
                 ),
+            )
+        await db.execute(
+            "UPDATE channel_turns SET delivery_id=?,status=?,completed_at=? "
+            "WHERE channel_turn_id=?",
+            (
+                str(delivery_id),
+                "completed" if finish_turn else "processing",
+                stamp.isoformat() if finish_turn else None,
+                str(lineage.channel_turn_id),
+            ),
+        )
+        events = await self._event_tx(
+            db,
+            turn,
+            "channel.delivery_plan_created",
+            stamp,
+            dict(
+                connection_id=str(route.connection_id),
+                channel_turn_id=str(lineage.channel_turn_id),
+                delivery_id=str(delivery_id),
+                part_count=len(parts),
+                chat_type="group",
+                conversation_key=f"group:{route.group_id}",
+                sender_key=turn["sender_key"],
+            ),
+        )
+        return ChannelGroupPlanResult(delivery_id, target, events)
+
+    async def _finish_group_voice_tx(
+        self,
+        db: aiosqlite.Connection,
+        route: ChannelGroupRouteRecord,
+        turn: aiosqlite.Row,
+        delivery: aiosqlite.Row,
+        audio: aiosqlite.Row,
+        reply_text: str,
+        stamp: datetime,
+    ) -> ChannelGroupPlanResult:
+        if not route.allow_requested_voice:
+            raise ChannelPolicyError("group voice is no longer enabled")
+        delivery_id = UUID(delivery["delivery_id"])
+        target = ChannelGroupDeliveryTarget.model_validate_json(delivery["group_target_json"])
+        payload = ChannelAudioDeliveryPartPayload.model_validate_json(audio["payload_json"])
+        events: tuple[GenericCoreEvent, ...] = ()
+        fallback = await _one(
+            db,
+            "SELECT payload_json FROM channel_delivery_parts WHERE delivery_id=? AND ordinal=1",
+            (str(delivery_id),),
+        )
+        if fallback is not None:
+            if (
+                ChannelTextDeliveryPartPayload.model_validate_json(fallback["payload_json"]).text
+                != reply_text
+            ):
+                raise ChannelConflictError("voice fallback reply differs from its generation")
+        elif delivery["status"] == "delivered" and audio["status"] == "delivered":
+            if reply_text != payload.text:
+                raise ChannelConflictError("voice reply differs from its actual spoken text")
+        elif (
+            delivery["status"] in {"failed", "cancelled"}
+            and audio["status"] in {"failed", "cancelled"}
+            and audio["provider_message_id"] is None
+            and audio["delivered_at"] is None
+        ):
+            await db.execute(
+                "UPDATE channel_delivery_parts SET required=0 WHERE delivery_id=? AND ordinal=0",
+                (str(delivery_id),),
+            )
+            await db.execute(
+                "INSERT INTO channel_delivery_parts(part_id,delivery_id,ordinal,kind,"
+                "payload_json,required,status,delay_after_ms,attempt,provider_client_id,created_at,"
+                "updated_at) VALUES(?,?,1,'text',?,1,'pending',0,0,?,?,?)",
+                (
+                    str(uuid4()),
+                    str(delivery_id),
+                    ChannelTextDeliveryPartPayload(text=reply_text).model_dump_json(),
+                    f"chatwaifu-{delivery_id.hex}-001",
+                    stamp.isoformat(),
+                    stamp.isoformat(),
+                ),
+            )
+            await db.execute(
+                "UPDATE channel_deliveries SET status='pending',last_error_json=NULL,"
+                "plan_version=plan_version+1,cancel_requested_at=NULL,lease_id=NULL,lease_expires_at=NULL,"
+                "updated_at=? WHERE delivery_id=?",
+                (stamp.isoformat(), str(delivery_id)),
             )
             events = await self._event_tx(
                 db,
@@ -1426,15 +1639,21 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
                 stamp,
                 dict(
                     connection_id=str(route.connection_id),
-                    channel_turn_id=str(lineage.channel_turn_id),
+                    channel_turn_id=turn["channel_turn_id"],
                     delivery_id=str(delivery_id),
-                    part_count=len(draft_parts),
-                    chat_type="group",
-                    conversation_key=f"group:{route.group_id}",
-                    sender_key=turn["sender_key"],
+                    part_count=2,
+                    plan_version=2,
+                    recovery="voice_text_fallback",
                 ),
             )
-            return ChannelGroupPlanResult(delivery_id, target, events)
+        else:
+            raise ChannelPolicyError("group voice receipt is not terminal")
+        await db.execute(
+            "UPDATE channel_turns SET status='completed',reply_text=?,completed_at=?,"
+            "updated_at=?,revision=revision+1 WHERE channel_turn_id=?",
+            (reply_text, stamp.isoformat(), stamp.isoformat(), turn["channel_turn_id"]),
+        )
+        return ChannelGroupPlanResult(delivery_id, target, events)
 
     async def cancel_group_turn(
         self, channel_turn_id: UUID, *, expected_revision: int, reason: str, updated_at: datetime

@@ -16,8 +16,10 @@ from typing import Protocol
 
 import regex
 from chatwaifu_protocol.channels import (
+    ChannelAudioDeliveryPartPayload,
     ChannelDeliveryPartDraft,
     ChannelDeliveryPartKind,
+    ChannelDeliveryPartStatus,
     ChannelImageDeliveryPartPayload,
     ChannelPresentationPolicy,
     ChannelPresentationProfile,
@@ -49,8 +51,31 @@ def group_text_parts_match_reply(
     reply_text: str,
     *,
     allow_sticker: bool = False,
+    allow_voice: bool = False,
 ) -> bool:
     """Required text stays canonical; a permitted final learned image stays optional."""
+    voice_payload = parts[0].payload if parts else None
+    if allow_voice and isinstance(voice_payload, ChannelAudioDeliveryPartPayload):
+        audio = parts[0]
+        if audio.ordinal != 0 or audio.delay_after_ms != 0:
+            return False
+        if len(parts) == 1:
+            return audio.required and voice_payload.text == reply_text
+        if len(parts) == 2 and isinstance(audio, ChannelDeliveryPartRecord):
+            fallback = parts[1]
+            return (
+                not audio.required
+                and audio.status
+                in {ChannelDeliveryPartStatus.FAILED, ChannelDeliveryPartStatus.CANCELLED}
+                and fallback.ordinal == 1
+                and fallback.kind is ChannelDeliveryPartKind.TEXT
+                and isinstance(fallback.payload, ChannelTextDeliveryPartPayload)
+                and fallback.required
+                and fallback.delay_after_ms == 0
+                and fallback.payload.text == reply_text
+                and bool(reply_text.strip())
+            )
+        return False
     text_parts = parts
     if allow_sticker and parts and parts[-1].kind is ChannelDeliveryPartKind.IMAGE:
         image = parts[-1]

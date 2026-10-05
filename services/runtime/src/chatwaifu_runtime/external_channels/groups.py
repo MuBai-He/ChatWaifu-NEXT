@@ -31,6 +31,7 @@ from chatwaifu_protocol.channel_groups import (
     ChannelParticipantLinkUpdate,
 )
 from chatwaifu_protocol.channels import (
+    ChannelAudioDeliveryPartPayload,
     ChannelConnectionStatus,
     ChannelDeliveryPartStatus,
     ChannelGroupDeliveryTarget,
@@ -63,6 +64,7 @@ from chatwaifu_runtime.external_channels.group_models import (
     qq_id,
 )
 from chatwaifu_runtime.external_channels.group_ports import ChannelGroupRepository
+from chatwaifu_runtime.external_channels.group_voice import requests_group_voice
 from chatwaifu_runtime.external_channels.models import (
     ChannelConnectionRecord,
     ChannelDeliveryPlanRecord,
@@ -123,6 +125,7 @@ class _Input:
     image_input: ChannelInboundImageInput | None = None
     learning_revision: int | None = None
     discussion: GroupDiscussionContext | None = None
+    voice_requested: bool = False
     revoked: bool = False
     task: asyncio.Task[None] | None = None
 
@@ -492,6 +495,7 @@ class ChannelGroupService:
             members,
             now,
             now,
+            allow_requested_voice=request.allow_requested_voice,
         )
         return _route_snapshot(await self._repository.create_route(route))
 
@@ -540,6 +544,7 @@ class ChannelGroupService:
             members=members,
             scene_id=scene_id,
             updated_at=self._clock(),
+            allow_requested_voice=request.allow_requested_voice,
         )
         assert transition.route is not None
         self._fence_old_route(transition.route, prior_admissions)
@@ -1113,6 +1118,16 @@ class ChannelGroupService:
             if not await self._guard(item):
                 await self._terminal(turn, ChannelTurnStatus.CANCELLED)
                 return
+            route = await self._repository.get_route(item.admission.lineage.route_id)
+            item.voice_requested = (
+                route is not None
+                and route.allow_requested_voice
+                and not item.message.mention_only
+                and requests_group_voice(item.message.text)
+            )
+            voice_skills: frozenset[str] = (
+                frozenset({"channel.voice"}) if item.voice_requested else frozenset()
+            )
             await self._conversation.submit_text(
                 turn.session_id,
                 item.message.text,
@@ -1122,9 +1137,10 @@ class ChannelGroupService:
                     origin="external_channel",
                     presentation_profile=item.presentation_policy.profile.value,
                     output_modes=frozenset({"text"}),
-                    allow_tools=False,
-                    allowed_skill_ids=frozenset(),
-                    contextual_skill_ids=frozenset(),
+                    allow_tools=item.voice_requested,
+                    allowed_skill_ids=voice_skills,
+                    contextual_skill_ids=voice_skills,
+                    allow_shared_voice=item.voice_requested,
                     trusted_identity=identity,
                     before_generation=lambda: self._guard(item),
                     image_loader=self._learning_image_loader(item, completed),
@@ -1439,12 +1455,18 @@ class ChannelGroupService:
         if not live() or record is None:
             return False
         lineage = record.lineage
+        route = await self._repository.get_route(lineage.route_id)
+        if route is None or not live():
+            return False
         if (
             record.turn.account_key != target.account_key
             or record.turn.conversation_key != f"group:{target.group_id}"
             or record.turn.delivery_id != plan.delivery_id
             or not group_text_parts_match_reply(
-                plan.parts, record.turn.reply_text or "", allow_sticker=False
+                plan.parts,
+                record.turn.reply_text or "",
+                allow_sticker=False,
+                allow_voice=route.allow_requested_voice,
             )
             or lineage.route_id != target.route_id
             or lineage.route_revision != target.route_revision
@@ -1454,6 +1476,44 @@ class ChannelGroupService:
             return False
         authorization = await self._repository.authorize_group_turn(lineage)
         return authorization.allowed and live()
+
+    async def authorize_reply_voice(self, turn: ChannelTurnRecord) -> bool:
+        """Only the owned, current explicitly requested group reply gets a voice grant."""
+        item = self._workflows.get(turn.channel_turn_id)
+        if (
+            item is None
+            or not item.voice_requested
+            or item.message.mention_only
+            or not requests_group_voice(item.message.text)
+            or (
+                item.admission.turn.session_id,
+                item.admission.turn.turn_id,
+                item.admission.turn.generation_id,
+            )
+            != (turn.session_id, turn.turn_id, turn.generation_id)
+            or not await self._guard(item)
+        ):
+            return False
+        route = await self._repository.get_route(item.admission.lineage.route_id)
+        return route is not None and route.allow_requested_voice and self._live(item)
+
+    async def publish_reply_voice(
+        self,
+        turn: ChannelTurnRecord,
+        payload: ChannelAudioDeliveryPartPayload,
+        delivery_id: UUID,
+        created_at: datetime,
+    ) -> None:
+        if not await self.authorize_reply_voice(turn):
+            raise ChannelPolicyError("group voice reply is no longer authorized")
+        item = self._workflows[turn.channel_turn_id]
+        plan = await self._repository.create_group_voice_plan(
+            item.admission.lineage, payload=payload, delivery_id=delivery_id, created_at=created_at
+        )
+        for event in plan.persisted_events:
+            await self._publisher.publish_persisted(event)
+        if self._live(item) and self._scheduler_wake is not None:
+            self._scheduler_wake(turn.connection_id)
 
     async def on_plan_terminal(self, plan: ChannelDeliveryPlanRecord) -> None:
         if plan.channel_turn_id is None or plan.channel_turn_id in self._workflows:
@@ -1522,6 +1582,7 @@ def _route_snapshot(route: ChannelGroupRouteRecord) -> ChannelGroupRouteSnapshot
         display_name=route.display_name,
         revision=route.revision,
         enabled=route.enabled,
+        allow_requested_voice=route.allow_requested_voice,
         pause_reason=route.pause_reason,
         observation_id=route.observation_id,
         audience_fingerprint=route.audience_fingerprint,

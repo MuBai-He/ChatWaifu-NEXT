@@ -855,8 +855,9 @@ class NapCatClient:
         segments: list[JsonObject],
         *,
         before_send: Callable[[], Awaitable[bool]],
+        allow_voice: bool = False,
     ) -> str:
-        """Send captured text/native faces or one validated expression image to a fixed group."""
+        """Send bounded fixed-target parts; voice requires the host's explicit opt-in."""
         if qq_group_identifier(group_id) != group_id:
             raise ValueError("QQ group must be a canonical identifier")
         if not 1 <= len(segments) <= 128:
@@ -903,6 +904,24 @@ class NapCatClient:
                 images += 1
                 visible = True
                 captured.append({"type": "image", "data": {"file": file, "sub_type": 1}})
+            elif allow_voice and len(segments) == 1 and segment.get("type") == "record":
+                file = data.get("file") if isinstance(data, dict) else None
+                if (
+                    not isinstance(file, str)
+                    or not file.startswith("base64://")
+                    or len(file) > 11_184_821
+                ):
+                    raise ValueError("QQ group voice requires bounded owned WAV bytes")
+                try:
+                    raw = base64.b64decode(file.removeprefix("base64://"), validate=True)
+                except (ValueError, binascii.Error):
+                    raise ValueError("QQ group voice Base64 is invalid") from None
+                if not 12 <= len(raw) <= 8 * 1024 * 1024 or (
+                    raw[:4] != b"RIFF" or raw[8:12] != b"WAVE"
+                ):
+                    raise ValueError("QQ group voice requires a bounded WAV file")
+                visible = True
+                captured.append({"type": "record", "data": {"file": file}})
             else:
                 raise ValueError("QQ group reply segment is unsupported")
             if size > 20_000:

@@ -123,6 +123,7 @@ export const channelGroupRouteCreateSchema = z
     observation_id: uuid,
     display_name: name,
     speaker_sender_keys: speakers.default([]),
+    allow_requested_voice: z.boolean().optional(),
   })
   .strict();
 export const channelGroupRouteUpdateSchema = z
@@ -132,6 +133,7 @@ export const channelGroupRouteUpdateSchema = z
     expected_revision: revision,
     observation_id: uuid.nullish(),
     speaker_sender_keys: speakers,
+    allow_requested_voice: z.boolean().nullish(),
   })
   .strict()
   .refine(
@@ -164,6 +166,7 @@ export const channelGroupRouteSnapshotSchema = z
     display_name: name,
     revision,
     enabled: z.boolean().default(false),
+    allow_requested_voice: z.boolean().default(false),
     pause_reason: channelGroupPauseReasonSchema.nullish(),
     observation_id: uuid,
     audience_fingerprint: fingerprint,

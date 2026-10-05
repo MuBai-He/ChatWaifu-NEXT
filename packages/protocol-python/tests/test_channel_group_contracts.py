@@ -68,3 +68,15 @@ def test_all_group_contracts_in_catalog_without_exporting_files() -> None:
     schema = ProtocolCatalog.model_json_schema()
     assert "channel_group_delivery_target" in schema["properties"]
     assert SCHEMAS["channel-group-route-create"] is ChannelGroupRouteCreate
+
+
+def test_group_voice_defaults_off_and_omitted_update_preserves_the_setting() -> None:
+    created = ChannelGroupRouteCreate(observation_id=uuid4(), display_name="fixture")
+    assert created.allow_requested_voice is False
+    update = ChannelGroupRouteUpdate(enabled=False, expected_revision=1, speaker_sender_keys=[])
+    assert update.allow_requested_voice is None
+    for value in (1, "true"):
+        with pytest.raises(ValidationError):
+            ChannelGroupRouteUpdate.model_validate(
+                {**update.model_dump(), "allow_requested_voice": value}
+            )
