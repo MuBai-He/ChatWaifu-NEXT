@@ -30,12 +30,23 @@ from chatwaifu_protocol.channels import (
 )
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.external_channels.adapters.qq_napcat.client import NapCatClient
+from chatwaifu_runtime.external_channels.adapters.qq_napcat.management import credential_reference
 from chatwaifu_runtime.external_channels.group_models import ChannelGroupInboundDescriptor
 from chatwaifu_runtime.external_channels.models import ChannelInboundImageInput
+from chatwaifu_runtime.external_channels.service import ChannelConflictError
 from chatwaifu_runtime.providers.contracts import LlmInputImage
 from chatwaifu_runtime.sticker_library.classifier import StickerClassification
 from PIL import Image
-from test_qq_channels import _image_event, _ingest, _pair, _picture, _runtime, _segments, _terminal
+from test_qq_channels import (
+    _event,
+    _image_event,
+    _ingest,
+    _pair,
+    _picture,
+    _runtime,
+    _segments,
+    _terminal,
+)
 from test_qq_group_runtime import GROUP, OTHER_GROUP, _group_event, _notice, _Runtime
 from test_qq_group_runtime import runtime as runtime
 
@@ -44,6 +55,266 @@ def _classification() -> StickerClassification:
     return StickerClassification(
         suitable=True, confidence=0.99, label="开心猫", description="开心猫表情", expression="happy"
     )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "case",
+    [
+        "followup",
+        "expired",
+        "fenced",
+        "configuration_changed",
+        "stale_config",
+        "manual_cancel",
+        "quoted",
+    ],
+)
+async def test_private_picture_then_question_cancels_old_loader_and_freezes_current_image(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+    case: str,
+) -> None:
+    async with _runtime(runtime_settings, monkeypatch) as harness:
+        container = harness.container
+        connection_id = await _pair(harness)
+        output = io.BytesIO()
+        Image.new("RGB", (44, 44), "red").save(
+            output,
+            format="GIF",
+            save_all=True,
+            append_images=[Image.new("RGB", (44, 44), "blue")],
+            duration=100,
+        )
+        entered, cancelled = asyncio.Event(), asyncio.Event()
+        downloads: list[str] = []
+        clock = [10.0]
+        monkeypatch.setattr(container.external_channels, "_recent_image_clock", lambda: clock[0])
+
+        async def download(_client: NapCatClient, ref: str, *, max_bytes: int) -> bytes:
+            downloads.append(ref)
+            if len(downloads) == 1:
+                entered.set()
+                try:
+                    await asyncio.Event().wait()
+                except asyncio.CancelledError:
+                    cancelled.set()
+                    raise
+            return output.getvalue()
+
+        async def photos(*_args: object, **_kwargs: object) -> None:
+            raise AssertionError("QQ image follow-up must remain ephemeral")
+
+        monkeypatch.setattr(NapCatClient, "download_image", download)
+        monkeypatch.setattr(container.photo_observer, "observe_batch", photos)
+        socket = harness.peer.peers[-1]
+        await socket.send(json.dumps(_image_event("", 1805)))
+        await asyncio.wait_for(entered.wait(), 5)
+        if case == "expired":
+            clock[0] += 61.0
+        elif case == "fenced":
+            container.qq_channels._group_transport_invalidated(connection_id)
+        elif case in {"configuration_changed", "stale_config"}:
+            snapshot = await container.external_channels.get_connection(connection_id)
+            changed = snapshot.configuration.model_copy(update={"stickers_enabled": False})
+            if case == "stale_config":
+                with pytest.raises(ChannelConflictError):
+                    await container.external_channels.update_connection(
+                        changed, expected_revision=snapshot.revision + 1, rotate_access_token=False
+                    )
+            else:
+                await container.external_channels.update_connection(
+                    changed, expected_revision=snapshot.revision, rotate_access_token=False
+                )
+        elif case == "manual_cancel":
+            previous = await container.external_channel_repository.find_turn_by_external_message(
+                connection_id, "1805"
+            )
+            raw = await harness.credentials.get(credential_reference(connection_id))
+            assert previous is not None and raw is not None
+            await container.external_channels.interrupt(
+                connection_id,
+                previous.channel_turn_id,
+                access_token=json.loads(raw)["gateway_token"],
+                reason="user_interrupt",
+            )
+        followup = _event("这是什么", 1806)
+        if case == "quoted":
+            cast(list[JsonObject], followup["message"]).insert(
+                0, {"type": "reply", "data": {"id": "1805"}}
+            )
+        await socket.send(json.dumps(followup))
+        await asyncio.wait_for(cancelled.wait(), 5)
+        request = await asyncio.wait_for(harness.model.received.get(), 5)
+        assert request.user_text == "这是什么"
+        should_carry = case in {"followup", "stale_config"}
+        assert len(request.images) == int(should_carry)
+        if request.images:
+            assert request.images[0].data.startswith(b"\x89PNG")
+            with Image.open(io.BytesIO(request.images[0].data)) as preview:
+                assert preview.convert("RGB").getpixel((0, 0)) == (255, 0, 0)
+        await asyncio.wait_for(harness.peer.sends.get(), 5)
+        previous = await container.external_channel_repository.find_turn_by_external_message(
+            connection_id, "1805"
+        )
+        current = await container.external_channel_repository.find_turn_by_external_message(
+            connection_id, "1806"
+        )
+        assert previous is not None and current is not None
+        assert (await _terminal(harness, connection_id, previous.channel_turn_id)).status is (
+            ChannelTurnStatus.CANCELLED
+        )
+        assert (await _terminal(harness, connection_id, current.channel_turn_id)).status is (
+            ChannelTurnStatus.COMPLETED
+        )
+        assert request.generation_id == current.generation_id != previous.generation_id
+        assert len(downloads) == (2 if should_carry else 1)
+        assert len(harness.model.requests) == 1
+        assert not container.sticker_library._tasks
+        assert not (await container.sticker_repository.snapshot("local", "default")).items
+        # The exact provider duplicate reuses the frozen reference without restarting vision.
+        await socket.send(json.dumps(followup))
+        await socket.send(json.dumps(_event("接着聊", 1807)))
+        next_request = await asyncio.wait_for(harness.model.received.get(), 5)
+        assert next_request.user_text == "接着聊" and not next_request.images
+        await asyncio.wait_for(harness.peer.sends.get(), 5)
+        assert len(harness.model.requests) == 2
+        assert len(downloads) == (2 if should_carry else 1)
+        assert not harness.synthesis
+
+
+@pytest.mark.asyncio
+async def test_private_reference_revocation_during_download_rejects_late_image(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async with _runtime(runtime_settings, monkeypatch) as harness:
+        container = harness.container
+        connection_id = await _pair(harness)
+        entered, release = asyncio.Event(), asyncio.Event()
+        calls = 0
+
+        async def download(_client: NapCatClient, _ref: str, *, max_bytes: int) -> bytes:
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                entered.set()
+                await release.wait()
+            return _picture()
+
+        monkeypatch.setattr(NapCatClient, "download_image", download)
+        socket = harness.peer.peers[-1]
+        await socket.send(json.dumps(_image_event("", 1810)))
+        await asyncio.wait_for(harness.model.received.get(), 5)
+        await asyncio.wait_for(harness.peer.sends.get(), 5)
+        source = await container.external_channel_repository.find_turn_by_external_message(
+            connection_id, "1810"
+        )
+        assert source is not None
+        assert (await _terminal(harness, connection_id, source.channel_turn_id)).status is (
+            ChannelTurnStatus.COMPLETED
+        )
+        await socket.send(json.dumps(_event("这是什么", 1811)))
+        await asyncio.wait_for(entered.wait(), 5)
+        container.external_channels.fence_recent_images(connection_id)
+        release.set()
+        await asyncio.wait_for(harness.peer.sends.get(), 5)
+        current = await container.external_channel_repository.find_turn_by_external_message(
+            connection_id, "1811"
+        )
+        assert current is not None
+        assert (await _terminal(harness, connection_id, current.channel_turn_id)).status is (
+            ChannelTurnStatus.FAILED
+        )
+        assert len(harness.model.requests) == 1 and harness.model.received.empty()
+        assert not container.sticker_library._tasks
+        assert not (await container.sticker_repository.snapshot("local", "default")).items
+
+
+@pytest.mark.asyncio
+async def test_static_private_followup_learns_after_its_own_completion(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async with _runtime(runtime_settings, monkeypatch) as harness:
+        container = harness.container
+        connection_id = await _pair(harness)
+        await container.sticker_repository.update_settings(
+            "local", "default", learning_enabled=True, expected_revision=0
+        )
+        entered, classified, release = asyncio.Event(), asyncio.Event(), asyncio.Event()
+        classified_generations: list[UUID] = []
+        calls = 0
+
+        async def download(_client: NapCatClient, _ref: str, *, max_bytes: int) -> bytes:
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                entered.set()
+                await asyncio.Event().wait()
+            return _picture()
+
+        async def classify(image: LlmInputImage, *, generation_id: UUID) -> StickerClassification:
+            assert image.data == _picture()
+            classified_generations.append(generation_id)
+            classified.set()
+            await release.wait()
+            return _classification()
+
+        monkeypatch.setattr(NapCatClient, "download_image", download)
+        monkeypatch.setattr(container.sticker_library._classifier, "classify", classify)
+        socket = harness.peer.peers[-1]
+        await socket.send(json.dumps(_image_event("", 1812)))
+        await asyncio.wait_for(entered.wait(), 5)
+        await socket.send(json.dumps(_event("这是什么", 1813)))
+        request = await asyncio.wait_for(harness.model.received.get(), 5)
+        assert len(request.images) == 1
+        await asyncio.wait_for(harness.peer.sends.get(), 5)
+        await asyncio.wait_for(classified.wait(), 5)
+        current = await container.external_channel_repository.find_turn_by_external_message(
+            connection_id, "1813"
+        )
+        assert current is not None
+        assert (await _terminal(harness, connection_id, current.channel_turn_id)).status is (
+            ChannelTurnStatus.COMPLETED
+        )
+        assert classified_generations == [current.generation_id]
+        assert not (await container.sticker_repository.snapshot("local", "default")).items
+        tasks = [task for _, task in container.sticker_library._tasks.values()]
+        release.set()
+        await asyncio.wait_for(asyncio.gather(*tasks), 5)
+        assert len((await container.sticker_repository.snapshot("local", "default")).items) == 1
+        assert not harness.synthesis
+
+
+@pytest.mark.asyncio
+async def test_failed_private_image_is_not_retried_as_context_for_following_text(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async with _runtime(runtime_settings, monkeypatch) as harness:
+        container = harness.container
+        connection_id = await _pair(harness)
+        downloads: list[str] = []
+
+        async def download(_client: NapCatClient, ref: str, *, max_bytes: int) -> bytes:
+            downloads.append(ref)
+            raise RuntimeError("Fixture unavailable image")
+
+        monkeypatch.setattr(NapCatClient, "download_image", download)
+        socket = harness.peer.peers[-1]
+        await socket.send(json.dumps(_image_event("", 1808)))
+        await asyncio.wait_for(harness.peer.sends.get(), 5)
+        source = await container.external_channel_repository.find_turn_by_external_message(
+            connection_id, "1808"
+        )
+        assert source is not None
+        assert (await _terminal(harness, connection_id, source.channel_turn_id)).status is (
+            ChannelTurnStatus.FAILED
+        )
+        assert not container.external_channels._recent_images
+        await socket.send(json.dumps(_event("继续文字聊天", 1809)))
+        request = await asyncio.wait_for(harness.model.received.get(), 5)
+        assert request.user_text == "继续文字聊天" and not request.images
+        await asyncio.wait_for(harness.peer.sends.get(), 5)
+        assert len(downloads) == len(harness.model.requests) == 1
 
 
 @pytest.mark.asyncio

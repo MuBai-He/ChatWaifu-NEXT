@@ -978,7 +978,7 @@ async def test_admitted_image_failure_sends_one_durable_notice_without_model_req
 
 
 @pytest.mark.asyncio
-async def test_new_owner_text_cancels_image_loading_without_stale_vision_or_reply(
+async def test_cleared_image_context_and_new_text_cancel_loading_without_stale_vision_or_reply(
     runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     async with _runtime(runtime_settings, monkeypatch) as harness:
@@ -997,6 +997,9 @@ async def test_new_owner_text_cancels_image_loading_without_stale_vision_or_repl
         monkeypatch.setattr(NapCatClient, "download_image", download)
         await harness.peer.peers[-1].send(json.dumps(_image_event("看图", 43)))
         await asyncio.wait_for(entered.wait(), timeout=5)
+        # Explicit context revocation removes the recent descriptor; a following
+        # turn must still cancel the original loader and reject stale vision.
+        harness.container.external_channels.fence_recent_images(connection_id)
         await harness.peer.peers[-1].send(json.dumps(_event("取消图片，直接文字聊", 44)))
         await asyncio.wait_for(cancelled.wait(), timeout=5)
         request = await asyncio.wait_for(harness.model.received.get(), timeout=5)

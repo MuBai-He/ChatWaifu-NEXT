@@ -9,6 +9,7 @@ import secrets
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
+from time import monotonic
 from typing import TYPE_CHECKING, cast
 from uuid import UUID, uuid4
 
@@ -101,6 +102,8 @@ logger = logging.getLogger(__name__)
 BURST_LOAD_TIMEOUT_SECONDS = 20.0
 AUDIO_PREPROCESS_TIMEOUT_SECONDS = 60.0
 MAX_AUDIO_PREPROCESSING_TASKS = 32
+MAX_RECENT_IMAGE_REFERENCES = 32
+RECENT_IMAGE_REFERENCE_SECONDS = 60.0
 
 WEIXIN_ILINK_PROVIDER = ChannelProviderRegistration(
     provider_id="weixin_ilink",
@@ -212,6 +215,25 @@ __all__ = [
 ]
 
 
+@dataclass(slots=True)
+class _RecentImageReference:
+    connection_id: UUID
+    connection_revision: int
+    source_turn_id: UUID
+    account_key: str | None
+    sender_key: str
+    received_at: datetime
+    image_input: ChannelInboundImageInput
+    expires_at: float
+    used_by: str | None = None
+
+
+@dataclass(slots=True)
+class _ImageReferenceAdmission:
+    connection_id: UUID
+    revoked: bool = False
+
+
 class ExternalChannelService:
     """Coordinate external identities, durable turns, generation, and delivery.
 
@@ -237,6 +259,7 @@ class ExternalChannelService:
         photo_observer: PhotoMemoryObserver | None = None,
         burst_scheduler: BurstScheduler | None = None,
         tool_policy: Callable[[ChannelConnectionConfiguration, str], frozenset[str]] | None = None,
+        recent_image_clock: Callable[[], float] = monotonic,
     ) -> None:
         self._repository = repository
         self._conversation_repository = conversation_repository
@@ -254,6 +277,9 @@ class ExternalChannelService:
             sticker_catalog=sticker_catalog
         )
         self._ingress_lock = asyncio.Lock()
+        self._recent_images: dict[UUID, _RecentImageReference] = {}
+        self._recent_image_clock = recent_image_clock
+        self._image_reference_admission: _ImageReferenceAdmission | None = None
         self._turn_tasks: dict[UUID, asyncio.Task[None]] = {}
         self._audio_tasks: dict[UUID, asyncio.Task[None]] = {}
         self._audio_lifecycle_lock = asyncio.Lock()
@@ -354,6 +380,7 @@ class ExternalChannelService:
 
     async def stop(self) -> None:
         self._stopping = True
+        self.fence_recent_images()
         # Constructor-owned cleanup can run before the database is opened.
         # Only a started gateway can own durable admissions to fence.
         if self._started:
@@ -452,6 +479,7 @@ class ExternalChannelService:
                     access_token_hash=_token_hash(token) if token is not None else None,
                     updated_at=datetime.now(UTC),
                 )
+                self.fence_recent_images(configuration.connection_id)
                 if self._proactive is not None:
                     self._proactive.fence_route_revision(
                         configuration.connection_id, updated.revision
@@ -484,6 +512,7 @@ class ExternalChannelService:
 
     async def delete_connection(self, connection_id: UUID) -> None:
         await self._required_connection(connection_id)
+        self.fence_recent_images(connection_id)
         if self._groups is not None:
             self._groups.fence_connection(connection_id, reason="connection_deleted")
             await self._groups.pause_connection(
@@ -547,16 +576,18 @@ class ExternalChannelService:
         raw_images: tuple[object, ...] = (),
         context_token: str | None = None,
         pending_contexts_count: int = 0,
+        recent_image_context: bool = False,
     ) -> ChannelTurnReceipt:
         if audio_input is not None and (image_input is not None or burst_intake or raw_images):
             raise ChannelPolicyError("Audio ingress cannot be combined with image ingress")
         if burst_intake and not image_retention_allowed:
             raise ChannelPolicyError("Ephemeral ingress does not support image burst collection")
-        connection, binding, turn, duplicate = await self._admit_ingress(
+        connection, binding, turn, duplicate, image_input = await self._admit_ingress(
             message,
             access_token=access_token,
             supersede_inflight=supersede_inflight,
-            image_fingerprint=image_input.source_fingerprint if image_input is not None else None,
+            image_input=image_input,
+            recent_image_context=recent_image_context and audio_input is None and not burst_intake,
             burst_intake=burst_intake,
             audio_fingerprint=audio_input.source_fingerprint if audio_input is not None else None,
         )
@@ -1265,6 +1296,16 @@ class ExternalChannelService:
         self._turn_terminal_listeners.append(listener)
 
     async def _notify_turn_terminal(self, turn: ChannelTurnRecord) -> None:
+        cached = self._recent_images.get(turn.binding_id)
+        if (
+            turn.status is ChannelTurnStatus.FAILED
+            and cached is not None
+            and (
+                cached.source_turn_id == turn.channel_turn_id
+                or cached.used_by == turn.external_message_id
+            )
+        ):
+            self._recent_images.pop(turn.binding_id, None)
         if self._turn_terminal_listeners:
             for listener in list(self._turn_terminal_listeners):
                 try:
@@ -1331,16 +1372,62 @@ class ExternalChannelService:
                     await self._notify_turn_terminal(mem_turn)
         return record
 
+    def fence_recent_images(self, connection_id: UUID | None = None) -> None:
+        """Invalidate ephemeral descriptors synchronously before transport teardown."""
+        admission = self._image_reference_admission
+        if admission is not None and (
+            connection_id is None or admission.connection_id == connection_id
+        ):
+            admission.revoked = True
+        for binding_id, reference in tuple(self._recent_images.items()):
+            if connection_id is None or reference.connection_id == connection_id:
+                self._recent_images.pop(binding_id, None)
+
+    def _referenced_image_input(
+        self,
+        reference: _RecentImageReference,
+        binding_id: UUID,
+        message: ChannelInboundTextMessage,
+        access_token: str,
+    ) -> ChannelInboundImageInput:
+        def check() -> None:
+            if (
+                self._stopping
+                or self._recent_images.get(binding_id) is not reference
+                or reference.used_by != message.external_message_id
+            ):
+                raise ChannelPolicyError("Recent image context was revoked")
+
+        async def load() -> LlmInputImage | tuple[LlmInputImage, ...]:
+            check()
+            connection = await self._authenticate(message.connection_id, access_token)
+            check()
+            self._validate_ingress(connection, message, has_image=True)
+            if connection.revision != reference.connection_revision:
+                raise ChannelPolicyError("Recent image context configuration changed")
+            images = await reference.image_input.load()
+            check()
+            return images
+
+        return replace(reference.image_input, load=load)
+
     async def _admit_ingress(
         self,
         message: ChannelInboundTextMessage,
         *,
         access_token: str,
         supersede_inflight: bool = False,
-        image_fingerprint: str | None = None,
+        image_input: ChannelInboundImageInput | None = None,
+        recent_image_context: bool = False,
         burst_intake: bool = False,
         audio_fingerprint: str | None = None,
-    ) -> tuple[ChannelConnectionRecord, ChannelBindingRecord, ChannelTurnRecord, bool]:
+    ) -> tuple[
+        ChannelConnectionRecord,
+        ChannelBindingRecord,
+        ChannelTurnRecord,
+        bool,
+        ChannelInboundImageInput | None,
+    ]:
         """Persist a unique channel turn without serializing model preparation.
 
         The process-local lock protects the compound binding/idempotency checks.
@@ -1350,15 +1437,43 @@ class ExternalChannelService:
         """
 
         async with self._ingress_lock:
+            reference_admission = _ImageReferenceAdmission(message.connection_id)
+            self._image_reference_admission = reference_admission
             connection = await self._authenticate(message.connection_id, access_token)
+            original_image_input = image_input
             self._validate_ingress(
                 connection,
                 message,
-                has_image=image_fingerprint is not None,
+                has_image=image_input is not None,
                 has_audio=audio_fingerprint is not None,
             )
             if self._stopping:
                 raise ChannelBusyError("channel ingress is stopping")
+            binding = await self._repository.find_binding(
+                message.connection_id, message.conversation_key
+            )
+            for key, reference in tuple(self._recent_images.items()):
+                if reference.expires_at <= self._recent_image_clock():
+                    self._recent_images.pop(key, None)
+            cached = self._recent_images.get(binding.binding_id) if binding is not None else None
+            inherited = None
+            if (
+                recent_image_context
+                and image_input is None
+                and message.kind is ChannelMessageKind.TEXT
+                and message.reply_to_external_message_id is None
+                and cached is not None
+                and cached.connection_id == message.connection_id
+                and cached.connection_revision == connection.revision
+                and cached.account_key == message.account_key
+                and cached.sender_key == message.sender_key
+                and cached.received_at <= message.received_at
+                and cached.used_by in (None, message.external_message_id)
+                and not reference_admission.revoked
+            ):
+                inherited = cached
+                image_input = cached.image_input
+            image_fingerprint = image_input.source_fingerprint if image_input is not None else None
             digest = _message_digest(
                 message, image_fingerprint=image_fingerprint, audio_fingerprint=audio_fingerprint
             )
@@ -1372,23 +1487,17 @@ class ExternalChannelService:
                     raise ChannelConflictError(
                         "external_message_id was already used with different message content"
                     )
-                binding = await self._repository.find_binding(
-                    message.connection_id, message.conversation_key
-                )
                 if binding is None or binding.binding_id != duplicate.binding_id:
                     raise ChannelConflictError(
                         "duplicate channel turn no longer has its durable binding"
                     )
-                return connection, binding, duplicate, True
+                return connection, binding, duplicate, True, image_input
 
             if (
                 audio_fingerprint is not None
                 and len(self._audio_tasks) >= MAX_AUDIO_PREPROCESSING_TASKS
             ):
                 raise ChannelBusyError("audio preprocessing capacity is exhausted")
-            binding = await self._repository.find_binding(
-                message.connection_id, message.conversation_key
-            )
             if binding is None:
                 session = await self._sessions.create_session(connection.configuration.character_id)
                 binding = await self._repository.create_binding(
@@ -1498,6 +1607,11 @@ class ExternalChannelService:
                         for ev in cancel_res.persisted_events:
                             await self._publisher.publish_persisted(ev)
 
+            if inherited is not None and (
+                self._recent_images.get(binding.binding_id) is not inherited
+                or reference_admission.revoked
+            ):
+                raise ChannelPolicyError("Recent image context was revoked during admission")
             turn = ChannelTurnRecord(
                 channel_turn_id=uuid4(),
                 connection_id=message.connection_id,
@@ -1533,7 +1647,36 @@ class ExternalChannelService:
                 ),
             )
             turn = await self._repository.create_turn(turn)
-            return connection, binding, turn, False
+            if inherited is not None:
+                inherited.used_by = message.external_message_id
+                image_input = self._referenced_image_input(
+                    inherited, binding.binding_id, message, access_token
+                )
+            else:
+                self._recent_images.pop(binding.binding_id, None)
+                if (
+                    recent_image_context
+                    and original_image_input is not None
+                    and message.reply_to_external_message_id is None
+                    and not reference_admission.revoked
+                ):
+                    if len(self._recent_images) >= MAX_RECENT_IMAGE_REFERENCES:
+                        oldest = min(
+                            self._recent_images,
+                            key=lambda key: self._recent_images[key].expires_at,
+                        )
+                        self._recent_images.pop(oldest)
+                    self._recent_images[binding.binding_id] = _RecentImageReference(
+                        message.connection_id,
+                        connection.revision,
+                        turn.channel_turn_id,
+                        message.account_key,
+                        message.sender_key,
+                        message.received_at,
+                        original_image_input,
+                        self._recent_image_clock() + RECENT_IMAGE_REFERENCE_SECONDS,
+                    )
+            return connection, binding, turn, False, image_input
 
     async def wait_for_turn(
         self,
@@ -1640,6 +1783,8 @@ class ExternalChannelService:
         # Establish the durable cancellation fence before waiting for optional
         # reply preparation (including sticker-history reads) under _sync_turn.
         turn = await self._required_turn(connection_id, target_turn_id)
+        if reason != "superseded_by_new_inbound_message":
+            self._recent_images.pop(turn.binding_id, None)
         if turn.status not in {ChannelTurnStatus.ACCEPTED, ChannelTurnStatus.PROCESSING}:
             return ChannelTurnCancelReceipt(
                 channel_turn_id=channel_turn_id,

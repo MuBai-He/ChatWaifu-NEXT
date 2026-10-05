@@ -28,6 +28,18 @@ PNG preview for the current conversation. Only a single-frame GIF is eligible fo
 static learning; animated previews are excluded before classification or saving.
 This does not preserve animation or prove understanding of later frames.
 
+In a QQ owner-private conversation, a standalone image may keep its descriptor
+for 60 seconds in the same authenticated durable binding. The next ordinary text
+turn can use it under its own generation and content hash, even if that text
+superseded image processing. At most 32 bindings keep one reference each. Explicit
+quotes and audio do not inherit it; quoted image posts do not establish it. A new
+image replaces it, failure discards it, and duplicate events never refresh its
+lifetime or repeat downloads. Current account/owner/configuration checks and
+synchronous manual-cancel, transport, connection-update/delete and stop fences
+revoke it. Restart loses the descriptor; it is never recovered from QQ history.
+Only QQ's trusted adapter opts into this behavior. No bytes, animation or photos
+are retained, and ordinary Web, desktop and other-channel ingress is unchanged.
+
 Mobile QQ often sends an image and a mention as separate envelopes. With scoped
 learning enabled, an authenticated, granted member's image-only envelope may keep
 only its bounded descriptors for 60 seconds. There are at most 32 references, one

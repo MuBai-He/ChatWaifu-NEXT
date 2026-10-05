@@ -160,6 +160,7 @@ class NapCatManagement:
 
     def _group_transport_invalidated(self, connection_id: UUID) -> None:
         self._group_notice_pending.add(connection_id)
+        self._gateway.fence_recent_images(connection_id)
         if self._groups is not None:
             self._groups.fence_connection(connection_id, reason="reconnect")
 
@@ -642,6 +643,7 @@ class NapCatManagement:
                             else None,
                             image_retention_allowed=False,
                             sticker_learning_allowed=True,
+                            recent_image_context=True,
                             audio_input=audio_input(client, inbound.record, self._audio_transcriber)
                             if inbound.record is not None
                             else None,
@@ -657,8 +659,7 @@ class NapCatManagement:
                     connection_id, ChannelConnectionStatus.DEGRADED, "qq_connection_lost"
                 )
             finally:
-                if self._groups is not None:
-                    self._group_transport_invalidated(connection_id)
+                self._group_transport_invalidated(connection_id)
                 try:
                     await self._cancel_group_ingress(connection_id)
                     if self._groups is not None:
@@ -757,6 +758,7 @@ class NapCatManagement:
         cancel_pending: bool = True,
         group_reason: ChannelGroupPauseReason = ChannelGroupPauseReason.RECONNECT,
     ) -> None:
+        self._gateway.fence_recent_images(connection_id)
         if self._groups is not None:
             self._group_stop_reasons[connection_id] = group_reason
             self._group_transport_invalidated(connection_id)
