@@ -351,6 +351,7 @@ class RuntimeContainer:
             self.event_publisher,
             conversation_repository=self.conversation_repository,
             sticker_library=self.sticker_library,
+            discussion_policy=settings.group_discussion,
         )
         self.channel_groups.set_authenticator(self.external_channels.authenticate_group_transport)
         self.external_channels.set_group_service(self.channel_groups)
