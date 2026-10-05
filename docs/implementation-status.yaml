@@ -1,15 +1,24 @@
 schema_version: "1.0"
 updated_at: "2026-10-05"
 current_phase: "13.6"
+qq_group_requested_voice:
+  status: source_and_deployment_verified_phone_receipt_and_playback_pending
+  adr: "0076"
+  product_commit: "d1714b5"
+  evidence:
+    - Explicit operator opt-in opens only the requested existing QQ group; default replies stay text, current speaker requests may use channel.voice with auto choice, and other groups remain text-only. Quotes, old discussion and definition questions do not grant voice. Private semantic selection remains unchanged.
+    - Frozen full Python 3786 passes with 46 platform skips; final related Python 159 and Linux 65 passes, earlier Linux related 354 passes. Strict types/product Ruff/format, 111 protocol and 412 Web checks/build pass; global Ruff retains 284 existing findings in 19 unmodified evidence scripts.
+    - Five compiled synthetic group requests to the configured Gemini selector select two voice tools and three text replies, with payloads, native usage and latency retained; no actual QQ sends or real TTS executed in this probe, so media choice does not accept handset playback or full Q02.
+    - Main Runtime deployed with 34 reviewed files, schema 43 and old facts/checksums/config/routes preserved. Only requested route voice enabled with original scene/grants; QQ/new WeChat ready, NapCat and 13 containers unchanged, seven updated Web assets verified. Fresh phone receipt/playback and subsequent normal-text reply remain pending; see docs/research/qq-agent-plus-evidence/qq-group-voice-2026-10-05/README.md.
 qq_group_discussion:
   status: source_and_deployment_verified_targeted_phone_feedback_received_strict_model_fidelity_open
   adr: "0075"
   product_commit: "50a30a3"
   baseline_commit: "c2e6790"
   evidence:
-    - Authorized unmentioned text remains volatile and silent; at-only replies retain current speaker grants and text-only delivery. Fair quotas, TTL, dedup and complete-wire model limits bound collection and on-demand extractive compression.
+    - Authorized unmentioned text remains volatile and silent; at-only replies retain current speaker grants and default text delivery; requested voice is a separate operator opt-in under ADR 0076. Fair quotas, TTL, dedup and complete-wire model limits bound collection and on-demand extractive compression.
     - Final local Python 3740 passes and 46 platform skips; Linux candidate 308 passes. Strict types, lint, format, architecture and unchanged Web build pass. Current-turn evidence follows older history and remains separate from transcript and memory extraction; lifecycle fences revoke stale work and context.
-    - Main Runtime deployed with 16 reviewed source/test files, all unrelated source/config/model routes preserved, same original group scenes/grants restored, old schema-42 facts retained, seven original Web assets matched and all 13 observed containers unchanged. User subsequently reports this targeted fix usable; this does not accept broader fidelity or group voice, which retains the explicitly requested text-only policy.
+    - Main Runtime deployed with 16 reviewed source/test files, all unrelated source/config/model routes preserved, same original group scenes/grants restored, old schema-42 facts retained, seven original Web assets matched and all 13 observed containers unchanged. User subsequently reports this targeted fix usable; this does not accept broader fidelity. That reference-fix validation kept group text-only; subsequent requested voice has its separate ADR 0076 acceptance evidence.
     - Genuine bare mentions retain a structured trigger, use current admitted discussion or ask for a topic, and skip cache/memory projection. Frozen Gemini reference A/B and a raw-usage supplement retain 11 actual payloads; four current-position replies distinguish the latest speaker claim. The control did not reproduce the exact old missing-image sentence; see docs/research/qq-agent-plus-evidence/qq-mention-reference-fix-2026-10-05/README.md.
     - Earlier c2e6790 long-material samples inferred a preference and an unrecorded unresolved question. This targeted reference fix does not reaccept broader fidelity or original full Q02; see docs/research/qq-agent-plus-evidence/qq-group-discussion-2026-10-05/README.md.
 channel_short_replies:
