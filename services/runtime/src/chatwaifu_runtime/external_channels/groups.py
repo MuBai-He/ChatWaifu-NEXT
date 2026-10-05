@@ -130,6 +130,17 @@ class _Gate:
     users: int = 0
 
 
+@dataclass(slots=True)
+class _ImageReferenceContext:
+    route_id: UUID
+    route_revision: int
+    scene_id: str
+    settings_revision: int
+    image_input: ChannelInboundImageInput
+    expires_at: datetime
+    used_by: str | None = None
+
+
 class ChannelGroupService:
     def __init__(
         self,
@@ -166,6 +177,7 @@ class ChannelGroupService:
         self._blocked_connections: set[UUID] = set()
         self._blocked_groups: set[tuple[UUID, str]] = set()
         self._blocked_scenes: set[str] = set()
+        self._image_context: dict[tuple[UUID, str, str], _ImageReferenceContext] = {}
         self._started = False
         self._stopping = False
 
@@ -244,6 +256,7 @@ class ChannelGroupService:
         self._started = True
 
     async def stop(self) -> None:
+        self._image_context.clear()
         if not self._started and not self.active_count:
             self._stopping = True
             return
@@ -598,6 +611,32 @@ class ChannelGroupService:
         access_token: str,
         image_input: ChannelInboundImageInput | None = None,
     ) -> ChannelTurnReceipt:
+        receipt = await self._process_group(
+            descriptor, access_token=access_token, image_input=image_input
+        )
+        assert receipt is not None
+        return receipt
+
+    async def observe_group_image_reference(
+        self,
+        descriptor: ChannelGroupInboundDescriptor,
+        *,
+        access_token: str,
+        image_input: ChannelInboundImageInput,
+    ) -> None:
+        """Keep a short-lived descriptor only; no download, generation, learning or transcript."""
+        await self._process_group(
+            descriptor, access_token=access_token, image_input=image_input, observe_only=True
+        )
+
+    async def _process_group(
+        self,
+        descriptor: ChannelGroupInboundDescriptor,
+        *,
+        access_token: str,
+        image_input: ChannelInboundImageInput | None,
+        observe_only: bool = False,
+    ) -> ChannelTurnReceipt | None:
         if descriptor.image_fingerprint != (
             image_input.source_fingerprint if image_input is not None else None
         ):
@@ -637,6 +676,28 @@ class ChannelGroupService:
             self._check_admission(item)
             if route is None or not route.enabled or route.deleted_at is not None:
                 raise ChannelPolicyError("group route must be explicitly enabled")
+            now = self._clock()
+            for key, context in tuple(self._image_context.items()):
+                if context.expires_at <= now:
+                    self._image_context.pop(key, None)
+            context_key = (descriptor.connection_id, descriptor.group_id, descriptor.sender_key)
+            cached = self._image_context.get(context_key) if not observe_only else None
+            if (
+                image_input is None
+                and cached is not None
+                and (
+                    cached.route_id == route.route_id
+                    and cached.route_revision == route.revision
+                    and cached.scene_id == route.scene_id
+                    and cached.used_by in (None, descriptor.external_message_id)
+                )
+            ):
+                image_input = cached.image_input
+                descriptor = replace(descriptor, image_fingerprint=image_input.source_fingerprint)
+                item.message = descriptor
+            elif image_input is not None and not observe_only:
+                self._image_context.pop(context_key, None)
+                cached = None
             learning_revision: int | None = None
             if image_input is not None:
                 if self._sticker_library is None or route.character_id != "default":
@@ -647,6 +708,12 @@ class ChannelGroupService:
                 self._check_admission(item)
                 if not settings.learning_enabled:
                     raise ChannelPolicyError("Group image learning must be explicitly enabled")
+                if (
+                    cached is not None
+                    and image_input is cached.image_input
+                    and (settings.revision != cached.settings_revision)
+                ):
+                    raise ChannelPolicyError("Group image reference learning policy changed")
                 learning_revision = settings.revision
             item.route = route
             async with self._gate(self._gates, route.route_id):
@@ -660,6 +727,35 @@ class ChannelGroupService:
                 )
                 if member is None or not member.can_speak or fresh.scene_id in self._blocked_scenes:
                     raise ChannelPolicyError("group speaker is not granted")
+                if observe_only:
+                    link = await self._repository.get_link(member.link_id)
+                    self._check_admission(item)
+                    if (
+                        image_input is None
+                        or learning_revision is None
+                        or link is None
+                        or not link.enabled
+                        or link.provider_id != "qq_napcat"
+                        or link.participant_id != member.participant_id
+                        or link.sender_key != descriptor.sender_key
+                        or link.account_key != descriptor.account_key
+                        or fresh.account_key != descriptor.account_key
+                        or fresh.character_id != connection.configuration.character_id
+                    ):
+                        raise ChannelPolicyError("Group image reference speaker unavailable")
+                    if context_key not in self._image_context and len(self._image_context) >= 32:
+                        raise ChannelBusyError("Group image reference capacity reached")
+                    self._image_context[context_key] = _ImageReferenceContext(
+                        fresh.route_id,
+                        fresh.revision,
+                        fresh.scene_id,
+                        learning_revision,
+                        image_input,
+                        self._clock() + timedelta(seconds=60),
+                    )
+                    return None
+                if cached is not None and image_input is cached.image_input:
+                    cached.used_by = descriptor.external_message_id
                 duplicate = await self._repository.find_group_turn(
                     descriptor.connection_id, descriptor.group_id, descriptor.external_message_id
                 )
@@ -783,6 +879,9 @@ class ChannelGroupService:
     def fence_connection(
         self, connection_id: UUID, reason: str, group_id: str | None = None
     ) -> None:
+        for key in tuple(self._image_context):
+            if key[0] == connection_id and (group_id is None or key[1] == group_id):
+                self._image_context.pop(key, None)
         if self._sticker_library is not None:
             self._sticker_library.request_cancel_group(connection_id, group_id=group_id)
         if group_id is not None:
@@ -813,6 +912,9 @@ class ChannelGroupService:
                 self._revoke(item, reason)
 
     def _fence_old_route(self, route: ChannelGroupRouteRecord, prior: frozenset[UUID]) -> None:
+        for key, context in tuple(self._image_context.items()):
+            if context.route_id == route.route_id and context.route_revision != route.revision:
+                self._image_context.pop(key, None)
         for key, item in tuple(self._admissions.items()):
             if (
                 item.message.connection_id != route.connection_id
@@ -1080,7 +1182,9 @@ class ChannelGroupService:
                     generation_id=turn.generation_id,
                     group_target=target,
                 ),
-                images,
+                image_input.sticker_learning_images(images)
+                if image_input.sticker_learning_images is not None
+                else images,
                 wait_for_completion=wait_for_completion,
                 on_saved=image_input.on_sticker_saved,
             )

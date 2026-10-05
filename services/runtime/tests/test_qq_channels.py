@@ -945,7 +945,9 @@ async def test_admitted_image_failure_sends_one_durable_notice_without_model_req
             downloads.append(file_ref)
             if failure == "expired":
                 raise RuntimeError("private-filename-and-token")
-            return _picture("GIF")
+            output = io.BytesIO()
+            Image.new("RGB", (12, 8), "red").save(output, format="BMP")
+            return output.getvalue()
 
         monkeypatch.setattr(NapCatClient, "download_image", download)
         files = (

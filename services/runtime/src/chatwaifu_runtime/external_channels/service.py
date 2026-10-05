@@ -662,6 +662,12 @@ class ExternalChannelService:
                 original_images = raw_loaded if isinstance(raw_loaded, tuple) else (raw_loaded,)
                 try:
                     if library is not None and learn_stickers:
+                        learning_images = (
+                            image_input.sticker_learning_images(original_images)
+                            if image_input is not None
+                            and image_input.sticker_learning_images is not None
+                            else original_images
+                        )
                         await library.observe_batch(
                             StickerLearningSource(
                                 principal_scope=connection.configuration.principal_scope,
@@ -669,7 +675,7 @@ class ExternalChannelService:
                                 connection_id=turn.connection_id,
                                 generation_id=turn.generation_id,
                             ),
-                            original_images,
+                            learning_images,
                             wait_for_completion=wait_for_completion,
                             on_saved=image_input.on_sticker_saved
                             if image_input is not None

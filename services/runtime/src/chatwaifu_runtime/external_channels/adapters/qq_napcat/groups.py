@@ -40,6 +40,7 @@ class NapCatGroupInboundMessage:
     text: str = field(repr=False)
     received_at: datetime
     images: tuple[NapCatImageReference, ...] = field(default=(), repr=False)
+    bot_mentioned: bool = True
 
 
 @dataclass(frozen=True, slots=True)

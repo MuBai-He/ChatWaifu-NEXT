@@ -10,8 +10,10 @@ from __future__ import annotations
 import asyncio
 import base64
 import hashlib
+import io
 import json
 from collections.abc import Awaitable, Callable
+from datetime import timedelta
 from typing import cast
 from uuid import UUID
 
@@ -28,8 +30,11 @@ from chatwaifu_protocol.channels import (
 )
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.external_channels.adapters.qq_napcat.client import NapCatClient
+from chatwaifu_runtime.external_channels.group_models import ChannelGroupInboundDescriptor
+from chatwaifu_runtime.external_channels.models import ChannelInboundImageInput
 from chatwaifu_runtime.providers.contracts import LlmInputImage
 from chatwaifu_runtime.sticker_library.classifier import StickerClassification
+from PIL import Image
 from test_qq_channels import _image_event, _ingest, _pair, _picture, _runtime, _segments, _terminal
 from test_qq_group_runtime import GROUP, OTHER_GROUP, _group_event, _notice, _Runtime
 from test_qq_group_runtime import runtime as runtime
@@ -39,6 +44,167 @@ def _classification() -> StickerClassification:
     return StickerClassification(
         suitable=True, confidence=0.99, label="开心猫", description="开心猫表情", expression="happy"
     )
+
+
+@pytest.mark.asyncio
+async def test_private_animated_gif_reaches_model_without_learning(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async with _runtime(runtime_settings, monkeypatch) as harness:
+        container = harness.container
+        connection_id = await _pair(harness)
+        await container.sticker_repository.update_settings(
+            "local", "default", learning_enabled=True, expected_revision=0
+        )
+        output = io.BytesIO()
+        Image.new("RGB", (44, 44), "red").save(
+            output,
+            format="GIF",
+            save_all=True,
+            append_images=[Image.new("RGB", (44, 44), "blue")],
+            duration=100,
+        )
+
+        async def download(_client: NapCatClient, _ref: str, *, max_bytes: int) -> bytes:
+            return output.getvalue()
+
+        async def classify(*_args: object, **_kwargs: object) -> None:
+            raise AssertionError("Animated source must never reach the sticker classifier")
+
+        monkeypatch.setattr(NapCatClient, "download_image", download)
+        monkeypatch.setattr(container.sticker_library._classifier, "classify", classify)
+        await harness.peer.peers[-1].send(json.dumps(_image_event("看看表情", 1801)))
+        request = await asyncio.wait_for(harness.model.received.get(), 5)
+        assert len(request.images) == 1 and request.images[0].data.startswith(b"\x89PNG")
+        await asyncio.wait_for(harness.peer.sends.get(), 5)
+        turn = await container.external_channel_repository.find_turn_by_external_message(
+            connection_id, "1801"
+        )
+        assert turn is not None
+        assert (
+            await _terminal(harness, connection_id, turn.channel_turn_id)
+        ).status is ChannelTurnStatus.COMPLETED
+        assert not container.sticker_library._tasks
+        assert not (await container.sticker_repository.snapshot("local", "default")).items
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "case", ["same_sender", "other_sender", "expired", "fenced", "policy_changed", "rapid"]
+)
+async def test_group_separate_image_reference_is_lazy_scoped_bounded_and_fenced(
+    runtime: _Runtime,
+    monkeypatch: pytest.MonkeyPatch,
+    case: str,
+) -> None:
+    from test_qq_group_runtime import ALICE, BOB
+
+    harness = runtime
+    container = harness.container
+    route = await harness.route()
+    await harness.request(
+        "PUT",
+        "/v1/sticker-library/settings" + _scope_query(route),
+        {"learning_enabled": True, "expected_revision": 0},
+        status=200,
+    )
+    image = _picture()
+    calls: list[str] = []
+
+    async def download(_client: NapCatClient, ref: str, *, max_bytes: int) -> bytes:
+        calls.append(ref)
+        return image
+
+    async def classify(*_args: object, **_kwargs: object) -> None:
+        return None
+
+    monkeypatch.setattr(NapCatClient, "download_image", download)
+    monkeypatch.setattr(container.sticker_library._classifier, "classify", classify)
+    event = _group_image(1802, image)
+    event["message"] = [
+        segment for segment in cast(list[JsonObject], event["message"]) if segment["type"] != "at"
+    ]
+    entered, release = asyncio.Event(), asyncio.Event()
+    if case == "rapid":
+        observe = container.channel_groups.observe_group_image_reference
+
+        async def held_observe(
+            descriptor: ChannelGroupInboundDescriptor,
+            *,
+            access_token: str,
+            image_input: ChannelInboundImageInput,
+        ) -> None:
+            entered.set()
+            await release.wait()
+            await observe(descriptor, access_token=access_token, image_input=image_input)
+
+        monkeypatch.setattr(container.channel_groups, "observe_group_image_reference", held_observe)
+        await harness.send(event, join_admission=False)
+        await asyncio.wait_for(entered.wait(), 5)
+    else:
+        await harness.send(event)
+    assert not calls and not harness.model.requests
+    assert (
+        await container.channel_group_repository.find_group_turn(
+            harness.connection_id, GROUP, "1802"
+        )
+        is None
+    )
+    assert len(container.channel_groups._image_context) == (0 if case == "rapid" else 1)
+    if case == "expired":
+        clock = container.channel_groups._clock
+        monkeypatch.setattr(
+            container.channel_groups, "_clock", lambda: clock() + timedelta(seconds=61)
+        )
+    elif case == "fenced":
+        # A real route-update fence synchronously removes cached references.
+        container.channel_groups.fence_connection(
+            harness.connection_id, "test", group_id=OTHER_GROUP
+        )
+        assert (
+            container.channel_groups._image_context
+        )  # Another group cannot delete this group's reference.
+        container.channel_groups.fence_connection(harness.connection_id, "test", group_id=GROUP)
+        assert not container.channel_groups._image_context
+        return
+    elif case == "policy_changed":
+        await harness.request(
+            "PUT",
+            "/v1/sticker-library/settings" + _scope_query(route),
+            {"learning_enabled": False, "expected_revision": 1},
+            status=200,
+        )
+        await harness.request(
+            "PUT",
+            "/v1/sticker-library/settings" + _scope_query(route),
+            {"learning_enabled": True, "expected_revision": 2},
+            status=200,
+        )
+    mention = _group_event(1803, "看看刚才的图片", sender=BOB if case == "other_sender" else ALICE)
+    if case == "rapid":
+        await harness.send(mention, join_admission=False)
+        assert not harness.model.requests
+        release.set()
+        await asyncio.wait_for(
+            asyncio.gather(*tuple(container.qq_channels._group_ingress_tasks)), 5
+        )
+    else:
+        await harness.send(mention)
+    if case == "policy_changed":
+        assert not calls and not harness.model.requests
+        return
+    request = await asyncio.wait_for(harness.model.started.get(), 5)
+    assert len(request.images) == (1 if case in {"same_sender", "rapid"} else 0)
+    assert len(calls) == (1 if case in {"same_sender", "rapid"} else 0)
+    await harness.terminal(route, 1803)
+    if case == "same_sender":
+        await harness.send(mention)
+        await harness.send(_group_event(1804, "另一个话题"))
+        followup = await asyncio.wait_for(harness.model.started.get(), 5)
+        assert (
+            not followup.images and len(calls) == 1
+        )  # Neither duplicate nor next turn re-downloads.
 
 
 def _scope_query(route: ChannelGroupRouteSnapshot) -> str:

@@ -44,6 +44,7 @@ def normalize_group_inbound(
     account: str,
     group_id: str,
     allowed_senders: frozenset[str] | None,
+    allow_unmentioned_images: bool = False,
 ) -> NapCatGroupInboundMessage | None:
     """Normalize a structured mention, including its optional reply envelope.
 
@@ -140,7 +141,11 @@ def normalize_group_inbound(
     text = "".join(texts).strip()
     if not text and images:
         text = "[图片]"
-    if mentions != 1 or not text or len(text) > 20_000:
+    if (
+        (mentions != 1 and not (allow_unmentioned_images and mentions == 0 and images))
+        or not text
+        or len(text) > 20_000
+    ):
         return None
     return NapCatGroupInboundMessage(
         connection_id,
@@ -151,6 +156,7 @@ def normalize_group_inbound(
         text,
         datetime.now(UTC),
         tuple(images),
+        mentions == 1,
     )
 
 

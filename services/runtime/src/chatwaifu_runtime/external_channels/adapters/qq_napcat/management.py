@@ -115,6 +115,7 @@ class NapCatManagement:
         self._journal_cursor: UUID | None = None
         self._journal_task: asyncio.Task[None] | None = None
         self._group_ingress_tasks: dict[asyncio.Task[None], UUID] = {}
+        self._group_ingress_order: dict[tuple[UUID, str], asyncio.Task[None]] = {}
         self._group_notice_pending: set[UUID] = set()
         self._group_stop_reasons: dict[UUID, ChannelGroupPauseReason] = {}
         if groups is not None:
@@ -186,6 +187,7 @@ class NapCatManagement:
             account=account,
             group_id=group_id,
             allowed_senders=None,
+            allow_unmentioned_images=True,
         )
         if message is None:
             return
@@ -213,23 +215,45 @@ class NapCatManagement:
             message.received_at,
             incoming_image.source_fingerprint if incoming_image is not None else None,
         )
-        task = asyncio.create_task(
-            self._ingest_group(descriptor, access_token, incoming_image), name="qq-group-admission"
-        )
+        key = (connection_id, group_id)
+        predecessor = self._group_ingress_order.get(key)
+
+        async def ordered_admission() -> None:
+            if predecessor is not None:
+                await asyncio.shield(predecessor)
+            await self._ingest_group(
+                descriptor, access_token, incoming_image, mentioned=message.bot_mentioned
+            )
+
+        task = asyncio.create_task(ordered_admission(), name="qq-group-admission")
+        self._group_ingress_order[key] = task
         self._group_ingress_tasks[task] = connection_id
-        task.add_done_callback(lambda finished: self._group_ingress_tasks.pop(finished, None))
+
+        def finished_admission(finished: asyncio.Task[None]) -> None:
+            self._group_ingress_tasks.pop(finished, None)
+            if self._group_ingress_order.get(key) is finished:
+                self._group_ingress_order.pop(key, None)
+
+        task.add_done_callback(finished_admission)
 
     async def _ingest_group(
         self,
         descriptor: ChannelGroupInboundDescriptor,
         access_token: str,
         incoming_image: ChannelInboundImageInput | None = None,
+        *,
+        mentioned: bool = True,
     ) -> None:
         assert self._groups is not None
         try:
-            await self._groups.ingest_group(
-                descriptor, access_token=access_token, image_input=incoming_image
-            )
+            if mentioned:
+                await self._groups.ingest_group(
+                    descriptor, access_token=access_token, image_input=incoming_image
+                )
+            elif incoming_image is not None:
+                await self._groups.observe_group_image_reference(
+                    descriptor, access_token=access_token, image_input=incoming_image
+                )
         except asyncio.CancelledError:
             raise
         except ExternalChannelError as error:

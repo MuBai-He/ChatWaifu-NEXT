@@ -40,6 +40,34 @@ class Transport:
         return result
 
 
+@pytest.mark.parametrize("animated", [False, True])
+async def test_gif_labeled_png_has_bounded_preview_and_animation_is_not_learnable(
+    animated: bool,
+) -> None:
+    frames = [Image.new("RGB", (44, 44), color) for color in ("red", "green")]
+    output = io.BytesIO()
+    frames[0].save(
+        output,
+        format="GIF",
+        save_all=animated,
+        append_images=frames[1:] if animated else [],
+        duration=100,
+        loop=0,
+    )
+    data = output.getvalue()
+    attachment = image_input(
+        Transport({"fake.png": data}), (NapCatImageReference("fake.png", len(data)),)
+    )
+    loaded = await attachment.load()
+    assert isinstance(loaded, tuple) and len(loaded) == 1
+    assert loaded[0].mime_type == "image/png" and loaded[0].data.startswith(b"\x89PNG")
+    with Image.open(io.BytesIO(loaded[0].data)) as preview:
+        assert preview.size == (44, 44) and preview.convert("RGB").getpixel((1, 1)) == (255, 0, 0)
+        assert getattr(preview, "n_frames", 1) == 1
+    assert attachment.sticker_learning_images is not None
+    assert attachment.sticker_learning_images(loaded) == (() if animated else loaded)
+
+
 async def test_image_input_is_lazy_ordered_and_fingerprint_tracks_private_descriptors() -> None:
     first, second = picture("PNG"), picture("JPEG")
     transport = Transport({"one.png": first, "two.jpg": second})
@@ -86,7 +114,6 @@ async def test_invalid_whole_batch_performs_no_download(
 @pytest.mark.parametrize(
     "second",
     [
-        picture("GIF"),
         b"not-an-image",
         b"\x89PNG\r\n\x1a\ninvalid",
         RuntimeError("private-image-url-and-token"),

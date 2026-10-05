@@ -1,6 +1,6 @@
 # ADR 0074: Scoped QQ sticker learning and native expressions
 
-Status: Accepted design; implementation and phone acceptance in progress
+Status: Accepted; deployed implementation, handset learning/reuse acceptance pending
 
 ## Decision
 
@@ -22,6 +22,24 @@ granted speaker in the same SQLite transaction. Transport/membership/scene fence
 cancel in-flight learners. Revalidation with the same scene preserves its assets;
 a changed scene cannot read its predecessor's library. Photos, screenshots,
 uncertain classifications and animated/market media are not retained.
+
+QQ can label GIF bytes as `.png`. Inspect the bytes and offer a bounded first-frame
+PNG preview for the current conversation. Only a single-frame GIF is eligible for
+static learning; animated previews are excluded before classification or saving.
+This does not preserve animation or prove understanding of later frames.
+
+Mobile QQ often sends an image and a mention as separate envelopes. With scoped
+learning enabled, an authenticated, granted member's image-only envelope may keep
+only its bounded descriptors for 60 seconds. There are at most 32 references, one
+per connection/group/sender. No bytes, model request, transcript, memory or sticker
+save is produced until that same member mentions the bot in the same current
+route/scene/settings revision. Only the first such turn consumes the reference;
+its duplicate uses the same descriptor while available. Later turns do not inherit
+it. Account, membership, route and lifecycle fences clear references; expired or
+restart-lost descriptors are never recovered from provider history. Group ingress
+admission is ordered within each connection/group, independently of generation,
+so a quick mention cannot overtake its preceding image observation. This adds
+recent image context, not collection of unmentioned group text or an archive.
 
 A group response may append at most one optional learned image after the required
 canonical text bubbles. Persistence verifies the asset belongs to that scene;
@@ -70,5 +88,5 @@ results and send-journal continuity. Real Gemini classification, native favorite
 readback and handset learning/reuse/native expression display are separate gates.
 This slice does not close Q02's full character/presentation A/B acceptance.
 Group images with opaque account-global references, mismatched checksums, failed
-reads or unsupported animation are not retained. Read failures remain failed
+reads or animated content are not retained. Read failures remain failed
 turns under the existing group policy, without a generated-answer success claim.

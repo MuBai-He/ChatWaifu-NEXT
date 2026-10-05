@@ -58,6 +58,9 @@ class ChannelInboundImageInput:
         repr=False, compare=False
     )
     on_sticker_saved: StickerSavedObserver | None = field(default=None, repr=False, compare=False)
+    sticker_learning_images: (
+        Callable[[tuple[LlmInputImage, ...]], tuple[LlmInputImage, ...]] | None
+    ) = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         raw_fp = cast(object, self.source_fingerprint)

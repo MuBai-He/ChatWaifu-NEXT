@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import io
 import json
 from typing import Literal, Protocol
+
+from PIL import Image
 
 from chatwaifu_runtime.external_channels.adapters.weixin_ilink.image import (
     MAX_IMAGE_BYTES,
@@ -48,8 +51,15 @@ def image_input(
     fingerprint = hashlib.sha256(
         json.dumps(references, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
+    eligible: tuple[bool, ...] = ()
+
+    def learning_images(loaded: tuple[LlmInputImage, ...]) -> tuple[LlmInputImage, ...]:
+        if len(loaded) != len(eligible):
+            raise ValueError("QQ image learning projection is unavailable")
+        return tuple(image for image, allowed in zip(loaded, eligible, strict=True) if allowed)
 
     async def load() -> tuple[LlmInputImage, ...]:
+        nonlocal eligible
         try:
             if not 1 <= len(images) <= MAX_INBOUND_IMAGES_PER_MESSAGE:
                 raise NapCatError("QQ image count exceeds the supported limit")
@@ -62,6 +72,7 @@ def image_input(
                     raise NapCatError("QQ image descriptor is invalid or oversized")
             async with asyncio.timeout(IMAGE_BATCH_TIMEOUT_SECONDS):
                 loaded: list[LlmInputImage] = []
+                flags: list[bool] = []
                 total_bytes = 0
                 for image in images:
                     data = await transport.download_image(image.file_ref, max_bytes=MAX_IMAGE_BYTES)
@@ -69,6 +80,7 @@ def image_input(
                         hashlib.md5(data, usedforsecurity=False).hexdigest() != image.expected_md5
                     ):
                         raise NapCatError("QQ group image checksum does not match its source")
+                    data, may_learn = _static_preview(data)
                     detected = sniff_image_mime_type(data)
                     mime_type: Literal["image/png", "image/jpeg"] = (
                         "image/png" if detected == "image/png" else "image/jpeg"
@@ -78,6 +90,8 @@ def image_input(
                     if total_bytes > MAX_TOTAL_IMAGE_BYTES:
                         raise NapCatError("QQ image batch exceeds the supported limit")
                     loaded.append(strip_image_exif(LlmInputImage(data=data, mime_type=mime_type)))
+                    flags.append(may_learn)
+                eligible = tuple(flags)
                 return tuple(loaded)
         except asyncio.CancelledError:
             raise
@@ -86,5 +100,37 @@ def image_input(
             raise NapCatError("QQ image is unavailable; please send it again") from None
 
     return ChannelInboundImageInput(
-        source_fingerprint=fingerprint, load=load, on_sticker_saved=on_sticker_saved
+        source_fingerprint=fingerprint,
+        load=load,
+        on_sticker_saved=on_sticker_saved,
+        sticker_learning_images=learning_images,
     )
+
+
+def _static_preview(data: bytes) -> tuple[bytes, bool]:
+    """QQ may label GIF bytes as .png. Preview one bounded frame, never retain animation."""
+    if not data.startswith((b"GIF87a", b"GIF89a")):
+        return data, True
+    with Image.open(io.BytesIO(data)) as source:
+        if (
+            source.format != "GIF"
+            or source.width > 8192
+            or source.height > 8192
+            or source.width * source.height > 16_777_216
+        ):
+            raise NapCatError("QQ GIF dimensions exceed their limit")
+        first = source.convert("RGBA")
+        try:
+            source.seek(1)  # Bound inspection to two frames; do not enumerate an entire GIF.
+        except EOFError:
+            may_learn = True
+        else:
+            may_learn = False
+        clean = Image.new("RGBA", first.size)
+        clean.paste(first)
+        output = io.BytesIO()
+        clean.save(output, format="PNG")
+        preview = output.getvalue()
+        if len(preview) > MAX_IMAGE_BYTES:
+            raise NapCatError("QQ GIF preview exceeds its byte limit")
+        return preview, may_learn
