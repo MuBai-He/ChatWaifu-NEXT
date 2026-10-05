@@ -53,17 +53,19 @@ export async function startChannelAuthorization(
   providerId: string,
   characterId: string,
   signal?: AbortSignal,
+  options: ChannelRequestOptions = {},
 ): Promise<ChannelAuthorizationSnapshot> {
   return requestRuntime(
     "/v1/channel-auth-sessions",
     channelAuthorizationSnapshotParser,
     {
       method: "POST",
+      ...options,
       body: JSON.stringify({
         provider_id: providerId,
         character_id: characterId,
       }),
-      signal,
+      signal: signal ?? options.signal,
     },
   );
 }
@@ -72,12 +74,17 @@ export async function getChannelAuthorization(
   authSessionId: string,
   waitSeconds = 20,
   signal?: AbortSignal,
+  options: ChannelRequestOptions = {},
 ): Promise<ChannelAuthorizationSnapshot> {
   const boundedWait = Math.max(0, Math.min(30, Math.floor(waitSeconds)));
   return requestRuntime(
     `/v1/channel-auth-sessions/${encodeURIComponent(authSessionId)}?wait_seconds=${boundedWait}`,
     channelAuthorizationSnapshotParser,
-    { signal, timeoutMs: (boundedWait + 8) * 1_000 },
+    {
+      ...options,
+      signal: signal ?? options.signal,
+      timeoutMs: (boundedWait + 8) * 1_000,
+    },
   );
 }
 
@@ -85,25 +92,28 @@ export async function submitChannelAuthorizationVerification(
   authSessionId: string,
   verificationCode: string,
   signal?: AbortSignal,
+  options: ChannelRequestOptions = {},
 ): Promise<ChannelAuthorizationSnapshot> {
   return requestRuntime(
     `/v1/channel-auth-sessions/${encodeURIComponent(authSessionId)}/verification`,
     channelAuthorizationSnapshotParser,
     {
       method: "POST",
+      ...options,
       body: JSON.stringify({ verification_code: verificationCode }),
-      signal,
+      signal: signal ?? options.signal,
     },
   );
 }
 
 export async function cancelChannelAuthorization(
   authSessionId: string,
+  options: ChannelRequestOptions = {},
 ): Promise<void> {
   await requestRuntime(
     `/v1/channel-auth-sessions/${encodeURIComponent(authSessionId)}`,
     mutationReceiptSchema,
-    { method: "DELETE" },
+    { method: "DELETE", ...options },
   );
 }
 

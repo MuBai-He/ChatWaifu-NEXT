@@ -273,6 +273,9 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
                 <ProductIcon name="close" />
               </button>
             </header>
+            <a className="vn-settings-link" href="/settings/channels">
+              消息渠道与权限设置
+            </a>
             <label>
               <span>角色构图</span>
               <select

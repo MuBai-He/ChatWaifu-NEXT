@@ -10,6 +10,7 @@ from collections.abc import AsyncIterator
 
 import pytest
 from chatwaifu_protocol.channel_groups import ChannelGroupPauseReason, ChannelGroupRouteSnapshot
+from chatwaifu_protocol.channel_settings import ChannelRuntimePolicy, ChannelRuntimeSettingsUpdate
 from chatwaifu_protocol.channels import (
     ChannelDeliveryPartKind,
     ChannelDeliveryStatus,
@@ -125,9 +126,16 @@ def test_only_a_current_direct_request_opens_group_voice(text: str, expected: bo
 
 
 @pytest.mark.parametrize("sender", [ALICE, BOB])
+@pytest.mark.parametrize("private_voice_enabled", [False, True])
 async def test_opted_in_member_voice_then_text_and_other_group_stays_text(
-    runtime: _Runtime, monkeypatch: pytest.MonkeyPatch, sender: str
+    runtime: _Runtime, monkeypatch: pytest.MonkeyPatch, sender: str, private_voice_enabled: bool
 ) -> None:
+    await runtime.container.channel_settings.update(
+        ChannelRuntimeSettingsUpdate(
+            expected_revision=0,
+            policy=ChannelRuntimePolicy(qq_owner_voice_reply_enabled=private_voice_enabled),
+        )
+    )
     model = _model(runtime, monkeypatch)
     route = await _voice_route(runtime)
     other = await runtime.route(OTHER_GROUP)

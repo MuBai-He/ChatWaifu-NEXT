@@ -13,7 +13,10 @@ import {
 } from "@chatwaifu/protocol";
 
 import { requestRuntime, runtimeParser } from "./http";
-import { resolveRuntimeConnection } from "../runtimeEndpoint";
+import {
+  assertRuntimeRequestContext,
+  readRuntimeRequestContext,
+} from "../runtimeEndpoint";
 
 export type {
   StickerUsageHistory,
@@ -48,10 +51,11 @@ export async function getStickerLibrary(
   groupScope?: StickerGroupScope,
 ): Promise<StickerLibrarySnapshot> {
   const query = libraryQuery(characterId, groupScope);
+  const expectedContext = await readRuntimeRequestContext();
   return requestRuntime(
     `/v1/sticker-library?${query.toString()}`,
     stickerLibrarySnapshotParser,
-    { signal },
+    { signal, expectedContext },
   );
 }
 
@@ -62,6 +66,7 @@ export async function updateStickerLibrarySettings(
   groupScope?: StickerGroupScope,
 ): Promise<StickerLibrarySettings> {
   const query = libraryQuery(characterId, groupScope);
+  const expectedContext = await readRuntimeRequestContext();
   return requestRuntime(
     `/v1/sticker-library/settings?${query.toString()}`,
     stickerLibrarySettingsParser,
@@ -69,6 +74,7 @@ export async function updateStickerLibrarySettings(
       method: "PUT",
       body: JSON.stringify(update),
       signal,
+      expectedContext,
     },
   );
 }
@@ -80,12 +86,14 @@ export async function deleteLearnedSticker(
   groupScope?: StickerGroupScope,
 ): Promise<StickerLibraryDeleteResult> {
   const query = libraryQuery(characterId, groupScope);
+  const expectedContext = await readRuntimeRequestContext();
   return requestRuntime(
     `/v1/sticker-library/${encodeURIComponent(stickerId)}?${query.toString()}`,
     stickerLibraryDeleteResultParser,
     {
       method: "DELETE",
       signal,
+      expectedContext,
     },
   );
 }
@@ -118,7 +126,8 @@ export async function fetchStickerImageUrl(
     throw callerSignal.reason ?? new DOMException("Aborted", "AbortError");
   }
 
-  const connection = await resolveRuntimeConnection();
+  const expectedContext = await readRuntimeRequestContext();
+  const connection = expectedContext.connection;
 
   // callerSignal can abort during awaited resolveRuntimeConnection; recheck immediately
   if (callerSignal?.aborted) {
@@ -149,6 +158,7 @@ export async function fetchStickerImageUrl(
   }
 
   try {
+    assertRuntimeRequestContext(expectedContext);
     const response = await fetch(url, {
       method: "GET",
       headers,
@@ -156,6 +166,7 @@ export async function fetchStickerImageUrl(
       signal: controller.signal,
     });
 
+    assertRuntimeRequestContext(expectedContext);
     if (!response.ok) {
       throw new Error(`获取表情图片失败 (${response.status})`);
     }
@@ -198,6 +209,7 @@ export async function fetchStickerImageUrl(
       throw new Error("表情图片体积超出上限（最大支持 5MB）");
     }
 
+    assertRuntimeRequestContext(expectedContext);
     return URL.createObjectURL(blob);
   } catch (error: unknown) {
     if (timedOut) {
@@ -218,9 +230,10 @@ export async function getStickerUsage(
   groupScope?: StickerGroupScope,
 ): Promise<StickerUsageHistory> {
   const query = libraryQuery(characterId, groupScope);
+  const expectedContext = await readRuntimeRequestContext();
   return requestRuntime(
     `/v1/sticker-library/usage?${query.toString()}`,
     runtimeParser(parseStickerUsageHistory),
-    { signal },
+    { signal, expectedContext },
   );
 }

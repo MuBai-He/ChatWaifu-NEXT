@@ -19,6 +19,7 @@ from uuid import UUID
 import pytest
 from chatwaifu_protocol.base import JsonObject, JsonValue
 from chatwaifu_protocol.channel_groups import ChannelGroupPauseReason, ChannelGroupRouteSnapshot
+from chatwaifu_protocol.channel_settings import ChannelRuntimePolicy, ChannelRuntimeSettingsUpdate
 from chatwaifu_protocol.channels import (
     ChannelConnectionSnapshot,
     ChannelDeliveryPartStatus,
@@ -26,14 +27,17 @@ from chatwaifu_protocol.channels import (
     ChannelPresentationProfile,
     ChannelTurnStatus,
 )
+from chatwaifu_protocol.sticker_library import StickerLibrarySettings
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.external_channels.adapters.qq_napcat.client import NapCatClient
+from chatwaifu_runtime.external_channels.adapters.qq_napcat.favorites import NapCatStickerFavorites
 from chatwaifu_runtime.external_channels.adapters.qq_napcat.management import credential_reference
 from chatwaifu_runtime.external_channels.group_models import ChannelGroupInboundDescriptor
 from chatwaifu_runtime.external_channels.models import ChannelInboundImageInput
 from chatwaifu_runtime.external_channels.service import ChannelConflictError
 from chatwaifu_runtime.providers.contracts import LlmInputImage
 from chatwaifu_runtime.sticker_library.classifier import StickerClassification
+from chatwaifu_runtime.sticker_library.models import StickerLearningSource, StickerSaveCandidate
 from PIL import Image
 from test_qq_channels import (
     _event,
@@ -523,6 +527,108 @@ async def _enable_stickers(harness: _Runtime) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("revocation_point", ["settings_read", "before_upload"])
+async def test_native_favorite_revocation_during_reads_keeps_saved_sticker_but_blocks_upload(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch, revocation_point: str
+) -> None:
+    async with _runtime(runtime_settings, monkeypatch) as harness:
+        container = harness.container
+        cid = await _pair(harness)
+        current = await container.external_channels.get_connection(cid)
+        await container.external_channels.update_connection(
+            current.configuration.model_copy(
+                update={
+                    "presentation_policy": ChannelPresentationPolicy(
+                        profile=ChannelPresentationProfile.INSTANT_MESSAGE,
+                        stickers_enabled=True,
+                    )
+                }
+            ),
+            expected_revision=current.revision,
+            rotate_access_token=False,
+        )
+        await container.sticker_repository.update_settings(
+            "local", "default", learning_enabled=True, expected_revision=0
+        )
+        receipt = await _ingest(harness, cid, "准备保存已审核表情", 509)
+        await asyncio.wait_for(harness.peer.sends.get(), 5)
+        completed = await _terminal(harness, cid, receipt.channel_turn_id)
+        data = _picture()
+        saved = await container.sticker_repository.save(
+            "local",
+            "default",
+            StickerSaveCandidate(
+                data=data,
+                label="开心猫",
+                description="开心猫表情",
+                expression="happy",
+                source_connection_id=cid,
+                generation_id=completed.generation_id,
+            ),
+            expected_revision=1,
+        )
+        assert saved is not None
+        assert current.configuration.account_key is not None
+        client = NapCatClient("ws://127.0.0.1:1", "test-token-not-used")
+        client.bind_account(current.configuration.account_key)
+        source = StickerLearningSource(
+            "local", "default", cid, completed.generation_id, settings_revision=1
+        )
+        favorites = NapCatStickerFavorites(
+            container.external_channel_repository,
+            container.sticker_library,
+            client,
+            cid,
+            journal_lock=asyncio.Lock(),
+            enabled=lambda: container.channel_settings.get().policy.qq_native_favorites_enabled,
+        )
+        assert await favorites._allowed(source, saved)
+        entered, release = asyncio.Event(), asyncio.Event()
+        uploads: list[bytes] = []
+        if revocation_point == "settings_read":
+            original = container.sticker_repository.get_settings
+
+            async def settings(scope: str, character: str) -> StickerLibrarySettings:
+                result = await original(scope, character)
+                entered.set()
+                await release.wait()
+                return result
+
+            monkeypatch.setattr(container.sticker_repository, "get_settings", settings)
+
+        async def hashes(_client: NapCatClient) -> frozenset[str]:
+            if revocation_point == "before_upload":
+                entered.set()
+                await release.wait()
+            return frozenset()
+
+        async def add(
+            _client: NapCatClient,
+            image: bytes,
+            *,
+            before_add: Callable[[], Awaitable[bool]],
+            checkpoint: Callable[[], Awaitable[None]],
+        ) -> bool:
+            uploads.append(image)
+            return True
+
+        monkeypatch.setattr(NapCatClient, "favorite_hashes", hashes)
+        monkeypatch.setattr(NapCatClient, "add_sticker_favorite", add)
+        task = asyncio.create_task(favorites.observe_saved(source, saved))
+        await asyncio.wait_for(entered.wait(), 5)
+        await container.channel_settings.update(
+            ChannelRuntimeSettingsUpdate(
+                expected_revision=0,
+                policy=ChannelRuntimePolicy(qq_native_favorites_enabled=False),
+            )
+        )
+        release.set()
+        await asyncio.wait_for(task, 5)
+        assert not uploads
+        assert (await container.sticker_repository.snapshot("local", "default")).items == [saved]
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("accept", [False, True])
 async def test_private_qq_learning_is_opt_in_and_keeps_photos_off(
     runtime_settings: Settings,
@@ -593,13 +699,21 @@ async def test_private_qq_learning_is_opt_in_and_keeps_photos_off(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("native_confirmed", [False, True])
+@pytest.mark.parametrize("native_enabled", [False, True])
 async def test_group_sticker_learns_in_its_scene_but_replies_remain_text_only(
     runtime: _Runtime,
     monkeypatch: pytest.MonkeyPatch,
     native_confirmed: bool,
+    native_enabled: bool,
 ) -> None:
     harness = runtime
     container = harness.container
+    await container.channel_settings.update(
+        ChannelRuntimeSettingsUpdate(
+            expected_revision=0,
+            policy=ChannelRuntimePolicy(qq_native_favorites_enabled=native_enabled),
+        )
+    )
     await _enable_stickers(harness)
     route = await harness.route()
     other = await harness.route(OTHER_GROUP)
@@ -680,7 +794,7 @@ async def test_group_sticker_learns_in_its_scene_but_replies_remain_text_only(
     assert (await harness.terminal(route, 1203)).turn.status is ChannelTurnStatus.COMPLETED
     tasks = [task for _, task in container.sticker_library._tasks.values()]
     await asyncio.wait_for(asyncio.gather(*tasks), 5)
-    assert len(favorite_calls) == 1
+    assert len(favorite_calls) == int(native_enabled)
     assert len((await harness.request("GET", "/v1/sticker-library" + query)).json()["items"]) == 1
 
     # Use an explicit celebration with the normal response planner, not a forced image payload.
@@ -702,9 +816,11 @@ async def test_group_sticker_learns_in_its_scene_but_replies_remain_text_only(
     assert not usage
     cursor = await container.external_channel_repository.get_adapter_cursor(harness.connection_id)
     assert cursor is not None
-    assert json.loads(cursor)["qq-favorite:" + saved[0]["sha256"]] == (
-        "confirmed" if native_confirmed else "unknown"
-    )
+    favorite_key = "qq-favorite:" + saved[0]["sha256"]
+    if native_enabled:
+        assert json.loads(cursor)[favorite_key] == ("confirmed" if native_confirmed else "unknown")
+    else:
+        assert favorite_key not in json.loads(cursor)
     deleted = (
         await harness.request("DELETE", "/v1/sticker-library/" + saved[0]["sticker_id"] + query)
     ).json()

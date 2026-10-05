@@ -1,5 +1,6 @@
 import {
   cleanup,
+  act,
   fireEvent,
   render,
   screen,
@@ -12,8 +13,9 @@ import type {
   ChannelAuthorizationSnapshot,
   ChannelConnectionSnapshot,
 } from "../chat/runtimeClient";
-import type { DesktopSettingsContext } from "./DesktopSettingsContext";
+import type { DesktopSettingsContext } from "../desktop-settings/DesktopSettingsContext";
 import { ChannelsSettingsSection } from "./ChannelsSettingsSection";
+import { setRemoteRuntimeConnection } from "../chat/runtimeEndpoint";
 
 vi.mock("qrcode.react", () => ({
   QRCodeSVG: ({ value }: { value: string }) => (
@@ -80,7 +82,20 @@ describe("ChannelsSettingsSection", () => {
 
   afterEach(() => {
     cleanup();
+    setRemoteRuntimeConnection(null);
     vi.clearAllMocks();
+  });
+
+  it("shows the selected Runtime address without credentials", async () => {
+    setRemoteRuntimeConnection({
+      baseUrl: "https://example.test/runtime?secret=hidden#private",
+      token: "operator-secret",
+    });
+    render(<ChannelsSettingsSection context={context()} />);
+    expect(
+      await screen.findByText("https://example.test/runtime"),
+    ).toBeTruthy();
+    expect(screen.queryByText(/operator-secret|hidden|private/)).toBeNull();
   });
 
   it("starts native Weixin QR authorization without manual identity or secret fields", async () => {
@@ -104,6 +119,10 @@ describe("ChannelsSettingsSection", () => {
       expect(runtimeClient.startChannelAuthorization).toHaveBeenCalledWith(
         "weixin_ilink",
         "default",
+        expect.any(AbortSignal) as unknown,
+        expect.objectContaining({
+          expectedContext: expect.any(Object) as unknown,
+        }),
       ),
     );
     expect(
@@ -142,7 +161,14 @@ describe("ChannelsSettingsSection", () => {
     await waitFor(() =>
       expect(
         runtimeClient.submitChannelAuthorizationVerification,
-      ).toHaveBeenCalledWith("00000000-0000-4000-8000-000000000201", "123456"),
+      ).toHaveBeenCalledWith(
+        "00000000-0000-4000-8000-000000000201",
+        "123456",
+        expect.any(AbortSignal) as unknown,
+        expect.objectContaining({
+          expectedContext: expect.any(Object) as unknown,
+        }),
+      ),
     );
     await waitFor(() =>
       expect(screen.queryByLabelText("手机验证码")).toBeNull(),
@@ -179,10 +205,20 @@ describe("ChannelsSettingsSection", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "扫码绑定微信" }),
     );
+    vi.mocked(runtimeClient.getChannelAuthorization).mockImplementation(
+      (_id, wait, signal) =>
+        wait === 0
+          ? Promise.resolve(authorization("cancelled"))
+          : cancellableWait(signal),
+    );
     fireEvent.click(await screen.findByRole("button", { name: "取消绑定" }));
     await waitFor(() =>
       expect(runtimeClient.cancelChannelAuthorization).toHaveBeenCalledWith(
         "00000000-0000-4000-8000-000000000201",
+        expect.objectContaining({
+          signal: expect.any(AbortSignal) as unknown,
+          expectedContext: expect.any(Object) as unknown,
+        }),
       ),
     );
     expect(
@@ -195,9 +231,15 @@ describe("ChannelsSettingsSection", () => {
     ]);
     render(<ChannelsSettingsSection context={context()} />);
     fireEvent.click(await screen.findByRole("button", { name: "断开连接" }));
+    expect(runtimeClient.deleteChannelConnection).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "确认解除微信绑定" }));
     await waitFor(() =>
       expect(runtimeClient.deleteChannelConnection).toHaveBeenCalledWith(
         "00000000-0000-4000-8000-000000000202",
+        expect.objectContaining({
+          signal: expect.any(AbortSignal) as unknown,
+          expectedContext: expect.any(Object) as unknown,
+        }),
       ),
     );
   });
@@ -241,6 +283,10 @@ describe("ChannelsSettingsSection", () => {
         max_delay_ms: 3000,
         stickers_enabled: true,
       }),
+      expect.any(AbortSignal) as unknown,
+      expect.objectContaining({
+        expectedContext: expect.any(Object) as unknown,
+      }),
     );
 
     await waitFor(() => expect(toggle.checked).toBe(true));
@@ -264,7 +310,7 @@ describe("ChannelsSettingsSection", () => {
     fireEvent.click(toggle);
 
     await waitFor(() => {
-      expect(screen.getByRole("alert")).toBeTruthy();
+      expect(screen.getByRole("status")).toBeTruthy();
       expect(screen.getByText("网络连接失败")).toBeTruthy();
     });
     expect(toggle.checked).toBe(false);
@@ -275,6 +321,15 @@ describe("ChannelsSettingsSection", () => {
       connection(),
     ]);
 
+    vi.mocked(runtimeClient.getChannelConnections).mockResolvedValue([
+      {
+        ...connection(),
+        configuration: {
+          ...connection().configuration,
+          character_id: "custom_other_char",
+        },
+      },
+    ]);
     render(<ChannelsSettingsSection context={context("custom_other_char")} />);
 
     const toggle = await screen.findByRole<HTMLInputElement>("switch", {
@@ -308,6 +363,126 @@ describe("ChannelsSettingsSection", () => {
     expect(
       runtimeClient.updateChannelPresentationPolicy,
     ).not.toHaveBeenCalled();
+  });
+
+  it("selects the ready binding, shows expired bindings truthfully and offers rebind without deleting", async () => {
+    const old = {
+      ...connection("error"),
+      configuration: { ...connection().configuration, name: "旧微信" },
+    };
+    const fresh = {
+      ...connection(),
+      configuration: {
+        ...connection().configuration,
+        name: "新微信",
+        connection_id: "00000000-0000-4000-8000-000000000203",
+      },
+    };
+    vi.mocked(runtimeClient.getChannelConnections).mockResolvedValue([
+      old,
+      fresh,
+    ]);
+    vi.mocked(runtimeClient.startChannelAuthorization).mockResolvedValue(
+      authorization("pending"),
+    );
+    vi.mocked(runtimeClient.getChannelAuthorization).mockImplementation(
+      (_id, _wait, signal) => cancellableWait(signal),
+    );
+    render(<ChannelsSettingsSection context={context()} />);
+    expect(await screen.findByText("新微信", { selector: "h3" })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("管理哪个微信绑定"), {
+      target: { value: old.configuration.connection_id },
+    });
+    expect(screen.getByText("连接异常")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "重新扫码绑定" }));
+    await screen.findByTestId("weixin-qr");
+    expect(runtimeClient.deleteChannelConnection).not.toHaveBeenCalled();
+  });
+
+  it("restores a disabled binding through CAS while preserving identity and presentation", async () => {
+    const saved = connection("disabled", false);
+    vi.mocked(runtimeClient.getChannelConnections).mockResolvedValue([saved]);
+    vi.mocked(runtimeClient.updateChannelConnection).mockImplementation(
+      (_id, configuration) =>
+        Promise.resolve({
+          ...saved,
+          revision: 2,
+          status: "untested",
+          configuration,
+        }),
+    );
+    render(<ChannelsSettingsSection context={context()} />);
+    const toggle = await screen.findByRole<HTMLInputElement>("switch", {
+      name: "启用微信消息",
+    });
+    expect(toggle.checked).toBe(false);
+    fireEvent.click(toggle);
+    await waitFor(() => expect(toggle.checked).toBe(true));
+    expect(runtimeClient.updateChannelConnection).toHaveBeenCalledWith(
+      saved.configuration.connection_id,
+      { ...saved.configuration, enabled: true },
+      1,
+      expect.any(AbortSignal) as unknown,
+      expect.objectContaining({
+        expectedContext: expect.any(Object) as unknown,
+      }),
+    );
+    expect(screen.getByText("待检查")).toBeTruthy();
+  });
+
+  it("reconciles confirmation that won the race against cancellation", async () => {
+    vi.mocked(runtimeClient.startChannelAuthorization).mockResolvedValue(
+      authorization("pending"),
+    );
+    vi.mocked(runtimeClient.getChannelAuthorization).mockImplementation(
+      (_id, wait, signal) =>
+        wait === 0
+          ? Promise.resolve(authorization("confirmed", connection()))
+          : cancellableWait(signal),
+    );
+    render(<ChannelsSettingsSection context={context()} />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "扫码绑定微信" }),
+    );
+    vi.mocked(runtimeClient.getChannelConnections).mockResolvedValue([
+      connection(),
+    ]);
+    fireEvent.click(await screen.findByRole("button", { name: "取消绑定" }));
+    await screen.findByText("我的微信", { selector: "h3" });
+    expect(screen.queryByTestId("weixin-qr")).toBeNull();
+    expect(await screen.findByText("已连接")).toBeTruthy();
+  });
+
+  it("drops an old Runtime's QR confirmation after switching connection", async () => {
+    setRemoteRuntimeConnection({ baseUrl: "https://a.example", token: "a" });
+    let finish!: (value: ChannelAuthorizationSnapshot) => void;
+    vi.mocked(runtimeClient.startChannelAuthorization).mockResolvedValue(
+      authorization("pending"),
+    );
+    vi.mocked(runtimeClient.getChannelAuthorization).mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    render(<ChannelsSettingsSection context={context()} />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "扫码绑定微信" }),
+    );
+    await waitFor(() =>
+      expect(runtimeClient.getChannelAuthorization).toHaveBeenCalled(),
+    );
+    const signal = vi.mocked(runtimeClient.getChannelAuthorization).mock
+      .calls[0][2];
+    act(() =>
+      setRemoteRuntimeConnection({ baseUrl: "https://b.example", token: "b" }),
+    );
+    await screen.findByRole("button", { name: "扫码绑定微信" });
+    await act(() =>
+      Promise.resolve(finish(authorization("confirmed", connection()))),
+    );
+    expect(signal?.aborted).toBe(true);
+    expect(screen.queryByText("我的微信")).toBeNull();
+    expect(runtimeClient.cancelChannelAuthorization).not.toHaveBeenCalled();
   });
 });
 
@@ -365,6 +540,12 @@ function connection(
         cadence_enabled: true,
         stickers_enabled: false,
       },
+    },
+    capabilities: {
+      chat_types: ["direct"],
+      inbound_message_kinds: ["text", "image"],
+      outbound_message_kinds: ["text", "image"],
+      supports_typing: true,
     },
     revision: 1,
     status,

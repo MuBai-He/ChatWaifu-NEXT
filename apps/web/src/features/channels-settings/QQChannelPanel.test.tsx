@@ -16,6 +16,8 @@ import { RuntimeRequestError } from "../chat/runtime-client/http";
 import { QQChannelPanel } from "./QQChannelPanel";
 import { setRemoteRuntimeConnection } from "../chat/runtimeEndpoint";
 
+vi.mock("./StickerLibraryPanel", () => ({ StickerLibraryPanel: () => null }));
+
 vi.mock("../chat/runtimeClient", () => ({
   getChannelConnections: vi.fn(),
   deleteChannelConnection: vi.fn(),
@@ -29,6 +31,32 @@ vi.mock("../chat/runtime-client/qqClient", () => ({
 }));
 
 describe("QQChannelPanel", () => {
+  it("selects among existing QQ accounts without changing pairing or granting group permissions", async () => {
+    const first = connection();
+    const second = {
+      ...first,
+      configuration: {
+        ...first.configuration,
+        name: "第二个 QQ",
+        account_key: "901",
+        connection_id: "00000000-0000-4000-8000-000000000203",
+      },
+    };
+    vi.mocked(runtimeClient.getChannelConnections).mockResolvedValue([
+      first,
+      second,
+    ]);
+    render(<QQChannelPanel characterId="default" runtimeOnline />);
+    await screen.findByText(first.configuration.name, { selector: "h3" });
+    fireEvent.change(screen.getByLabelText("管理哪个 QQ 连接"), {
+      target: { value: second.configuration.connection_id },
+    });
+    expect(
+      screen.getByText(second.configuration.name, { selector: "h3" }),
+    ).toBeTruthy();
+    expect(runtimeClient.updateChannelConnection).not.toHaveBeenCalled();
+    expect(qqClient.startQQPairing).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     vi.mocked(runtimeClient.getChannelConnections).mockResolvedValue([]);
     vi.mocked(runtimeClient.deleteChannelConnection).mockResolvedValue();
@@ -271,7 +299,7 @@ describe("QQChannelPanel", () => {
           ? screen.getByRole("button", { name: "断开 QQ 连接" })
           : screen.getByRole("switch", {
               name:
-                action === "toggle" ? "启用 QQ 私聊" : "允许角色发送表情图片",
+                action === "toggle" ? "启用 QQ 连接" : "允许角色发送表情图片",
             }),
       );
       const mutationSignal =
@@ -372,13 +400,16 @@ describe("QQChannelPanel", () => {
       original.configuration.connection_id,
       {
         ...original.configuration,
-        presentation_policy: {
+        presentation_policy: expect.objectContaining({
           profile: "instant_message",
+          max_parts: 3,
+          preferred_chars_per_part: 30,
+          soft_max_chars_per_part: 60,
           stickers_enabled: true,
-        },
+        }) as unknown,
       },
       original.revision,
-      expect.any(AbortSignal),
+      expect.any(AbortSignal) as unknown,
       guardedRequestOptions(),
     );
     expect(screen.queryByRole("switch", { name: /语音/u })).toBeNull();
@@ -518,7 +549,7 @@ describe("QQChannelPanel", () => {
     await waitFor(() =>
       expect(qqClient.testQQChannelConnection).toHaveBeenCalledWith(
         disabled.configuration.connection_id,
-        expect.any(AbortSignal),
+        expect.any(AbortSignal) as unknown,
         guardedRequestOptions(),
       ),
     );
@@ -528,13 +559,13 @@ describe("QQChannelPanel", () => {
           .disabled,
       ).toBe(false),
     );
-    fireEvent.click(screen.getByRole("switch", { name: "启用 QQ 私聊" }));
+    fireEvent.click(screen.getByRole("switch", { name: "启用 QQ 连接" }));
     await waitFor(() =>
       expect(runtimeClient.updateChannelConnection).toHaveBeenCalledWith(
         disabled.configuration.connection_id,
         { ...disabled.configuration, enabled: true },
         disabled.revision,
-        expect.any(AbortSignal),
+        expect.any(AbortSignal) as unknown,
         guardedRequestOptions(),
       ),
     );
@@ -642,7 +673,7 @@ describe("QQChannelPanel", () => {
     expect(qqClient.getQQPairing).toHaveBeenCalledWith(
       pairing().pairing_id,
       0,
-      expect.any(AbortSignal),
+      expect.any(AbortSignal) as unknown,
       guardedRequestOptions(),
     );
     expect(screen.queryByRole("button", { name: "开始 QQ 配对" })).toBeNull();
@@ -668,7 +699,7 @@ describe("QQChannelPanel", () => {
       view.container.querySelector(".channels-settings-state.connected"),
     ).toBeNull();
     expect(
-      screen.getByRole<HTMLInputElement>("switch", { name: "启用 QQ 私聊" })
+      screen.getByRole<HTMLInputElement>("switch", { name: "启用 QQ 连接" })
         .disabled,
     ).toBe(true);
     expect(

@@ -13,7 +13,7 @@ import {
   type ChannelProactivePreview,
 } from "../chat/runtime-client/channelProactiveClient";
 import { isConflictError } from "../chat/runtime-client/realtimeClient";
-import { SettingsToggle } from "./SettingsPrimitives";
+import { SettingsToggle } from "../settings/SettingsPrimitives";
 import "./qq-proactive-panel.css";
 
 type Props = {

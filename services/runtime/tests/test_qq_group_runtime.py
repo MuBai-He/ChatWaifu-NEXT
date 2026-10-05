@@ -413,7 +413,7 @@ async def test_operator_apis_default_off_two_members_fixed_text_and_isolated_sta
     row = await runtime.container.database.fetchone(
         "SELECT max(version) AS v FROM schema_migrations"
     )
-    assert row is not None and row["v"] == 43
+    assert row is not None and row["v"] == 44
     unauthenticated = await runtime.http.get(
         f"{runtime.path}/group-routes", headers={"Authorization": ""}
     )

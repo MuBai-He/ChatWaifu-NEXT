@@ -14,6 +14,7 @@ import * as publicProtocol from "../src/index";
 import * as coreParsers from "../src/parsers/protocol";
 import * as groupParsers from "../src/parsers/channelGroups";
 import * as proactiveParsers from "../src/parsers/channelProactive";
+import * as settingsParsers from "../src/parsers/channelSettings";
 import {
   channelDeliveryAcknowledgementSchema,
   channelDeliveryPartAcknowledgementSchema,
@@ -30,7 +31,12 @@ import {
   type JsonSchemaDef,
 } from "../src/internal/testing/index";
 
-const parserModule = { ...coreParsers, ...proactiveParsers, ...groupParsers };
+const parserModule = {
+  ...coreParsers,
+  ...proactiveParsers,
+  ...groupParsers,
+  ...settingsParsers,
+};
 
 // Compile-time type-level equivalence assertions
 type Equal<A, B> =

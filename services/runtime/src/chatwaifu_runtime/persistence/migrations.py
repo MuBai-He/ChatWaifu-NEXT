@@ -2102,10 +2102,20 @@ CREATE TRIGGER channel_group_part_content_immutable BEFORE UPDATE OF kind,ordina
 BEGIN SELECT RAISE(ABORT,'group delivery content is immutable'); END;
 """
 
+CHANNEL_SETTINGS_MIGRATION44_SQL = """
+CREATE TABLE channel_runtime_settings (
+ singleton_id INTEGER PRIMARY KEY CHECK(singleton_id=1),
+ revision INTEGER NOT NULL CHECK(revision>=1),
+ policy_json TEXT NOT NULL CHECK(json_valid(policy_json)),
+ updated_at TEXT NOT NULL
+);
+"""
+
 MIGRATIONS = (
     *_BASE_MIGRATIONS,
     (40, GROUP_MIGRATION40_SQL),
     (41, GROUP_BUBBLES_MIGRATION41_SQL),
     (42, GROUP_STICKERS_MIGRATION42_SQL),
     (43, GROUP_VOICE_MIGRATION43_SQL),
+    (44, CHANNEL_SETTINGS_MIGRATION44_SQL),
 )

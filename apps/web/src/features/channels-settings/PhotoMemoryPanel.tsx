@@ -13,7 +13,7 @@ import {
   formatFullDateTime,
   formatCaptureDate,
 } from "./photoDateUtils";
-import { SettingsToggle } from "./SettingsPrimitives";
+import { SettingsToggle } from "../settings/SettingsPrimitives";
 
 interface PhotoMemoryPanelProps {
   characterId: string;

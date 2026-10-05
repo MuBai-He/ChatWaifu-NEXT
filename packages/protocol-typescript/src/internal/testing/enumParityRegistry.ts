@@ -1,4 +1,10 @@
 import {
+  channelRuntimePolicySchema,
+  channelRuntimeSettingsResponseSchema,
+  channelRuntimeSettingsUpdateSchema,
+  groupDiscussionPolicySchema,
+} from "../../parsers/channelSettings";
+import {
   channelGroupAudienceRequestSchema,
   channelGroupAudienceSnapshotSchema,
   channelGroupDeliveryTargetSchema,
@@ -186,6 +192,10 @@ export {
  * Registry of all root model schemas that back public parsers.
  */
 export const protocolModelSchemas = {
+  ChannelRuntimePolicy: channelRuntimePolicySchema,
+  ChannelRuntimeSettingsResponse: channelRuntimeSettingsResponseSchema,
+  ChannelRuntimeSettingsUpdate: channelRuntimeSettingsUpdateSchema,
+  GroupDiscussionPolicy: groupDiscussionPolicySchema,
   ChannelGroupAudienceRequest: channelGroupAudienceRequestSchema,
   ChannelGroupAudienceSnapshot: channelGroupAudienceSnapshotSchema,
   ChannelGroupDeliveryTarget: channelGroupDeliveryTargetSchema,
@@ -340,6 +350,10 @@ export const parserRootRegistry: Record<
   parseChannelTurnCancelRequest: "ChannelTurnCancelRequest",
   parseChannelTurnCancelReceipt: "ChannelTurnCancelReceipt",
   parseChannelErrorResponse: "ChannelErrorResponse",
+  parseChannelRuntimePolicy: "ChannelRuntimePolicy",
+  parseChannelRuntimeSettingsResponse: "ChannelRuntimeSettingsResponse",
+  parseChannelRuntimeSettingsUpdate: "ChannelRuntimeSettingsUpdate",
+  parseGroupDiscussionPolicy: "GroupDiscussionPolicy",
   parseMemoryRecord: "MemoryRecord",
   parseMemoryProposal: "MemoryProposal",
   parseMemorySource: "MemorySource",
