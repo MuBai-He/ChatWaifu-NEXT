@@ -140,7 +140,9 @@ class App:
     async def join(self, channel_turn_id: UUID) -> None:
         actor = self.service._workflows.get(channel_turn_id)
         if actor is not None and actor.task is not None:
-            await asyncio.wait_for(asyncio.shield(actor.task), 3)
+            # This joins real durable SQLite work, not a response-latency assertion.
+            # Keep a bounded deadlock guard that also allows slow Windows disk I/O.
+            await asyncio.wait_for(asyncio.shield(actor.task), 15)
 
 
 @pytest.fixture
