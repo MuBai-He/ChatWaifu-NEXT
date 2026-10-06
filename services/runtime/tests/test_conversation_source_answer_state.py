@@ -220,6 +220,7 @@ async def test_provisional_frame_never_becomes_completed_coverage_after_failure_
 ) -> None:
     container, provider = await _container(runtime_settings, monkeypatch)
     entered, release = asyncio.Event(), asyncio.Event()
+    stop_task: asyncio.Task[None] | None = None
     try:
         session = (await container.sessions.create_session("default")).session_id
         if mode in {"stop_during_commit", "reset_during_commit"}:
@@ -257,8 +258,20 @@ async def test_provisional_frame_never_becomes_completed_coverage_after_failure_
         if mode == "cancel":
             await container.conversation.cancel(session)
         elif mode == "stop_during_commit":
-            await container.conversation.stop()
+            stop_entered = asyncio.Event()
+            stop = container.conversation.stop
+
+            async def observed_stop() -> None:
+                stop_entered.set()
+                await stop()
+
+            monkeypatch.setattr(container.conversation, "stop", observed_stop)
+            stop_task = asyncio.create_task(container.conversation.stop())
+            await asyncio.wait_for(stop_entered.wait(), timeout=2)
+            assert not stop_task.done()
+            assert not container.conversation._active[session].coverage_valid
             release.set()
+            await asyncio.wait_for(stop_task, timeout=5)
         elif mode == "reset_during_commit":
             # Reset observes the existing completion barrier before deletion.
             reset_entered = asyncio.Event()
@@ -295,6 +308,8 @@ async def test_provisional_frame_never_becomes_completed_coverage_after_failure_
         assert provider.requests[-1].response_schema is not None
     finally:
         release.set()
+        if stop_task is not None:
+            await asyncio.gather(stop_task, return_exceptions=True)
         await container.stop()
 
 
