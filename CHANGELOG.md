@@ -2,6 +2,72 @@
 
 ## Unreleased
 
+- Merge the frozen QQ NapCat and Q02 v7 test branches for isolated server testing.
+  Add a default-off host policy for current-owner public reads, recheck it before
+  execution, preserve ordinary model-selected voice and shared-scene isolation,
+  and complete source retrieval as text. Keep the Q02 quality gate unapproved.
+
+- Select the frozen v7 persona on the local Q02 test branch at the user's request.
+  Preserve v4 controls and separately verify v7 loading and section-budget clipping
+  across three presentations. Retain the failed quality verdict and the independent
+  server version; record the optimization checkpoint, rollback and remaining gates.
+
+- Freeze the v44 Q02 conclusion with all attempts and four separate gates.
+  Directed search/read controls and a real four-turn flow acquired the official
+  missing conditions. An exact previously unsent review was admitted by a bounded
+  operating allowance control, but complete-input replies still contain unsupported
+  source dates and bibliography. Keep the version unapproved, the original full
+  A/B gate unchanged, and valid delivery/playback evidence scoped and reused.
+  No prompt rules, production model/budget changes, or AGY were introduced.
+
+- Prefer the latest ordinary assistant history over optional older source bodies
+  for explicit acquired-material follow-ups, and preserve full pre-reprojection
+  estimates in successful and blocked guard reports. Network-forbidden controls
+  reproduce the old actual wires and verify retained history under the same
+  allowance. Answer fidelity remains unapproved; no prompt or production changes.
+
+- Reproject whole prior source bodies against complete outgoing tool/review input
+  after late overhead, preserving current results and withheld-draft fences.
+  Exact offline replay, local/server 523 checks and a real four-turn flow validate
+  the repair. A frozen two-budget control still exposes latest-answer selection
+  and complete-input fidelity failures; Q02 remains unapproved, with no prompt
+  change, production deployment or automatic window increase.
+
+- Enforce the evaluator's selected DNS resolver in actual permissioned source
+  invocations while preserving original model arguments and rejecting invalid
+  values. A bounded production-service discovery flow recorded one model reply
+  and three Runtime fallbacks; retrieval success does not approve Q02 quality.
+- Recognize explicit acquired-material questions with no new retrieval and
+  acquired-document checklists in existing routing. Retain successful READ and
+  missing-body fences, affirmative operations and cancellation. Local/server
+  regressions passed; no new prompts, budget increase or production deployment.
+
+- Reuse the existing source review for explicit versioned provided material with
+  natural text and source frames disabled. Keep the withheld draft bounded and
+  unpublished, with truthful budget fallback and cancellation fences. Four actual
+  four-turn flows completed, but full-text review still found condition and scope
+  loss; v40 is not adopted or deployed and Q02 remains unapproved.
+
+- Investigate Q02 fidelity with an isolated, bounded structured source-answer frame.
+  Retain model-declared unresolved gaps across the same original URL/body identity
+  and render typed list items; production behavior is unchanged. Ten server HTTP
+  controls preserve gaps but expose condition ambiguity and an expanded prohibition;
+  the prototype is not adopted and full Q02 acceptance remains open. Record ADR 0070,
+  all raw/rendered replies, wire accounting and the source-condition dependency.
+
+- Route explicit “this document” follow-up summaries through the existing retained-source
+  revision when a successful original READ is available, preserving fresh-operation and
+  permission boundaries. Q02 fidelity remains unapproved after actual four-turn validation.
+
+- Preserve safe native-tool protocol error codes without exposing response bodies,
+  and let the optional evaluation decision wrapper use its existing single
+  correction allowance for unknown functions. Production execution still rejects
+  unknown calls. Evaluator 1.32.0 fingerprints the final routing change.
+- Keep an enabled, validated builtin source reader available alongside selected
+  builtin search within the original tool count and schema limits. Preserve
+  per-call permission and confirmation. A server-isolated native four-turn source
+  flow completed; frozen-document review still found scope and checklist gaps,
+  so Q02 and the full persona candidate remain unapproved.
 - Preserve the positive meaning of the Chinese intensifier `特别`, and plan a
   current positive user signal as a happy celebration after higher-priority
   distress, boundary, interaction and question handling. Opted-in private stickers

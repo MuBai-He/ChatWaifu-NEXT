@@ -1,5 +1,9 @@
 """Provider-neutral streaming and synthesis contracts."""
 
+from __future__ import annotations
+
+import json
+import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -15,6 +19,30 @@ class LlmToolCallingUnavailableError(RuntimeError):
     """The selected provider cannot honor a requested structured tool round."""
 
 
+type LlmToolCallProtocolCode = Literal[
+    "unknown_tool",
+    "malformed_arguments",
+    "arguments_not_object",
+    "duplicate_ids",
+    "incomplete_calls",
+]
+
+
+class LlmToolCallProtocolError(RuntimeError):
+    """A rejected native call batch; only a fixed, nonsecret code crosses adapters."""
+
+    def __init__(self, code: LlmToolCallProtocolCode) -> None:
+        messages = {
+            "unknown_tool": "OpenAI-compatible LLM requested an unknown tool",
+            "malformed_arguments": "OpenAI-compatible LLM returned malformed tool arguments",
+            "arguments_not_object": "OpenAI-compatible LLM tool arguments must be a JSON object",
+            "duplicate_ids": "OpenAI-compatible LLM returned duplicate tool call ids",
+            "incomplete_calls": "OpenAI-compatible LLM ended with no complete tool calls",
+        }
+        super().__init__(messages[code])
+        self.code = code
+
+
 class LlmImageInputUnavailableError(RuntimeError):
     """The selected provider cannot honor an image input."""
 
@@ -25,6 +53,71 @@ class LlmEmptyResponseError(RuntimeError):
     def __init__(self, *, has_tool_results: bool = False) -> None:
         super().__init__("LLM completed without visible answer text")
         self.has_tool_results = has_tool_results
+
+
+class LlmResponseSchemaUnavailableError(RuntimeError):
+    """A provider cannot honor a declared format; no silent prose downgrade."""
+
+    code = "response_schema_unavailable"
+
+    def __init__(self) -> None:
+        super().__init__("The selected LLM cannot honor the declared response schema")
+
+
+def _schema_pairs(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("invalid response schema")
+        result[key] = value
+    return result
+
+
+def _schema_constant(_: str) -> object:
+    raise ValueError("invalid response schema")
+
+
+@dataclass(frozen=True, slots=True)
+class LlmResponseSchema:
+    """Immutable provider-neutral JSON Schema snapshot, with no SDK objects."""
+
+    name: str
+    schema_json: str = field(repr=False)
+    version: Literal["1.0"] = "1.0"
+
+    def __post_init__(self) -> None:
+        if self.version != "1.0" or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,63}", self.name):
+            raise ValueError("invalid response schema identity")
+        try:
+            if len(self.schema_json.encode()) > 16_384:
+                raise ValueError("response schema exceeds bound")
+            value = json.loads(
+                self.schema_json, object_pairs_hook=_schema_pairs, parse_constant=_schema_constant
+            )
+        except (json.JSONDecodeError, UnicodeError, RecursionError) as error:
+            raise ValueError("invalid response schema") from error
+        if not isinstance(value, dict):
+            raise ValueError("response schema must be an object")
+
+    @classmethod
+    def from_schema(cls, name: str, schema: JsonObject) -> LlmResponseSchema:
+        return cls(
+            name,
+            json.dumps(
+                schema, ensure_ascii=False, separators=(",", ":"), sort_keys=True, allow_nan=False
+            ),
+        )
+
+    def response_format(self) -> JsonObject:
+        # Return a fresh object each time; callers cannot mutate the snapshot.
+        return {
+            "type": "json_schema",
+            "json_schema": {
+                "name": self.name,
+                "strict": True,
+                "schema": json.loads(self.schema_json),
+            },
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,9 +200,19 @@ class LlmUsage:
 
 
 @dataclass(frozen=True, slots=True)
+class LlmResponseIdentity:
+    """Unverified provider labels, never proof of weights or reasoning effort."""
+
+    reported_model_ids: tuple[str, ...]
+    incomplete: bool = False
+    version: Literal["1.0"] = "1.0"
+
+
+@dataclass(frozen=True, slots=True)
 class LlmResponseCompleted:
     finish_reason: LlmFinishReason
     usage: LlmUsage | None = None
+    identity: LlmResponseIdentity | None = None
 
 
 type LlmStreamEvent = LlmTextDelta | LlmToolCallRequested | LlmResponseCompleted
@@ -163,10 +266,17 @@ class LlmRequest:
     # Trusted safety/time prompt for a required initial operation decision.
     # Native optional decisions and later responses retain the full character contract.
     tool_decision_system_prompt: str | None = None
+    # Trusted Runtime instruction after user/history/tool messages, never source data.
+    # Guides the next tool decision or final revision; included in the wire estimate.
+    continuation_system_prompt: str | None = None
     input_budget: LlmInputBudget | None = None
     input_budget_report: LlmInputBudgetReport | None = None
     max_output_tokens: int | None = None
     tool_result_max_bytes: int = 32_768
+    # Trusted Runtime output policy after context/history, before the current user.
+    # Included by build_messages in every provider-wire budget estimate.
+    pre_user_system_prompt: str | None = None
+    response_schema: LlmResponseSchema | None = None
 
     def __post_init__(self) -> None:
         if self.max_output_tokens is not None and (

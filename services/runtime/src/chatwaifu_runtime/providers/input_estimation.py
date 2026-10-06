@@ -73,7 +73,9 @@ def estimate_reference_input_tokens(request: LlmRequest) -> int:
     messages = build_messages(text_request)
     payload = build_chat_completions_payload("reference", text_request, messages)
     projection = {
-        key: payload[key] for key in ("messages", "tools", "tool_choice") if key in payload
+        key: payload[key]
+        for key in ("messages", "tools", "tool_choice", "response_format")
+        if key in payload
     }
     wire = json.dumps(projection, ensure_ascii=False, separators=(",", ":"))
     return (

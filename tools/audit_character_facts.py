@@ -129,6 +129,14 @@ class ValidationError:
     details: dict[str, Any] = field(default_factory=dict[str, Any])
 
 
+def _is_regulatory_spec(spec: TurnFactSpec) -> bool:
+    """Keep this regulatory audit scoped when technical source snapshots coexist."""
+    return any(
+        concept.id in {"ccc_certification", "recalled_models_batches"}
+        for concept in spec.required_concepts
+    )
+
+
 def match_pattern(pattern: str, text: str) -> bool:
     """Matches a concept or cue pattern against visible text.
 
@@ -427,6 +435,7 @@ def run_fact_audit(
 ) -> dict[str, Any]:
     """Runs fact coverage audit on results files against fixture specifications."""
     specs, fixture_turns, fixture_errors = load_fact_specs(fixtures_path)
+    target_specs = {turn_key: spec for turn_key, spec in specs.items() if _is_regulatory_spec(spec)}
 
     validation_errors: list[ValidationError] = list(fixture_errors)
     audited_samples: list[dict[str, Any]] = []
@@ -473,8 +482,10 @@ def run_fact_audit(
                 pass
         input_file_entries.append(file_entry)
 
-    # Track seen sample identities: (provider, model, sample_key)
-    seen_identities: set[tuple[str, str, str]] = set()
+    # A sample key is reused across presentation profiles by the evaluator. Keep
+    # the profile in the identity so a combined multi-presentation audit does not
+    # mistake the same scenario turn for a duplicate sample.
+    seen_identities: set[tuple[str, str, str, str]] = set()
 
     # If fixture loading had errors, skip scanning results files
     if not fixture_errors:
@@ -525,7 +536,10 @@ def run_fact_audit(
 
                     provider = _as_str(record.get("provider"), default="unknown")
                     model = _as_str(record.get("model"), default="unknown")
-                    identity = (provider, model, safe_key)
+                    presentation_profile = _as_str(
+                        record.get("presentation_profile"), default="unknown"
+                    )
+                    identity = (provider, model, presentation_profile, safe_key)
 
                     if identity in seen_identities:
                         validation_errors.append(
@@ -535,7 +549,11 @@ def run_fact_audit(
                                 line_number=line_no,
                                 sample_key=safe_key,
                                 source_file=str(path),
-                                details={"provider": provider, "model": model},
+                                details={
+                                    "provider": provider,
+                                    "model": model,
+                                    "presentation_profile": presentation_profile,
+                                },
                             )
                         )
                         invalid_count += 1
@@ -545,11 +563,11 @@ def run_fact_audit(
                     scenario_id = _as_str(record.get("scenario_id"))
                     turn_id = _as_int(record.get("turn_id"), default=-1)
                     turn_key = (scenario_id, turn_id)
-                    if turn_key not in specs:
+                    if turn_key not in target_specs:
                         # Non-target turn, skipped from fact coverage audit
                         continue
 
-                    spec = specs[turn_key]
+                    spec = target_specs[turn_key]
                     raw_reply = _as_str(record.get("raw_reply"))
 
                     # Check required concepts
@@ -581,6 +599,7 @@ def run_fact_audit(
                             "variant": _as_str(record.get("variant")),
                             "model": model,
                             "provider": provider,
+                            "presentation_profile": presentation_profile,
                             "concept_covered": covered,
                             "covered": covered,
                             "concept_coverage": concept_results,
@@ -603,7 +622,7 @@ def run_fact_audit(
     concept_breakdown: dict[str, dict[str, Any]] = {}
     human_review_breakdown: dict[str, dict[str, Any]] = {}
 
-    for spec in specs.values():
+    for spec in target_specs.values():
         for concept in spec.required_concepts:
             cov_cnt = sum(
                 1 for s in audited_samples if s["concept_coverage"].get(concept.id, False)
@@ -627,7 +646,9 @@ def run_fact_audit(
         and invalid_count == 0
     )
 
-    primary_spec = next(iter(specs.values())) if specs else None
+    # The audit targets the CAAC regulatory snapshot. Do not rely on fixture
+    # insertion order now that technical-source snapshots can coexist with it.
+    primary_spec = next(iter(target_specs.values()), None)
 
     if retrospective:
         disclaimer = (
@@ -666,11 +687,11 @@ def run_fact_audit(
             "metadata_policy": "independent_audit_snapshot_does_not_modify_original_run_metadata",
             "disclaimer": disclaimer,
         },
-        "source_snapshot": (
-            asdict(primary_spec)
-            if len(specs) == 1 and primary_spec is not None
-            else [asdict(s) for s in specs.values()]
-        ),
+        # Keep the long-standing `source_snapshot` object shape for the
+        # regulatory audit target. Additional technical snapshots are exposed
+        # separately instead of changing the primary report type by fixture order.
+        "source_snapshot": asdict(primary_spec) if primary_spec is not None else None,
+        "source_snapshots": [asdict(s) for s in specs.values()],
         "input_files": input_file_entries,
         "summary": {
             "factual_correctness": "not_assessed",

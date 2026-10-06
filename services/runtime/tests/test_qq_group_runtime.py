@@ -331,11 +331,13 @@ class _Runtime:
                 pass
 
 
-@pytest.fixture
+@pytest.fixture(params=[False, True], ids=["web-disabled", "owner-web-enabled"])
 async def runtime(
-    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest
 ) -> AsyncIterator[_Runtime]:
     monkeypatch.setattr(private, "_OneBot", _GroupPeer)
+    if request.param is True:
+        runtime_settings = private._public_web_settings(runtime_settings)
     async with private._runtime(runtime_settings, monkeypatch) as base:
         peer = cast(_GroupPeer, base.peer)
         model = _GroupModel()

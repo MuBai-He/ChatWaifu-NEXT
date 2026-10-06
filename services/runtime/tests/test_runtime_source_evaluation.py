@@ -6,12 +6,14 @@ import asyncio
 import json
 from collections.abc import AsyncIterator
 from pathlib import Path
+from typing import Literal
 from uuid import UUID, uuid4
 
 import httpx2
 import pytest
+from chatwaifu_protocol.base import JsonObject
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
-from chatwaifu_runtime.config.settings import Settings
+from chatwaifu_runtime.config.settings import PublicWebConfig, Settings
 from chatwaifu_runtime.conversation.source_context import SourceContextPacket
 from chatwaifu_runtime.providers.contracts import (
     LlmInputBudget,
@@ -25,6 +27,11 @@ from chatwaifu_runtime.providers.contracts import (
     LlmUsage,
 )
 from chatwaifu_runtime.runtime_skills.agent_router import RuntimeSkillRouter
+from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
+from chatwaifu_runtime.runtime_skills.public_web_providers import (
+    ProviderSearchResponse,
+    ProviderSearchResult,
+)
 from chatwaifu_runtime.runtime_skills.transports import ValidatedMcpEndpoint
 
 from tools.runtime_source_evaluation import (
@@ -32,6 +39,141 @@ from tools.runtime_source_evaluation import (
     RuntimeMissingTerminal,
     RuntimeSourceEvaluation,
 )
+from tools.source_decision_evaluation import DECISION_NAME
+
+
+@pytest.mark.parametrize("configured", ["system", "cloudflare"])
+@pytest.mark.parametrize("requested", [None, "system", "cloudflare"])
+@pytest.mark.parametrize("allow_once", [True, False])
+async def test_source_resolver_configuration_controls_actual_permissioned_read(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    configured: Literal["system", "cloudflare"],
+    requested: str | None,
+    allow_once: bool,
+) -> None:
+    actual: list[JsonObject] = []
+
+    class RequestedResolver(_Provider):
+        async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+            self.requests.append(request)
+            if not request.tool_exchanges:
+                tool = next(t for t in request.tools if t.input_schema.get("required") == ["url"])
+                arguments: JsonObject = {"url": "https://source.example/"}
+                if requested is not None:
+                    arguments["dns_resolver"] = requested
+                yield LlmToolCallRequested(LlmToolCall("read-source", tool.name, arguments))
+                yield LlmResponseCompleted("tool_calls")
+            else:
+                yield LlmTextDelta("Only the actual source result is used.")
+                yield LlmResponseCompleted("stop")
+
+    async def read(self: object, arguments: JsonObject) -> JsonObject:
+        actual.append(dict(arguments))
+        if arguments.get("dns_resolver", "system") != configured:
+            raise SkillExecutionError("web_url", "Controlled wrong-resolver failure")
+        return {
+            "provider": "builtin",
+            "url": "https://source.example/",
+            "title": "Source",
+            "text": "Actual source",
+            "retrieved_at": "2026-10-04T00:00:00+00:00",
+            "content_type": "text/plain",
+            "body_sha256": "d" * 64,
+            "total_characters": 13,
+            "text_offset": 0,
+            "truncated": False,
+            "focus_matched": None,
+            "dns_resolver": configured,
+            "extraction_method": "plain_text",
+            "document_characters": 13,
+        }
+
+    monkeypatch.setattr("chatwaifu_runtime.runtime_skills.public_web.PublicWebReader.read", read)
+    container = RuntimeContainer(runtime_settings)
+    await container.start()
+    try:
+        session = await container.sessions.create_session("ayachi_nene")
+        provider = RequestedResolver()
+        evaluation = RuntimeSourceEvaluation(
+            provider,
+            container.runtime_skills,
+            trace_path=tmp_path / "rounds.jsonl",
+            max_provider_requests=4,
+            allow_once=allow_once,
+            dns_resolver=configured,
+        )
+        outcome = await evaluation.run(
+            LlmRequest(uuid4(), "请读取 https://source.example/ 的原文", "Persona"),
+            session_id=session.session_id,
+            turn_id=uuid4(),
+            sample_key="resolver-policy",
+        )
+        run = outcome.trace["tool_runs"][0]
+        original = provider.requests[1].tool_exchanges[0].calls[0].arguments
+        assert original.get("dns_resolver") == requested
+        assert ("dns_resolver" in original) is (requested is not None)
+        assert actual == (
+            [{"url": "https://source.example/", "dns_resolver": configured}] if allow_once else []
+        )
+        assert run["state"] == ("succeeded" if allow_once else "failed")
+        if not allow_once:
+            assert run["error"]["code"] == "permission_denied"
+        assert outcome.trace["source_resolver_policy"] == [
+            {
+                "provider_tool_call_id": "read-source",
+                "skill_id": "web.read",
+                "requested_present": requested is not None,
+                "requested_value": requested,
+                "effective_value": configured,
+                "configuration_applied": True,
+            }
+        ]
+        assert await container.database.fetchall("SELECT * FROM permission_grants") == []
+    finally:
+        await container.stop()
+
+
+@pytest.mark.parametrize("invalid", [None, "invalid", 17, {}])
+async def test_source_resolver_policy_does_not_repair_invalid_model_arguments(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+    invalid: object,
+) -> None:
+    from chatwaifu_protocol.skills import SkillInvocation
+
+    from tools.runtime_source_evaluation import (
+        _SourceGateway,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    entered = False
+
+    async def read(self: object, arguments: JsonObject) -> JsonObject:
+        nonlocal entered
+        entered = True
+        raise AssertionError("Invalid arguments must not reach the adapter")
+
+    monkeypatch.setattr("chatwaifu_runtime.runtime_skills.public_web.PublicWebReader.read", read)
+    container = RuntimeContainer(runtime_settings)
+    await container.start()
+    try:
+        session = await container.sessions.create_session("ayachi_nene")
+        gateway = _SourceGateway(container.runtime_skills, True, dns_resolver="cloudflare")
+        invocation = SkillInvocation.model_validate(
+            {
+                "skill_id": "web.read",
+                "capability": "read",
+                "arguments": {"url": "https://source.example/", "dns_resolver": invalid},
+            }
+        )
+        with pytest.raises(SkillExecutionError):
+            await gateway.invoke(session.session_id, invocation)
+        assert not entered
+        assert invocation.arguments["dns_resolver"] == invalid
+        assert gateway.resolver_policy[0]["configuration_applied"] is False
+    finally:
+        await container.stop()
 
 
 class _Provider:
@@ -68,14 +210,154 @@ class _MissingFirstProvider(_Provider):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("fallback", [False, True])
+@pytest.mark.parametrize(
+    "question",
+    [
+        "查询国内航班充电宝规定",
+        "这能直接证明截至2026年10月4日所有中国境内航班都实施相同数量限制吗？"
+        "请区分国际规则公告和中国境内实际执行；无法核实的部分要明确说明。",  # noqa: RUF001
+    ],
+)
+async def test_searxng_query_receipts_pass_real_skill_output_validation(
+    runtime_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    fallback: bool,
+    question: str,
+) -> None:
+    queries: list[str] = []
+
+    class FakeSearxng:
+        def __init__(self, _: PublicWebConfig) -> None:
+            pass
+
+        async def search(self, query: str, maximum: int) -> ProviderSearchResponse:
+            del maximum
+            queries.append(query)
+            if len(queries) > 1:
+                raise SkillExecutionError("web_timeout", "synthetic supplemental timeout")
+            return ProviderSearchResponse(
+                "searxng",
+                "http://127.0.0.1:18080/search",
+                "2026-10-03T00:00:00+00:00",
+                b"actual response",
+                (ProviderSearchResult("https://source.example/", "Official", ""),),
+            )
+
+    class SearchThenRead(_Provider):
+        async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+            self.requests.append(request)
+            if len(self.requests) <= 2:
+                required = "query" if len(self.requests) == 1 else "url"
+                tool = next(
+                    t for t in request.tools if t.input_schema.get("required") == [required]
+                )
+                arguments: JsonObject = {
+                    required: "国内航班充电宝规定"
+                    if required == "query"
+                    else "https://source.example/"
+                }
+                yield LlmToolCallRequested(
+                    LlmToolCall(str(len(self.requests)), tool.name, arguments)
+                )
+                yield LlmResponseCompleted("tool_calls")
+            else:
+                yield LlmTextDelta("实际读取的完整资料。")
+                yield LlmResponseCompleted("stop")
+
+    async def resolve(
+        *args: object, **kwargs: object
+    ) -> list[tuple[int, int, int, str, tuple[str, int]]]:
+        return [(2, 1, 6, "", ("93.184.216.34", 443))]
+
+    def transport(endpoint: ValidatedMcpEndpoint) -> httpx2.AsyncBaseTransport:
+        return httpx2.MockTransport(
+            lambda request: httpx2.Response(
+                200, headers={"content-type": "text/plain"}, text="3C 召回 额定能量 100Wh 160Wh"
+            )
+        )
+
+    monkeypatch.setattr(
+        "chatwaifu_runtime.runtime_skills.public_web_search.SearxngSearchClient", FakeSearxng
+    )
+    monkeypatch.setattr(asyncio.get_running_loop(), "getaddrinfo", resolve)
+    monkeypatch.setattr(
+        "chatwaifu_runtime.runtime_skills.public_web.PinnedAsyncHTTPTransport", transport
+    )
+    if fallback:
+
+        async def fail_crawl(self: object, source_url: str, **kwargs: object) -> None:
+            raise SkillExecutionError(
+                "web_provider_unavailable", "Unavailable", details={"status_code": 503}
+            )
+
+        monkeypatch.setattr(
+            "chatwaifu_runtime.runtime_skills.public_web_providers.Crawl4aiReaderClient.read",
+            fail_crawl,
+        )
+    settings = runtime_settings.model_copy(
+        update={
+            "public_web": PublicWebConfig(
+                search_provider="searxng",
+                reader_provider="crawl4ai" if fallback else "builtin",
+                crawl4ai_builtin_fallback=fallback,
+            )
+        }
+    )
+    container = RuntimeContainer(settings)
+    await container.start()
+    try:
+        session = await container.sessions.create_session("ayachi_nene")
+        evaluation = RuntimeSourceEvaluation(
+            SearchThenRead(),
+            container.runtime_skills,
+            trace_path=tmp_path / "rounds.jsonl",
+            max_provider_requests=4,
+            allow_once=True,
+        )
+        outcome = await evaluation.run(
+            LlmRequest(uuid4(), question, "Persona"),
+            session_id=session.session_id,
+            turn_id=uuid4(),
+            sample_key="contract",
+        )
+        assert outcome.reply == "实际读取的完整资料。"
+        runs = outcome.trace["tool_runs"]
+        assert [r["state"] for r in runs] == ["succeeded", "succeeded"]
+        assert runs[0]["skill_version"] == "1.3.6"
+        data = runs[0]["result"]["data"]
+        assert [q["query"] for q in data["provider_queries"]] == ["国内航班充电宝规定"]
+        assert [q.get("error_code") for q in data["provider_queries"]] == [None]
+        read_data = runs[1]["result"]["data"]
+        assert read_data["provider"] == "builtin"
+        assert ("provider_fallback" in read_data) is fallback
+        if fallback:
+            assert read_data["provider_fallback"]["reason"] == "web_provider_unavailable"
+        assert await container.database.fetchall("SELECT * FROM permission_grants") == []
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("allow_once", [True, False])
 @pytest.mark.parametrize("use_correction", [False, True])
+@pytest.mark.parametrize("fallback", [False, True])
+@pytest.mark.parametrize(
+    "user_text",
+    [
+        "请核查这个网页来源 https://source.example/",
+        "这个一致性算法的选举时序有哪些约束？",
+    ],
+)
 async def test_runtime_eval_records_actual_confirmation_result_and_all_provider_rounds(
     runtime_settings: Settings,
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     allow_once: bool,
     use_correction: bool,
+    fallback: bool,
+    user_text: str,
 ) -> None:
     requests: list[httpx2.Request] = []
 
@@ -95,12 +377,31 @@ async def test_runtime_eval_records_actual_confirmation_result_and_all_provider_
     monkeypatch.setattr(
         "chatwaifu_runtime.runtime_skills.public_web.PinnedAsyncHTTPTransport", transport
     )
-    container = RuntimeContainer(runtime_settings)
+    crawl_calls: list[str] = []
+    if fallback:
+
+        async def fail_crawl(self: object, source_url: str, **kwargs: object) -> None:
+            crawl_calls.append(source_url)
+            raise SkillExecutionError("web_provider_network_error", "Unavailable")
+
+        monkeypatch.setattr(
+            "chatwaifu_runtime.runtime_skills.public_web_providers.Crawl4aiReaderClient.read",
+            fail_crawl,
+        )
+    settings = runtime_settings.model_copy(
+        update={
+            "public_web": PublicWebConfig(
+                reader_provider="crawl4ai" if fallback else "builtin",
+                crawl4ai_builtin_fallback=fallback,
+            )
+        }
+    )
+    container = RuntimeContainer(settings)
     await container.start()
     try:
         session = await container.sessions.create_session("ayachi_nene")
         provider = _MissingFirstProvider() if use_correction else _Provider()
-        expected_rounds = 3 if use_correction else 2
+        expected_rounds = (3 if use_correction else 2) + int(allow_once)
         evaluation = RuntimeSourceEvaluation(
             provider,
             container.runtime_skills,
@@ -111,9 +412,10 @@ async def test_runtime_eval_records_actual_confirmation_result_and_all_provider_
         )
         request = LlmRequest(
             uuid4(),
-            "请核查这个网页来源 https://source.example/",
+            user_text,
             "Persona",
             tool_decision_system_prompt="TRUSTED_SAFETY_AND_FROZEN_CLOCK",
+            pre_user_system_prompt="TRUSTED_OUTPUT_CONTRACT",
             input_budget=LlmInputBudget(7292),
         )
         outcome = await evaluation.run(
@@ -123,10 +425,20 @@ async def test_runtime_eval_records_actual_confirmation_result_and_all_provider_
         if not allow_once:
             assert "Actual source result" not in outcome.reply
             assert "尚未核实" in outcome.reply
-        assert outcome.usage == (
-            LlmUsage(35, 6, 41, None) if use_correction else LlmUsage(30, 5, 35, None)
-        )
+        base = (35, 6, 41) if use_correction else (30, 5, 35)
+        extra = (20, 3, 23) if allow_once else (0, 0, 0)
+        assert outcome.usage == LlmUsage(*(a + b for a, b in zip(base, extra, strict=True)))
+        if allow_once:
+            assert provider.requests[-1].tools == ()
+            assert "runtime_source_answer_revision" in (
+                provider.requests[-1].continuation_system_prompt or ""
+            )
         assert len(provider.requests) == expected_rounds
+        assert provider.requests[0].tool_choice == "required"
+        assert provider.requests[0].pre_user_system_prompt is None
+        assert provider.requests[-1].pre_user_system_prompt == request.pre_user_system_prompt
+        assert outcome.trace["provider_calls"][0]["pre_user_system_prompt_sha256"] is None
+        assert outcome.trace["provider_calls"][-1]["pre_user_system_prompt_sha256"] is not None
         assert provider.requests[0].system_prompt.startswith("TRUSTED_SAFETY_AND_FROZEN_CLOCK")
         assert "dns_resolver=system" in provider.requests[0].system_prompt
         assert "TRUSTED_SAFETY_AND_FROZEN_CLOCK" not in provider.requests[-1].system_prompt
@@ -135,6 +447,7 @@ async def test_runtime_eval_records_actual_confirmation_result_and_all_provider_
         assert isinstance(result.content, dict)
         assert result.content["ok"] is allow_once
         assert len(requests) == int(allow_once)
+        assert len(crawl_calls) == int(allow_once and fallback)
         assert outcome.trace["permission_policy"] == ("allow_once" if allow_once else "deny")
         assert len(outcome.trace["provider_calls"]) == expected_rounds
         assert all(
@@ -176,7 +489,7 @@ async def test_runtime_eval_records_actual_confirmation_result_and_all_provider_
             provider,
             container.runtime_skills,
             trace_path=tmp_path / "followup.jsonl",
-            max_provider_requests=1,
+            max_provider_requests=1 + int(allow_once),
             allow_once=allow_once,
         )
         outcome = await followup.run(
@@ -296,11 +609,52 @@ class _SearchThenReadProvider(_Provider):
             yield LlmResponseCompleted("stop", LlmUsage(30, 5, 35))
 
 
+class _NativeSearchThenReadProvider(_SearchThenReadProvider):
+    async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+        if not request.tools or not request.tool_exchanges:
+            async for event in super().stream(request):
+                yield event
+            return
+        self.requests.append(request)
+        assert [t.name for t in request.tools] == [DECISION_NAME]
+        reading = len(request.tool_exchanges) == 1
+        action: JsonObject = (
+            {
+                "kind": "read",
+                "arguments": {"url": "https://source.example/", "max_links": 12},
+                "answer_draft": "",
+            }
+            if reading
+            else {
+                "kind": "finish_with_evidence",
+                "arguments": {},
+                "answer_draft": "Draft from actual source.",
+            }
+        )
+        yield LlmToolCallRequested(
+            LlmToolCall(
+                "native-read" if reading else "native-finish",
+                DECISION_NAME,
+                {
+                    "verification_scope": "other",
+                    "read_sources": [],
+                    "unresolved_updates": [],
+                    "next_action": action,
+                },
+            )
+        )
+        yield LlmResponseCompleted(
+            "tool_calls", LlmUsage(20, 2, 22) if reading else LlmUsage(30, 5, 35)
+        )
+
+
 @pytest.mark.asyncio
+@pytest.mark.parametrize("source_decision_contract", [False, True])
 async def test_real_search_registration_confirmation_and_original_read_chain(
     runtime_settings: Settings,
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
+    source_decision_contract: bool,
 ) -> None:
     requests: list[httpx2.Request] = []
 
@@ -332,13 +686,18 @@ async def test_real_search_registration_confirmation_and_original_read_chain(
     await container.start()
     try:
         session = await container.sessions.create_session("ayachi_nene")
-        provider = _SearchThenReadProvider()
+        provider = (
+            _NativeSearchThenReadProvider()
+            if source_decision_contract
+            else _SearchThenReadProvider()
+        )
         evaluation = RuntimeSourceEvaluation(
             provider,
             container.runtime_skills,
             trace_path=tmp_path / "rounds.jsonl",
-            max_provider_requests=3,
+            max_provider_requests=4,
             allow_once=True,
+            source_decision_contract=source_decision_contract,
         )
         outcome = await evaluation.run(
             LlmRequest(uuid4(), "请搜索并核查网页来源", "Persona"),
@@ -346,7 +705,10 @@ async def test_real_search_registration_confirmation_and_original_read_chain(
             turn_id=uuid4(),
             sample_key="one",
         )
-        assert outcome.usage == LlmUsage(60, 9, 69)
+        assert outcome.usage == LlmUsage(90, 14, 104)
+        assert len(provider.requests) == 4
+        assert provider.requests[-1].tools == ()
+        assert provider.requests[-1].tool_exchanges == provider.requests[-2].tool_exchanges
         assert [request.url.host for request in requests] == [
             "lite.duckduckgo.com",
             "source.example",
@@ -355,6 +717,15 @@ async def test_real_search_registration_confirmation_and_original_read_chain(
         assert all(run["state"] == "succeeded" for run in outcome.trace["tool_runs"])
         result = provider.requests[2].tool_exchanges[1].results[0].content
         assert isinstance(result, dict)
+        if source_decision_contract:
+            assert provider.requests[2].tool_exchanges[1].calls[0].name == DECISION_NAME
+            result = result["executed_result"]
+            assert isinstance(result, dict)
+            raw_call = outcome.trace["provider_calls"][1]["requested_calls"][0]
+            assert raw_call["name"] == DECISION_NAME
+            mapping = outcome.trace["source_decisions"][0]["validated_projection"]
+            assert mapping["call_id"] == raw_call["call_id"]
+            assert mapping["arguments"]["max_links"] == 12
         data = result["data"]
         assert isinstance(data, dict) and data["text"] == "Actual original body"
         persisted = str(await container.database.fetchall("SELECT result_json FROM skill_runs"))

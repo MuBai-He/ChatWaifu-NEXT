@@ -7,6 +7,7 @@ from chatwaifu_runtime.providers.contracts import (
     LlmImageInputUnavailableError,
     LlmRequest,
     LlmResponseCompleted,
+    LlmResponseSchemaUnavailableError,
     LlmStreamEvent,
     LlmTextDelta,
 )
@@ -15,11 +16,14 @@ from chatwaifu_runtime.providers.contracts import (
 class DemoLlmProvider:
     kind = "demo"
     supports_tool_calling = False
+    supports_response_schema = False
 
     def __init__(self, chunk_delay_ms: int = 25) -> None:
         self._delay_seconds = chunk_delay_ms / 1000
 
     async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+        if request.response_schema is not None:
+            raise LlmResponseSchemaUnavailableError()
         if request.images:
             raise LlmImageInputUnavailableError("Demo LLM provider does not support image inputs")
         if request.trigger == "proactive":

@@ -135,6 +135,7 @@ async def test_running_provider_late_output_is_fenced_and_terminal_cleanup_keeps
                 expected_generation_id=first.generation_id,
                 reason="route_revoked",
             )
+            assert container.conversation.active_generation_id(session.session_id) is None
         elif mode == "reset":
             await asyncio.wait_for(container.conversation.reset(session.session_id), 2)
         elif mode == "stop":

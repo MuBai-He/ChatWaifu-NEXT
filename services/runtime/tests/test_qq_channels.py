@@ -6,11 +6,13 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import hashlib
 import io
 import json
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field, replace
+from datetime import UTC, datetime
 from typing import Literal, cast
 from uuid import UUID, uuid4
 
@@ -28,7 +30,7 @@ from chatwaifu_protocol.channels import (
 )
 from chatwaifu_protocol.skills import SkillInvocation
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
-from chatwaifu_runtime.config.settings import Settings
+from chatwaifu_runtime.config.settings import PublicWebConfig, Settings
 from chatwaifu_runtime.external_channels.adapters.qq_napcat.client import NapCatClient
 from chatwaifu_runtime.external_channels.adapters.qq_napcat.management import (
     credential_reference,
@@ -48,6 +50,9 @@ from chatwaifu_runtime.providers.contracts import (
     SynthesisResult,
 )
 from chatwaifu_runtime.providers.model_config import ModelRoleConfig
+from chatwaifu_runtime.runtime_skills.adapters import GenerationSkillContext
+from chatwaifu_runtime.runtime_skills.public_web import PublicWebReader
+from chatwaifu_runtime.runtime_skills.public_web_search import PublicWebSearch
 from PIL import Image
 from pydantic import SecretStr
 from websockets.asyncio.server import ServerConnection, serve
@@ -55,8 +60,71 @@ from websockets.asyncio.server import ServerConnection, serve
 ACCOUNT = "10001"
 OWNER = "20002"
 TOKEN = "test-only-onebot-access-token"
+SOURCE_URL = "https://source.example/notice"
+SOURCE_BODY = "本说明仅适用于测试环境，启用后须逐项核对。"
 SPOKEN = "这是实际合成并发送的语音内容。"
 TEXT_REPLY = "这是普通文字回复。"
+
+
+def _public_source() -> JsonObject:
+    return {
+        "url": SOURCE_URL,
+        "title": "测试说明",
+        "text": SOURCE_BODY,
+        "retrieved_at": datetime.now(UTC).isoformat(),
+        "content_type": "text/plain",
+        "body_sha256": hashlib.sha256(SOURCE_BODY.encode()).hexdigest(),
+        "total_characters": len(SOURCE_BODY),
+        "text_offset": 0,
+        "truncated": False,
+        "focus_matched": None,
+        "dns_resolver": "system",
+        "extraction_method": "plain_text",
+        "document_characters": len(SOURCE_BODY),
+    }
+
+
+def _source_model(
+    harness: _Harness, monkeypatch: pytest.MonkeyPatch, *, search_first: bool = False
+) -> None:
+    async def stream(request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+        harness.model.requests.append(request)
+        harness.model.received.put_nowait(request)
+        reader = next(
+            (
+                tool
+                for tool in request.tools
+                if "url" in cast(list[str], tool.input_schema.get("required", []))
+            ),
+            None,
+        )
+        searcher = next(
+            (
+                tool
+                for tool in request.tools
+                if "query" in cast(list[str], tool.input_schema.get("required", []))
+            ),
+            None,
+        )
+        if search_first and searcher is not None and not request.tool_exchanges:
+            yield LlmToolCallRequested(
+                LlmToolCall("search-source", searcher.name, {"query": "公开测试说明"})
+            )
+            yield LlmResponseCompleted("tool_calls")
+        elif reader is not None and (
+            not request.tool_exchanges or (search_first and len(request.tool_exchanges) == 1)
+        ):
+            yield LlmToolCallRequested(LlmToolCall("read-source", reader.name, {"url": SOURCE_URL}))
+            yield LlmResponseCompleted("tool_calls")
+        else:
+            yield LlmTextDelta(f"{SOURCE_BODY} 来源:{SOURCE_URL}")
+            yield LlmResponseCompleted("stop")
+
+    monkeypatch.setattr(harness.model, "stream", stream)
+
+
+def _public_web_settings(settings: Settings) -> Settings:
+    return settings.model_copy(update={"public_web": PublicWebConfig(qq_owner_reads_enabled=True)})
 
 
 def _event(
@@ -1031,3 +1099,190 @@ async def test_cancel_pairing_and_shutdown_close_sockets_without_enrolling(
         assert not harness.container.qq_channels._tasks
         snapshot = await harness.container.qq_channels.pairing(second.pairing_id)
         assert snapshot.status == "cancelled"
+
+
+@pytest.mark.asyncio
+async def test_owner_public_read_and_followup_use_receipts_without_confirmation_or_voice(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    reads: list[JsonObject] = []
+
+    async def read(_self: PublicWebReader, arguments: JsonObject) -> JsonObject:
+        reads.append(arguments)
+        return _public_source()
+
+    monkeypatch.setattr(PublicWebReader, "read", read)
+    async with _runtime(_public_web_settings(runtime_settings), monkeypatch) as harness:
+        connection_id = await _pair(harness)
+        _source_model(harness, monkeypatch)
+        receipt = await _ingest(
+            harness, connection_id, f"请读取 {SOURCE_URL} 官方网页并总结。", 201
+        )
+        sent = await asyncio.wait_for(harness.peer.sends.get(), 5)
+        terminal = await _terminal(harness, connection_id, receipt.channel_turn_id)
+        assert terminal.status is ChannelTurnStatus.COMPLETED
+        assert SOURCE_BODY in (terminal.reply_text or "")
+        assert reads == [{"url": SOURCE_URL}]
+        assert _segments(sent)[0]["type"] == "text"
+        assert not harness.synthesis
+        assert not await harness.container.runtime_skills.pending_confirmations(receipt.session_id)
+        assert all(
+            "text" not in cast(list[str], tool.input_schema.get("required", []))
+            for tool in harness.model.requests[0].tools
+        )
+        assert any(SOURCE_BODY in str(request.tool_exchanges) for request in harness.model.requests)
+
+        await _ingest(
+            harness, connection_id, "只根据刚才已读取的资料整理成清单，不要重新联网。", 202
+        )
+        followup = await asyncio.wait_for(harness.peer.sends.get(), 5)
+        assert _segments(followup)[0]["type"] == "text"
+        assert reads == [{"url": SOURCE_URL}]
+        assert any(SOURCE_BODY in str(request.context) for request in harness.model.requests[1:])
+        assert harness.peer.sends.empty()
+        with pytest.raises(PermissionError, match="Non-interactive"):
+            await harness.container.runtime_skills.invoke(
+                receipt.session_id,
+                SkillInvocation(
+                    skill_id="web.read", capability="read", arguments={"url": SOURCE_URL}
+                ),
+                allow_confirmation=False,
+            )
+        assert reads == [{"url": SOURCE_URL}]
+
+
+@pytest.mark.asyncio
+async def test_public_web_opt_in_keeps_ordinary_reply_medium_a_model_choice(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async with _runtime(_public_web_settings(runtime_settings), monkeypatch) as harness:
+        connection_id = await _pair(harness)
+        harness.model.voice_decision = True
+        await _ingest(harness, connection_id, "今天有点累", 203)
+        sent = await asyncio.wait_for(harness.peer.sends.get(), 5)
+        assert len(harness.model.requests[0].tools) == 1
+        assert _segments(sent)[0]["type"] == "record"
+        assert len(harness.synthesis) == 1
+
+
+@pytest.mark.asyncio
+async def test_owner_public_read_rechecks_authorization_before_adapter_execution(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    reads: list[JsonObject] = []
+
+    async def read(_self: PublicWebReader, arguments: JsonObject) -> JsonObject:
+        reads.append(arguments)
+        return _public_source()
+
+    monkeypatch.setattr(PublicWebReader, "read", read)
+    async with _runtime(_public_web_settings(runtime_settings), monkeypatch) as harness:
+        connection_id = await _pair(harness)
+        _source_model(harness, monkeypatch)
+        policy = harness.container.runtime_skills._generation_permission_policy
+        assert policy is not None
+        checks = 0
+
+        async def revoked(context: GenerationSkillContext, skill_id: str) -> bool:
+            nonlocal checks
+            checks += 1
+            return await policy(context, skill_id) if checks == 1 else False
+
+        monkeypatch.setattr(
+            harness.container.runtime_skills, "_generation_permission_policy", revoked
+        )
+        receipt = await _ingest(
+            harness, connection_id, f"请读取 {SOURCE_URL} 官方网页并总结。", 204
+        )
+        await asyncio.wait_for(harness.peer.sends.get(), 5)
+        await _terminal(harness, connection_id, receipt.channel_turn_id)
+        assert checks == 2
+        assert not reads
+        rows = await harness.container.database.fetchall(
+            "SELECT state, error_json FROM skill_runs WHERE skill_id = 'web.read'"
+        )
+        assert len(rows) == 1 and rows[0]["state"] == "failed"
+        assert "stale_channel_request" in str(rows[0]["error_json"])
+
+
+@pytest.mark.asyncio
+async def test_new_owner_input_cancels_public_read_without_stale_delivery(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    started = asyncio.Event()
+    cancelled = asyncio.Event()
+
+    async def read(_self: PublicWebReader, _arguments: JsonObject) -> JsonObject:
+        started.set()
+        try:
+            await asyncio.Future()
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+        return _public_source()
+
+    monkeypatch.setattr(PublicWebReader, "read", read)
+    async with _runtime(_public_web_settings(runtime_settings), monkeypatch) as harness:
+        connection_id = await _pair(harness)
+        original_stream = harness.model.stream
+        _source_model(harness, monkeypatch)
+        old = await _ingest(harness, connection_id, f"请读取 {SOURCE_URL} 官方网页并总结。", 205)
+        await asyncio.wait_for(started.wait(), 5)
+        monkeypatch.setattr(harness.model, "stream", original_stream)
+        new = await _ingest(harness, connection_id, "先停止，只用文字回答。", 206)
+        await asyncio.wait_for(cancelled.wait(), 5)
+        sent = await asyncio.wait_for(harness.peer.sends.get(), 5)
+        assert _segments(sent) == [{"type": "text", "data": {"text": TEXT_REPLY}}]
+        assert (
+            await _terminal(harness, connection_id, old.channel_turn_id)
+        ).status is ChannelTurnStatus.CANCELLED
+        assert (
+            await _terminal(harness, connection_id, new.channel_turn_id)
+        ).status is ChannelTurnStatus.COMPLETED
+        assert harness.peer.sends.empty()
+        assert not harness.container.runtime_skills._policy_authorized_runs
+
+
+@pytest.mark.asyncio
+async def test_owner_public_search_reads_discovered_body_before_text_delivery(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    operations: list[str] = []
+
+    async def search(_self: PublicWebSearch, arguments: JsonObject) -> JsonObject:
+        operations.append("search")
+        return {
+            "provider": "duckduckgo_lite",
+            "query": arguments["query"],
+            "effective_query": arguments["query"],
+            "search_url": "https://lite.duckduckgo.com/lite/?q=fixture",
+            "retrieved_at": datetime.now(UTC).isoformat(),
+            "body_sha256": "a" * 64,
+            "dns_resolver": "system",
+            "results": [{"url": SOURCE_URL, "title": "测试说明", "snippet": "须读取原文"}],
+            "total_matched": 1,
+            "filtered_count": 0,
+            "truncated": False,
+            "empty_reason": None,
+        }
+
+    async def read(_self: PublicWebReader, arguments: JsonObject) -> JsonObject:
+        assert arguments["url"] == SOURCE_URL
+        operations.append("read")
+        return _public_source()
+
+    monkeypatch.setattr(PublicWebSearch, "search", search)
+    monkeypatch.setattr(PublicWebReader, "read", read)
+    async with _runtime(_public_web_settings(runtime_settings), monkeypatch) as harness:
+        connection_id = await _pair(harness)
+        _source_model(harness, monkeypatch, search_first=True)
+        receipt = await _ingest(harness, connection_id, "请搜索公开测试说明，读取来源并总结。", 207)
+        sent = await asyncio.wait_for(harness.peer.sends.get(), 5)
+        result = await _terminal(harness, connection_id, receipt.channel_turn_id)
+        assert operations == ["search", "read"]
+        assert result.status is ChannelTurnStatus.COMPLETED
+        assert SOURCE_BODY in (result.reply_text or "")
+        assert _segments(sent)[0]["type"] == "text"
+        assert not harness.synthesis
+        assert not await harness.container.runtime_skills.pending_confirmations(receipt.session_id)
+        assert harness.peer.sends.empty()

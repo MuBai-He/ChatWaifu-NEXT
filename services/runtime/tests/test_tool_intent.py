@@ -7,6 +7,36 @@ from chatwaifu_runtime.agent.tool_intent import requires_external_operation
 @pytest.mark.parametrize(
     "text",
     [
+        "依据刚才取得的原文，合法心跳到达后是否必须重新随机生成选举超时？"
+        "原文没规定就说明未规定，不要新检索。",
+        "根据已经读取的文档分析现行规定的证据缺口，不要重新检索。",
+        "仅依据已有原文分析现行规定，不要进行新的检索。",
+    ],
+)
+def test_obtained_material_and_no_new_retrieval_are_local_scope(text: str) -> None:
+    from chatwaifu_runtime.agent.tool_intent import restricts_to_existing_content
+
+    assert restricts_to_existing_content(text)
+    assert not requires_external_operation(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "依据刚才取得的原文分析规定，不要新检索，然后读取网页。",
+        "根据已经读取的文档说明现行规定，不要新检索，并保存到笔记。",
+        "依据刚才取得的原文解释规定，不要新检索，然后发送到邮箱。",
+        "依据刚才取得的原文，现行规定是否仍适用？",
+        "哪些现行规定还没核实？不要新检索。",
+    ],
+)
+def test_no_retrieval_phrase_does_not_hide_other_authorized_operations(text: str) -> None:
+    assert requires_external_operation(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
         "听说宁宁很容易害羞，是不是真的呀？",
         "时间不早了，今天就先聊到这里吧。",
         "好的，谢谢，旅行的事到这里就结束了。晚安，不用再提醒我。",
@@ -142,3 +172,32 @@ def test_chinese_command_modifiers_preserve_operation_and_local_scope(
     text: str, required: bool
 ) -> None:
     assert requires_external_operation(text) is required
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "关于分布式一致性算法的选举机制，领导者心跳超时是怎么计算的？",
+        "What timing assumptions does this consensus algorithm require?",
+        "这个协议的状态转换有哪些规范要求？",
+        "这个 API 对重试次数和幂等性有哪些保证？",
+    ],
+)
+def test_technical_specification_requirements_need_a_recorded_source(text: str) -> None:
+    assert requires_external_operation(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "不要联网，解释这个算法的选举超时\uff1b没把握的部分说明未核实。",
+        "Explain the protocol timing assumptions. Do not browse or call tools.",
+        "只根据以下协议片段解释超时约束，不要调用工具。",
+        "请核查这段代码里的协议超时计算是否正确。",
+        "Explain the timeout constraints in the supplied protocol excerpt.",
+        "归并排序算法的原理是什么？",
+        "这个算法的时间复杂度怎么计算？",
+    ],
+)
+def test_supplied_content_and_general_algorithms_do_not_force_a_lookup(text: str) -> None:
+    assert not requires_external_operation(text)

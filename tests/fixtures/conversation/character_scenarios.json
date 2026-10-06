@@ -645,7 +645,37 @@
           "回答清晰到位"
         ],
         "forbidden_behavior": ["装傻不回答技术问题", "概念错误"],
-        "review_criteria": "专业解答 Raft 选举心跳机制。"
+        "review_criteria": "专业解答 Raft 选举心跳机制。",
+        "source_snapshot": {
+          "title": "Raft 论文：选举与心跳时序约束来源快照",
+          "verified_date": "2026-10-02",
+          "snapshot_valid_as_of": "2026-10-02",
+          "scope_note": "仅覆盖 Raft 论文中的角色、AppendEntries 心跳和 timing requirement；论文没有规定所有实现必须采用的毫秒数，具体数值属于实现配置示例。",
+          "sources": [
+            {
+              "title": "In Search of an Understandable Consensus Algorithm (Raft)",
+              "url": "https://raft.github.io/raft.pdf",
+              "verified_date": "2026-10-02",
+              "notes": "论文区分 broadcastTime、选举超时和心跳/AppendEntries；核心要求为 broadcastTime 远小于 election timeout，后者远小于可用故障间隔。"
+            }
+          ],
+          "required_concepts": [
+            {
+              "id": "raft_timing_terms",
+              "name": "Raft timing terms",
+              "description": "区分 broadcastTime、heartbeat interval 和 election timeout；选举超时通常随机化，并且应显著大于心跳间隔。",
+              "patterns": ["broadcastTime", "heartbeat interval", "election timeout", "随机"]
+            }
+          ],
+          "human_review_cues": [
+            {
+              "id": "raft_numeric_example",
+              "name": "Raft numeric example",
+              "description": "回答若给出 150ms、300ms 或其他具体数值，需确认明确标为实现示例，而不是论文固定值。",
+              "patterns": ["150ms", "300ms", "固定", "实现示例"]
+            }
+          ]
+        }
       },
       {
         "turn_id": 2,

@@ -20,6 +20,10 @@ DEFAULT_AGENT_SCHEMA_BUDGET_BYTES = 24_576
 MAX_AGENT_SCHEMA_BUDGET_BYTES = 65_536
 MAX_AGENT_TOOL_SCHEMA_BYTES = 12_288
 MAX_AGENT_TOOL_DESCRIPTION_BYTES = 768
+# Host-owned workflow relationships, not model/source claims or lexical aliases.
+# Discovery needs an available reader for its subsequent evidence step. This
+# grants no execution permission and never enables an absent/disabled capability.
+_BUILTIN_COMPANIONS = {("web.search", "search"): ("web.read", "read")}
 _ASCII_WORD = re.compile(r"[a-z0-9][a-z0-9_-]*")
 _CJK_RUN = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]+")
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]+")
@@ -164,8 +168,9 @@ class RuntimeSkillRouter:
             return ()
         bounded_limit = min(limit, MAX_AGENT_TOOL_LIMIT)
         bounded_budget = min(schema_budget_bytes, MAX_AGENT_SCHEMA_BUDGET_BYTES)
+        definitions = tuple(self._definitions())
         candidates: list[_Candidate] = []
-        for skill in self._definitions():
+        for skill in definitions:
             if not skill.enabled:
                 continue
             for capability in skill.capabilities:
@@ -190,6 +195,44 @@ class RuntimeSkillRouter:
             selected.append(candidate)
             consumed += projected_bytes
 
+        selected_ids = {candidate.identity for candidate in selected}
+        for candidate in tuple(selected):
+            companion_id = _BUILTIN_COMPANIONS.get(candidate.identity)
+            if (
+                candidate.skill.source != "builtin"
+                or companion_id is None
+                or companion_id in selected_ids
+                or len(selected) >= bounded_limit
+            ):
+                continue
+            for skill in definitions:
+                if (
+                    skill.skill_id != companion_id[0]
+                    or skill.source != "builtin"
+                    or not skill.enabled
+                ):
+                    continue
+                for capability in skill.capabilities:
+                    if (
+                        capability.name != companion_id[1]
+                        or capability.side_effect is not SideEffect.READ
+                    ):
+                        continue
+                    companion = _project_candidate(
+                        skill, capability, query=query, require_relevance=False
+                    )
+                    if companion is None:
+                        continue
+                    size = companion.schema_bytes + len(companion.description.encode("utf-8"))
+                    if (
+                        companion.identity not in selected_ids
+                        and len(selected) < bounded_limit
+                        and size <= bounded_budget - consumed
+                    ):
+                        selected.append(companion)
+                        selected_ids.add(companion.identity)
+                        consumed += size
+
         identities = [candidate.identity for candidate in selected]
         names = allocate_tool_names(identities, max_length=64, opaque_prefix="cw")
         return tuple(
@@ -209,7 +252,12 @@ class RuntimeSkillRouter:
 
 
 def _project_candidate(
-    skill: SkillDefinition, capability: SkillCapability, *, query: str, contextual: bool = False
+    skill: SkillDefinition,
+    capability: SkillCapability,
+    *,
+    query: str,
+    require_relevance: bool = True,
+    contextual: bool = False,
 ) -> _Candidate | None:
     if capability.adapter_operation != "invoke":
         return None
@@ -241,7 +289,7 @@ def _project_candidate(
         return None
 
     score = _relevance_score(query, skill, capability)
-    if score <= 0 and not contextual:
+    if require_relevance and score <= 0 and not contextual:
         return None
     description = _model_description(skill, capability)
     return _Candidate(

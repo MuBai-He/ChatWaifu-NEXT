@@ -31,13 +31,17 @@ def estimate_input_tokens(request: LlmRequest) -> int:
     return estimate_reference_input_tokens(request)
 
 
-def fit_input_budget(request: LlmRequest) -> LlmRequest:
+def fit_input_budget(
+    request: LlmRequest, *, protected_history_indices: tuple[int, ...] = ()
+) -> LlmRequest:
     """Preserve complete results, current user input and latest prior user turn.
 
     Replace older history in place so source-ledger indices retain their meaning.
     Never clip source bodies, arguments, errors, permission outcomes, or schemas.
     The orchestrator can close its tool phase if schemas no longer fit; mandatory
-    input overflow is explicit rather than silently deleting evidence.
+    input overflow is explicit rather than silently deleting evidence. A caller
+    selecting optional prior bodies can reserve relevant history first; that
+    history remains ordinary assistant prose, never authoritative source data.
     """
     if request.input_budget is None:
         return request
@@ -73,6 +77,8 @@ def fit_input_budget(request: LlmRequest) -> LlmRequest:
         index for index, (role, _) in enumerate(history) if role == "user" and index != latest_user
     ]
     for index in order:
+        if index in protected_history_indices:
+            continue
         if used <= limit:
             break
         role, _text = history[index]

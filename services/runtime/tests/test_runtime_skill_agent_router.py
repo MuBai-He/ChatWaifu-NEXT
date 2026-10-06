@@ -56,9 +56,14 @@ def test_current_reply_context_does_not_make_voice_a_global_desktop_tool() -> No
     [
         "乘坐国内航班时有哪些具体的民航携带规定？",
         "核对当前安全规章和法规来源",
+        "关于分布式一致性算法的选举机制，领导者心跳超时是怎么计算的？",
+        "What timing assumptions does this consensus algorithm require?",
+        "这个协议的状态转换有哪些规范要求？",
+        "这能直接证明截至2026年10月4日所有中国境内航班都实施相同数量限制吗？"
+        "请区分国际规则公告和中国境内实际执行\uff1b无法核实的部分要明确说明。",
     ],
 )
-def test_source_tools_route_regulations_from_metadata(query: str) -> None:
+def test_source_tools_route_external_documentation_from_metadata(query: str) -> None:
     registry = SkillRegistry(Path(__file__).resolve().parents[3] / "skills" / "builtin")
     registry.reload([])
     selected = RuntimeSkillRouter(registry.list).select(query)
@@ -66,10 +71,48 @@ def test_source_tools_route_regulations_from_metadata(query: str) -> None:
 
 
 @pytest.mark.parametrize(
+    "unavailable", ["available", "disabled", "missing", "plugin", "unsafe_schema"]
+)
+def test_search_companion_must_be_available_safe_host_builtin(unavailable: str) -> None:
+    search = _skill("web.search", "Discovery", "findmarker", [_capability("search", "findmarker")])
+    reader = _skill(
+        "web.read",
+        "Unmatched reader",
+        "Unmatched reader",
+        [
+            _capability(
+                "read",
+                "Unmatched reader",
+                permission="public_web.read",
+                confirmation=True,
+                schema={"type": "string"} if unavailable == "unsafe_schema" else None,
+            )
+        ],
+        enabled=unavailable != "disabled",
+        source="plugin" if unavailable == "plugin" else "builtin",
+    )
+    definitions = [search] if unavailable == "missing" else [search, reader]
+    tools = RuntimeSkillRouter(lambda: definitions).select("findmarker")
+    assert "web.search" in {tool.skill_id for tool in tools}
+    assert ("web.read" in {tool.skill_id for tool in tools}) == (unavailable == "available")
+
+
+def test_search_companion_respects_original_schema_and_count_limits() -> None:
+    registry = SkillRegistry(Path(__file__).resolve().parents[3] / "skills" / "builtin")
+    registry.reload([])
+    router = RuntimeSkillRouter(registry.list)
+    tools = router.select("搜索", limit=1)
+    assert len(tools) == 1
+    assert router.select("搜索", schema_budget_bytes=1) == ()
+
+
+@pytest.mark.parametrize(
     "query",
     [
         "展示 return_exceptions=True 并区分正常结果与异常",
         "异常对象是直接作为元素返回，还是会封装在特定类型里？",
+        "早上好，今天过得怎么样？",
+        "只回复 17 乘以 23 的结果。",
     ],
 )
 def test_generic_code_result_language_does_not_recall_public_sources(query: str) -> None:

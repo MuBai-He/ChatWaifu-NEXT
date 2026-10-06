@@ -2,12 +2,13 @@
 
 import asyncio
 import base64
+import codecs
 import contextlib
 import hashlib
 import json
 import logging
 import math
-from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
+from collections.abc import AsyncGenerator, Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from time import monotonic
 from typing import Literal, NoReturn, cast
@@ -21,10 +22,13 @@ from chatwaifu_runtime.providers.contracts import (
     LlmImageInputUnavailableError,
     LlmRequest,
     LlmResponseCompleted,
+    LlmResponseIdentity,
+    LlmResponseSchemaUnavailableError,
     LlmStreamEvent,
     LlmTextDelta,
     LlmToolCall,
     LlmToolCallingUnavailableError,
+    LlmToolCallProtocolError,
     LlmToolCallRequested,
     LlmUsage,
 )
@@ -34,11 +38,14 @@ MAX_TOOL_CALLS_PER_RESPONSE = 8
 MAX_TOOL_ARGUMENT_CHARACTERS = 65_536
 MAX_TOOL_CALL_ID_CHARACTERS = 256
 MAX_TOOL_NAME_CHARACTERS = 64
+MAX_REPORTED_MODEL_IDS = 8
+MAX_REPORTED_MODEL_CHARACTERS = 256
 
 
 class OpenAiCompatibleLlmProvider:
     kind = "openai_compatible"
     supports_tool_calling = True
+    supports_response_schema = True
 
     def __init__(
         self,
@@ -61,7 +68,7 @@ class OpenAiCompatibleLlmProvider:
         self._sleeper = sleeper
         self._request_usage = bool(request_usage)
 
-    async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+    async def stream(self, request: LlmRequest) -> AsyncGenerator[LlmStreamEvent]:
         started_at = monotonic()
         deadline = started_at + self._timeout
         max_attempts = 3
@@ -79,9 +86,12 @@ class OpenAiCompatibleLlmProvider:
                 raise TimeoutError("OpenAI-compatible request timeout budget exhausted")
 
             try:
-                async for event in self._stream_once(request, attempt_timeout=remaining_timeout):
-                    emitted_any_event = True
-                    yield event
+                async with contextlib.aclosing(
+                    self._stream_once(request, attempt_timeout=remaining_timeout)
+                ) as attempt_stream:
+                    async for event in attempt_stream:
+                        emitted_any_event = True
+                        yield event
                 return
             except _ToolCallingUnsupported as error:
                 # OpenAI-compatible describes an endpoint shape, not a guarantee that
@@ -142,7 +152,7 @@ class OpenAiCompatibleLlmProvider:
 
     async def _stream_once(
         self, request: LlmRequest, *, attempt_timeout: float | None = None
-    ) -> AsyncIterator[LlmStreamEvent]:
+    ) -> AsyncGenerator[LlmStreamEvent]:
         messages = build_messages(request)
         headers = {"Content-Type": "application/json"}
         effective_key = self._api_key() if callable(self._api_key) else self._api_key
@@ -163,6 +173,18 @@ class OpenAiCompatibleLlmProvider:
         tool_parts: dict[int, _ToolCallParts] = {}
         captured_usage: LlmUsage | None = None
         pending_finish_reason: LlmFinishReason | None = None
+        reported_model_ids: list[str] = []
+        identity_seen = identity_incomplete = False
+
+        def completion(reason: LlmFinishReason) -> LlmResponseCompleted:
+            return LlmResponseCompleted(
+                reason,
+                usage=captured_usage,
+                identity=LlmResponseIdentity(tuple(reported_model_ids), identity_incomplete)
+                if identity_seen
+                else None,
+            )
+
         try:
             async with contextlib.AsyncExitStack() as stack:
                 client = await stack.enter_async_context(
@@ -184,11 +206,17 @@ class OpenAiCompatibleLlmProvider:
                     )
                     if response.status_code >= 400:
                         body = await response.aread()
+                        if request.response_schema is not None and _rejects_response_schema(
+                            response.status_code, body
+                        ):
+                            raise LlmResponseSchemaUnavailableError()
                         if request.tools and _rejects_tool_calling(response.status_code, body):
                             raise _ToolCallingUnsupported
                     response.raise_for_status()
 
-                line_iterator = response.aiter_lines().__aiter__()
+                line_iterator = await stack.enter_async_context(
+                    contextlib.aclosing(_iter_sse_lines(response))
+                )
                 while True:
                     try:
                         read_remaining = max(0.0, deadline - monotonic())
@@ -204,13 +232,13 @@ class OpenAiCompatibleLlmProvider:
                     data = line.removeprefix("data:").strip()
                     if data == "[DONE]":
                         if pending_finish_reason is not None:
-                            yield LlmResponseCompleted(pending_finish_reason, usage=captured_usage)
+                            yield completion(pending_finish_reason)
                         elif tool_parts:
                             for call in _finalize_tool_calls(tool_parts, request):
                                 yield LlmToolCallRequested(call)
-                            yield LlmResponseCompleted("tool_calls", usage=captured_usage)
+                            yield completion("tool_calls")
                         else:
-                            yield LlmResponseCompleted("stop", usage=captured_usage)
+                            yield completion("stop")
                         completed = True
                         return
                     try:
@@ -222,6 +250,21 @@ class OpenAiCompatibleLlmProvider:
                     if not isinstance(payload, dict):
                         raise RuntimeError("OpenAI-compatible LLM returned invalid stream data")
                     payload_object = cast(dict[str, object], payload)
+                    if "model" in payload_object:
+                        identity_seen = True
+                        model_id = payload_object["model"]
+                        if (
+                            not isinstance(model_id, str)
+                            or not model_id.strip()
+                            or len(model_id) > MAX_REPORTED_MODEL_CHARACTERS
+                            or not model_id.isprintable()
+                        ):
+                            identity_incomplete = True
+                        elif model_id not in reported_model_ids:
+                            if len(reported_model_ids) < MAX_REPORTED_MODEL_IDS:
+                                reported_model_ids.append(model_id)
+                            else:
+                                identity_incomplete = True
 
                     if self._request_usage:
                         raw_usage = payload_object.get("usage")
@@ -259,7 +302,7 @@ class OpenAiCompatibleLlmProvider:
                             if finish_reason == "tool_calls":
                                 for call in _finalize_tool_calls(tool_parts, request):
                                     yield LlmToolCallRequested(call)
-                            yield LlmResponseCompleted(finish_reason)
+                            yield completion(finish_reason)
                             completed = True
                             return
                         pending_finish_reason = finish_reason
@@ -268,13 +311,13 @@ class OpenAiCompatibleLlmProvider:
                                 yield LlmToolCallRequested(call)
                             tool_parts.clear()
                 if pending_finish_reason is not None:
-                    yield LlmResponseCompleted(pending_finish_reason, usage=captured_usage)
+                    yield completion(pending_finish_reason)
                 elif tool_parts:
                     for call in _finalize_tool_calls(tool_parts, request):
                         yield LlmToolCallRequested(call)
-                    yield LlmResponseCompleted("tool_calls", usage=captured_usage)
+                    yield completion("tool_calls")
                 else:
-                    yield LlmResponseCompleted("other", usage=captured_usage)
+                    yield completion("other")
                 completed = True
         finally:
             if first_chunk_at is not None and last_chunk_at is not None:
@@ -301,6 +344,33 @@ class OpenAiCompatibleLlmProvider:
                     max_chunk_characters,
                     pattern,
                 )
+
+
+async def _iter_sse_lines(response: httpx2.Response) -> AsyncGenerator[str]:
+    """Own the byte iterator even when DONE precedes HTTP EOF.
+
+    httpx2 2.12's text/line wrappers do not close their nested iterators on early
+    exit. Its bytes iterator does, and retains content decompression. Decode SSE
+    UTF-8 here, accepting a leading BOM and CR, LF, or CRLF across byte chunks.
+    """
+    decoder = codecs.getincrementaldecoder("utf-8-sig")(errors="replace")
+    pending = ""
+    skip_lf = False
+    async with contextlib.aclosing(response.aiter_bytes()) as byte_stream:
+        async for chunk in byte_stream:
+            text = decoder.decode(chunk)
+            if not text:
+                continue
+            if skip_lf and text.startswith("\n"):
+                text = text[1:]
+            skip_lf = text.endswith("\r")
+            lines = (pending + text).replace("\r\n", "\n").replace("\r", "\n").split("\n")
+            pending = lines.pop()
+            for line in lines:
+                yield line
+        pending += decoder.decode(b"", final=True)
+        if pending:
+            yield pending
 
 
 def classify_stream_delivery(
@@ -334,6 +404,8 @@ def build_messages(request: LlmRequest) -> list[dict[str, object]]:
     messages: list[dict[str, object]] = [{"role": "system", "content": request.system_prompt}]
     messages.extend({"role": role, "content": text} for role, text in request.context)
     messages.extend({"role": role, "content": text} for role, text in request.history)
+    if request.pre_user_system_prompt:
+        messages.append({"role": "system", "content": request.pre_user_system_prompt})
     if request.images:
         user_content: list[dict[str, object]] = [{"type": "text", "text": request.user_text}]
         for image in request.images:
@@ -383,6 +455,8 @@ def build_messages(request: LlmRequest) -> list[dict[str, object]]:
             }
             for result in exchange.results
         )
+    if request.continuation_system_prompt:
+        messages.append({"role": "system", "content": request.continuation_system_prompt})
     return messages
 
 
@@ -400,6 +474,8 @@ def build_chat_completions_payload(
         payload["max_tokens"] = request.max_output_tokens
     if request_usage:
         payload["stream_options"] = {"include_usage": True}
+    if request.response_schema is not None:
+        payload["response_format"] = request.response_schema.response_format()
     if request.tools:
         payload["tools"] = [
             {
@@ -414,6 +490,17 @@ def build_chat_completions_payload(
         ]
         payload["tool_choice"] = request.tool_choice
     return payload
+
+
+def _rejects_response_schema(status_code: int, body: bytes) -> bool:
+    if status_code not in {400, 422}:
+        return False
+    # Only a specific format rejection, not quota/auth/other client errors.
+    text = body[:16_384].decode("utf-8", errors="replace").lower()
+    return bool(
+        ("response_format" in text or "json_schema" in text)
+        and any(word in text for word in ("not supported", "unsupported", "not implemented"))
+    )
 
 
 def _parse_usage(raw: dict[str, object]) -> LlmUsage | None:
@@ -550,13 +637,13 @@ def _finalize_tool_calls(
     for index, item in sorted(parts.items()):
         name = item.name.strip()
         if not name or name not in allowed_names:
-            raise RuntimeError("OpenAI-compatible LLM requested an unknown tool")
+            raise LlmToolCallProtocolError("unknown_tool")
         try:
             arguments_value = _strict_json_loads(item.arguments or "{}")
         except (json.JSONDecodeError, ValueError) as error:
-            raise RuntimeError("OpenAI-compatible LLM returned malformed tool arguments") from error
+            raise LlmToolCallProtocolError("malformed_arguments") from error
         if not isinstance(arguments_value, dict):
-            raise RuntimeError("OpenAI-compatible LLM tool arguments must be a JSON object")
+            raise LlmToolCallProtocolError("arguments_not_object")
         arguments = cast(JsonObject, arguments_value)
         call_id = item.call_id.strip()
         if not call_id:
@@ -565,11 +652,11 @@ def _finalize_tool_calls(
             ).hexdigest()[:16]
             call_id = f"call_{digest}"
         if call_id in call_ids:
-            raise RuntimeError("OpenAI-compatible LLM returned duplicate tool call ids")
+            raise LlmToolCallProtocolError("duplicate_ids")
         call_ids.add(call_id)
         calls.append(LlmToolCall(call_id=call_id, name=name, arguments=arguments))
     if not calls:
-        raise RuntimeError("OpenAI-compatible LLM ended with no complete tool calls")
+        raise LlmToolCallProtocolError("incomplete_calls")
     return tuple(calls)
 
 

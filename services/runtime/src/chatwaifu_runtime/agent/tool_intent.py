@@ -84,7 +84,11 @@ _PERSONAL_DATA_REQUEST = re.compile(
     re.IGNORECASE,
 )
 _EXCLUSIVE_CONTENT_SCOPE = re.compile(
-    r"(?:只|仅(?:仅)?)(?:能)?(?:根据|依据|使用|基于|参考)"
+    r"(?:(?:只|仅(?:仅)?)(?:能)?(?:根据|依据|使用|基于|参考)|"
+    r"(?:根据|依据|使用|基于|参考)(?:刚才|刚刚|先前|之前|已(?:经)?)"
+    r"(?:成功|实际)?(?:取得|读取|读到|提供|获取|获得)(?:的)?|"
+    r"(?:把|将)(?:刚才|刚刚|先前|之前|已(?:经)?)(?:成功|实际)?"
+    r"(?:取得|读取|读到|获取|获得)(?:的)?)"
     r"[^，,。.!?！？\uFF1B;\n]{0,80}"
     r"(?:原文|文档|资料|材料|网页|页面|(?:两|这|几|三|一|[0-9]+)页|文本|内容|记录)|"
     r"\b(?:based\s+(?:solely|only)\s+on|(?:using|use)\s+only|only\s+(?:use|using|from))"
@@ -92,19 +96,53 @@ _EXCLUSIVE_CONTENT_SCOPE = re.compile(
     re.IGNORECASE,
 )
 _NO_NEW_TOOLS = re.compile(
-    r"(?:不要|不用|不必|别)(?:再|再次|继续)?"
-    r"(?:(?:调用|使用|执行)(?:任何|新的|新)?(?:工具|函数)|联网|上网|搜索|读取|浏览)|"
+    r"(?:不要|不用|不必|别)(?:再|再次|继续|重新)?"
+    r"(?:(?:调用|使用|执行)(?:任何|新的|新)?(?:工具|函数)|联网|上网|搜索|读取|浏览|"
+    r"(?:进行)?(?:新(?:的)?)?检索)|"
     r"\b(?:do\s+not|don't)\s+"
     r"(?:(?:call|use|invoke)\s+(?:any\s+|new\s+|more\s+)?tools?\b|browse\b|search\b|fetch\b|read\b)",
     re.IGNORECASE,
 )
 
+_TECHNICAL_SUBJECT = re.compile(
+    r"算法|协议|规范|\b(?:algorithm|protocol|specification)s?\b|"
+    r"(?<![a-z0-9_])(?:api|sdk)(?![a-z0-9_])",
+    re.IGNORECASE,
+)
+_TECHNICAL_REQUIREMENT = re.compile(
+    r"超时|阈值|时序|约束|保证|规范要求|语义|幂等|次数限制|"
+    r"\b(?:timeouts?|timing|assumptions?|requirements?|constraints?|guarantees?|semantics|limits?)\b",
+    re.IGNORECASE,
+)
+_SUPPLIED_TECHNICAL_CONTENT = re.compile(
+    r"(?:这段|以下|所给|给定|所附|上述|上面的)(?:代码|文本|规范|协议|材料)|"
+    r"\b(?:this|the\s+(?:following|supplied|provided)|supplied|provided)\s+"
+    r"(?:code|text|excerpt|specification|protocol)\b",
+    re.IGNORECASE,
+)
+
+
+def _requires_technical_source(user_text: str) -> bool:
+    """Normative technical facts need evidence; local explanation remains local.
+
+    Only current user intent participates. This does not select tool names,
+    supply reference answers or bypass the normal per-call permission gateway.
+    """
+    return bool(
+        _TECHNICAL_SUBJECT.search(user_text)
+        and _TECHNICAL_REQUIREMENT.search(user_text)
+        and _QUESTION.search(user_text)
+        and not _NO_NEW_TOOLS.search(user_text)
+        and not _SUPPLIED_TECHNICAL_CONTENT.search(user_text)
+    )
+
 
 def restricts_to_existing_content(user_text: str) -> bool:
     """Recognize explicit content-only scope, not evidence or execution authority.
 
-    Both exclusive supplied/prior content and a no-new-tools instruction are
-    required. Affirmative commands elsewhere still take precedence through
+    An exclusive content scope or explicit obtained-material reference, together
+    with a no-new-tools instruction, is required. Affirmative commands elsewhere
+    still take precedence through
     requires_external_operation; source text and assistant output never participate.
     """
     return bool(_EXCLUSIVE_CONTENT_SCOPE.search(user_text) and _NO_NEW_TOOLS.search(user_text))
@@ -142,6 +180,7 @@ def requires_external_operation(user_text: str) -> bool:
         or _REMINDER.search(operation_text)
         or _CLOCK_QUESTION.search(operation_text)
         or _PERSONAL_DATA_REQUEST.search(operation_text)
+        or _requires_technical_source(user_text)
         or (
             _EXTERNAL_FACT.search(operation_text)
             and _QUESTION.search(user_text)
