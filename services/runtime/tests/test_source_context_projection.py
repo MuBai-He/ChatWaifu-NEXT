@@ -73,12 +73,37 @@ def _request(limit: int = 8192) -> LlmRequest:
     )
 
 
+def test_reprojection_replaces_runtime_envelope_and_keeps_other_context() -> None:
+    packet = SourceContextPacket((_receipt("COMPLETE ORIGINAL"),))
+    request = replace(_request(), context=(("user", "supplied material"),))
+    projected = project_source_context(request, packet)
+    reprojection = project_source_context(projected, packet)
+    assert reprojection.context == projected.context
+    assert reprojection.context[0] == ("user", "supplied material")
+    assert sum(text.startswith("[PUBLIC SOURCE DATA]\n") for _, text in reprojection.context) == 1
+
+
 @pytest.mark.parametrize(
     ("user_text", "expected"),
     [
         ("把刚才这份公告整理成清单，保留当前规则仍需要再核实的提醒。", True),
         ("请总结之前已读的文档，保留适用范围与未核实事项。", True),
+        ("不要再联网，只根据刚才读到的原文，用两句话概括区别。", True),
         ("Summarize the previously read document; keep unresolved checks for current rules.", True),
+        ("将这份 ICAO 公告整理为三条清单，保留日期与适用范围。", True),
+        ("将这份国航提示整理为三条出发前检查清单。", True),
+        (
+            "把已经取得的充电宝资料整理成三条出发前检查清单，保留日期与真实链接、"
+            "实质条件和未核实范围。不要新检索。",
+            True,
+        ),
+        ("请把这个网页概括为两段。", True),
+        ("Summarize this document as a checklist.", True),
+        ("把这份公告整理成清单，并核实今天的更新。", False),
+        ("整理这份公告，然后创建明天的提醒。", False),
+        ("Summarize this document and send it by email.", False),
+        ("将这份新的公告整理成清单\uff1ahttps://example.org/new", False),
+        ("把这个程序整理成函数。", False),
         ("把刚才的公告整理成清单，并重新查询今天的最新规定。", False),
         ("把刚才的公告总结\uff1b重新核查适用范围。", False),
         ("把刚才的公告整理成最新规则清单。", False),
@@ -108,7 +133,10 @@ def test_source_transformation_requires_prior_material_and_no_new_operation(
 
 
 @pytest.mark.parametrize("mode", ["empty", "unavailable", "failed", "search_only", "blank_body"])
-def test_source_transformation_cannot_treat_missing_or_search_original_as_read(mode: str) -> None:
+@pytest.mark.parametrize("text", ["把刚才这份公告整理成清单。", "将这份国航提示整理为清单。"])
+def test_source_transformation_cannot_treat_missing_or_search_original_as_read(
+    mode: str, text: str
+) -> None:
     receipt = _receipt("ORIGINAL", available=mode != "unavailable", failed=mode == "failed")
     if mode == "search_only":
         receipt = replace(
@@ -118,7 +146,7 @@ def test_source_transformation_cannot_treat_missing_or_search_original_as_read(m
     elif mode == "blank_body":
         receipt = _receipt(" ")
     packet = SourceContextPacket(() if mode == "empty" else (receipt,))
-    assert not can_reuse_prior_sources("把刚才这份公告整理成清单。", packet)
+    assert not can_reuse_prior_sources(text, packet)
 
 
 def test_source_body_or_old_assistant_instructions_cannot_choose_transformation_intent() -> None:
@@ -182,6 +210,86 @@ def test_complete_source_outweighs_old_assistant_prose() -> None:
     assert projected.history[1] == request.history[1]
     assert projected.input_budget_report is not None
     assert projected.input_budget_report.omitted_history_indices == (0,)
+
+
+@pytest.mark.parametrize("late_review", [False, True])
+def test_prior_material_followup_keeps_latest_answer_before_old_source_bodies(
+    late_review: bool,
+) -> None:
+    from chatwaifu_runtime.agent.tool_calling import (
+        _budgeted_request,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    newest = _receipt("FULL CURRENT CONDITIONS AND EXCEPTIONS")
+    older = _receipt("Unrelated older source body. " * 200)
+    packet = SourceContextPacket((newest, older))
+    latest_answer = "The approval rules and later revisions remain unverified. " * 220
+    request = replace(
+        _request(20000),
+        user_text="Summarize the previously read documents and preserve unresolved checks.",
+        history=(
+            ("user", "An older topic"),
+            ("assistant", "An older answer"),
+            ("user", "Explain these documents and what has not been checked."),
+            ("assistant", latest_answer),
+        ),
+    )
+    # Latest answer plus current source fits; the old body competes for the
+    # remaining allowance. Derive the allowance without clipping any message.
+    without_old_body = SourceContextPacket(
+        (newest, replace(older, original_result_available=False))
+    )
+    required = project_source_context(request, without_old_body)
+    limit = estimate_input_tokens(required) + 100
+    request = replace(request, input_budget=LlmInputBudget(limit))
+    if late_review:
+        initial = project_source_context(
+            replace(request, input_budget=LlmInputBudget(20000)), packet
+        )
+        request = replace(
+            initial,
+            input_budget=LlmInputBudget(limit),
+            continuation_system_prompt="Existing review policy with its withheld draft.",
+        )
+        fitted = _budgeted_request(request, source_context=packet)
+    else:
+        fitted = project_source_context(request, packet)
+    assert fitted.history[-1] == ("assistant", latest_answer)
+    assert fitted.history[-2] == request.history[-2]
+    assert fitted.input_budget_report is not None
+    assert 3 not in fitted.input_budget_report.omitted_history_indices
+    assert estimate_input_tokens(fitted) <= limit
+    assert all(latest_answer not in text for _, text in fitted.context)
+    sources = json.loads(fitted.context[-1][1].split("\n", 1)[1])["receipts"]
+    assert sources[0]["data"]["text"] == "FULL CURRENT CONDITIONS AND EXCEPTIONS"
+    assert sources[1]["original_result"] == "omitted_for_input_budget"
+    assert "data" not in sources[1]
+    assert newest.run.result is not None and older.run.result is not None
+    assert isinstance(older.run.result.data, dict)
+    assert older.run.result.data["text"] == "Unrelated older source body. " * 200
+
+
+def test_unfittable_latest_answer_does_not_become_original_source_evidence() -> None:
+    from chatwaifu_runtime.agent.source_context import missing_required_prior_read
+    from chatwaifu_runtime.agent.tool_calling import (
+        _budgeted_request,  # pyright: ignore[reportPrivateUsage]
+    )
+
+    packet = SourceContextPacket((_receipt("A complete original"),))
+    request = replace(
+        _request(1000),
+        user_text="只根据刚才读到的原文整理清单，不要再联网。",
+        history=(("assistant", "Unverified assistant claim " * 2000),),
+    )
+    fitted = _budgeted_request(request, source_context=packet)
+    assert estimate_input_tokens(fitted) <= 1000
+    assert fitted.input_budget_report is not None
+    assert fitted.input_budget_report.omitted_history_indices == (0,)
+    assert missing_required_prior_read(fitted)
+    assert "Unverified assistant claim" not in fitted.context[-1][1]
+    assert "A complete original" not in fitted.context[-1][1]
+    assert "omitted_for_input_budget" in fitted.context[-1][1]
+    assert "omitted an earlier assistant" in fitted.history[0][1]
 
 
 def test_source_wire_whitespace_does_not_displace_an_otherwise_fitting_whole_result() -> None:
@@ -362,3 +470,84 @@ def test_generation_selection_is_bounded_deduplicated_and_excludes_unknown_ids()
         ConversationHistoryEntry("user", "input", generation_id=uuid4()),
     )
     assert source_generation_ids(history, None) == tuple(reversed(generations[-8:]))
+
+
+@pytest.mark.parametrize(
+    "mode", ["retained", "omitted", "failed", "unavailable", "new_topic", "fresh_read"]
+)
+def test_prior_revision_only_uses_retained_originals_for_transformations(mode: str) -> None:
+    from chatwaifu_runtime.agent.source_context import prior_source_revision_urls
+
+    packet = SourceContextPacket(
+        (
+            _receipt(
+                "Very large source " * 2000 if mode == "omitted" else "Original conditions",
+                available=mode != "unavailable",
+                failed=mode == "failed",
+            ),
+        )
+    )
+    request = replace(
+        _request(1000),
+        user_text="整理上述所有准备要点和建议成核对表。"
+        if mode not in {"new_topic", "fresh_read"}
+        else "不聊这个了，番茄炒蛋放糖还是盐？"
+        if mode == "new_topic"
+        else "整理上述来源，并重新核查最新规定。",
+    )
+    projected = project_source_context(request, packet)
+    assert prior_source_revision_urls(projected) == (
+        ("https://example.org/original",) if mode == "retained" else ()
+    )
+
+
+@pytest.mark.parametrize("mode", ["retained", "omitted", "failed", "unavailable", "blank"])
+def test_exclusive_prior_read_scope_uses_the_final_retained_body(mode: str) -> None:
+    from chatwaifu_runtime.agent.source_context import missing_required_prior_read
+
+    receipt = _receipt(
+        "Large original " * 3000 if mode == "omitted" else " " if mode == "blank" else "Original",
+        available=mode != "unavailable",
+        failed=mode == "failed",
+    )
+    request = replace(
+        _request(1000), user_text="不要再联网，只根据刚才读到的原文，用两句话概括区别。"
+    )
+    projected = project_source_context(request, SourceContextPacket((receipt,)))
+    assert missing_required_prior_read(projected) is (mode != "retained")
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Don't browse; using only the previously read source, summarize the differences.", True),
+        ("不聊这个了，番茄炒蛋放糖还是盐？", False),
+        ("概括刚才的原文即可。", False),
+        ("不要联网，只根据我粘贴的原文概括区别。", False),
+        ("不要联网，只根据刚才读到的原文及以下材料概括:本地提供的正文。", False),
+        ("不要联网，只根据刚才读到的原文概括，并重新读取最新文档。", False),
+        ("不要再联网，只根据刚才读到的原文，用两句话概括区别。\n> 本地原文", False),
+    ],
+)
+def test_missing_read_does_not_override_supplied_material_or_other_requests(
+    text: str, expected: bool
+) -> None:
+    from chatwaifu_runtime.agent.source_context import missing_required_prior_read
+
+    request = replace(_request(), user_text=text)
+    projected = project_source_context(request, SourceContextPacket((_receipt("", failed=True),)))
+    assert missing_required_prior_read(projected) is expected
+    assert not missing_required_prior_read(request)
+
+
+def test_older_failed_read_cannot_hide_user_supplied_material_in_the_previous_turn() -> None:
+    from chatwaifu_runtime.agent.source_context import missing_required_prior_read
+
+    request = replace(
+        _request(),
+        user_text="不要再联网，只根据刚才读到的原文，用两句话概括区别。",
+        routing_previous_user_text="以下是我粘贴的原文，请读一下。",
+        history=(("user", "以下是我粘贴的原文，请读一下。\n这里是已有材料的正文。"),),
+    )
+    projected = project_source_context(request, SourceContextPacket((_receipt("", failed=True),)))
+    assert not missing_required_prior_read(projected)

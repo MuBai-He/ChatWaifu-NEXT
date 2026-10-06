@@ -18,6 +18,7 @@ from urllib.parse import urljoin, urlsplit, urlunsplit
 import httpx2
 from chatwaifu_protocol.base import JsonObject, JsonValue
 
+from chatwaifu_runtime.config.settings import PublicWebConfig
 from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
 from chatwaifu_runtime.runtime_skills.transports import (
     PinnedAsyncHTTPTransport,
@@ -37,6 +38,9 @@ MAX_DNS_RESPONSE_BYTES = 16 * 1024
 _REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 _CONTENT_TYPES = {"text/html", "application/xhtml+xml", "text/plain"}
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+_MARKDOWN_HEADING = re.compile(r"^ {0,3}#{1,6}[ \t]+(.+?)\s*#*\s*$")
+_MARKDOWN_FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
+_MARKDOWN_INLINE_LINK = re.compile(r"\[([^\]\n]{1,256})\]\([^\n)]{0,2048}\)")
 _IGNORED_TAGS = {"script", "style", "nav", "footer", "aside", "template", "noscript", "svg"}
 _CONTENT_CLASSES = {
     "article-body",
@@ -132,6 +136,21 @@ async def validate_public_url(url: str) -> ValidatedMcpEndpoint:
     return endpoint
 
 
+async def validate_public_url_with_resolver(
+    url: str,
+    resolver: Literal["system", "cloudflare"],
+    *,
+    transport_factory: Callable[[ValidatedMcpEndpoint], httpx2.AsyncBaseTransport] | None = None,
+) -> ValidatedMcpEndpoint:
+    """Validate a source URL with the same resolver semantics as the built-in reader."""
+
+    normalized = normalize_public_source_url(url)
+    if resolver == "system":
+        return await validate_public_url(normalized)
+    reader = PublicWebReader(transport_factory=transport_factory)
+    return await reader._cloudflare_endpoint(normalized)  # pyright: ignore[reportPrivateUsage]
+
+
 @dataclass(frozen=True, slots=True)
 class PublicWebPage:
     url: str
@@ -148,10 +167,12 @@ class PublicWebReader:
     def __init__(
         self,
         *,
+        provider_config: PublicWebConfig | None = None,
         transport_factory: Callable[[ValidatedMcpEndpoint], httpx2.AsyncBaseTransport]
         | None = None,
         timeout_seconds: float = 25,
     ) -> None:
+        self._provider_config = provider_config or PublicWebConfig()
         self._transport_factory = transport_factory or PinnedAsyncHTTPTransport
         self._timeout_seconds = timeout_seconds
 
@@ -161,6 +182,7 @@ class PublicWebReader:
         maximum = arguments.get("max_characters", MAX_SOURCE_CHARACTERS)
         maximum_links = arguments.get("max_links", 0)
         resolver = arguments.get("dns_resolver", "system")
+        fresh = arguments.get("fresh", False)
         if (
             not isinstance(url, str)
             or (focus is not None and (not isinstance(focus, str) or not 1 <= len(focus) <= 128))
@@ -172,10 +194,12 @@ class PublicWebReader:
             or not 0 <= maximum_links <= MAX_SOURCE_LINKS
             or not isinstance(resolver, str)
             or resolver not in {"system", "cloudflare"}
+            or not isinstance(fresh, bool)
         ):
             raise SkillExecutionError(
                 "web_invalid_arguments", "Invalid source URL, focus, excerpt length or link limit"
             )
+        fallback_trace: dict[str, object] = {}
         try:
             async with asyncio.timeout(self._timeout_seconds):
                 return await self._read(
@@ -184,14 +208,22 @@ class PublicWebReader:
                     maximum,
                     maximum_links,
                     cast(Literal["system", "cloudflare"], resolver),
+                    fresh,
+                    fallback_trace,
                 )
         except (TimeoutError, httpx2.TimeoutException) as error:
             raise SkillExecutionError(
-                "web_timeout", "Public source read timed out", retryable=True
+                "web_timeout",
+                "Public source read timed out",
+                retryable=True,
+                details=fallback_trace,
             ) from error
         except httpx2.HTTPError as error:
             raise SkillExecutionError(
-                "web_network_error", "Public source could not be read", retryable=True
+                "web_network_error",
+                "Public source could not be read",
+                retryable=True,
+                details=fallback_trace,
             ) from error
         except SkillExecutionError as error:
             if error.structured.code.startswith("mcp_"):
@@ -201,11 +233,64 @@ class PublicWebReader:
                     else "web_invalid_response"
                 )
                 raise SkillExecutionError(
-                    code, "Public source failed its network response validation"
+                    code,
+                    "Public source failed its network response validation",
+                    details=fallback_trace,
                 ) from error
             raise
 
     async def _read(
+        self,
+        url: str,
+        focus: str | None,
+        maximum: int,
+        maximum_links: int,
+        resolver: Literal["system", "cloudflare"],
+        fresh: bool,
+        fallback_trace: dict[str, object] | None = None,
+    ) -> JsonObject:
+        if self._provider_config.reader_provider != "builtin":
+            try:
+                return await self._read_external(
+                    url, focus, maximum, maximum_links, resolver, fresh
+                )
+            except SkillExecutionError as error:
+                if (
+                    self._provider_config.reader_provider != "crawl4ai"
+                    or not self._provider_config.crawl4ai_builtin_fallback
+                    or urlsplit(url).path.lower().endswith(".pdf")
+                    or error.structured.code
+                    not in {"web_provider_unavailable", "web_provider_network_error", "web_timeout"}
+                ):
+                    raise
+                status = error.structured.details.get("status_code")
+                fallback: JsonObject = {
+                    "from_provider": "crawl4ai",
+                    "reason": error.structured.code,
+                    "http_status": status if type(status) is int and 100 <= status <= 599 else None,
+                }
+                if fallback_trace is not None:
+                    fallback_trace["provider_fallback"] = fallback
+                # The outer read() deadline owns both attempts. The builtin path
+                # revalidates every redirect and never sends companion credentials.
+                try:
+                    result = await self._read_builtin(url, focus, maximum, maximum_links, resolver)
+                except SkillExecutionError as final:
+                    details: dict[str, object] = {"provider_fallback": fallback}
+                    final_status = final.structured.details.get("status_code")
+                    if type(final_status) is int and 100 <= final_status <= 599:
+                        details["status_code"] = final_status
+                    raise SkillExecutionError(
+                        final.structured.code,
+                        final.structured.message,
+                        retryable=final.structured.retryable,
+                        details=details,
+                    ) from final
+                result["provider_fallback"] = fallback
+                return result
+        return await self._read_builtin(url, focus, maximum, maximum_links, resolver)
+
+    async def _read_builtin(
         self,
         url: str,
         focus: str | None,
@@ -234,6 +319,7 @@ class PublicWebReader:
         )
         return {
             "url": page.url,
+            "provider": "builtin",
             "title": title[:240],
             "text": excerpt,
             "retrieved_at": page.retrieved_at,
@@ -249,6 +335,88 @@ class PublicWebReader:
             "links": links,
             "links_requested": maximum_links > 0,
             "links_truncated": links_truncated,
+            "links_scope": "selected_source",
+            "read_url_schemes": ["https"],
+        }
+
+    async def _read_external(
+        self,
+        url: str,
+        focus: str | None,
+        maximum: int,
+        maximum_links: int,
+        resolver: Literal["system", "cloudflare"],
+        fresh: bool,
+    ) -> JsonObject:
+        from chatwaifu_runtime.runtime_skills.public_web_providers import (
+            Crawl4aiReaderClient,
+            FirecrawlReaderClient,
+            JinaReaderClient,
+            provider_body_sha256,
+        )
+
+        if self._provider_config.reader_provider == "jina":
+            try:
+                page = await JinaReaderClient(
+                    self._provider_config, transport_factory=self._transport_factory
+                ).read(url, fresh=fresh, dns_resolver=resolver)
+            except SkillExecutionError as error:
+                fallback_codes = {
+                    "web_timeout",
+                    "web_empty_content",
+                    "web_provider_network_error",
+                    "web_provider_unavailable",
+                    "web_provider_format_changed",
+                }
+                if (
+                    not (
+                        self._provider_config.firecrawl_api_key is not None
+                        or self._provider_config.firecrawl_allow_anonymous
+                    )
+                    or error.structured.code not in fallback_codes
+                ):
+                    raise
+                page = await FirecrawlReaderClient(
+                    self._provider_config, transport_factory=self._transport_factory
+                ).read(url, fresh=fresh, dns_resolver=resolver)
+        elif self._provider_config.reader_provider == "crawl4ai":
+            page = await Crawl4aiReaderClient(self._provider_config).read(
+                url, fresh=fresh, dns_resolver=resolver
+            )
+        else:
+            page = await FirecrawlReaderClient(
+                self._provider_config, transport_factory=self._transport_factory
+            ).read(url, fresh=fresh, dns_resolver=resolver)
+        text = _clean_text(page.text)
+        if not text:
+            raise SkillExecutionError(
+                "web_empty_content", "Public source contained no readable text"
+            )
+        focus_offset = _external_focus_offset(text, focus)
+        offset = (
+            min(max(0, focus_offset - 160), max(0, len(text) - maximum))
+            if focus_offset is not None
+            else 0
+        )
+        excerpt = text[offset : offset + maximum]
+        return {
+            "url": page.source_url,
+            "provider": page.provider,
+            "title": page.title[:240],
+            "text": excerpt,
+            "retrieved_at": page.retrieved_at,
+            "content_type": "text/plain",
+            "body_sha256": provider_body_sha256(page.body),
+            "total_characters": len(text),
+            "text_offset": offset,
+            "truncated": offset > 0 or offset + len(excerpt) < len(text),
+            "focus_matched": focus_offset is not None if focus else None,
+            "dns_resolver": resolver,
+            "extraction_method": "plain_text",
+            "document_characters": len(text),
+            "links": [],
+            "links_requested": maximum_links > 0,
+            "links_truncated": maximum_links > 0,
             "links_scope": "selected_source",
             "read_url_schemes": ["https"],
         }
@@ -750,6 +918,39 @@ def _source_links(
         links.append(link)
         used_bytes += size
     return links, truncated
+
+
+def _external_focus_offset(text: str, focus: str | None) -> int | None:
+    """Prefer a literal visible Markdown heading, then an ordinary text match.
+
+    External readers return Markdown with linked section numbers and titles.
+    Searching that markup literally can miss a requested heading or select its
+    table-of-contents label. Only matching removes link syntax; the returned
+    source, offsets and length remain excerpts of the already-cleaned text. This does not
+    perform semantic search or fetch any links. Fenced examples are not headings.
+    """
+    if not focus:
+        return None
+    needle = " ".join(focus.split()).casefold()
+    offset = 0
+    fence = ""
+    for line in text.splitlines(keepends=True):
+        marker = _MARKDOWN_FENCE.match(line)
+        if marker:
+            token, suffix = marker.groups()
+            if not fence:
+                fence = token
+            elif token[0] == fence[0] and len(token) >= len(fence) and not suffix.strip():
+                fence = ""
+        elif not fence and len(line) <= 2048:
+            heading = _MARKDOWN_HEADING.match(line)
+            if heading:
+                visible = _MARKDOWN_INLINE_LINK.sub(r"\1", heading.group(1))
+                if needle and needle in " ".join(visible.split()).casefold():
+                    return offset
+        offset += len(line)
+    match = re.search(re.escape(focus), text, re.IGNORECASE)
+    return match.start() if match is not None else None
 
 
 def _clean_text(text: str) -> str:

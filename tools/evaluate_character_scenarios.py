@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any, Literal, cast
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, SecretStr, ValidationError
 
 _ROOT = Path(__file__).resolve().parents[1]
 for _subpath in (
@@ -51,7 +51,7 @@ from chatwaifu_protocol.memory import (
     MemoryContextPacket,
     MemoryExcerpt,
 )
-from chatwaifu_runtime.agent.tool_calling import MAX_AGENT_PROVIDER_ROUNDS
+from chatwaifu_runtime.agent.tool_calling import MAX_SOURCE_PROVIDER_ROUNDS
 from chatwaifu_runtime.character_kernel.prompt import PromptCompiler
 from chatwaifu_runtime.character_kernel.service import (
     _classify,
@@ -61,7 +61,7 @@ from chatwaifu_runtime.character_kernel.service import (
     _relationship_stage,
 )
 from chatwaifu_runtime.characters.service import CharacterProfile, CharacterService
-from chatwaifu_runtime.config.settings import Settings, StorageConfig
+from chatwaifu_runtime.config.settings import PublicWebConfig, Settings, StorageConfig
 from chatwaifu_runtime.conversation.models import ConversationHistoryEntry
 from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.eventing.publisher import EventPublisher
@@ -108,6 +108,7 @@ class TurnDefinition:
     expected_behavior: list[str]
     forbidden_behavior: list[str]
     review_criteria: str
+    source_snapshot: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,7 +123,7 @@ class ScenarioDefinition:
     turns: list[TurnDefinition]
 
 
-TOOL_VERSION = "1.14.0"
+TOOL_VERSION = "1.33.0"
 
 
 def _utc_prompt_time(value: datetime) -> datetime:
@@ -308,6 +309,7 @@ class EvaluatedSample:
     tokens_source: Literal["estimated", "provider_reported"] = "estimated"
     input_snapshot: dict[str, Any] | None = None
     runtime_source_trace: dict[str, Any] | None = None
+    provider_response_identities: list[dict[str, Any] | None] | None = None
 
 
 _EVALUATED_SAMPLE_FIELD_NAMES = {f.name for f in fields(EvaluatedSample)}
@@ -341,6 +343,11 @@ def load_scenarios(path: Path) -> list[ScenarioDefinition]:
                 expected_behavior=list(t.get("expected_behavior", [])),
                 forbidden_behavior=list(t.get("forbidden_behavior", [])),
                 review_criteria=t.get("review_criteria", ""),
+                source_snapshot=(
+                    cast(dict[str, Any], t["source_snapshot"])
+                    if isinstance(t.get("source_snapshot"), dict)
+                    else None
+                ),
             )
             for t in raw_turns
         ]
@@ -475,13 +482,24 @@ class EvaluationRunner:
         resume: bool = True,
         isolated_db_dir: Path | None = None,
         runtime_source_tools: bool = False,
+        source_decision_contract: bool = False,
         allow_source_tools_once: bool = False,
         max_provider_requests: int | None = None,
         source_dns_resolver: Literal["system", "cloudflare"] = "system",
+        source_search_provider: Literal[
+            "duckduckgo_lite", "firecrawl", "searxng", "so360", "jina_sogou"
+        ] = "duckduckgo_lite",
+        source_reader_provider: Literal["builtin", "jina", "firecrawl", "crawl4ai"] = "builtin",
+        source_reader_builtin_fallback: bool = False,
+        source_firecrawl_allow_anonymous: bool = False,
         prompt_as_of: datetime | None = None,
         context_window: int = 8192,
         model_budget: ModelContextBudget | None = None,
+        output_contract_position: Literal["system", "pre_user"] = "system",
     ) -> None:
+        if output_contract_position not in {"system", "pre_user"}:
+            raise ValueError("unsupported output contract position")
+        self.output_contract_position: Literal["system", "pre_user"] = output_contract_position
         if not 1024 <= context_window <= 2_000_000:
             raise ValueError("context_window must be between 1024 and 2000000")
         self.context_window = context_window
@@ -492,9 +510,24 @@ class EvaluationRunner:
         self.output_dir = output_dir
         self.provider_kind = provider
         self.runtime_source_tools = runtime_source_tools
+        self.source_decision_contract = source_decision_contract
+        if source_decision_contract and not runtime_source_tools:
+            raise ValueError("Source decision contract requires --runtime-source-tools")
         self.allow_source_tools_once = allow_source_tools_once
         self.max_provider_requests = max_provider_requests
         self.source_dns_resolver: Literal["system", "cloudflare"] = source_dns_resolver
+        self.source_search_provider: Literal[
+            "duckduckgo_lite", "firecrawl", "searxng", "so360", "jina_sogou"
+        ] = source_search_provider
+        self.source_reader_provider: Literal["builtin", "jina", "firecrawl", "crawl4ai"] = (
+            source_reader_provider
+        )
+        self.source_firecrawl_allow_anonymous = bool(source_firecrawl_allow_anonymous)
+        self.source_reader_builtin_fallback = bool(source_reader_builtin_fallback)
+        if self.source_reader_builtin_fallback and (
+            not runtime_source_tools or source_reader_provider != "crawl4ai"
+        ):
+            raise ValueError("Builtin reader fallback requires Runtime sources and Crawl4AI")
         if runtime_source_tools:
             if not allow_source_tools_once:
                 raise ValueError("Runtime source evaluation requires --allow-source-tools-once")
@@ -510,6 +543,16 @@ class EvaluationRunner:
             raise ValueError("Source-tool options require --runtime-source-tools")
         if source_dns_resolver not in {"system", "cloudflare"}:
             raise ValueError("Unsupported source DNS resolver")
+        if source_search_provider not in {
+            "duckduckgo_lite",
+            "firecrawl",
+            "searxng",
+            "so360",
+            "jina_sogou",
+        }:
+            raise ValueError("Unsupported source search provider")
+        if source_reader_provider not in {"builtin", "jina", "firecrawl", "crawl4ai"}:
+            raise ValueError("Unsupported source reader provider")
         if provider not in {"demo", "controlled", "openai_compatible"}:
             raise ValueError(f"Unsupported evaluation provider: {provider}")
         if repeats < 1 or timeout_seconds <= 0:
@@ -562,6 +605,18 @@ class EvaluationRunner:
             if provider == "openai_compatible"
             else _FIXED_TIME
         )
+
+    def _source_evidence_for_turn(self, turn: TurnDefinition) -> str:
+        """Use fixture evidence only in the direct-provider control path.
+
+        Runtime-source evaluations must prove that the provider requested and
+        received facts through the permissioned tool loop. Injecting the fixture
+        snapshot there would make a tool-backed answer indistinguishable from a
+        preloaded answer and could suppress the tool call entirely.
+        """
+        if self.runtime_source_tools:
+            return ""
+        return _format_source_snapshot(turn.source_snapshot)
 
     def _validate_execution(self) -> None:
         if self.provider_kind != "openai_compatible":
@@ -656,7 +711,10 @@ class EvaluationRunner:
             def get(self, role: str):
                 return evaluation_config
 
-        compiler = PromptCompiler(_DummyModelConfig())  # pyright: ignore[reportArgumentType]
+        compiler = PromptCompiler(
+            _DummyModelConfig(),  # pyright: ignore[reportArgumentType]
+            output_contract_position=self.output_contract_position,
+        )
         sample_prompt_tokens: list[int] = []
 
         now = _FIXED_TIME
@@ -678,23 +736,25 @@ class EvaluationRunner:
                 plan = ResponsePlan(
                     intent="answer", tone="gentle", expression="neutral", rationale="estimate"
                 )
-                comp = asyncio.run(
-                    compiler.compile(
-                        character=variant_char,
-                        kernel=kernel,
-                        plan=plan,
-                        memory=MemoryContextPacket(token_budget_used=0),
-                        history=(),
-                        user_text=s.turns[0].user_text,
-                        presentation_profile=s.presentation_profile,
-                        as_of=self.prompt_as_of,
+                for turn in s.turns:
+                    comp = asyncio.run(
+                        compiler.compile(
+                            character=variant_char,
+                            kernel=kernel,
+                            plan=plan,
+                            memory=MemoryContextPacket(token_budget_used=0),
+                            history=(),
+                            user_text=turn.user_text,
+                            presentation_profile=s.presentation_profile,
+                            source_evidence=self._source_evidence_for_turn(turn),
+                            as_of=self.prompt_as_of,
+                        )
                     )
-                )
-                sample_prompt_tokens.append(comp.report.used)
+                    sample_prompt_tokens.append(comp.report.used)
         # Average completion tokens estimate: casual ~60, technical/detail ~350, blend ~120
         avg_completion_tokens = 120
 
-        total_prompt_tokens = sum(sample_prompt_tokens) * turns_per_scenario * self.repeats
+        total_prompt_tokens = sum(sample_prompt_tokens) * self.repeats
         total_completion_tokens = total_requests * avg_completion_tokens
         total_tokens = total_prompt_tokens + total_completion_tokens
 
@@ -720,7 +780,11 @@ class EvaluationRunner:
             if self.runtime_source_tools
             else "direct_provider",
             "provider_round_upper_bound": total_requests
-            * (MAX_AGENT_PROVIDER_ROUNDS if self.runtime_source_tools else 1),
+            * (
+                MAX_SOURCE_PROVIDER_ROUNDS + int(self.source_decision_contract)
+                if self.runtime_source_tools
+                else 1
+            ),
             "max_provider_requests": self.max_provider_requests,
             "tool_input_tokens_estimated": False,
             "fixtures_file": str(self.fixtures_path),
@@ -733,14 +797,21 @@ class EvaluationRunner:
             "estimated_completion_tokens": total_completion_tokens,
             "estimated_total_tokens": total_tokens,
             "prompt_estimate_scope": (
-                "Each selected persona and scenario's first turn, compiled at a "
-                f"{self.context_window}-token "
-                "window, extrapolated to all turns and repeats without later-turn history."
+                "Each selected persona and scenario turn is compiled independently at a "
+                f"{self.context_window}-token window, "
+                + (
+                    "without fixture source snapshots because Runtime source tools are the "
+                    "sole evidence path, "
+                    if self.runtime_source_tools
+                    else "with turn-level fixture source snapshots included when present, "
+                )
+                + "without later-turn history; generated completion lengths remain unknown."
             ),
             "provider": self.provider_kind,
             "model": self.model_name,
             "context_window": self.context_window,
             "model_budget": self.model_budget.model_dump(mode="json"),
+            "output_contract_position": self.output_contract_position,
             "estimated_cost_usd": cost_val,
             "estimated_cost_display": cost_str,
             "pricing_source": pricing_src,
@@ -803,6 +874,7 @@ class EvaluationRunner:
         metadata_identity: dict[str, Any] = {
             "tool": "evaluate_character_scenarios",
             "version": TOOL_VERSION,
+            "output_contract_position": self.output_contract_position,
             "prompt_as_of": self.prompt_as_of.isoformat(),
             "state_time": _FIXED_TIME.isoformat(),
             "fixtures_hash": compute_file_hash(self.fixtures_path),
@@ -823,16 +895,23 @@ class EvaluationRunner:
                 }
                 for name, p in variants_to_run
             },
+            "source_snapshot_projection": (
+                "disabled_for_runtime_source_tools"
+                if self.runtime_source_tools
+                else "bounded_untrusted_evidence"
+            ),
         }
         if self.runtime_source_tools:
             fingerprint = hashlib.sha256()
             for relative in (
                 "tools/runtime_source_evaluation.py",
+                "tools/source_decision_evaluation.py",
                 "services/runtime/src/chatwaifu_runtime/character_kernel/prompt.py",
                 "services/runtime/src/chatwaifu_runtime/conversation/models.py",
                 "services/runtime/src/chatwaifu_runtime/conversation/service.py",
                 "packages/protocol-python/src/chatwaifu_protocol/character.py",
                 "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py",
+                "services/runtime/src/chatwaifu_runtime/agent/source_answer.py",
                 "services/runtime/src/chatwaifu_runtime/agent/tool_intent.py",
                 "services/runtime/src/chatwaifu_runtime/agent/input_budget.py",
                 "services/runtime/src/chatwaifu_runtime/agent/source_context.py",
@@ -849,6 +928,8 @@ class EvaluationRunner:
                 "services/runtime/src/chatwaifu_runtime/runtime_skills/agent_router.py",
                 "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web.py",
                 "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web_search.py",
+                "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web_providers.py",
+                "services/runtime/src/chatwaifu_runtime/config/settings.py",
                 "skills/builtin/web-read/chatwaifu.yaml",
                 "skills/builtin/web-read/SKILL.md",
                 "skills/builtin/web-search/chatwaifu.yaml",
@@ -859,7 +940,12 @@ class EvaluationRunner:
             metadata_identity["execution_path"] = "runtime_source_tools"
             metadata_identity["runtime_source_config"] = {
                 "permission_policy": "allow_once",
+                "source_decision_contract": self.source_decision_contract,
                 "dns_resolver": self.source_dns_resolver,
+                "search_provider": self.source_search_provider,
+                "reader_provider": self.source_reader_provider,
+                "crawl4ai_builtin_fallback": self.source_reader_builtin_fallback,
+                "firecrawl_allow_anonymous": self.source_firecrawl_allow_anonymous,
                 "max_provider_requests": self.max_provider_requests,
                 "implementation_sha256": fingerprint.hexdigest(),
             }
@@ -953,7 +1039,9 @@ class EvaluationRunner:
                 }
             )
         )
-        compiler = PromptCompiler(model_configs)
+        compiler = PromptCompiler(
+            model_configs, output_contract_position=self.output_contract_position
+        )
 
         # base_character already started during preflight
 
@@ -992,6 +1080,35 @@ class EvaluationRunner:
                     build_providers(settings),
                     "disabled",
                     "evaluation",
+                    public_web_config=PublicWebConfig(
+                        search_provider=self.source_search_provider,
+                        reader_provider=self.source_reader_provider,
+                        crawl4ai_builtin_fallback=self.source_reader_builtin_fallback,
+                        firecrawl_allow_anonymous=self.source_firecrawl_allow_anonymous,
+                        # The evaluator runs against an explicitly selected, isolated
+                        # provider route. Reuse the process configuration for endpoint
+                        # overrides so server-side runs do not accidentally target a
+                        # different loopback service (for example Open WebUI on :8080).
+                        searxng_endpoint=os.environ.get(
+                            "CHATWAIFU_PUBLIC_WEB__SEARXNG_ENDPOINT",
+                            "http://127.0.0.1:8080",
+                        ),
+                        crawl4ai_endpoint=os.environ.get(
+                            "CHATWAIFU_PUBLIC_WEB__CRAWL4AI_ENDPOINT",
+                            "http://127.0.0.1:11235",
+                        ),
+                        crawl4ai_api_token=(
+                            SecretStr(token)
+                            if (token := os.environ.get("CHATWAIFU_PUBLIC_WEB__CRAWL4AI_API_TOKEN"))
+                            else None
+                        ),
+                        jina_endpoint=os.environ.get(
+                            "CHATWAIFU_PUBLIC_WEB__JINA_ENDPOINT", "https://r.jina.ai"
+                        ),
+                        so360_endpoint=os.environ.get(
+                            "CHATWAIFU_PUBLIC_WEB__SO360_ENDPOINT", "https://www.so.com"
+                        ),
+                    ),
                 )
                 await source_service.start()
                 assert self.max_provider_requests is not None
@@ -1002,6 +1119,7 @@ class EvaluationRunner:
                     max_provider_requests=self.max_provider_requests,
                     allow_once=self.allow_source_tools_once,
                     dns_resolver=self.source_dns_resolver,
+                    source_decision_contract=self.source_decision_contract,
                 )
             for variant_name, persona_path in variants_to_run:
                 # Load variant character profile
@@ -1156,6 +1274,7 @@ class EvaluationRunner:
                                 history=tuple(history),
                                 user_text=turn.user_text,
                                 presentation_profile=scenario.presentation_profile,
+                                source_evidence=self._source_evidence_for_turn(turn),
                                 as_of=self.prompt_as_of,
                             )
 
@@ -1186,6 +1305,7 @@ class EvaluationRunner:
                                 user_text=turn.user_text,
                                 system_prompt=compilation.system_prompt,
                                 tool_decision_system_prompt=compilation.tool_decision_system_prompt,
+                                pre_user_system_prompt=compilation.pre_user_system_prompt,
                                 character_name=character.display_name,
                                 context=compilation.context,
                                 history=compilation.history,
@@ -1211,6 +1331,7 @@ class EvaluationRunner:
                             finish_reason: str | None = None
                             captured_usage: LlmUsage | None = None
                             runtime_source_trace: dict[str, Any] | None = None
+                            captured_identities: list[dict[str, Any] | None] = [None]
 
                             async def _stream_llm(
                                 current_req: LlmRequest,
@@ -1224,7 +1345,8 @@ class EvaluationRunner:
                                     output_text, \
                                     finish_reason, \
                                     captured_usage, \
-                                    runtime_source_trace
+                                    runtime_source_trace, \
+                                    captured_identities
                                 if source_evaluation is not None:
                                     outcome = await source_evaluation.run(
                                         current_req,
@@ -1241,6 +1363,10 @@ class EvaluationRunner:
                                         outcome.usage,
                                         outcome.trace,
                                     )
+                                    captured_identities = [
+                                        call.get("response_identity")
+                                        for call in outcome.trace["provider_calls"]
+                                    ]
                                     return
                                 async for event in llm_provider.stream(current_req):
                                     if isinstance(event, LlmTextDelta):
@@ -1248,6 +1374,11 @@ class EvaluationRunner:
                                     elif isinstance(event, LlmResponseCompleted):
                                         finish_reason = event.finish_reason
                                         captured_usage = event.usage
+                                        captured_identities = [
+                                            asdict(event.identity)
+                                            if event.identity is not None
+                                            else None
+                                        ]
 
                             try:
                                 requests_executed += 1
@@ -1264,6 +1395,7 @@ class EvaluationRunner:
                                     key,
                                     "timeout",
                                     source_evaluation.last_trace if source_evaluation else None,
+                                    provider_response_identities=captured_identities,
                                 )
                                 return samples_collected
                             except asyncio.CancelledError:
@@ -1271,6 +1403,7 @@ class EvaluationRunner:
                                     key,
                                     "cancelled",
                                     source_evaluation.last_trace if source_evaluation else None,
+                                    provider_response_identities=captured_identities,
                                 )
                                 raise
                             except Exception as error:
@@ -1281,6 +1414,7 @@ class EvaluationRunner:
                                     else type(error).__name__,
                                     source_evaluation.last_trace if source_evaluation else None,
                                     provider_usage=captured_usage,
+                                    provider_response_identities=captured_identities,
                                     raw_reply=output_text
                                     if source_evaluation is None
                                     and isinstance(error, LlmEmptyResponseError)
@@ -1289,7 +1423,11 @@ class EvaluationRunner:
                                 return samples_collected
 
                             if finish_reason is None:
-                                self._record_incomplete(key, "missing_terminal_event")
+                                self._record_incomplete(
+                                    key,
+                                    "missing_terminal_event",
+                                    provider_response_identities=captured_identities,
+                                )
                                 return samples_collected
 
                             if not output_text.strip():
@@ -1298,6 +1436,7 @@ class EvaluationRunner:
                                     "empty_model_response",
                                     runtime_source_trace,
                                     provider_usage=captured_usage,
+                                    provider_response_identities=captured_identities,
                                     raw_reply=output_text,
                                 )
                                 return samples_collected
@@ -1352,6 +1491,7 @@ class EvaluationRunner:
                                 tokens_source=tokens_source,
                                 input_snapshot=turn_input_snapshot,
                                 runtime_source_trace=runtime_source_trace,
+                                provider_response_identities=captured_identities,
                             )
 
                             # Append to results file immediately (partial persistence)
@@ -1395,11 +1535,18 @@ class EvaluationRunner:
         *,
         provider_usage: LlmUsage | None = None,
         raw_reply: str | None = None,
+        provider_response_identities: list[dict[str, Any] | None] | None = None,
     ) -> None:
         with self._incomplete_file.open("a", encoding="utf-8") as out:
             record: dict[str, Any] = {"sample_key": sample_key, "reason": reason}
             if runtime_source_trace is not None:
                 record["runtime_source_trace"] = runtime_source_trace
+                record["provider_response_identities"] = [
+                    call.get("response_identity")
+                    for call in runtime_source_trace.get("provider_calls", [])
+                ]
+            elif provider_response_identities is not None:
+                record["provider_response_identities"] = provider_response_identities
             if provider_usage is not None:
                 record["provider_usage"] = asdict(provider_usage)
             if raw_reply is not None:
@@ -1578,6 +1725,18 @@ def _fenced_review_reply(reply: str) -> str:
     return f"{fence}text\n{reply}\n{fence}"
 
 
+def _format_source_snapshot(snapshot: dict[str, Any] | None) -> str:
+    """Serialize fixture source metadata for bounded evaluation-only projection.
+
+    This is source evidence for the current turn, not character memory or a legal
+    database. The prompt contract keeps it fenced as untrusted data and preserves
+    its dates, scope and unresolved notes.
+    """
+    if snapshot is None:
+        return ""
+    return json.dumps(snapshot, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
 def _build_memory_packet(
     synthetic_memory: list[dict[str, Any]], *, scenario_id: str
 ) -> MemoryContextPacket:
@@ -1670,6 +1829,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="ModelContextBudget JSON file; all settings are frozen in resume identity",
     )
     parser.add_argument(
+        "--output-contract-position",
+        choices=["system", "pre_user"],
+        default="system",
+        help=(
+            "Isolated output-policy placement experiment; "
+            "default preserves the combined system prompt"
+        ),
+    )
+    parser.add_argument(
         "--input-usd-per-million",
         type=float,
         default=None,
@@ -1711,6 +1879,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Use the real read-only Runtime source tool loop in an isolated synthetic session",
     )
     parser.add_argument(
+        "--source-decision-contract",
+        action="store_true",
+        help="Opt into the evaluation-only v3 native source decision contract",
+    )
+    parser.add_argument(
         "--allow-source-tools-once",
         action="store_true",
         help=(
@@ -1727,6 +1900,31 @@ def build_arg_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument("--source-dns-resolver", choices=["system", "cloudflare"], default="system")
+    parser.add_argument(
+        "--source-search-provider",
+        choices=["duckduckgo_lite", "firecrawl", "searxng", "so360", "jina_sogou"],
+        default="duckduckgo_lite",
+        help="Isolated Runtime source search provider (default: duckduckgo_lite)",
+    )
+    parser.add_argument(
+        "--source-reader-provider",
+        choices=["builtin", "jina", "firecrawl", "crawl4ai"],
+        default="builtin",
+        help="Isolated Runtime source reader provider (default: builtin)",
+    )
+    parser.add_argument(
+        "--source-reader-builtin-fallback",
+        action="store_true",
+        help="Opt into one builtin HTML/text recovery after a Crawl4AI service failure",
+    )
+    parser.add_argument(
+        "--source-firecrawl-anonymous",
+        action="store_true",
+        help=(
+            "Opt into Firecrawl's unauthenticated trial path for an isolated source evaluation; "
+            "no quota or billing guarantee"
+        ),
+    )
     parser.add_argument(
         "--prompt-as-of",
         type=_parse_prompt_time,
@@ -1819,11 +2017,17 @@ def main() -> int:
         variant_b_persona_path=args.persona_b,
         resume=args.resume,
         runtime_source_tools=args.runtime_source_tools,
+        source_decision_contract=args.source_decision_contract,
         allow_source_tools_once=args.allow_source_tools_once,
         max_provider_requests=args.max_provider_requests,
         source_dns_resolver=args.source_dns_resolver,
+        source_search_provider=args.source_search_provider,
+        source_reader_provider=args.source_reader_provider,
+        source_reader_builtin_fallback=args.source_reader_builtin_fallback,
+        source_firecrawl_allow_anonymous=args.source_firecrawl_anonymous,
         prompt_as_of=args.prompt_as_of,
         context_window=args.context_window,
+        output_contract_position=args.output_contract_position,
         model_budget=ModelContextBudget.model_validate_json(
             args.model_budget_json.read_text(encoding="utf-8")
         )

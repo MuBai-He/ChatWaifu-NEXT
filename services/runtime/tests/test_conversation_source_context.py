@@ -54,7 +54,7 @@ class _Provider:
             # Deliberately omit the original conditions from assistant prose.
             yield LlmTextDelta(
                 "已读网页，旧助手长篇措辞。" * 4000
-                if self.verbose_first_reply and len(self.requests) == 2
+                if self.verbose_first_reply and len(self.requests) == 3
                 else "读过了。"
             )
             yield LlmResponseCompleted("stop")
@@ -233,7 +233,7 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
         final = provider.requests[-1]
         supplied = "\n".join(text for _role, text in final.context)
         if mode in {"source_summary", "source_evidence_gap", "source_evidence_gap_unavailable"}:
-            assert len(provider.requests) == 3
+            assert len(provider.requests) == (5 if mode == "source_summary" else 4)
             assert final.tools == ()
             assert final.tool_choice == "auto"
             assert "<runtime_initial_tool_decision>" not in final.system_prompt
@@ -242,7 +242,7 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
         elif mode in {"source_summary_fresh", "source_summary_write"}:
             assert final.tools and final.tool_choice == "required"
         elif mode in {"goodbye", "teasing"}:
-            assert len(provider.requests) == 3, [
+            assert len(provider.requests) == 4, [
                 (request.user_text, request.tool_choice) for request in provider.requests
             ]
             assert final.tool_choice == "auto"

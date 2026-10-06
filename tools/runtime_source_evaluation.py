@@ -27,11 +27,14 @@ from chatwaifu_runtime.providers.contracts import (
     LlmRequest,
     LlmStreamEvent,
     LlmTextDelta,
+    LlmToolCallProtocolError,
     LlmToolCallRequested,
     LlmUsage,
 )
 from chatwaifu_runtime.runtime_skills.agent_router import RuntimeSkillRouter
 from chatwaifu_runtime.runtime_skills.service import RuntimeSkillService
+
+from tools.source_decision_evaluation import SourceDecisionProvider
 
 _SOURCE_SKILLS = frozenset({"web.search", "web.read"})
 
@@ -92,6 +95,16 @@ class _RecordedProvider:
             "generation_id": str(request.generation_id),
             "started_at": datetime.now(UTC).isoformat(),
             "system_prompt_sha256": hashlib.sha256(request.system_prompt.encode()).hexdigest(),
+            "pre_user_system_prompt_sha256": hashlib.sha256(
+                request.pre_user_system_prompt.encode()
+            ).hexdigest()
+            if request.pre_user_system_prompt
+            else None,
+            "continuation_system_prompt_sha256": hashlib.sha256(
+                request.continuation_system_prompt.encode()
+            ).hexdigest()
+            if request.continuation_system_prompt
+            else None,
             "input_context_sha256": hashlib.sha256(
                 json.dumps(request.context, ensure_ascii=False, separators=(",", ":")).encode()
             ).hexdigest(),
@@ -109,7 +122,10 @@ class _RecordedProvider:
             "text": "",
             "finish_reason": None,
             "usage": None,
+            "response_identity": None,
             "error_type": None,
+            "protocol_error_code": None,
+            "http_status": None,
         }
         # Persist the chargeable attempt before dispatch; unfinished attempts still
         # consume the global limit on resume. This journal has exactly one writer.
@@ -126,10 +142,19 @@ class _RecordedProvider:
                 else:
                     call["finish_reason"] = event.finish_reason
                     call["usage"] = asdict(event.usage) if event.usage is not None else None
+                    call["response_identity"] = (
+                        asdict(event.identity) if event.identity is not None else None
+                    )
                 yield event
         except BaseException as error:
             # Error messages may contain private provider addresses or credentials.
             call["error_type"] = type(error).__name__
+            if isinstance(error, LlmToolCallProtocolError):
+                call["protocol_error_code"] = error.code
+            # Retain a scalar status without storing SDK objects, URLs, headers or bodies.
+            status = getattr(getattr(error, "response", None), "status_code", None)
+            if type(status) is int and 100 <= status <= 599:
+                call["http_status"] = status
             raise
         finally:
             call["latency_ms"] = int((time.perf_counter() - started) * 1000)
@@ -153,10 +178,20 @@ class _RecordedProvider:
 
 
 class _SourceGateway:
-    def __init__(self, service: RuntimeSkillService, allow_once: bool) -> None:
+    def __init__(
+        self,
+        service: RuntimeSkillService,
+        allow_once: bool,
+        *,
+        dns_resolver: Literal["system", "cloudflare"] = "system",
+    ) -> None:
+        if dns_resolver not in {"system", "cloudflare"}:
+            raise ValueError("source resolver must be system or cloudflare")
         self.service = service
         self.allow_once = allow_once
+        self.dns_resolver = dns_resolver
         self.runs: list[dict[str, Any]] = []
+        self.resolver_policy: list[dict[str, Any]] = []
 
     def _record(self, snapshot: SkillRunSnapshot) -> None:
         record = snapshot.model_dump(mode="json")
@@ -181,6 +216,30 @@ class _SourceGateway:
     ) -> SkillRunSnapshot:
         if invocation.skill_id not in _SOURCE_SKILLS or invocation.background:
             raise PermissionError("evaluation only permits foreground public source tools")
+        arguments = invocation.arguments
+        requested_present = "dns_resolver" in arguments
+        requested = arguments.get("dns_resolver")
+        # Enforce the selected evaluation environment without altering the
+        # provider call retained in tool exchanges. Invalid explicit arguments
+        # still reach the service schema unchanged and must fail validation.
+        apply_configuration = not requested_present or (
+            isinstance(requested, str) and requested in {"system", "cloudflare"}
+        )
+        effective = self.dns_resolver if apply_configuration else requested
+        self.resolver_policy.append(
+            {
+                "provider_tool_call_id": provider_tool_call_id,
+                "skill_id": invocation.skill_id,
+                "requested_present": requested_present,
+                "requested_value": requested,
+                "effective_value": effective,
+                "configuration_applied": apply_configuration,
+            }
+        )
+        if apply_configuration:
+            invocation = invocation.model_copy(
+                update={"arguments": {**arguments, "dns_resolver": self.dns_resolver}}
+            )
         created = await self.service.invoke(
             session_id,
             invocation,
@@ -227,15 +286,21 @@ class RuntimeSourceEvaluation:
         max_provider_requests: int,
         allow_once: bool,
         dns_resolver: Literal["system", "cloudflare"] = "system",
+        source_decision_contract: bool = False,
     ) -> None:
         if max_provider_requests < 1:
             raise ValueError("provider request limit must be positive")
         self._provider = _RecordedProvider(provider, trace_path, max_provider_requests)
-        self._gateway = _SourceGateway(service, allow_once)
+        self._gateway = _SourceGateway(service, allow_once, dns_resolver=dns_resolver)
         self._router = RuntimeSkillRouter(
             lambda: [skill for skill in service.list() if skill.skill_id in _SOURCE_SKILLS]
         )
-        self._agent = AgentTurnOrchestrator(self._provider, self._gateway, self._router)
+        self._decisions = (
+            SourceDecisionProvider(self._provider) if source_decision_contract else None
+        )
+        self._agent = AgentTurnOrchestrator(
+            self._decisions or self._provider, self._gateway, self._router
+        )
         self._resolver = dns_resolver
         self._running = False
         self.last_trace: dict[str, Any] | None = None
@@ -275,12 +340,15 @@ class RuntimeSourceEvaluation:
         self._provider.calls = []
         self._provider.sample_key = sample_key
         self._gateway.runs = []
+        self._gateway.resolver_policy = []
         sources = await self._gateway.service.load_source_context(session_id, source_generation_ids)
         projections = self._agent.select_tools(
             request.user_text,
             routing_previous_user_text=request.routing_previous_user_text,
             supports_tool_calling=self._provider.supports_tool_calling,
         )
+        if self._decisions is not None:
+            self._decisions.begin(request.generation_id, projections, prior_sources=sources)
         evaluation_policy = (
             "\nPublic source tools use an evaluation-only permission policy. "
             f"When selecting a source tool use dns_resolver={self._resolver}. "
@@ -300,14 +368,19 @@ class RuntimeSourceEvaluation:
             ),
         )
         self.last_trace = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "execution_path": "runtime_source_tools",
             "permission_policy": "allow_once" if self._gateway.allow_once else "deny",
             "dns_resolver": self._resolver,
             "tools_digest": compute_tools_digest(projections),
             "provider_calls": self._provider.calls,
             "tool_runs": self._gateway.runs,
+            "source_resolver_policy": self._gateway.resolver_policy,
             "reply_origin": None,
+            "source_decisions": self._decisions.records if self._decisions is not None else None,
+            "source_wire_budget_failures": self._decisions.budget_failures
+            if self._decisions is not None
+            else None,
             "source_context": {
                 "schema_version": sources.schema_version,
                 "truncated": sources.truncated,

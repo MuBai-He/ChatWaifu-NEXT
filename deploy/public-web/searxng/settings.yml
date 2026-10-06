@@ -1,0 +1,38 @@
+use_default_settings:
+  # Keep the local instance on one explicitly selected trial provider.
+  # The default engine set is broad and can exhaust shared search
+  # quotas, turning a real outage into an empty result set.
+  engines:
+    keep_only:
+      - yandex
+
+# SearXNG's current default profile ships several engines disabled or subject
+# to regional throttling. Yandex passed initial Chinese/technical probes, then
+# timed out repeatedly under the model batch and recovered after a cooldown.
+# This template is a trial configuration, not a stability guarantee. Recheck
+# discovery before adopting it; the detailed evidence is linked in operations.
+# Keep one engine so unrelated
+# results from a second provider cannot silently outrank an official result.
+engines:
+  - name: yandex
+    disabled: false
+    # Keep three bounded Runtime queries within the 30-second skill timeout.
+    timeout: 8.0
+
+server:
+  # The container port is published on host loopback only by compose.
+  bind_address: 0.0.0.0
+  port: 8080
+  secret_key: replace-this-with-a-random-local-secret
+  limiter: false
+  public_instance: false
+  image_proxy: false
+
+search:
+  formats:
+    - html
+    - json
+  # The server is used for Chinese Q02 source discovery. Without an explicit
+  # market, Bing routes by the host region and can return unrelated Japanese
+  # or game results for Chinese/technical queries.
+  default_lang: "zh-CN"

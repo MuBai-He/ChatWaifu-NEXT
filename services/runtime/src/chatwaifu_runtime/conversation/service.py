@@ -34,6 +34,8 @@ from chatwaifu_protocol.events import (
 from chatwaifu_protocol.memory import MemoryContextPacket
 from chatwaifu_protocol.session import GenerationState, SessionSnapshot, SessionState
 
+from chatwaifu_runtime.agent.source_answer_frame import SourceAnswerFrame, SourceAnswerFrameError
+from chatwaifu_runtime.agent.source_answer_state import SourceAnswerTurn
 from chatwaifu_runtime.agent.tool_calling import (
     AgentTurnOrchestrator,
     compute_tools_digest,
@@ -62,6 +64,10 @@ from chatwaifu_runtime.conversation.repository import (
     ConversationRepository,
 )
 from chatwaifu_runtime.conversation.reset import ExperienceResetRepository
+from chatwaifu_runtime.conversation.source_answer_context import (
+    SourceAnswerCoverageStore,
+    coverage_context_key,
+)
 from chatwaifu_runtime.conversation.source_context import SourceContextPacket, SourceContextPort
 from chatwaifu_runtime.conversation.speech import ConversationSpeechPipeline
 from chatwaifu_runtime.conversation.text_segmenter import StreamingTextSegmenter
@@ -77,6 +83,7 @@ from chatwaifu_runtime.providers.contracts import (
     LlmInputImage,
     LlmProvider,
     LlmRequest,
+    LlmResponseSchemaUnavailableError,
 )
 from chatwaifu_runtime.providers.factory import ProviderSet
 from chatwaifu_runtime.providers.model_config import (
@@ -102,6 +109,7 @@ class _ActiveGeneration:
     turn_id: UUID | None = None
     audio_stream_id: UUID | None = None
     completing: bool = False
+    coverage_valid: bool = True
     revoked: bool = False
 
 
@@ -125,6 +133,7 @@ class ConversationService:
         photo_recall: PhotoRecallService | None = None,
         photo_annotations: PhotoAnnotationService | None = None,
         source_context: SourceContextPort | None = None,
+        source_answer_frames: bool = False,
     ) -> None:
         self._repository = repository
         self._reset_repository = reset_repository
@@ -141,6 +150,8 @@ class ConversationService:
         self._photo_annotations = photo_annotations
         self._photo_recall = photo_recall
         self._source_context = source_context
+        self._source_answer_frames = source_answer_frames
+        self._source_answer_coverage = SourceAnswerCoverageStore()
         self._avatar_planner = SemanticAvatarCuePlanner()
         self._models = models
         self._active: dict[UUID, _ActiveGeneration] = {}
@@ -188,6 +199,16 @@ class ConversationService:
             )
         else:
             # Current channel replies require an explicit channel capability policy.
+            visible_tools = tuple(
+                tool
+                for tool in visible_tools
+                if not getattr(tool, "completes_channel_reply", False)
+            )
+        if options.origin == "external_channel" and any(
+            tool.to_invocation({}).skill_id in {"web.search", "web.read"} for tool in visible_tools
+        ):
+            # Source retrieval completes as a reviewed text answer. An already
+            # composed voice call must not publish before the source-read loop.
             visible_tools = tuple(
                 tool
                 for tool in visible_tools
@@ -1179,7 +1200,7 @@ class ConversationService:
 
     def active_generation_id(self, session_id: UUID) -> UUID | None:
         active = self._active.get(session_id)
-        if active is None or (active.task is not None and active.task.done()):
+        if active is None or active.revoked or (active.task is not None and active.task.done()):
             return None
         return active.generation_id
 
@@ -1253,6 +1274,7 @@ class ConversationService:
                     ) from None
                 raise
             audio_commit = staged_audio.commit()
+            self._source_answer_coverage.clear(session_id)
             for affected in reset.photo_generations:
                 await self.cancel(
                     affected.session_id,
@@ -1290,8 +1312,10 @@ class ConversationService:
 
     async def stop(self) -> None:
         active = tuple(self._active.items())
+        self._source_answer_coverage.clear()
         tasks: list[asyncio.Task[None]] = []
         for session_id, generation in active:
+            generation.coverage_valid = False
             # Completion is irrevocable, but still owns publication and memory
             # work. Join it before shutdown releases those dependencies.
             if generation.task is not None:
@@ -1458,6 +1482,20 @@ class ConversationService:
         segmenter = StreamingTextSegmenter() if options.emits("audio") else None
         segment_index = 0
         memory_projection_submitted = memory_observation is None
+        answer_frame: SourceAnswerFrame | None = None
+        coverage_key: str | None = None
+        reply_origin: Literal["provider", "provider_frame_rendered", "runtime_fallback"] = (
+            "provider"
+        )
+
+        def frame_ready(frame: SourceAnswerFrame) -> None:
+            nonlocal answer_frame, reply_origin
+            answer_frame = frame
+            reply_origin = "provider_frame_rendered"
+
+        def runtime_fallback() -> None:
+            nonlocal reply_origin
+            reply_origin = "runtime_fallback"
 
         async def deliver_segment(text: str) -> None:
             nonlocal memory_projection_submitted, segment_index
@@ -1577,6 +1615,7 @@ class ConversationService:
                 user_text=user_text,
                 system_prompt=system_prompt,
                 tool_decision_system_prompt=compilation.tool_decision_system_prompt,
+                pre_user_system_prompt=compilation.pre_user_system_prompt,
                 character_name=character.display_name,
                 context=compilation.context,
                 history=compilation.history,
@@ -1640,10 +1679,11 @@ class ConversationService:
                     ),
                 )
             sources = SourceContextPacket()
+            answer_turn: SourceAnswerTurn | None = None
             if (
-                self._source_context is not None
-                and trigger == "user"
+                trigger == "user"
                 and options.trusted_identity is None
+                and (self._source_context is not None or self._source_answer_frames)
             ):
                 eligible: list[UUID] = []
                 for generation_id in compilation.source_generation_ids:
@@ -1654,9 +1694,10 @@ class ConversationService:
                         and prior.state is GenerationState.COMPLETED
                     ):
                         eligible.append(generation_id)
-                sources = await self._source_context.load_source_context(
-                    accepted.session_id, tuple(eligible)
-                )
+                if self._source_context is not None:
+                    sources = await self._source_context.load_source_context(
+                        accepted.session_id, tuple(eligible)
+                    )
                 self._ensure_current(accepted)
                 if sources.receipts or sources.truncated:
                     logger.info(
@@ -1666,6 +1707,19 @@ class ConversationService:
                         len(sources.receipts),
                         sum(receipt.original_result_available for receipt in sources.receipts),
                         sources.truncated,
+                    )
+                if self._source_answer_frames:
+                    if compilation.identity is None:
+                        raise SourceAnswerFrameError("context_identity")
+                    coverage_key = coverage_context_key(
+                        compilation.identity, character_context.snapshot.user_scope
+                    )
+                    answer_turn = SourceAnswerTurn(
+                        self._source_answer_coverage.load(
+                            accepted.session_id, tuple(eligible), coverage_key
+                        ),
+                        frame_ready,
+                        runtime_fallback,
                     )
             await self._check_generation_guard(accepted, options)
             async for delta in self._agent.stream(
@@ -1677,6 +1731,7 @@ class ConversationService:
                 llm=snapshot.chat_provider,
                 tools=snapshot.visible_tools,
                 source_context=sources,
+                source_answer_turn=answer_turn,
             ):
                 self._ensure_current(accepted)
                 output += delta
@@ -1695,23 +1750,43 @@ class ConversationService:
                 output,
                 emit_avatar=options.emits("avatar"),
                 source_context=options.source_context,
+                answer_frame=answer_frame,
+                coverage_key=coverage_key,
+                reply_origin=reply_origin if self._source_answer_frames else None,
             )
         except asyncio.CancelledError as error:
             reason = str(error.args[0]) if error.args else "interrupted"
             await self._cancelled(accepted, reason)
             raise
         except Exception as error:
-            error_code = (
-                "empty_model_response"
-                if isinstance(error, LlmEmptyResponseError)
-                else ("image_input_error" if options.image_loader is not None else "provider_error")
-            )
+            if isinstance(error, SourceAnswerFrameError):
+                error_code = "source_answer_frame_rejected"
+                logger.info(
+                    "conversation.source_answer_frame_rejected generation=%s reason=%s",
+                    accepted.generation_id,
+                    error.code,
+                )
+            elif isinstance(error, LlmResponseSchemaUnavailableError):
+                error_code = error.code
+            else:
+                error_code = (
+                    "empty_model_response"
+                    if isinstance(error, LlmEmptyResponseError)
+                    else (
+                        "image_input_error"
+                        if options.image_loader is not None
+                        else "provider_error"
+                    )
+                )
             await self._failed(
                 accepted,
                 error,
                 error_code=error_code,
                 recovery_text=options.failure_recovery_text,
                 source_context=options.source_context,
+                retryable=not isinstance(
+                    error, (SourceAnswerFrameError, LlmResponseSchemaUnavailableError)
+                ),
             )
         finally:
             if (
@@ -1747,8 +1822,13 @@ class ConversationService:
         *,
         emit_avatar: bool = False,
         source_context: ConversationSourceContext | None = None,
+        answer_frame: SourceAnswerFrame | None = None,
+        coverage_key: str | None = None,
+        reply_origin: Literal["provider", "provider_frame_rendered", "runtime_fallback"]
+        | None = None,
     ) -> bool:
         self._begin_completion(accepted)
+        active = self._active[accepted.session_id]
         now = datetime.now(UTC)
         assistant_turn_id = uuid4()
         complete_event = GenericCoreEvent(
@@ -1760,7 +1840,16 @@ class ConversationService:
             source="runtime.conversation",
             privacy=PrivacyLevel.LOCAL,
             event_type="assistant.generation_completed",
-            payload={"text": output, "assistant_turn_id": str(assistant_turn_id)},
+            payload={
+                "text": output,
+                "assistant_turn_id": str(assistant_turn_id),
+                **({"reply_origin": reply_origin} if reply_origin is not None else {}),
+                **(
+                    {"source_answer_frame_version": answer_frame.version}
+                    if answer_frame is not None
+                    else {}
+                ),
+            },
         )
         pre_events: list[AvatarCueEmittedEvent] = []
         if emit_avatar:
@@ -1808,6 +1897,15 @@ class ConversationService:
             )
             return False
         persisted_pre_events, persisted_complete = persisted
+        if (
+            answer_frame is not None
+            and coverage_key is not None
+            and active.coverage_valid
+            and self._active.get(accepted.session_id) is active
+        ):
+            self._source_answer_coverage.put_completed(
+                accepted.session_id, accepted.generation_id, coverage_key, answer_frame
+            )
         for pre_ev in persisted_pre_events:
             try:
                 await self._publisher.publish_persisted(pre_ev)

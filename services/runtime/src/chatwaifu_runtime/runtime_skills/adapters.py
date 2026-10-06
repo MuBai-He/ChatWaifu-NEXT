@@ -33,6 +33,9 @@ class GenerationSkillContext:
     origin: str
 
 
+GenerationPermissionPolicy = Callable[[GenerationSkillContext, str], Awaitable[bool]]
+
+
 class AuthorizedGenerationHandler(Protocol):
     async def authorize(self, context: GenerationSkillContext) -> bool: ...
     async def __call__(

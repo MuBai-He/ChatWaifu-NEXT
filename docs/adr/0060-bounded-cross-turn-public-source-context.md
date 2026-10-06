@@ -90,6 +90,17 @@ Runtime fallbacks. Claude quota cooldown left 14 replies missing; this incomplet
 batch does not validate the subsequent intent repair or establish a persona gain.
 Real-model quality and the full adoption plan remain separate acceptance gates.
 
+On 2026-10-04, the bounded transformation intent was extended to explicit
+document references such as “this document” and the Chinese equivalents of “this
+notice”. A current-user source noun must occur within the bounded reference phrase;
+ordinary “this program” does not qualify. Existing exclusions for a supplied URL,
+fresh verification, latest material and mutations remain. Only retained successful
+READ bodies select the existing text-only revision. The change neither creates
+source authority nor treats a successful revision as quality approval. Deterministic
+before/after checks and two actual four-turn Runtime flows confirm dispatch; both
+final checklists still lose an earlier unresolved time scope, so fidelity acceptance
+remains open. Evaluator 1.32.1 fingerprints the routing change.
+
 ## Rollback
 
 Remove the read-only source port wiring and request projection. Existing audit rows,

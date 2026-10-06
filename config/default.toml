@@ -13,6 +13,21 @@ busy_timeout_ms = 5000
 [privacy]
 cloud_egress = "ask"
 
+[public_web]
+qq_owner_reads_enabled = false
+# Keep the local DuckDuckGo Lite/built-in path unless a provider is explicitly enabled.
+search_provider = "duckduckgo_lite"
+reader_provider = "builtin"
+firecrawl_endpoint = "https://api.firecrawl.dev"
+# Anonymous trial access is opt-in and has no quota guarantee.
+firecrawl_allow_anonymous = false
+jina_endpoint = "https://r.jina.ai"
+# Local companion services are opt-in and stay on loopback.
+searxng_endpoint = "http://127.0.0.1:8080"
+crawl4ai_endpoint = "http://127.0.0.1:11235"
+crawl4ai_builtin_fallback = false
+timeout_seconds = 25
+
 [llm]
 provider = "demo"
 model = "chatwaifu-demo"

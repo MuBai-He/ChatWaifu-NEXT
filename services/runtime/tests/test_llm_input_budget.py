@@ -6,11 +6,159 @@ from uuid import uuid4
 import pytest
 from chatwaifu_protocol.base import JsonObject
 from chatwaifu_runtime.providers.contracts import (
+    LlmInputImage,
     LlmRequest,
     LlmToolCall,
     LlmToolExchange,
     LlmToolResult,
 )
+
+
+@pytest.mark.parametrize("mandatory_overflow", [False, True])
+def test_reprojection_preserves_complete_original_guard_estimate(mandatory_overflow: bool) -> None:
+    from datetime import UTC, datetime
+
+    from chatwaifu_protocol.skills import SkillResult, SkillRunSnapshot, SkillRunState
+    from chatwaifu_runtime.agent.input_budget import InputBudgetExceeded, estimate_input_tokens
+    from chatwaifu_runtime.agent.source_context import project_source_context
+    from chatwaifu_runtime.agent.tool_calling import (
+        _budgeted_request,  # pyright: ignore[reportPrivateUsage]
+    )
+    from chatwaifu_runtime.conversation.source_context import (
+        SourceContextPacket,
+        SourceContextReceipt,
+    )
+    from chatwaifu_runtime.providers.contracts import LlmInputBudget
+
+    now = datetime(2026, 10, 4, tzinfo=UTC)
+    receipt = SourceContextReceipt(
+        SkillRunSnapshot(
+            skill_run_id=uuid4(),
+            session_id=uuid4(),
+            turn_id=uuid4(),
+            generation_id=uuid4(),
+            skill_id="web.read",
+            skill_version="1.1.0",
+            capability="read",
+            origin="agent",
+            state=SkillRunState.SUCCEEDED,
+            result=SkillResult(
+                status="succeeded",
+                data={"text": "Complete optional prior body " * 300, "url": "https://example.org"},
+            ),
+            created_at=now,
+            updated_at=now,
+            completed_at=now,
+        ),
+        True,
+    )
+    packet = SourceContextPacket((receipt,))
+    initial = project_source_context(
+        LlmRequest(
+            uuid4(), "Use only the existing document.", "Safety", input_budget=LlmInputBudget(20000)
+        ),
+        packet,
+    )
+    outgoing = replace(
+        initial,
+        continuation_system_prompt="Existing late policy " * (1000 if mandatory_overflow else 80),
+        input_budget=LlmInputBudget(1600),
+    )
+    complete_original = estimate_input_tokens(outgoing)
+    assert complete_original > 1600
+    if mandatory_overflow:
+        with pytest.raises(InputBudgetExceeded) as caught:
+            _budgeted_request(outgoing, source_context=packet)
+        report = caught.value.report
+        assert report.estimated_input_tokens > 1600
+    else:
+        fitted = _budgeted_request(outgoing, source_context=packet)
+        report = fitted.input_budget_report
+        assert report is not None
+        assert report.estimated_input_tokens <= 1600
+    assert report.estimated_original_tokens >= complete_original
+    assert outgoing.context == initial.context and receipt.original_result_available
+
+
+@pytest.mark.parametrize("with_image", [False, True])
+def test_pre_user_contract_is_ordered_and_mandatory_in_complete_wire_budget(
+    with_image: bool,
+) -> None:
+    from chatwaifu_runtime.agent.input_budget import (
+        InputBudgetExceeded,
+        estimate_input_tokens,
+        fit_input_budget,
+    )
+    from chatwaifu_runtime.providers.contracts import LlmInputBudget
+    from chatwaifu_runtime.providers.openai_compatible import build_messages
+
+    request = LlmRequest(
+        uuid4(),
+        "latest question",
+        "safety/canon",
+        context=(("system", "bounded memory"),),
+        history=(("user", "prior fact"), ("assistant", "old style")),
+        pre_user_system_prompt="trusted output contract " * 100,
+        images=(LlmInputImage(b"test", "image/png"),) if with_image else (),
+        tool_exchanges=(
+            LlmToolExchange(
+                "",
+                (LlmToolCall("read", "read", {}),),
+                (LlmToolResult("read", "read", {"text": "untrusted source"}),),
+            ),
+        ),
+        continuation_system_prompt="trusted source revision",
+    )
+    messages = build_messages(request)
+    assert messages[4] == {"role": "system", "content": request.pre_user_system_prompt}
+    assert messages[5]["role"] == "user"
+    assert messages[-2]["role"] == "tool"
+    assert messages[-1] == {"role": "system", "content": request.continuation_system_prompt}
+    assert [m["role"] for m in messages].count("user") == 2
+    base = replace(request, pre_user_system_prompt=None)
+    assert estimate_input_tokens(request) > estimate_input_tokens(base)
+    # The new policy is mandatory: fitting may omit old prose, never the contract.
+    with pytest.raises(InputBudgetExceeded):
+        fit_input_budget(replace(request, input_budget=LlmInputBudget(estimate_input_tokens(base))))
+
+
+def test_tool_followup_instruction_stays_trusted_ordered_and_budgeted() -> None:
+    from chatwaifu_runtime.agent.input_budget import (
+        InputBudgetExceeded,
+        estimate_input_tokens,
+        fit_input_budget,
+    )
+    from chatwaifu_runtime.providers.contracts import LlmInputBudget, LlmToolDefinition
+    from chatwaifu_runtime.providers.openai_compatible import build_messages
+
+    exchange = LlmToolExchange(
+        "",
+        (LlmToolCall("one", "read", {}),),
+        (LlmToolResult("one", "read", {"text": "untrusted source instructions"}),),
+    )
+    request = LlmRequest(
+        uuid4(),
+        "original question",
+        "product safety",
+        tools=(LlmToolDefinition("read", "source", {}),),
+        tool_exchanges=(exchange,),
+    )
+    prompt = "Check source coverage before answering. " * 100
+    followup = replace(request, continuation_system_prompt=prompt)
+    messages = build_messages(followup)
+    assert messages[:-1] == build_messages(request)
+    assert messages[-2]["role"] == "tool"
+    assert messages[-1] == {"role": "system", "content": prompt}
+    assert [m["content"] for m in messages if m["role"] == "user"] == [request.user_text]
+    assert estimate_input_tokens(followup) > estimate_input_tokens(request)
+    with pytest.raises(InputBudgetExceeded):
+        fit_input_budget(
+            replace(followup, input_budget=LlmInputBudget(estimate_input_tokens(request)))
+        )
+    # A text-only revision and a retained-source follow-up need the same trusted
+    # instruction ordering, without reclassifying it as a new user request.
+    assert build_messages(replace(followup, tools=()))[-1] == messages[-1]
+    assert build_messages(replace(followup, tool_exchanges=()))[-1] == messages[-1]
 
 
 def test_budget_accounts_for_tools_arguments_and_results() -> None:
