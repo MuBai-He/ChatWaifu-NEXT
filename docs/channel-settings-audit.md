@@ -68,15 +68,15 @@
 ## 本地启动与服务器版本
 
 这份实现位于上述隔离工作区，主目录 `/Users/mubai/Desktop/CW2` 尚未合入，不能用旧主目录的启动结果验证新版。
-在该工作区按已有开发方式启动：
+当前服务器已发布本实现。Mac 原生客户端已启动为远程轻量客户端，连接
+`http://192.168.1.103:18780`，实际设置页读取到了服务器的权限和预算。
+在该工作区再次启动前端：
 
 ```bash
 cd /Users/mubai/.codex/worktrees/messaging-short-replies/CW2
-make server
-# 另一个终端：
+pnpm --filter @chatwaifu/desktop dev
+# 浏览器版本可使用：
 pnpm dev:web
-# 或者桌宠设置界面：
-pnpm dev:desktop-ui
 ```
 
 Web 打开 `/settings/channels`（也可从对话设置进入“消息渠道与权限设置”）；桌宠打开“设置 → 渠道”。
@@ -84,8 +84,8 @@ Web 打开 `/settings/channels`（也可从对话设置进入“消息渠道与�
 QQ 要先在 NapCat 登录，再按 UI 的配对指令绑定主人。微信仍需在手机扫码确认，后端需可用的安全凭据库。
 
 新“权限与预算”要求同版本后端和 schema 44。旧服务器缺少 `/v1/channels/settings` 时会明确提示更新，
-不宣称设置已经生效。此次不部署到 `192.168.1.103`、不改生产配置、不发送 QQ/微信消息，
-既有服务器和手机端验收不等同于本次页面源码验收。
+不宣称设置已经生效。服务器已升级至 schema 44，配置默认值和既有授权保持；
+本次部署未手工发送 QQ/微信消息。详情见[部署及 Mac 连接记录](operations/channel-settings-server-2026-10-06.md)。
 
 ## 验证记录
 
@@ -111,4 +111,6 @@ QQ 要先在 NapCat 登录，再按 UI 的配对指令绑定主人。微信仍�
 [Web 权限与预算](research/qq-agent-plus-evidence/channel-settings-ui-2026-10-06/channels-web-channel-budgets.png)、
 [Web 窄屏布局](research/qq-agent-plus-evidence/channel-settings-ui-2026-10-06/channels-web-channel-mobile.png)。
 
-部署：本次未执行。真实手机：本次未执行；原群语音收件/播放等未通过项仍保持原状态。
+部署：2026-10-06 已执行；Linux 定向回归 170 通过，原库迁移演练、现场数据与配置保持、
+真实 API 权限边界/CAS、Web 入口资源、原 HTTPS 入口及 Mac 原生设置读取均通过。
+真实手机：本次未执行；原群语音收件/播放等未通过项仍保持原状态。

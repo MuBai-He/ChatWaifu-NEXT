@@ -1,0 +1,58 @@
+{
+  "verified_at": "2026-10-06T02:29:19.272663+00:00",
+  "product_commit": "4898cb1",
+  "schema_version": 44,
+  "old_migration_records_preserved": 43,
+  "old_durable_rows_preserved": {
+    "turns": 224,
+    "generations": 116,
+    "channel_turns": 103,
+    "channel_deliveries": 98,
+    "channel_delivery_parts": 123
+  },
+  "protected_configuration_hashes_matched": true,
+  "model_routes_unchanged": true,
+  "policy_defaults_preserved": true,
+  "settings_revision": 0,
+  "search_provider": "searxng",
+  "reader_provider": "crawl4ai",
+  "operator_auth_required": true,
+  "settings_conflict_guard": 409,
+  "connection_readback": [
+    {
+      "provider": "weixin_ilink",
+      "status": "degraded",
+      "error_code": "weixin.notify_start_failed"
+    },
+    {
+      "provider": "qq_napcat",
+      "status": "ready",
+      "error_code": null
+    },
+    {
+      "provider": "weixin_ilink",
+      "status": "ready",
+      "error_code": null
+    }
+  ],
+  "group_readback": [
+    {
+      "requested_group": true,
+      "members": 5,
+      "ready": true,
+      "same_scene_and_grants": true,
+      "requested_voice_enabled": true
+    },
+    {
+      "requested_group": false,
+      "members": 2,
+      "ready": true,
+      "same_scene_and_grants": true,
+      "requested_voice_enabled": false
+    }
+  ],
+  "unrelated_service_identities_unchanged": 4,
+  "container_identities_preserved": 13,
+  "manual_external_messages_sent": 0,
+  "phone_acceptance": "not_retested"
+}
