@@ -3,7 +3,11 @@ import { X } from "lucide-react";
 import { ScopeControlsContext } from "../connection/clientControls";
 import { useDialogNavigation } from "../connection/useDialogNavigation";
 import { ModalPortal } from "./ModalPortal";
-import { mutationReceiptSchema, requestRuntime } from "./runtime-client/http";
+import {
+  mutationReceiptSchema,
+  requestRuntime,
+  RuntimeRequestError,
+} from "./runtime-client/http";
 import {
   createParticipant,
   createScene,
@@ -11,6 +15,7 @@ import {
   getScenes,
   OWNER_SCOPE,
   readConversationScope,
+  renameParticipant,
   scopedSessionStorageKey,
   scopeStorageKey,
   SCOPE_STORAGE_PREFIX,
@@ -36,10 +41,13 @@ export function ConversationScopeGate({
   const [name, setName] = useState("");
   const [sceneName, setSceneName] = useState("");
   const [audience, setAudience] = useState<string[]>([]);
+  const [editedName, setEditedName] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const pending = useRef<AbortController | null>(null);
+  const opener = useRef<HTMLElement | null>(null);
   const close = () => {
     pending.current?.abort();
     pending.current = null;
@@ -47,7 +55,7 @@ export function ConversationScopeGate({
     setOpen(false);
   };
   const { ref: dialogRef, onKeyDown: onDialogKeyDown } =
-    useDialogNavigation<HTMLElement>(open, close);
+    useDialogNavigation<HTMLElement>(open, close, opener);
   useEffect(() => () => pending.current?.abort(), []);
   useEffect(() => {
     let active = true;
@@ -94,6 +102,7 @@ export function ConversationScopeGate({
     ]);
     setBusy(true);
     setError(null);
+    setNotice(null);
     try {
       await operation(signal);
     } catch (e) {
@@ -101,11 +110,13 @@ export function ConversationScopeGate({
         setError(
           signal.aborted
             ? "服务暂时没有响应，可以重试或关闭此窗口。"
-            : e instanceof TypeError
-              ? "无法连接服务，请检查连接设置后重试。"
-              : e instanceof Error
-                ? e.message
-                : "操作失败",
+            : e instanceof RuntimeRequestError && e.status === 409
+              ? "名称已被其他操作修改，请重新打开窗口后重试。"
+              : e instanceof TypeError
+                ? "无法连接服务，请检查连接设置后重试。"
+                : e instanceof Error
+                  ? e.message
+                  : "操作失败",
         );
       }
     } finally {
@@ -115,12 +126,19 @@ export function ConversationScopeGate({
       }
     }
   };
-  const show = () => {
+  const show = (trigger?: HTMLElement) => {
+    // Keep the actual opener even if WebKit does not focus the clicked button
+    // or the background becomes inert before the dialog's effect runs.
+    if (trigger) opener.current = trigger;
     setOpen(true);
     setDraft(scope);
     setLoaded(false);
     setParticipants([]);
     setScenes([]);
+    setName("");
+    setSceneName("");
+    setAudience([]);
+    setEditedName(null);
     void act(async (signal) => {
       const [people, rooms] = await Promise.all([
         getParticipants(signal),
@@ -165,6 +183,10 @@ export function ConversationScopeGate({
   const label =
     participants.find((p) => p.participant_id === scope.participant_id)
       ?.display_name ?? (scope.participant_id === "local" ? "我" : "参与者");
+  const selectedParticipant = participants.find(
+    (p) => p.participant_id === draft.participant_id,
+  );
+  const nextName = editedName ?? selectedParticipant?.display_name ?? "";
   return (
     <ScopeControlsContext.Provider
       value={{
@@ -178,7 +200,7 @@ export function ConversationScopeGate({
       {showSwitch && (
         <button
           className="conversation-scope-trigger"
-          onClick={show}
+          onClick={(event) => show(event.currentTarget)}
           aria-label="切换参与者与场景"
         >
           对话设置
@@ -199,7 +221,7 @@ export function ConversationScopeGate({
               role="dialog"
               aria-modal="true"
               aria-labelledby="conversation-scope-title"
-              className="conversation-scope-dialog"
+              className="conversation-scope-dialog settings-controls"
             >
               <header className="conversation-scope-heading">
                 <h2 id="conversation-scope-title">参与者与场景</h2>
@@ -212,156 +234,252 @@ export function ConversationScopeGate({
                   <X size={18} />
                 </button>
               </header>
-              <p>
-                私聊记忆按参与者延续。共享场景只使用该场景的记忆，切换会结束当前通话。
-              </p>
-              {busy && !loaded && <p role="status">正在读取参与者与场景…</p>}
-              {!busy && !loaded && <button onClick={show}>重新加载</button>}
-              <fieldset
-                className="conversation-scope-fields"
-                disabled={busy || !loaded}
-              >
-                <label>
-                  当前说话者
-                  <select
-                    value={draft.participant_id}
-                    onChange={(e) =>
-                      setDraft({
-                        participant_id: e.target.value,
-                        scene_id: null,
-                      })
-                    }
-                  >
-                    {!loaded && (
-                      <option value={draft.participant_id}>等待服务连接</option>
-                    )}
-                    {participants.map((p) => (
-                      <option key={p.participant_id} value={p.participant_id}>
-                        {p.display_name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  对话场景
-                  <select
-                    value={draft.scene_id ?? ""}
-                    onChange={(e) =>
-                      setDraft({ ...draft, scene_id: e.target.value || null })
-                    }
-                  >
-                    <option value="">独立私聊</option>
-                    {scenes
-                      .filter((s) =>
-                        s.participant_ids.includes(draft.participant_id),
-                      )
-                      .map((s) => (
-                        <option key={s.scene_id} value={s.scene_id}>
-                          {s.display_name}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-                {draft.scene_id && (
-                  <p>
-                    听众：
-                    {scenes
-                      .find((s) => s.scene_id === draft.scene_id)
-                      ?.participant_ids.map(
-                        (id) =>
-                          participants.find((p) => p.participant_id === id)
-                            ?.display_name ?? id,
-                      )
-                      .join("、")}
-                  </p>
+              <div className="conversation-scope-body">
+                <p className="conversation-scope-description">
+                  选择桌宠与 Web
+                  当前的说话者。独立对话按人保留记忆，共享场景只使用该场景的记忆；切换会结束当前通话。
+                </p>
+                {busy && !loaded && <p role="status">正在读取参与者与场景…</p>}
+                {!busy && !loaded && (
+                  <button onClick={() => show()}>重新加载</button>
                 )}
-                <details>
-                  <summary>添加参与者</summary>
-                  <input
-                    aria-label="参与者名称"
-                    value={name}
-                    maxLength={80}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                  <button
-                    disabled={busy || !name.trim()}
-                    onClick={() =>
-                      void act(async (signal) => {
-                        const p = await createParticipant(name.trim(), signal);
-                        signal.throwIfAborted();
-                        setParticipants((list) => [...list, p]);
+                <fieldset
+                  className="conversation-scope-fields"
+                  disabled={busy || !loaded}
+                >
+                  <label>
+                    当前说话者
+                    <select
+                      value={draft.participant_id}
+                      onChange={(e) => {
+                        setEditedName(null);
                         setDraft({
-                          participant_id: p.participant_id,
+                          participant_id: e.target.value,
                           scene_id: null,
                         });
-                        setName("");
-                      })
-                    }
-                  >
-                    添加
-                  </button>
-                </details>
-                <details>
-                  <summary>创建共享场景</summary>
-                  <input
-                    aria-label="场景名称"
-                    value={sceneName}
-                    maxLength={120}
-                    onChange={(e) => setSceneName(e.target.value)}
-                  />
-                  <fieldset>
-                    <legend>听众（至少两人）</legend>
-                    {participants.map((p) => (
-                      <label key={p.participant_id}>
+                      }}
+                    >
+                      {!loaded && (
+                        <option value={draft.participant_id}>
+                          等待服务连接
+                        </option>
+                      )}
+                      {participants.map((p) => (
+                        <option key={p.participant_id} value={p.participant_id}>
+                          {p.display_name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    对话场景
+                    <select
+                      value={draft.scene_id ?? ""}
+                      onChange={(e) =>
+                        setDraft({ ...draft, scene_id: e.target.value || null })
+                      }
+                    >
+                      <option value="">独立私聊</option>
+                      {scenes
+                        .filter((s) =>
+                          s.participant_ids.includes(draft.participant_id),
+                        )
+                        .map((s) => (
+                          <option key={s.scene_id} value={s.scene_id}>
+                            {s.display_name}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  {draft.scene_id && (
+                    <p>
+                      听众：
+                      {scenes
+                        .find((s) => s.scene_id === draft.scene_id)
+                        ?.participant_ids.map(
+                          (id) =>
+                            participants.find((p) => p.participant_id === id)
+                              ?.display_name ?? id,
+                        )
+                        .join("、")}
+                    </p>
+                  )}
+                  <details className="conversation-scope-editor">
+                    <summary>修改当前参与者名称</summary>
+                    <div className="conversation-scope-editor-body">
+                      <label>
+                        显示名称
                         <input
-                          type="checkbox"
-                          checked={audience.includes(p.participant_id)}
-                          onChange={(e) =>
-                            setAudience((ids) =>
-                              e.target.checked
-                                ? [...ids, p.participant_id]
-                                : ids.filter((id) => id !== p.participant_id),
-                            )
-                          }
+                          value={nextName}
+                          maxLength={80}
+                          onChange={(e) => setEditedName(e.target.value)}
                         />
-                        {p.display_name}
                       </label>
-                    ))}
-                  </fieldset>
-                  <p>
-                    听众名单固定；更换听众请新建场景，避免沿用之前的共享记忆。
-                  </p>
-                  <button
-                    disabled={busy || !sceneName.trim() || audience.length < 2}
-                    onClick={() =>
-                      void act(async (signal) => {
-                        const room = await createScene(
-                          sceneName.trim(),
-                          audience,
-                          signal,
-                        );
-                        signal.throwIfAborted();
-                        setScenes((list) => [...list, room]);
-                        setDraft({
-                          participant_id: audience.includes(
-                            draft.participant_id,
-                          )
-                            ? draft.participant_id
-                            : audience[0],
-                          scene_id: room.scene_id,
-                        });
-                        setSceneName("");
-                      })
-                    }
-                  >
-                    创建场景
-                  </button>
-                </details>
-              </fieldset>
-              {error && <p role="alert">{error}</p>}
+                      <p>仅修改显示名称，已有身份关联、对话和记忆继续沿用。</p>
+                      <button
+                        type="button"
+                        disabled={
+                          busy ||
+                          !selectedParticipant ||
+                          !nextName.trim() ||
+                          nextName.trim() === selectedParticipant.display_name
+                        }
+                        onClick={() => {
+                          if (!selectedParticipant) return;
+                          const selected = selectedParticipant;
+                          void act(async (signal) => {
+                            const result = await renameParticipant(
+                              selected,
+                              nextName.trim(),
+                              signal,
+                            );
+                            signal.throwIfAborted();
+                            if (
+                              result.participant_id !== selected.participant_id
+                            )
+                              throw new Error("服务返回的参与者身份不一致");
+                            setParticipants((list) =>
+                              list.map((p) =>
+                                p.participant_id === result.participant_id
+                                  ? result
+                                  : p,
+                              ),
+                            );
+                            setEditedName(null);
+                            setNotice("参与者名称已保存");
+                          });
+                        }}
+                      >
+                        保存名称
+                      </button>
+                    </div>
+                  </details>
+                  <details className="conversation-scope-editor">
+                    <summary>添加参与者</summary>
+                    <div className="conversation-scope-editor-body">
+                      <label>
+                        参与者名称
+                        <input
+                          placeholder="例如：小林"
+                          value={name}
+                          maxLength={80}
+                          onChange={(e) => setName(e.target.value)}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        disabled={busy || !name.trim()}
+                        onClick={() =>
+                          void act(async (signal) => {
+                            const p = await createParticipant(
+                              name.trim(),
+                              signal,
+                            );
+                            signal.throwIfAborted();
+                            setParticipants((list) => [...list, p]);
+                            setDraft({
+                              participant_id: p.participant_id,
+                              scene_id: null,
+                            });
+                            setName("");
+                            setEditedName(null);
+                          })
+                        }
+                      >
+                        添加
+                      </button>
+                    </div>
+                  </details>
+                  <details className="conversation-scope-editor">
+                    <summary>创建共享场景</summary>
+                    <div className="conversation-scope-editor-body">
+                      <label>
+                        场景名称
+                        <input
+                          placeholder="例如：周末闲聊"
+                          value={sceneName}
+                          maxLength={120}
+                          onChange={(e) => setSceneName(e.target.value)}
+                        />
+                      </label>
+                      <fieldset className="conversation-scope-audience">
+                        <legend>
+                          听众 · 已选 {audience.length} 人（2–32 人）
+                        </legend>
+                        <div className="conversation-scope-member-list">
+                          {participants.map((p) => (
+                            <label
+                              key={p.participant_id}
+                              className="conversation-scope-member"
+                            >
+                              <input
+                                type="checkbox"
+                                value={p.participant_id}
+                                disabled={
+                                  audience.length >= 32 &&
+                                  !audience.includes(p.participant_id)
+                                }
+                                checked={audience.includes(p.participant_id)}
+                                onChange={(e) =>
+                                  setAudience((ids) =>
+                                    e.target.checked
+                                      ? [...ids, p.participant_id]
+                                      : ids.filter(
+                                          (id) => id !== p.participant_id,
+                                        ),
+                                  )
+                                }
+                              />
+                              <span>{p.display_name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </fieldset>
+                      <p>
+                        听众名单固定；更换听众请新建场景，避免沿用之前的共享记忆。
+                      </p>
+                      <button
+                        type="button"
+                        disabled={
+                          busy || !sceneName.trim() || audience.length < 2
+                        }
+                        onClick={() =>
+                          void act(async (signal) => {
+                            const room = await createScene(
+                              sceneName.trim(),
+                              audience,
+                              signal,
+                            );
+                            signal.throwIfAborted();
+                            setScenes((list) => [...list, room]);
+                            setDraft({
+                              participant_id: audience.includes(
+                                draft.participant_id,
+                              )
+                                ? draft.participant_id
+                                : audience[0],
+                              scene_id: room.scene_id,
+                            });
+                            setSceneName("");
+                            setEditedName(null);
+                          })
+                        }
+                      >
+                        创建场景
+                      </button>
+                    </div>
+                  </details>
+                </fieldset>
+                {notice && <p role="status">{notice}</p>}
+                {error && <p role="alert">{error}</p>}
+              </div>
               <footer>
-                <button onClick={close}>取消</button>
+                <button type="button" onClick={close}>
+                  取消
+                </button>
                 <button
+                  type="button"
+                  className="conversation-scope-primary"
                   disabled={busy || !loaded || participants.length === 0}
                   onClick={() => void apply()}
                 >

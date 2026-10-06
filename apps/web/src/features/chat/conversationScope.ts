@@ -86,3 +86,22 @@ export async function createScene(
     body: JSON.stringify({ display_name, participant_ids }),
   });
 }
+
+export async function renameParticipant(
+  participant: Participant,
+  displayName: string,
+  signal?: AbortSignal,
+) {
+  return requestRuntime(
+    `/v1/participants/${encodeURIComponent(participant.participant_id)}`,
+    participantSchema,
+    {
+      method: "PATCH",
+      signal,
+      body: JSON.stringify({
+        display_name: displayName,
+        expected_display_name: participant.display_name,
+      }),
+    },
+  );
+}

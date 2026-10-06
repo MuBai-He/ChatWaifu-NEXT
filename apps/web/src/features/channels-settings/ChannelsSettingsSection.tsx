@@ -59,7 +59,7 @@ function ChannelsSettingsContent({
   const online = context.runtime.connection === "connected";
   const characterId = context.appearance.character?.character_id ?? "default";
   return (
-    <div className="channels-settings-section">
+    <div className="channels-settings-section settings-controls">
       <SettingsSectionIntro
         icon="channels"
         title="消息渠道"
