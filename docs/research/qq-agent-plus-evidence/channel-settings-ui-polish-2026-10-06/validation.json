@@ -10,10 +10,7 @@
   },
   "browser": {
     "passed": 5,
-    "engines": [
-      "chromium",
-      "webkit"
-    ],
+    "engines": ["chromium", "webkit"],
     "runtime": "isolated loopback demo/fake/disabled",
     "bindings": "synthetic only",
     "checks": [
@@ -188,5 +185,6 @@
       "sha256": "f2524336e3ebb1b23115bace703dd2adeee10a3352bea467b42441225c6a7113",
       "content_matches_local": true
     }
-  ]
+  ],
+  "product_commit": "13f8254f6134df0c6ba0a3ac6080ae7db19f9ff6"
 }

@@ -1,8 +1,9 @@
 {
-  "frontend_commit": "2dca6cc52a46cef30cc1dd5b1dbdbd30e8b7dbbb",
+  "frontend_commit": "13f8254f6134df0c6ba0a3ac6080ae7db19f9ff6",
   "runtime_source_unchanged": true,
-  "web": "/home/mubai/chatwaifu-server/releases/channel-settings-ui-20261006-2dca6cc/web",
-  "previous_web": "/home/mubai/chatwaifu-server/releases/channel-settings-20261006-4898cb1/web",
+  "web": "/home/mubai/chatwaifu-server/releases/channel-settings-ui-20261006-13f8254/web",
+  "previous_web": "/home/mubai/chatwaifu-server/releases/channel-settings-ui-20261006-2dca6cc/web",
+  "original_web": "/home/mubai/chatwaifu-server/releases/channel-settings-20261006-4898cb1/web",
   "services_unchanged": true,
   "services": {
     "chatwaifu-runtime.service": "MainPID=1488295\nActiveState=active",
@@ -25,15 +26,15 @@
       "status": 200
     },
     {
-      "path": "assets/index-DsExNBt5.css",
-      "sha256": "1c8327bec412766acdc02ab2575f4182d0e7d57020094bf39f2578dcc4a0bbe4",
-      "bytes": 92351,
+      "path": "assets/index-Cq0nZs18.js",
+      "sha256": "0afdd725d0075cca9c59f99a76227c38682f1427c559d863334def5ce8f1baab",
+      "bytes": 701729,
       "status": 200
     },
     {
-      "path": "assets/index-E9FxrSFc.js",
-      "sha256": "0afdd725d0075cca9c59f99a76227c38682f1427c559d863334def5ce8f1baab",
-      "bytes": 701729,
+      "path": "assets/index-DDU-1BeZ.css",
+      "sha256": "276c1fd64bd7c57d8928c34104314e6433c879ae2ba7b88b043815a7fca28b48",
+      "bytes": 92340,
       "status": 200
     },
     {
@@ -50,7 +51,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "a89bc9acd6bfcb0cf7e6be6c4b6ab97a7e0026412371ecf45d14e3593c553cdf",
+      "sha256": "1363597219769f3428e31102033bc0d795a8d20563db4ed77e11980ee3c9b7ad",
       "bytes": 654,
       "status": 200
     }

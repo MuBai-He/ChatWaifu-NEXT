@@ -6,7 +6,7 @@ external_channel_settings:
   adr: "0077"
   baseline_commit: "046b391bffdb0e46d089d5be47465e8c0d090487"
   product_commit: "4898cb1"
-  ui_product_commit: "2dca6cc"
+  ui_product_commit: "13f8254"
   evidence:
     - Shared Web and Desktop channel settings cover existing WeChat and QQ binding, connection presentation, private capabilities, proactive policy, group identity and speaking grants, requested voice, scoped media and discussion budgets. See docs/channel-settings-audit.md.
     - Operator-only versioned policy uses SQLite migration 44 and CAS; configured defaults are preserved before the first save, persisted policy wins on restart, current permissions are enforced at tool and media boundaries. Fresh phone acceptance is not claimed.
