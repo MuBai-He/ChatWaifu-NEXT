@@ -1,6 +1,6 @@
 .qq-channel-content {
   display: grid;
-  padding: 24px;
+  padding: 20px;
   gap: 14px;
 }
 
@@ -28,17 +28,6 @@
 .qq-channel-form label {
   color: var(--settings-text);
   font-size: 0.68rem;
-}
-
-.qq-channel-form input {
-  box-sizing: border-box;
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--settings-line);
-  border-radius: 9px;
-  color: var(--settings-text);
-  background: rgb(255 255 255 / 70%);
-  font: inherit;
 }
 
 .qq-channel-form button,
@@ -82,9 +71,4 @@
 
 .qq-channel-offline {
   padding: 0 24px 24px;
-}
-
-.qq-channel-panel :is(input, button):focus-visible {
-  outline: 2px solid #8d527d;
-  outline-offset: 3px;
 }

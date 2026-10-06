@@ -2,13 +2,18 @@ schema_version: "1.0"
 updated_at: "2026-10-06"
 current_phase: "13.6"
 external_channel_settings:
-  status: source_and_isolated_local_ui_verified_not_deployed_phone_acceptance_pending
+  status: source_server_deployment_and_mac_remote_ui_verified_phone_acceptance_pending
   adr: "0077"
   baseline_commit: "046b391bffdb0e46d089d5be47465e8c0d090487"
+  product_commit: "4898cb1"
+  ui_product_commit: "d801d52"
   evidence:
     - Shared Web and Desktop channel settings cover existing WeChat and QQ binding, connection presentation, private capabilities, proactive policy, group identity and speaking grants, requested voice, scoped media and discussion budgets. See docs/channel-settings-audit.md.
-    - Operator-only versioned policy uses SQLite migration 44 and CAS; configured defaults are preserved before the first save, persisted policy wins on restart, current permissions are enforced at tool and media boundaries. Server deployment and fresh phone acceptance are not claimed.
+    - Operator-only versioned policy uses SQLite migration 44 and CAS; configured defaults are preserved before the first save, persisted policy wins on restart, current permissions are enforced at tool and media boundaries. Fresh phone acceptance is not claimed.
     - Full Python validation passed 3834 tests with 46 platform skips before final permission-race review; final related regression passed 157 tests including revoked reads/uploads/synthesis. Web passed 450 tests and protocol TypeScript passed 125. Both products passed isolated local real-API save/readback/reload/browser checks, builds and artifact isolation. No real account pairing, TTS, sends or handset playback performed.
+    - Server Linux targeted tests passed 170; staged 43-to-44 migration preserved 82 existing tables and 6614 rows, original schema and migration records. Deployment preserved model routes, configuration, durable rows, both group audiences and grants, four unrelated services and thirteen containers. Seven served Web artifacts, operator authentication/CAS, CORS and the existing hostname-verified HTTPS endpoint passed. The Mac native client is running the new frontend and visibly reads the remote permissions and budgets. See docs/operations/channel-settings-server-2026-10-06.md.
+    - Shared settings controls now use consistent dimensions, fonts, borders and visible keyboard focus, with native WebKit select appearance normalized. Five isolated Chromium/WebKit browser checks, Web tests, types/lint, both builds and artifact checks passed. Mac actual pet loaded after a client restart, separately from the settings preview. UI-only static deployment retained Runtime source/processes and policy; see docs/operations/channel-settings-ui-2026-10-06.md. No new phone acceptance is claimed.
+    - The portalled participant/scene dialog now shares the same controls and uses fixed header/footer, bounded member scrolling, visible labels and explicit opener focus restoration in WebKit. Operator-only CAS display-name edits preserve IDs, QQ associations and scene/session scopes. Four existing placeholder labels were updated from linked QQ nicknames. Final Web tests passed 453; Mac and Linux targeted Python tests passed 120 each; eight distinct browser cases, types/lint and both builds passed. Release d801d52 preserved 1301 unrelated source files and existing configuration/schema, revalidated both original QQ audiences and grants, and the Mac client visibly shows real nicknames and restores focus on Escape. See docs/operations/conversation-scope-ui-2026-10-06.md. No handset or Q02 quality acceptance is added.
 qq_group_requested_voice:
   status: source_and_deployment_verified_phone_receipt_and_playback_pending
   adr: "0076"

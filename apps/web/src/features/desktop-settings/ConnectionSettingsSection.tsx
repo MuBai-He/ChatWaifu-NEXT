@@ -32,14 +32,20 @@ export function ConnectionSettingsSection() {
       </SettingsGroup>
       <SettingsGroup
         title="对话范围"
-        description="独立对话与共享场景分别保留记忆。切换会结束当前通话。"
+        description="设置桌宠与 Web 当前的说话者和记忆范围。切换会结束当前通话。"
       >
         <div className="desktop-settings-connection-row">
           <span>
             <strong>{scope?.label ?? "独立对话"}</strong>
-            <small>管理参与者，或选择共享场景</small>
+            <small>
+              独立对话按人保留记忆；共享场景使用固定听众的场景记忆。QQ
+              群权限在“渠道”管理。
+            </small>
           </span>
-          <button onClick={() => scope?.open()} disabled={!scope}>
+          <button
+            onClick={(event) => scope?.open(event.currentTarget)}
+            disabled={!scope}
+          >
             管理对话
           </button>
         </div>

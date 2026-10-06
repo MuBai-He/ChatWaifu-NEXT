@@ -72,6 +72,7 @@ from chatwaifu_runtime.api.models import (
     SubmitTextRequest,
     TtsConfigurationUpdateRequest,
     TtsProviderSelectionRequest,
+    UpdateParticipantNameRequest,
     WebRtcOfferRequest,
     WebRtcPatchRequest,
     WorkerPackIntegrityItem,
@@ -90,6 +91,7 @@ from chatwaifu_runtime.realtime.configuration import (
     RealtimeConfigurationUpdateRequest,
     RealtimeRevisionConflictError,
 )
+from chatwaifu_runtime.sessions.service import ParticipantNameConflict
 
 logger = logging.getLogger(__name__)
 
@@ -741,6 +743,23 @@ async def create_participant(request: Request, body: CreateParticipantRequest) -
     return (await _container(request).sessions.create_participant(body.display_name)).model_dump(
         mode="json"
     )
+
+
+@router.patch("/participants/{participant_id}")
+async def rename_participant(
+    request: Request, participant_id: str, body: UpdateParticipantNameRequest
+) -> dict[str, object]:
+    try:
+        participant = await _container(request).sessions.rename_participant(
+            participant_id,
+            body.display_name,
+            expected_display_name=body.expected_display_name,
+        )
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="participant not found") from error
+    except ParticipantNameConflict as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return participant.model_dump(mode="json")
 
 
 @router.get("/scenes")

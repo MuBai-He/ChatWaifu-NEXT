@@ -20,70 +20,48 @@
   z-index: 10000;
   display: grid;
   place-items: center;
-  background: #18142477;
-  padding: 20px;
-}
-.conversation-scope-dialog {
-  width: min(480px, 100%);
-  max-height: 85vh;
-  overflow: auto;
-  background: #fff;
-  color: #302a3a;
-  border-radius: 18px;
+  background: rgb(41 36 45 / 38%);
   padding: 24px;
-  box-shadow: 0 20px 80px #0004;
-}
-.conversation-scope-dialog h2 {
-  margin: 0 0 12px;
-}
-.conversation-scope-dialog p {
-  font-size: 13px;
-  line-height: 1.6;
-}
-.conversation-scope-dialog label {
-  display: block;
-  margin: 12px 0;
-}
-.conversation-scope-dialog select,
-.conversation-scope-dialog input:not([type="checkbox"]) {
-  display: block;
-  width: 100%;
-  padding: 8px;
-  margin-top: 6px;
-  box-sizing: border-box;
-}
-.conversation-scope-dialog details {
-  margin: 16px 0;
-}
-.conversation-scope-dialog button {
-  padding: 7px 14px;
-  margin-top: 8px;
-  cursor: pointer;
-}
-.conversation-scope-dialog footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
 }
 .conversation-scope-dialog {
-  background: #f8f4f8;
-  border: 1px solid #dcd0df;
+  --settings-text: #29242d;
+  --settings-muted: #77707d;
+  --settings-line: rgb(75 58 80 / 11%);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: min(560px, 100%);
+  max-height: min(740px, calc(100dvh - 48px));
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 78%);
+  border-radius: 18px;
+  color: var(--settings-text);
+  background: #f6f2f5;
+  font-size: 13px;
+  box-shadow: 0 20px 80px rgb(41 36 45 / 24%);
 }
 .conversation-scope-heading {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  padding: 20px 24px 16px;
 }
 .conversation-scope-heading h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
+  font-weight: 600;
 }
 .conversation-scope-dialog button {
-  border: 1px solid #d9cbdc;
-  border-radius: 8px;
-  background: #fff9fd;
-  color: #6f4f75;
+  border: 1px solid rgb(86 67 91 / 18%);
+  color: #845981;
+  background: rgb(255 255 255 / 88%);
+  cursor: pointer;
+}
+.conversation-scope-dialog button:hover:not(:disabled) {
+  background: #efe5ee;
 }
 .conversation-scope-dialog button:disabled {
   opacity: 0.45;
@@ -95,11 +73,31 @@
   flex-shrink: 0;
   width: 32px;
   height: 32px;
-  margin: 0;
   padding: 0;
+  border: 0;
+  border-radius: 10px;
+  color: var(--settings-muted);
+  background: transparent;
+}
+.conversation-scope-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 24px 20px;
+}
+.conversation-scope-dialog p {
+  margin: 0;
+  color: var(--settings-muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+.conversation-scope-dialog .conversation-scope-description {
+  margin-bottom: 20px;
 }
 .conversation-scope-fields {
+  display: grid;
   min-width: 0;
+  gap: 16px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -107,25 +105,124 @@
 .conversation-scope-fields:disabled {
   opacity: 0.65;
 }
-.conversation-scope-dialog select,
-.conversation-scope-dialog input:not([type="checkbox"]) {
-  min-height: 40px;
-  border: 1px solid #dbcedd;
-  border-radius: 8px;
-  color: #514354;
-  background: #fffafd;
+.conversation-scope-fields label:not(.conversation-scope-member) {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  line-height: 1.5;
 }
-.conversation-scope-dialog :focus-visible {
-  outline: 2px solid #a66f95;
-  outline-offset: 3px;
+.conversation-scope-fields select,
+.conversation-scope-fields input:not([type="checkbox"]) {
+  width: 100%;
+}
+.conversation-scope-editor {
+  min-width: 0;
+  overflow: clip;
+  border: 1px solid var(--settings-line);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 65%);
+}
+.conversation-scope-editor summary {
+  padding: 14px 16px;
+  font-weight: 550;
+  cursor: pointer;
+}
+.conversation-scope-editor summary::marker {
+  color: #845981;
+}
+.conversation-scope-editor-body {
+  display: grid;
+  gap: 14px;
+  padding: 0 16px 16px;
+}
+.conversation-scope-editor-body > button {
+  justify-self: start;
+}
+.conversation-scope-audience {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.conversation-scope-audience legend {
+  padding: 0 0 10px;
+  color: var(--settings-muted);
+  font-size: 12px;
+}
+.conversation-scope-member-list {
+  display: grid;
+  max-height: 228px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  gap: 6px;
+}
+.conversation-scope-member {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--settings-line);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 70%);
+  cursor: pointer;
+}
+.conversation-scope-member:has(input:checked) {
+  border-color: rgb(141 82 125 / 45%);
+  background: #f2e9f0;
+}
+.conversation-scope-member input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+.conversation-scope-member span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+.conversation-scope-body > [role="status"],
+.conversation-scope-body > [role="alert"] {
+  margin-top: 16px;
 }
 .conversation-scope-dialog [role="alert"] {
-  padding: 10px;
-  border-radius: 8px;
+  padding: 12px;
+  border-radius: 10px;
   color: #9b425e;
   background: #f5e4eb;
   overflow-wrap: anywhere;
 }
 .conversation-scope-dialog footer {
-  margin-top: 20px;
+  display: flex;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--settings-line);
+  background: rgb(255 255 255 / 65%);
+}
+.conversation-scope-dialog button.conversation-scope-primary {
+  border-color: #8d527d;
+  color: #fff;
+  background: #8d527d;
+}
+.conversation-scope-dialog
+  button.conversation-scope-primary:hover:not(:disabled) {
+  background: #79456c;
+}
+@media (max-width: 480px) {
+  .conversation-scope-overlay {
+    padding: 12px;
+  }
+  .conversation-scope-dialog {
+    max-height: calc(100dvh - 24px);
+  }
+  .conversation-scope-heading,
+  .conversation-scope-dialog footer {
+    padding: 16px;
+  }
+  .conversation-scope-body {
+    padding: 0 16px 16px;
+  }
 }

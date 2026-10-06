@@ -6,6 +6,7 @@ import "./features/chat/skill-confirmation-prompt.css";
 import { mountProduct } from "./product/mountProduct";
 import { WebProductApp } from "./product/web/WebProductApp";
 import { resolveWebSurface } from "./product/web/webSurface";
+import "./features/settings/settings-controls.css";
 
 const surface = resolveWebSurface(window.location.pathname);
 mountProduct({

@@ -557,7 +557,7 @@ function QQGroupRoutesContent({
         <button
           type="button"
           className="qq-channel-secondary-action"
-          onClick={scopeControls.open}
+          onClick={(event) => scopeControls.open(event.currentTarget)}
         >
           管理对话参与者
         </button>
