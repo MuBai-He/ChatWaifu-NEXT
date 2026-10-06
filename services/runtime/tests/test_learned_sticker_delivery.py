@@ -18,6 +18,7 @@ from chatwaifu_protocol.channels import (
     ChannelImageDeliveryPartPayload,
     ChannelPresentationPolicy,
     ChannelPresentationProfile,
+    ChannelTextDeliveryPartPayload,
 )
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.config.settings import Settings
@@ -279,7 +280,11 @@ async def test_learned_sticker_delivery_and_plan_recovery(
         result = results[0]
         assert result.plan.status is ChannelDeliveryStatus.DELIVERED
         assert all(p.status is ChannelDeliveryPartStatus.DELIVERED for p in result.plan.parts)
-        assert len(result.plan.parts) == 2
+        assert len(result.plan.parts) >= 2
+        assert all(
+            isinstance(p.payload, ChannelTextDeliveryPartPayload) and p.required
+            for p in result.plan.parts[:-1]
+        )
 
         # Invariant checks: transport calls
         assert len(transport.images) == 1
@@ -308,10 +313,22 @@ async def test_learned_sticker_delivery_and_plan_recovery(
         assert plan is not None
         assert plan.status is ChannelDeliveryStatus.DELIVERED
         assert plan.parts[0].status is ChannelDeliveryPartStatus.DELIVERED
-        assert plan.parts[1].status is ChannelDeliveryPartStatus.DELIVERED
-        assert isinstance(plan.parts[1].payload, ChannelImageDeliveryPartPayload)
-        assert plan.parts[1].payload.sticker_id == learned_id
-        assert plan.parts[1].payload.sha256 == expected_sha
+        assert plan.parts[-1].status is ChannelDeliveryPartStatus.DELIVERED
+        assert isinstance(plan.parts[-1].payload, ChannelImageDeliveryPartPayload)
+        assert plan.parts[-1].payload.sticker_id == learned_id
+        assert plan.parts[-1].payload.sha256 == expected_sha
+        assert len(transport.sent_messages) == len(plan.parts) - 1
+        assert len({m["client_id"] for m in transport.sent_messages}) == len(
+            transport.sent_messages
+        )
+        assert (
+            "".join(
+                p.payload.text
+                for p in plan.parts
+                if isinstance(p.payload, ChannelTextDeliveryPartPayload)
+            )
+            == turn.reply_text
+        )
 
         # Recovery of response plan
         recovered_plan = await container.conversation_repository.generation_response_plan(
@@ -381,7 +398,8 @@ async def test_delete_learned_asset_while_queued_fails_image_terminal_without_re
             ):
                 text_delivered.set()
             elif (
-                result.part.ordinal == 1 and result.part.status is ChannelDeliveryPartStatus.FAILED
+                isinstance(result.part.payload, ChannelImageDeliveryPartPayload)
+                and result.part.status is ChannelDeliveryPartStatus.FAILED
             ):
                 image_failed.set()
         return result
@@ -399,7 +417,7 @@ async def test_delete_learned_asset_while_queued_fails_image_terminal_without_re
         plan: Any,
         part: Any,
     ) -> Any:
-        if part.ordinal == 1 and isinstance(part.payload, ChannelImageDeliveryPartPayload):
+        if isinstance(part.payload, ChannelImageDeliveryPartPayload):
             # Delete the learned sticker from SQLite right before management loads the image bytes
             del_res = await container.sticker_repository.delete(
                 "local", "default", part.payload.sticker_id
@@ -459,7 +477,6 @@ async def test_delete_learned_asset_while_queued_fails_image_terminal_without_re
 
         # Wait for text part to be delivered
         await asyncio.wait_for(text_delivered.wait(), timeout=10.0)
-        assert len(transport.sent_messages) == 1, "Text must be sent exactly once"
 
         # Wait for asset deletion to happen in flight
         await asyncio.wait_for(deleted_asset_event.wait(), timeout=10.0)
@@ -472,7 +489,9 @@ async def test_delete_learned_asset_while_queued_fails_image_terminal_without_re
         assert len(transport.images) == 0, "Deleted sticker must never be sent to transport"
 
         # 2. Text was sent exactly once (no duplicate delivery)
-        assert len(transport.sent_messages) == 1, "Text must not be resent or duplicated"
+        assert len({m["client_id"] for m in transport.sent_messages}) == len(
+            transport.sent_messages
+        )
 
         # 3. Durable state verification from repository
         turn = await container.external_channel_repository.find_turn_by_external_message(
@@ -483,15 +502,21 @@ async def test_delete_learned_asset_while_queued_fails_image_terminal_without_re
             turn.delivery_id
         )
         assert durable_plan is not None
-        assert len(durable_plan.parts) == 2
+        assert len(durable_plan.parts) >= 2
+        assert len(transport.sent_messages) == len(durable_plan.parts) - 1
+        assert all(
+            p.status is ChannelDeliveryPartStatus.DELIVERED
+            and isinstance(p.payload, ChannelTextDeliveryPartPayload)
+            for p in durable_plan.parts[:-1]
+        )
 
         part_0 = durable_plan.parts[0]
         assert part_0.status is ChannelDeliveryPartStatus.DELIVERED
         assert part_0.ordinal == 0
 
-        part_1 = durable_plan.parts[1]
+        part_1 = durable_plan.parts[-1]
         assert part_1.status is ChannelDeliveryPartStatus.FAILED
-        assert part_1.ordinal == 1
+        assert part_1.ordinal == len(durable_plan.parts) - 1
         assert not part_1.required
         assert part_1.last_error is not None
         assert part_1.last_error.code == "sticker_load_failed"
@@ -529,7 +554,11 @@ async def test_pending_learned_image_survives_runtime_restart_without_resending_
         acknowledgement: ChannelDeliveryPartAcknowledgement, *, updated_at: datetime
     ) -> DeliveryTransitionResult:
         result = await original_ack(acknowledgement, updated_at=updated_at)
-        if result.part is not None and result.part.ordinal == 0:
+        if (
+            result.part is not None
+            and isinstance(result.part.payload, ChannelTextDeliveryPartPayload)
+            and result.part.ordinal == len(result.plan.parts) - 2
+        ):
             text_committed.set()
             await asyncio.Event().wait()
         return result
@@ -571,14 +600,20 @@ async def test_pending_learned_image_survives_runtime_restart_without_resending_
             )
         )
         await asyncio.wait_for(text_committed.wait(), 5)
-        assert len(first_transport.sent_messages) == 1 and first_transport.images == []
+        assert first_transport.images == []
         turn = await first.external_channel_repository.find_turn_by_external_message(
             connection_id, "restart-learned"
         )
         assert turn is not None and turn.delivery_id is not None
         pending = await first.external_channel_repository.get_delivery_plan(turn.delivery_id)
         assert pending is not None
-        frozen = pending.parts[1]
+        assert len(first_transport.sent_messages) == len(pending.parts) - 1
+        assert all(
+            p.status is ChannelDeliveryPartStatus.DELIVERED
+            and isinstance(p.payload, ChannelTextDeliveryPartPayload)
+            for p in pending.parts[:-1]
+        )
+        frozen = pending.parts[-1]
         assert isinstance(frozen.payload, ChannelImageDeliveryPartPayload)
         assert frozen.payload.sticker_id == learned_id
         assert frozen.status is ChannelDeliveryPartStatus.PENDING

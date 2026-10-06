@@ -22,6 +22,23 @@ Anonymous, unknown, self-account-mismatched, self-sent and mixed-media messages
 fail closed. The connection administrator is separate from the conversational
 speaker.
 
+### Reply envelope compatibility, 2026-10-05
+
+The group text receiver now accepts one structured `reply` segment alongside
+the required real `at.qq == self_id` and nonempty text. Two actual group inputs
+had this shape but were discarded before Runtime admission. A reply reference
+must be one canonical, nonzero signed numeric message ID of at most 20 digits;
+duplicate or malformed references still reject the whole input.
+
+This is an input-envelope compatibility fix. The reference does not grant a
+reply trigger or resolve quoted content. The current text and existing
+scope-checked group history are passed to Conversation, as before. No provider
+`get_msg` lookup or private quote loader is added. Standalone quotes without a
+bot mention, mixed media and output quote segments remain outside this slice.
+Operator grants, scene boundaries, route cancellation and delivery fencing
+continue to apply. Automated and server checks are recorded separately from
+fresh handset acceptance in the [investigation record](../research/qq-agent-plus-evidence/qq-group-quote-2026-10-05.md).
+
 ## Session, memory and character state
 
 The persisted session owns conversational identity. Its existing immutable

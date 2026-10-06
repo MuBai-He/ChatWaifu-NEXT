@@ -29,8 +29,6 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryStatus,
     ChannelImageDeliveryPartPayload,
     ChannelInboundTextMessage,
-    ChannelPresentationPolicy,
-    ChannelPresentationProfile,
     ChannelTextDeliveryPartPayload,
     ChannelTurnStatus,
 )
@@ -64,7 +62,10 @@ from chatwaifu_runtime.external_channels.models import (
     ChannelTurnRecord,
 )
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
-from chatwaifu_runtime.external_channels.presentation import render_bubble_text
+from chatwaifu_runtime.external_channels.presentation import (
+    messaging_presentation_policy,
+    render_bubble_text,
+)
 from chatwaifu_runtime.external_channels.scheduler import (
     ChannelDeliveryScheduler,
     DeliveryPartExecutionResult,
@@ -854,9 +855,7 @@ class ChannelManagementService:
             account_key=bot_id,
             allowed_sender_keys=[user_id],
             enabled=True,
-            presentation_policy=ChannelPresentationPolicy(
-                profile=ChannelPresentationProfile.INSTANT_MESSAGE,
-            ),
+            presentation_policy=messaging_presentation_policy(),
         )
         gateway_access_token = secrets.token_urlsafe(32)
         credentials = WeixinCredentials(
@@ -1154,7 +1153,11 @@ class ChannelManagementService:
                         await self._set_connection_health(
                             connection_id,
                             error.code,
-                            "WeChat returned a response that cannot be processed.",
+                            (
+                                "The WeChat login has expired. Scan a new QR code to reconnect."
+                                if error.code == "weixin.session_expired"
+                                else "WeChat returned a response that cannot be processed."
+                            ),
                             status=ChannelConnectionStatus.ERROR,
                             retryable=False,
                         )
@@ -1886,6 +1889,11 @@ class ChannelManagementService:
                 part_id=str(part.part_id),
                 ordinal=part.ordinal,
                 send_elapsed_ms=round((perf_counter() - send_started) * 1000, 3),
+                receipt_kind=(
+                    "server_message_id"
+                    if provider_message_id is not None and provider_message_id != client_id
+                    else "client_id"
+                ),
             )
             return DeliveryPartExecutionResult(
                 outcome=DeliveryPartOutcome.DELIVERED,

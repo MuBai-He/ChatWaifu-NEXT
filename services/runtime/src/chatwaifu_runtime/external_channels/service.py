@@ -82,6 +82,7 @@ from chatwaifu_runtime.external_channels.presentation import (
     DeliveryPlanFactory,
     InstantMessageDeliveryPlanFactory,
     SingleTextDeliveryPlanFactory,
+    messaging_presentation_policy,
 )
 from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
 from chatwaifu_runtime.photo_memory.metadata import strip_image_exif
@@ -620,12 +621,8 @@ class ExternalChannelService:
             sender_display_name=message.sender_display_name,
             reply_to_external_message_id=message.reply_to_external_message_id,
         )
-        policy = connection.configuration.presentation_policy
-        profile = (
-            policy.profile.value
-            if policy is not None and hasattr(policy.profile, "value")
-            else (str(policy.profile) if policy is not None else None)
-        )
+        policy = messaging_presentation_policy(connection.configuration.presentation_policy)
+        profile = policy.profile.value
         recovery_text = (
             _IMAGE_FAILURE_RECOVERY_TEXT
             if image_input is not None
@@ -1104,12 +1101,8 @@ class ExternalChannelService:
             conversation_label=first_item.message.conversation_label,
             sender_display_name=first_item.message.sender_display_name,
         )
-        policy = connection.configuration.presentation_policy
-        profile = (
-            policy.profile.value
-            if policy is not None and hasattr(policy.profile, "value")
-            else (str(policy.profile) if policy is not None else None)
-        )
+        policy = messaging_presentation_policy(connection.configuration.presentation_policy)
+        profile = policy.profile.value
 
         async def combined_base_loader() -> tuple[LlmInputImage, ...]:
             all_images: list[LlmInputImage] = []
@@ -2260,7 +2253,7 @@ class ExternalChannelService:
                     )
                 delivery_id = turn.delivery_id or uuid4()
                 connection = await self._repository.get_connection(turn.connection_id)
-                policy = (
+                policy = messaging_presentation_policy(
                     connection.configuration.presentation_policy
                     if connection and connection.configuration
                     else None
@@ -2277,11 +2270,8 @@ class ExternalChannelService:
                 is_default_character = (
                     connection is not None and connection.configuration.character_id == "default"
                 )
-                is_instant_message = (
-                    policy is not None
-                    and policy.profile is ChannelPresentationProfile.INSTANT_MESSAGE
-                )
-                stickers_enabled = policy is not None and policy.stickers_enabled
+                is_instant_message = policy.profile is ChannelPresentationProfile.INSTANT_MESSAGE
+                stickers_enabled = policy.stickers_enabled
 
                 can_send_sticker = (
                     stickers_enabled
@@ -2332,11 +2322,7 @@ class ExternalChannelService:
                             "learned sticker selection unavailable generation_id=%s",
                             turn.generation_id,
                         )
-                profile_name: str = (
-                    policy.profile.value
-                    if policy is not None
-                    else ChannelPresentationProfile.SINGLE_TEXT.value
-                )
+                profile_name: str = policy.profile.value
                 fallback_reason: str | None = None
                 factory = self._delivery_plan_factory
                 if isinstance(factory, InstantMessageDeliveryPlanFactory):

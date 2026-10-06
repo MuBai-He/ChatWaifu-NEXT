@@ -26,7 +26,8 @@ from chatwaifu_runtime.conversation.models import (
     ConversationHistoryEntry,
     ConversationSourceContext,
 )
-from chatwaifu_runtime.providers.input_estimation import count_reference_tokens
+from chatwaifu_runtime.providers.contracts import LlmRequest
+from chatwaifu_runtime.providers.input_estimation import estimate_reference_input_tokens
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 
 CHARACTERS_ROOT = Path(__file__).resolve().parents[3] / "characters"
@@ -202,12 +203,13 @@ async def test_prompt_compiler_keeps_latest_contiguous_history_and_summarizes_pr
 
 
 class _PromptModels:
-    def __init__(self) -> None:
+    def __init__(self, *, context_window: int = 1024) -> None:
         self.summary_inputs: list[str] = []
+        self.context_window = context_window
 
     def get(self, role: str) -> SimpleNamespace:
         assert role == "chat"
-        return SimpleNamespace(context_window=1024)
+        return SimpleNamespace(context_window=self.context_window)
 
     async def complete(self, role: str, system: str, user: str) -> str:
         del system
@@ -736,7 +738,7 @@ async def test_v4_reference_presentation_profiles_im_single_text_and_voice() -> 
     assert nene is not None
     nene = nene.model_copy(update={"system_prompt": _v4_reference_prompt()})
 
-    models = _PromptModels()
+    models = _PromptModels(context_window=8192)
     compiler = PromptCompiler(cast(ModelConfigurationService, models))
     now = datetime.now(UTC)
     kernel = CharacterKernelSnapshot(
@@ -765,9 +767,18 @@ async def test_v4_reference_presentation_profiles_im_single_text_and_voice() -> 
         presentation_profile="instant_message",
     )
     assert "You are messaging in an instant chat" in comp_im.system_prompt
-    # Channel wording must leave room for actual source bodies in an 8192 window.
+    # Budget the complete request against its configured input allowance. A fixed
+    # output-contract-only token cap does not measure omissions or answer quality.
     output_contract = comp_im.system_prompt.split("[OUTPUT CONTRACT]\n", 1)[1]
-    assert count_reference_tokens(output_contract) <= 330
+    request = LlmRequest(
+        generation_id=uuid4(),
+        user_text="你好",
+        system_prompt=comp_im.system_prompt,
+        character_name=nene.display_name,
+        context=comp_im.context,
+        history=comp_im.history,
+    )
+    assert estimate_reference_input_tokens(request) <= comp_im.report.budget
     assert (
         "Priority: safety, truth and source facts; explicit user boundaries and requested tasks"
         in output_contract

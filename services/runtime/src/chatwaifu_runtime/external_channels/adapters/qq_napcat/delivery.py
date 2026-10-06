@@ -38,6 +38,10 @@ from chatwaifu_runtime.external_channels.models import (
     ChannelTurnRecord,
 )
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
+from chatwaifu_runtime.external_channels.presentation import (
+    group_text_parts_match_reply,
+    render_bubble_text,
+)
 from chatwaifu_runtime.external_channels.scheduler import (
     DeliveryPartExecutionResult,
     DeliveryPartOutcome,
@@ -185,7 +189,9 @@ class NapCatDelivery:
             return _failed("qq_delivery_cancelled", "QQ 投递已停止。")
         try:
             if isinstance(part.payload, ChannelTextDeliveryPartPayload):
-                segments: list[JsonObject] = [{"type": "text", "data": {"text": part.payload.text}}]
+                segments: list[JsonObject] = [
+                    {"type": "text", "data": {"text": self._render_text(plan, part)}}
+                ]
             elif isinstance(part.payload, ChannelAudioDeliveryPartPayload):
                 path = self._audio_root / f"{part.payload.asset_id}.wav"
                 if path.is_symlink() or not path.is_file() or path.stat().st_size > 8 * 1024 * 1024:
@@ -303,7 +309,9 @@ class NapCatDelivery:
             if len(journal) >= 256:
                 return _failed("qq_send_journal_full", "请处理未完成的 QQ 投递后重试。")
             assert isinstance(part.payload, ChannelTextDeliveryPartPayload)
-            segments: list[JsonObject] = [{"type": "text", "data": {"text": part.payload.text}}]
+            segments: list[JsonObject] = [
+                {"type": "text", "data": {"text": self._render_text(plan, part)}}
+            ]
             journal[key] = "unknown"
             await self._save(journal)
             try:
@@ -401,13 +409,30 @@ class NapCatDelivery:
             or source.group_route_id != target.route_id
             or source.group_route_revision != target.route_revision
             or source.group_lineage_version != 1
-            or len(plan.parts) != 1
-            or plan.delivery.part_count != 1
-            or len(current.parts) != 1
-            or current.delivery.part_count != 1
+            or plan.delivery.part_count != len(plan.parts)
+            or current.delivery.part_count != len(current.parts)
+            or len(plan.parts) != len(current.parts)
+            or not group_text_parts_match_reply(plan.parts, source.reply_text or "")
+            or not group_text_parts_match_reply(current.parts, source.reply_text or "")
+            or not 0 <= part.ordinal < len(current.parts)
         ):
             return False
-        original, claimed = plan.parts[0], current.parts[0]
+        for original_part, persisted_part in zip(plan.parts, current.parts, strict=True):
+            if (
+                original_part.delivery_id != plan.delivery_id
+                or persisted_part.delivery_id != plan.delivery_id
+                or original_part.part_id != persisted_part.part_id
+                or original_part.provider_client_id != persisted_part.provider_client_id
+                or original_part.payload != persisted_part.payload
+                or original_part.delay_after_ms != persisted_part.delay_after_ms
+            ):
+                return False
+        if any(
+            previous.status is not ChannelDeliveryPartStatus.DELIVERED
+            for previous in current.parts[: part.ordinal]
+        ):
+            return False
+        original, claimed = plan.parts[part.ordinal], current.parts[part.ordinal]
         return (
             part.delivery_id == original.delivery_id == claimed.delivery_id == plan.delivery_id
             and part.part_id == original.part_id == claimed.part_id
@@ -416,7 +441,7 @@ class NapCatDelivery:
             and part.kind is original.kind is claimed.kind is ChannelDeliveryPartKind.TEXT
             and isinstance(part.payload, ChannelTextDeliveryPartPayload)
             and bool(part.payload.text.strip())
-            and part.ordinal == original.ordinal == claimed.ordinal == 0
+            and part.ordinal == original.ordinal == claimed.ordinal
             and part.required
             and original.required
             and claimed.required
@@ -426,6 +451,17 @@ class NapCatDelivery:
             and part.attempt == claimed.attempt
             and claimed.lease_expires_at is not None
             and claimed.lease_expires_at > datetime.now(UTC)
+        )
+
+    @staticmethod
+    def _render_text(plan: ChannelDeliveryPlanRecord, part: ChannelDeliveryPartRecord) -> str:
+        assert isinstance(part.payload, ChannelTextDeliveryPartPayload)
+        return render_bubble_text(
+            part.payload.text,
+            has_following_text_part=any(
+                following.kind is ChannelDeliveryPartKind.TEXT
+                for following in plan.parts[part.ordinal + 1 :]
+            ),
         )
 
     async def _save(self, journal: dict[str, str]) -> None:

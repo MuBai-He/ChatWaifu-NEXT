@@ -26,6 +26,7 @@ from chatwaifu_protocol.channels import (
     ChannelConnectionStatus,
     ChannelDeliveryPartAcknowledgement,
     ChannelDeliveryPartClaimRequest,
+    ChannelDeliveryPartDraft,
     ChannelDeliveryPartStatus,
     ChannelTextDeliveryPartPayload,
     ChannelTurnStatus,
@@ -77,6 +78,7 @@ class Answer:
         self.cancelled = asyncio.Event()
         self.ignore_cancel = False
         self.fail = False
+        self.reply_text: str | None = None
 
     async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
         self.requests.append(request)
@@ -94,7 +96,7 @@ class Answer:
                 await self.hold.wait()
         if self.fail:
             raise RuntimeError("private provider detail must not escape")
-        yield LlmTextDelta(f"reply:{request.user_text}")
+        yield LlmTextDelta(self.reply_text or f"reply:{request.user_text}")
         yield LlmResponseCompleted("stop")
 
 
@@ -286,6 +288,105 @@ async def test_actual_conversation_fixed_target_no_tools_or_audio_and_distinct_m
     assert not await app.service.authorize_delivery(plan)
     assert wake == [app.connection_id, app.connection_id]
     assert not list(app.container.settings.data_dir.glob("audio/*.wav"))
+
+
+@pytest.mark.parametrize(
+    "reply", ["嗯，在呀。\n\n怎么啦？", "你怎么还在纠结这个呀……！真是拿你没办法。"]
+)
+async def test_group_short_contract_and_bubbles_preserve_one_canonical_turn(
+    app: App, reply: str
+) -> None:
+    await app.enable()
+    app.provider.reply_text = reply
+    receipt = await app.ingest(text="在吗？")
+    await app.join(receipt.channel_turn_id)
+    assert "usually 5-30 Chinese characters" in app.provider.requests[0].system_prompt
+    turn = await app.container.external_channel_repository.get_turn(receipt.channel_turn_id)
+    assert turn is not None and turn.delivery_id is not None
+    plan = await app.container.external_channel_repository.get_delivery_plan(turn.delivery_id)
+    assert plan is not None and plan.part_count == 2 and plan.group_target is not None
+    assert [part.ordinal for part in plan.parts] == [0, 1]
+    assert all(part.required for part in plan.parts)
+    assert (
+        "".join(
+            part.payload.text
+            for part in plan.parts
+            if isinstance(part.payload, ChannelTextDeliveryPartPayload)
+        )
+        == turn.reply_text
+        == app.provider.reply_text
+    )
+    assert await app.service.authorize_delivery(plan)
+    row = await app.container.database.fetchone(
+        "SELECT count(*) FROM turns WHERE session_id=? AND role='assistant'",
+        (str(receipt.session_id),),
+    )
+    assert row is not None and row[0] == 1
+
+
+@pytest.mark.parametrize(
+    "reply", ["嗯，在呀。\n\n怎么啦？", "你怎么还在纠结这个呀……！真是拿你没办法。"]
+)
+async def test_group_receipt_schedules_tail_and_new_mention_cancels_only_unsent_bubbles(
+    app: App,
+    reply: str,
+) -> None:
+    await app.enable()
+    app.provider.reply_text = reply
+    receipt = await app.ingest()
+    await app.join(receipt.channel_turn_id)
+    turn = await app.container.external_channel_repository.get_turn(receipt.channel_turn_id)
+    assert turn is not None and turn.delivery_id is not None
+    repository = app.container.external_channel_repository
+    first = await repository.claim_next_delivery_part(
+        ChannelDeliveryPartClaimRequest(delivery_id=turn.delivery_id, lease_id=uuid4()),
+        claimed_at=datetime.now(UTC),
+    )
+    assert first is not None and first.part is not None and first.part.lease_id is not None
+    assert first.plan.part_count == 2 and first.part.delay_after_ms > 0
+    acknowledged_at = datetime.now(UTC)
+    transition = await repository.acknowledge_delivery_part(
+        ChannelDeliveryPartAcknowledgement(
+            delivery_id=turn.delivery_id,
+            part_id=first.part.part_id,
+            lease_id=first.part.lease_id,
+            status=ChannelDeliveryPartStatus.DELIVERED,
+            provider_message_id="local-bubble-receipt",
+            acknowledged_at=acknowledged_at,
+        ),
+        updated_at=acknowledged_at,
+    )
+    assert transition.plan.parts[1].not_before_at == acknowledged_at + timedelta(
+        milliseconds=first.part.delay_after_ms
+    )
+    assert await app.service.authorize_delivery(transition.plan)
+    early = await repository.claim_next_delivery_part(
+        ChannelDeliveryPartClaimRequest(delivery_id=turn.delivery_id, lease_id=uuid4()),
+        claimed_at=acknowledged_at,
+    )
+    assert early is None
+    later = await app.ingest("2", "222", "new current question")
+    await app.join(later.channel_turn_id)
+    old = await repository.get_delivery_plan(turn.delivery_id)
+    assert old is not None
+    assert old.parts[0].status is ChannelDeliveryPartStatus.DELIVERED
+    assert old.parts[0].provider_message_id == "local-bubble-receipt"
+    assert old.parts[1].status is ChannelDeliveryPartStatus.CANCELLED
+    assert not await app.service.authorize_delivery(old)
+
+
+async def test_group_technical_code_is_complete_and_bypasses_casual_bubbles(app: App) -> None:
+    await app.enable()
+    app.provider.reply_text = "代码如下:\n\n```python\nprint(1 + 1)\n```\n\n输出为 2。"
+    receipt = await app.ingest(text="给出完整代码并解释输出。")
+    await app.join(receipt.channel_turn_id)
+    turn = await app.container.external_channel_repository.get_turn(receipt.channel_turn_id)
+    assert turn is not None and turn.delivery_id is not None
+    plan = await app.container.external_channel_repository.get_delivery_plan(turn.delivery_id)
+    assert plan is not None and plan.part_count == 1
+    assert isinstance(plan.parts[0].payload, ChannelTextDeliveryPartPayload)
+    assert plan.parts[0].payload.text == turn.reply_text == app.provider.reply_text
+    assert await app.service.authorize_delivery(plan)
 
 
 async def test_redelivery_with_new_timestamp_never_moves_head_or_replays_and_sender_conflicts(
@@ -714,9 +815,14 @@ async def test_plan_return_after_notice_cancels_unsent_part_without_fabricating_
         reply_text: str,
         delivery_id: UUID,
         completed_at: datetime,
+        parts: tuple[ChannelDeliveryPartDraft, ...] | None = None,
     ) -> ChannelGroupPlanResult:
         result = await original(
-            lineage, reply_text=reply_text, delivery_id=delivery_id, completed_at=completed_at
+            lineage,
+            reply_text=reply_text,
+            delivery_id=delivery_id,
+            completed_at=completed_at,
+            parts=parts,
         )
         entered.set()
         try:
