@@ -16,6 +16,10 @@ datas = [
     (str(ROOT / "characters"), "characters"),
     (str(ROOT / "skills"), "skills"),
     (
+        str(ROOT / "services/runtime/src/chatwaifu_runtime/providers/data"),
+        "chatwaifu_runtime/providers/data",
+    ),
+    (
         str(ROOT / "services/runtime/src/chatwaifu_runtime/external_channels/preset_stickers"),
         "chatwaifu_runtime/external_channels/preset_stickers",
     ),

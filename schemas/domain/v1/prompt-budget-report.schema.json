@@ -16,6 +16,19 @@
       "title": "Dropped History Turns",
       "type": "integer"
     },
+    "estimate_margin_ratio": {
+      "default": 0,
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Estimate Margin Ratio",
+      "type": "number"
+    },
+    "estimator": {
+      "const": "character_half_v1",
+      "default": "character_half_v1",
+      "title": "Estimator",
+      "type": "string"
+    },
     "memory_tokens": {
       "minimum": 0,
       "title": "Memory Tokens",
@@ -31,9 +44,35 @@
       "title": "Model Role",
       "type": "string"
     },
+    "omitted_memory_ids": {
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "title": "Omitted Memory Ids",
+      "type": "array"
+    },
+    "output_reserve_tokens": {
+      "default": 900,
+      "minimum": 0,
+      "title": "Output Reserve Tokens",
+      "type": "integer"
+    },
+    "persona_omitted_characters": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Persona Omitted Characters",
+      "type": "integer"
+    },
     "persona_tokens": {
       "minimum": 0,
       "title": "Persona Tokens",
+      "type": "integer"
+    },
+    "photo_omitted_characters": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Photo Omitted Characters",
       "type": "integer"
     },
     "relationship_tokens": {
@@ -51,9 +90,22 @@
       "title": "Scene Tokens",
       "type": "integer"
     },
+    "section_budget_limits": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Section Budget Limits",
+      "type": "object"
+    },
     "state_tokens": {
       "minimum": 0,
       "title": "State Tokens",
+      "type": "integer"
+    },
+    "summary_omitted_characters": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Summary Omitted Characters",
       "type": "integer"
     },
     "used": {

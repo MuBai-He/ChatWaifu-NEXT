@@ -26,6 +26,7 @@ from chatwaifu_protocol.channels import (
     ChannelInboundTextMessage,
     ChannelTurnCancelRequest,
 )
+from chatwaifu_protocol.character import ModelContextBudget
 from chatwaifu_protocol.commands import PlaybackAckCommand
 from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_protocol.events import GenericCoreEvent
@@ -652,8 +653,16 @@ async def update_model_configuration(
     if role not in MODEL_ROLES:
         raise HTTPException(status_code=404, detail="model role not found")
     container = _container(request)
-    prev_config = container.model_configurations.get(role) if role == "embedding" else None
+    prev_config = container.model_configurations.get(role)
     try:
+        same_route = (prev_config.provider, prev_config.model, prev_config.base_url) == (
+            body.provider,
+            body.model,
+            body.base_url,
+        )
+        budget = body.budget
+        if budget is None:
+            budget = prev_config.budget if same_route else ModelContextBudget()
         config = ModelRoleConfig(
             role=role,
             provider=body.provider,
@@ -661,6 +670,7 @@ async def update_model_configuration(
             base_url=body.base_url,
             timeout_seconds=body.timeout_seconds,
             context_window=body.context_window,
+            budget=budget,
             enabled=body.enabled,
             updated_at=datetime.now(UTC),
         )
@@ -671,8 +681,7 @@ async def update_model_configuration(
         )
         if role == "embedding":
             route_changed = (
-                prev_config is None
-                or prev_config.provider != config.provider
+                prev_config.provider != config.provider
                 or prev_config.model != config.model
                 or prev_config.base_url != config.base_url
                 or prev_config.enabled != config.enabled

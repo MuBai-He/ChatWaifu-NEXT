@@ -2335,6 +2335,23 @@ async def test_full_deferred_burst_and_many_more_images_do_not_block_stop(
         await transport.updates.put(
             WeixinUpdates(cursor="active", messages=tuple(photo(i) for i in range(4)))
         )
+        # Each initial message must be durably admitted before timing provider
+        # readiness. Serial intake of four messages is fixture preparation,
+        # separate from the stop/overflow responsiveness checked below.
+        for index in range(4):
+
+            async def member_admitted(external_id: str = f"pressure-{index}") -> bool:
+                turn = await container.external_channels.repository.find_turn_by_external_message(
+                    cid, external_id
+                )
+                return turn is not None and (
+                    await container.external_channels.repository.find_burst_leader(
+                        turn.channel_turn_id
+                    )
+                    is not None
+                )
+
+            await _wait_condition(member_admitted)
         await asyncio.wait_for(entered.wait(), 5)
         await transport.updates.put(
             WeixinUpdates(cursor="pending", messages=tuple(photo(i) for i in range(4, 8)))

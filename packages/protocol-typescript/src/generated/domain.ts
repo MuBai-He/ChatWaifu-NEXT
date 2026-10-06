@@ -464,6 +464,16 @@ export type Revision4 = number
 export type UserScope = string
 export type CharacterId3 = string
 export type CharacterPackageHash = string
+export type EstimateMarginRatio = number
+export type HistoryTurnLimit = number
+export type InputTokenLimit = number | null
+export type MaxOutputTokens = number | null
+export type MemoryCandidateLimit = number
+export type OutputReserveTokens = number
+export type OutputTokenLimit = number | null
+export type SectionPolicy = 'legacy' | 'scaled'
+export type ToolResultMaxBytes = number
+export type Version2 = '1.0'
 export type ContextWindow = number
 export type EndpointDigest = string | null
 export type Model = string
@@ -477,13 +487,20 @@ export type ToolsDigest = string
 export type Budget = number
 export type ConversationTokens = number
 export type DroppedHistoryTurns = number
+export type EstimateMarginRatio1 = number
+export type Estimator = 'character_half_v1'
 export type MemoryTokens = number
 export type ModelRole = 'chat' | 'memory_extraction' | 'memory_summary' | 'embedding'
+export type OmittedMemoryIds = string[]
+export type OutputReserveTokens1 = number
+export type PersonaOmittedCharacters = number
 export type PersonaTokens = number
+export type PhotoOmittedCharacters = number
 export type RelationshipTokens = number
 export type SafetyTokens = number
 export type SceneTokens = number
 export type StateTokens = number
+export type SummaryOmittedCharacters = number
 export type Used = number
 export type SchemaVersion24 = '1.0'
 export type SelectedMemoryIds = string[] | null
@@ -1229,7 +1246,7 @@ export type SandboxLimitsEnforced1 = string[]
 export type SandboxMode2 = 'required' | 'preferred' | 'disabled'
 export type TrustLevel2 = 'trusted' | 'untrusted'
 export type UpdatedAt10 = string
-export type Version2 = string
+export type Version3 = string
 export type Description8 = string
 export type Name10 = string
 export type PluginId1 = string
@@ -1248,7 +1265,7 @@ export type Kind8 = 'stdio'
 export type NetworkPolicy3 = 'deny' | 'loopback' | 'allow'
 export type SandboxMode3 = 'required' | 'preferred' | 'disabled'
 export type TrustLevel3 = 'trusted' | 'untrusted'
-export type Version3 = string
+export type Version4 = string
 export type Expression2 = 'neutral' | 'happy' | 'sad' | 'angry' | 'surprised' | 'shy' | 'curious'
 export type Intent1 = 'comfort' | 'answer' | 'celebrate' | 'reassure' | 'tease' | 'curious'
 export type Motion1 = ('headpat' | 'stare' | 'flustered' | 'sing') | null
@@ -1301,7 +1318,7 @@ export type Name12 = string
 export type PluginId2 = string | null
 export type SkillId1 = string
 export type Source16 = 'builtin' | 'plugin' | 'mcp_connection'
-export type Version4 = string
+export type Version5 = string
 export type Background = boolean
 export type Capability2 = string
 export type SkillId2 = string
@@ -1961,6 +1978,7 @@ export interface PromptContextIdentity {
   [k: string]: unknown
 }
 export interface NonsecretModelRoute {
+  budget?: ModelContextBudget
   context_window?: ContextWindow
   endpoint_digest?: EndpointDigest
   model: Model
@@ -1968,19 +1986,46 @@ export interface NonsecretModelRoute {
   role: Role
   [k: string]: unknown
 }
+/**
+ * Operator-selected limits, not an assertion of provider capabilities.
+ */
+export interface ModelContextBudget {
+  estimate_margin_ratio?: EstimateMarginRatio
+  history_turn_limit?: HistoryTurnLimit
+  input_token_limit?: InputTokenLimit
+  max_output_tokens?: MaxOutputTokens
+  memory_candidate_limit?: MemoryCandidateLimit
+  output_reserve_tokens?: OutputReserveTokens
+  output_token_limit?: OutputTokenLimit
+  section_policy?: SectionPolicy
+  tool_result_max_bytes?: ToolResultMaxBytes
+  version?: Version2
+  [k: string]: unknown
+}
 export interface PromptBudgetReport {
   budget: Budget
   conversation_tokens: ConversationTokens
   dropped_history_turns: DroppedHistoryTurns
+  estimate_margin_ratio?: EstimateMarginRatio1
+  estimator?: Estimator
   memory_tokens: MemoryTokens
   model_role: ModelRole
+  omitted_memory_ids?: OmittedMemoryIds
+  output_reserve_tokens?: OutputReserveTokens1
+  persona_omitted_characters?: PersonaOmittedCharacters
   persona_tokens: PersonaTokens
+  photo_omitted_characters?: PhotoOmittedCharacters
   relationship_tokens: RelationshipTokens
   safety_tokens: SafetyTokens
   scene_tokens: SceneTokens
+  section_budget_limits?: SectionBudgetLimits
   state_tokens: StateTokens
+  summary_omitted_characters?: SummaryOmittedCharacters
   used: Used
   [k: string]: unknown
+}
+export interface SectionBudgetLimits {
+  [k: string]: number
 }
 export interface EgressBlockedPayload {
   occurred_at: OccurredAt
@@ -2892,7 +2937,7 @@ export interface PluginSnapshot {
   sandbox_mode?: SandboxMode2
   trust_level?: TrustLevel2
   updated_at: UpdatedAt10
-  version: Version2
+  version: Version3
   [k: string]: unknown
 }
 export interface PluginManifest {
@@ -2902,7 +2947,7 @@ export interface PluginManifest {
   schema_version?: SchemaVersion62
   skills: Skills
   transport: PluginTransport
-  version: Version3
+  version: Version4
   [k: string]: unknown
 }
 export interface PluginTransport {
@@ -2965,7 +3010,7 @@ export interface SkillDefinition {
   plugin_id?: PluginId2
   skill_id: SkillId1
   source?: Source16
-  version: Version4
+  version: Version5
   [k: string]: unknown
 }
 export interface SkillCapability {

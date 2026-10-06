@@ -1305,4 +1305,10 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
         );
         """,
     ),
+    (
+        36,
+        """
+        ALTER TABLE model_role_configs ADD COLUMN budget_json TEXT NOT NULL DEFAULT '{}';
+        """,
+    ),
 )

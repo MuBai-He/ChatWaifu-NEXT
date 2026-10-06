@@ -5,12 +5,17 @@ import asyncio
 import json
 import shutil
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime, tzinfo
 from pathlib import Path
+from typing import cast
 from uuid import UUID
 
 import pytest
+from chatwaifu_protocol.base import JsonObject
 from chatwaifu_protocol.character import CharacterPromptCompiledPayload
 from chatwaifu_protocol.memory import MemoryContextPacket
+from chatwaifu_runtime.agent.input_budget import estimate_input_tokens
+from chatwaifu_runtime.agent.tool_calling import TOOL_INPUT_BUDGET_REPLY
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
 from chatwaifu_runtime.characters.service import CharacterService
 from chatwaifu_runtime.config.settings import Settings
@@ -43,6 +48,15 @@ class _RecordingProvider:
 async def test_admission_snapshot_survives_live_route_edit(
     runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    class Clock(datetime):
+        current = datetime(2026, 9, 30, 23, 59, tzinfo=UTC)
+
+        @classmethod
+        def now(cls, tz: tzinfo | None = None) -> datetime:
+            return cls.current.astimezone(tz)
+
+    monkeypatch.setattr("chatwaifu_runtime.conversation.service.datetime", Clock)
+    admitted_at = Clock.current
     container = RuntimeContainer(runtime_settings)
     await container.start()
     try:
@@ -92,8 +106,12 @@ async def test_admission_snapshot_survives_live_route_edit(
             )
         )
         await asyncio.wait_for(entered.wait(), 3)
+        Clock.current = datetime(2026, 10, 1, 0, 1, tzinfo=UTC)
+        # The route/snapshot exercise needs a smaller window that still fits
+        # mandatory character/safety input. The 2048-window rejection is tested
+        # below through the same real ConversationService boundary.
         changed = initial.model_copy(
-            update={"model": "route-after-admission", "context_window": 2048}
+            update={"model": "route-after-admission", "context_window": 4096}
         )
         await container.model_configurations.update(changed)
         release.set()
@@ -103,6 +121,12 @@ async def test_admission_snapshot_survives_live_route_edit(
         await asyncio.wait_for(active.task, 5)
 
         assert [name for name, _request in requests] == [initial.model]
+        assert admitted_at.isoformat(timespec="seconds") in requests[0][1].system_prompt
+        assert Clock.current.isoformat(timespec="seconds") not in requests[0][1].system_prompt
+        initial_decision_prompt = requests[0][1].tool_decision_system_prompt
+        assert initial_decision_prompt is not None
+        assert admitted_at.isoformat(timespec="seconds") in initial_decision_prompt
+        assert Clock.current.isoformat(timespec="seconds") not in initial_decision_prompt
         rows = await container.event_store.read_stream(session.session_id, limit=500)
         first_payload = CharacterPromptCompiledPayload.model_validate(
             next(
@@ -116,6 +140,8 @@ async def test_admission_snapshot_survives_live_route_edit(
         assert first_payload.identity.chat_route.model == initial.model
         assert first_payload.identity.chat_route.context_window == initial.context_window
         assert first_payload.report.budget == initial.context_window - 900
+        assert requests[0][1].input_budget is not None
+        assert requests[0][1].input_budget.estimated_token_limit == first_payload.report.budget
 
         second = await container.conversation.submit_text(
             session.session_id,
@@ -138,7 +164,38 @@ async def test_admission_snapshot_survives_live_route_edit(
         assert second_payload.identity is not None
         assert second_payload.identity.chat_route.model == "route-after-admission"
         assert second_payload.identity.identity_hash != first_payload.identity.identity_hash
-        assert second_payload.report.budget == 2048 - 900
+        assert second_payload.report.budget == 4096 - 900
+        assert requests[1][1].input_budget is not None
+        assert requests[1][1].input_budget.estimated_token_limit == second_payload.report.budget
+        assert requests[1][1].input_budget_report is not None
+        assert estimate_input_tokens(requests[1][1]) <= second_payload.report.budget
+        assert Clock.current.isoformat(timespec="seconds") in requests[1][1].system_prompt
+        next_decision_prompt = requests[1][1].tool_decision_system_prompt
+        assert next_decision_prompt is not None
+        assert Clock.current.isoformat(timespec="seconds") in next_decision_prompt
+
+        # A new date changes dynamic context, not the static configuration identity.
+        Clock.current = datetime(2026, 10, 2, 0, 1, tzinfo=UTC)
+        third = await container.conversation.submit_text(
+            session.session_id,
+            "third",
+            options=ConversationTurnOptions(output_modes=frozenset({"text"}), allow_tools=False),
+        )
+        active = container.conversation._active[session.session_id]
+        assert active.task is not None
+        await asyncio.wait_for(active.task, 5)
+        rows = await container.event_store.read_stream(session.session_id, limit=500)
+        third_payload = CharacterPromptCompiledPayload.model_validate(
+            next(
+                row["payload"]
+                for row in rows
+                if row["event_type"] == "character.prompt_compiled"
+                and row["generation_id"] == str(third.generation_id)
+            )
+        )
+        assert third_payload.identity is not None
+        assert third_payload.identity == second_payload.identity
+        assert Clock.current.isoformat(timespec="seconds") in requests[2][1].system_prompt
     finally:
         await container.stop()
 
@@ -154,9 +211,89 @@ async def test_admission_snapshot_survives_live_route_edit(
         assert [identity.identity_hash for identity in identities if identity is not None] == [
             first_payload.identity.identity_hash,
             second_payload.identity.identity_hash,
+            third_payload.identity.identity_hash,
         ]
     finally:
         await recovered.stop()
+
+
+@pytest.mark.asyncio
+async def test_small_admitted_text_budget_is_not_replaced_by_live_larger_route(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    container = RuntimeContainer(runtime_settings)
+    await container.start()
+    try:
+        session = await container.sessions.create_session("default")
+        initial = container.model_configurations.get("chat")
+        small = initial.model_copy(update={"model": "small-at-admission", "context_window": 2048})
+        await container.model_configurations.update(small)
+        requests: list[tuple[str, LlmRequest]] = []
+
+        def create_provider(config: ModelRoleConfig) -> LlmProvider:
+            return _RecordingProvider(config.model, requests)
+
+        monkeypatch.setattr(container.model_configurations, "create_chat_provider", create_provider)
+        entered, release = asyncio.Event(), asyncio.Event()
+        original_retrieve = container.memory.retrieve_context
+
+        async def paused_retrieve(
+            session_id: UUID,
+            turn_id: UUID,
+            character_id: str,
+            query: str,
+            *,
+            token_budget: int = 700,
+        ) -> MemoryContextPacket:
+            entered.set()
+            await release.wait()
+            return await original_retrieve(
+                session_id, turn_id, character_id, query, token_budget=token_budget
+            )
+
+        monkeypatch.setattr(container.memory, "retrieve_context", paused_retrieve)
+        submission = asyncio.create_task(
+            container.conversation.submit_text(
+                session.session_id,
+                "请认真回答当前问题",
+                options=ConversationTurnOptions(
+                    output_modes=frozenset({"text"}), allow_tools=False
+                ),
+            )
+        )
+        await asyncio.wait_for(entered.wait(), 3)
+        await container.model_configurations.update(
+            initial.model_copy(update={"model": "larger-now"})
+        )
+        release.set()
+        accepted = await submission
+        active = container.conversation._active[session.session_id]
+        assert active.task is not None
+        await asyncio.wait_for(active.task, 5)
+        assert requests == []
+        events = await container.event_store.read_stream(session.session_id, limit=500)
+        compiled = CharacterPromptCompiledPayload.model_validate(
+            next(
+                e["payload"]
+                for e in events
+                if e["event_type"] == "character.prompt_compiled"
+                and e["generation_id"] == str(accepted.generation_id)
+            )
+        )
+        assert compiled.identity is not None
+        assert compiled.identity.chat_route.model == "small-at-admission"
+        assert compiled.identity.chat_route.context_window == 2048
+        assert compiled.report.budget == 2048 - 900
+        completed_texts = [
+            cast(JsonObject, e["payload"])["text"]
+            for e in events
+            if e["event_type"] == "assistant.generation_completed"
+            and e["generation_id"] == str(accepted.generation_id)
+        ]
+        assert completed_texts == [TOOL_INPUT_BUDGET_REPLY]
+        assert container.model_configurations.get("chat").model == "larger-now"
+    finally:
+        await container.stop()
 
 
 @pytest.mark.asyncio

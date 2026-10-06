@@ -34,6 +34,12 @@ from referencing import Registry
 from referencing.exceptions import NoSuchResource, Unresolvable
 from referencing.jsonschema import SchemaRegistry
 
+from chatwaifu_runtime.conversation.source_context import (
+    MAX_SOURCE_GENERATIONS,
+    MAX_SOURCE_RECEIPTS,
+    SourceContextPacket,
+    SourceContextReceipt,
+)
 from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.providers.factory import ProviderSet
 from chatwaifu_runtime.runtime_skills.adapters import (
@@ -59,6 +65,8 @@ from chatwaifu_runtime.runtime_skills.permissions import (
     PermissionBroker,
 )
 from chatwaifu_runtime.runtime_skills.plugins import PluginManager
+from chatwaifu_runtime.runtime_skills.public_web import PublicWebReader
+from chatwaifu_runtime.runtime_skills.public_web_search import PublicWebSearch
 from chatwaifu_runtime.runtime_skills.registry import (
     RegistryEntry,
     SkillRegistry,
@@ -128,6 +136,10 @@ class RuntimeSkillService:
         self._permissions = PermissionBroker(repository)
         self._builtin = BuiltinAdapter()
         self._builtin.register("runtime_status", self._runtime_status)
+        self._public_web = PublicWebReader()
+        self._builtin.register("public_web_read", self._public_web.read)
+        self._public_web_search = PublicWebSearch(self._public_web)
+        self._builtin.register("public_web_search", self._public_web_search.search)
         for name, handler in (session_builtin_handlers or {}).items():
             self._builtin.register_session(name, handler)
         launcher = sandbox_launcher or RuntimeSandboxLauncher()
@@ -752,6 +764,25 @@ class RuntimeSkillService:
             )
             for row in rows
         ]
+
+    async def load_source_context(
+        self, session_id: UUID, generation_ids: tuple[UUID, ...]
+    ) -> SourceContextPacket:
+        """No replay or new persistence; unavailable originals remain unavailable."""
+        selected = tuple(dict.fromkeys(generation_ids))[:MAX_SOURCE_GENERATIONS]
+        rows = await self._repository.source_runs_for_generations(
+            session_id, selected, MAX_SOURCE_RECEIPTS + 1
+        )
+        receipts: list[SourceContextReceipt] = []
+        for row in rows[:MAX_SOURCE_RECEIPTS]:
+            original = self._ephemeral_results.get(UUID(str(row["skill_run_id"])))
+            snapshot = _snapshot(row, result_override=original).model_copy(deep=True)
+            receipts.append(
+                SourceContextReceipt(
+                    snapshot, original is not None and snapshot.state is SkillRunState.SUCCEEDED
+                )
+            )
+        return SourceContextPacket(tuple(receipts), len(rows) > MAX_SOURCE_RECEIPTS)
 
     async def run_status(self, session_id: UUID) -> SkillResult:
         snapshot = await self.invoke(

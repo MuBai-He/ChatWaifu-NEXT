@@ -1,4 +1,5 @@
 # pyright: reportPrivateUsage=false
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -17,16 +18,67 @@ from chatwaifu_protocol.memory import (
     MemoryContextPacket,
     MemoryExcerpt,
 )
-from chatwaifu_runtime.character_kernel.prompt import PromptCompiler
+from chatwaifu_runtime.character_kernel.prompt import PromptCompilation, PromptCompiler, _tokens
 from chatwaifu_runtime.characters.service import CharacterService
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.conversation.models import (
+    REDACTED_ASSISTANT_PLACEHOLDER,
     ConversationHistoryEntry,
     ConversationSourceContext,
 )
+from chatwaifu_runtime.providers.input_estimation import count_reference_tokens
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 
 CHARACTERS_ROOT = Path(__file__).resolve().parents[3] / "characters"
+
+
+@pytest.mark.asyncio
+async def test_prompt_compiler_uses_explicit_aware_time_and_accounts_for_it() -> None:
+    models = _PromptModels()
+    compiler = PromptCompiler(cast(ModelConfigurationService, models))
+    characters = CharacterService(CHARACTERS_ROOT)
+    characters.start()
+    character = characters.get("default")
+    assert character is not None
+    now = datetime(2026, 10, 1, 0, 1, tzinfo=UTC)
+    kernel = CharacterKernelSnapshot(
+        character_id="default",
+        user_scope="local",
+        revision=1,
+        affect=AffectState(updated_at=now),
+        relationship=RelationshipState(updated_at=now),
+    )
+
+    async def compile_at(as_of: datetime) -> PromptCompilation:
+        return await compiler.compile(
+            character=character,
+            kernel=kernel,
+            plan=ResponsePlan(
+                intent="answer", tone="gentle", expression="neutral", rationale="test"
+            ),
+            memory=MemoryContextPacket(token_budget_used=0),
+            history=(),
+            user_text="当前规定是什么？",
+            as_of=as_of,
+        )
+
+    result = await compile_at(now)
+    assert "[CURRENT TIME]" in result.system_prompt
+    assert now.isoformat(timespec="seconds") in result.system_prompt
+    assert "not evidence" in result.system_prompt
+    assert "effective dates" in result.system_prompt
+    assert now.isoformat(timespec="seconds") in result.tool_decision_system_prompt
+    assert "[SAFETY]" in result.tool_decision_system_prompt
+    assert "not evidence" in result.tool_decision_system_prompt
+    assert "[CHARACTER CANON]" not in result.tool_decision_system_prompt
+    assert "[RESPONSE PLAN]" not in result.tool_decision_system_prompt
+    assert "[OUTPUT CONTRACT]" not in result.tool_decision_system_prompt
+    assert len(result.tool_decision_system_prompt) < len(result.system_prompt)
+    # Clock data is mandatory safety context and participates in the reported estimate.
+    safety_context = result.system_prompt.split("[CHARACTER CANON]", 1)[0]
+    assert result.report.safety_tokens >= _tokens(safety_context) - 10
+    with pytest.raises(ValueError, match="timezone"):
+        await compile_at(now.replace(tzinfo=None))
 
 
 def test_six_file_character_package_loads_renderer_independent_policy() -> None:
@@ -97,6 +149,131 @@ class _PromptModels:
         assert role == "memory_summary"
         self.summary_inputs.append(user)
         return "较早对话摘要"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("presentation", ["instant_message", "single_text", None])
+@pytest.mark.parametrize("window", [4096, 8192])
+async def test_prompt_compiler_supplies_public_product_facts_without_private_deployment(
+    presentation: str | None, window: int
+) -> None:
+    class Models(_PromptModels):
+        def get(self, role: str) -> SimpleNamespace:
+            assert role == "chat"
+            return SimpleNamespace(
+                context_window=window,
+                base_url="https://private-config.invalid:8318",
+                api_key="PRIVATE_CONFIG_SENTINEL",
+                model="PRIVATE_MODEL_SENTINEL",
+            )
+
+    models = Models()
+    characters = CharacterService(CHARACTERS_ROOT)
+    characters.start()
+    character = characters.get("default")
+    assert character is not None
+    now = datetime(2026, 10, 2, tzinfo=UTC)
+    result = await PromptCompiler(cast(ModelConfigurationService, models)).compile(
+        character=character,
+        kernel=CharacterKernelSnapshot(
+            character_id="default",
+            user_scope="local",
+            revision=1,
+            affect=AffectState(updated_at=now),
+            relationship=RelationshipState(updated_at=now),
+        ),
+        plan=ResponsePlan(intent="answer", tone="gentle", expression="neutral", rationale="test"),
+        memory=MemoryContextPacket(token_budget_used=0),
+        history=(),
+        user_text="你背后是什么系统？本地还是云端？",
+        presentation_profile=presentation,
+        as_of=now,
+    )
+
+    # Product architecture is trusted Runtime context, not a character's guess
+    # about this particular provider. Both native decisions and final answers
+    # receive it without borrowing private adapter configuration.
+    for prompt in (result.system_prompt, result.tool_decision_system_prompt):
+        safety = prompt.split("[CURRENT TIME]", 1)[0]
+        assert "ChatWaifu NEXT" in safety
+        assert "local-first character Runtime" in safety
+        assert "replaceable local or remote model/voice providers" in safety
+        assert "does not establish current provider deployment" in safety
+        assert "private-config.invalid" not in prompt
+        assert "PRIVATE_CONFIG_SENTINEL" not in prompt
+        assert "PRIVATE_MODEL_SENTINEL" not in prompt
+    assert character.system_prompt in result.system_prompt
+    assert models.summary_inputs == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode", ["available", "redacted", "foreign_route", "unknown"])
+async def test_budget_omitted_history_keeps_only_eligible_source_generations(mode: str) -> None:
+    models = _PromptModels()
+    characters = CharacterService(CHARACTERS_ROOT)
+    characters.start()
+    character = characters.get("default")
+    assert character is not None
+    now = datetime.now(UTC)
+    source = ConversationSourceContext(
+        "wechat", uuid4(), "owner", "local", "direct", "chat", "sender"
+    )
+    generation_id = uuid4()
+    history = (
+        ConversationHistoryEntry(
+            "assistant",
+            REDACTED_ASSISTANT_PLACEHOLDER if mode == "redacted" else "读过了。",
+            replace(source, sender_key="other") if mode == "foreign_route" else source,
+            None if mode == "unknown" else generation_id,
+        ),
+        ConversationHistoryEntry("user", "当前此前用户事实。" * 1000, source),
+    )
+    result = await PromptCompiler(cast(ModelConfigurationService, models)).compile(
+        character=character,
+        kernel=CharacterKernelSnapshot(
+            character_id="default",
+            user_scope="local",
+            revision=1,
+            affect=AffectState(updated_at=now),
+            relationship=RelationshipState(updated_at=now),
+        ),
+        plan=ResponsePlan(intent="answer", tone="gentle", expression="neutral", rationale="test"),
+        memory=MemoryContextPacket(token_budget_used=0),
+        history=history,
+        user_text="请按已读原文整理清单。",
+        source_context=source,
+    )
+    assert result.history == () and result.report.dropped_history_turns == 2
+    assert len(models.summary_inputs) == 1
+    assert result.source_generation_ids == ((generation_id,) if mode == "available" else ())
+
+
+@pytest.mark.asyncio
+async def test_prompt_report_does_not_hide_actual_estimated_overflow() -> None:
+    models = _PromptModels()
+    characters = CharacterService(CHARACTERS_ROOT)
+    characters.start()
+    character = characters.get("default")
+    assert character is not None
+    now = datetime.now(UTC)
+    result = await PromptCompiler(cast(ModelConfigurationService, models)).compile(
+        character=character,
+        kernel=CharacterKernelSnapshot(
+            character_id="default",
+            user_scope="local",
+            revision=1,
+            affect=AffectState(updated_at=now),
+            relationship=RelationshipState(updated_at=now),
+        ),
+        plan=ResponsePlan(intent="answer", tone="gentle", expression="neutral", rationale="test"),
+        memory=MemoryContextPacket(token_budget_used=0),
+        history=(),
+        user_text="current task " * 1000,
+    )
+    # The task and mandatory rules are not silently clipped; a budget report is
+    # evidence of the actual projection, even when mandatory input is too large.
+    assert result.report.used > result.report.budget
+    assert result.report.used >= _tokens("current task " * 1000)
 
 
 @pytest.mark.asyncio
@@ -452,11 +629,23 @@ async def test_prompt_compiler_presentation_profiles_im_single_text_and_voice() 
         presentation_profile="instant_message",
     )
     assert "You are messaging in an instant chat" in comp_im.system_prompt
-    assert "Resolve rule conflicts in priority order" in comp_im.system_prompt
-    assert "When the user explicitly asks to stop joking" in comp_im.system_prompt
-    assert "without going globally silent or refusing" in comp_im.system_prompt
-    assert "对方要求停止玩笑或说正事时，立即停止玩笑并认真配合" in comp_im.system_prompt
-    assert "认真技术求助与明确要求详尽的任务必须完整严谨回答" in comp_im.system_prompt
+    # Channel wording must leave room for actual source bodies in an 8192 window.
+    output_contract = comp_im.system_prompt.split("[OUTPUT CONTRACT]\n", 1)[1]
+    assert count_reference_tokens(output_contract) <= 330
+    assert (
+        "Priority: safety, truth and source facts; explicit user boundaries and requested tasks"
+        in output_contract
+    )
+    assert "Stop requested jokes immediately" in output_contract
+    assert "without silence or refusal" in output_contract
+    assert "question-list requests override casual brevity and question limits" in output_contract
+    assert "including any requested number of sentences per topic" in output_contract
+    assert "This brevity overrides generic persona paragraph counts" in output_contract
+    assert (
+        "Acknowledgements and goodbyes end without more advice, questions or topics"
+        in output_contract
+    )
+    assert "Never invent physical actions or shared experiences" in output_contract
     assert "[CHARACTER CANON]\n" + nene.system_prompt in comp_im.system_prompt
     assert "通用知识不受 Memory Context 限制" in comp_im.system_prompt
     assert "无需机械声明缺乏物理实体" in comp_im.system_prompt
