@@ -95,6 +95,19 @@ class _GroupPeer(private._OneBot):
             elif action == "send_group_msg":
                 assert params["group_id"] in self.members
                 self.group_sends.put_nowait(params)
+                segments = cast(list[JsonObject], params["message"])
+                if self.reject_records and segments[0]["type"] == "record":
+                    await peer.send(
+                        json.dumps(
+                            {
+                                "status": "failed",
+                                "retcode": 1200,
+                                "data": None,
+                                "echo": request["echo"],
+                            }
+                        )
+                    )
+                    continue
                 if self.drop_next_group_receipt:
                     self.drop_next_group_receipt = False
                     await peer.close()
@@ -117,6 +130,7 @@ class _GroupModel:
 
     def __init__(self) -> None:
         self.requests: list[LlmRequest] = []
+        self.responses: dict[str, str] = {}
         self.started: asyncio.Queue[LlmRequest] = asyncio.Queue()
         self.holds: dict[str, asyncio.Event] = {}
         self.cancelled: asyncio.Queue[UUID] = asyncio.Queue()
@@ -137,7 +151,7 @@ class _GroupModel:
                 assert current is not None
                 current.uncancel()
                 await hold.wait()
-        yield LlmTextDelta(f"reply:{request.user_text}")
+        yield LlmTextDelta(self.responses.get(request.user_text, f"reply:{request.user_text}"))
         yield LlmResponseCompleted("stop")
 
 
@@ -399,7 +413,7 @@ async def test_operator_apis_default_off_two_members_fixed_text_and_isolated_sta
     row = await runtime.container.database.fetchone(
         "SELECT max(version) AS v FROM schema_migrations"
     )
-    assert row is not None and row["v"] == 42
+    assert row is not None and row["v"] == 43
     unauthenticated = await runtime.http.get(
         f"{runtime.path}/group-routes", headers={"Authorization": ""}
     )
@@ -784,6 +798,7 @@ async def test_route_wide_pending_member_cannot_revive_after_operator_disable(
         members: tuple[ChannelGroupRouteMember, ...],
         scene_id: str,
         updated_at: datetime,
+        allow_requested_voice: bool | None = None,
     ) -> ChannelGroupTransition:
         result = await update(
             route_id,
@@ -793,6 +808,7 @@ async def test_route_wide_pending_member_cannot_revive_after_operator_disable(
             members=members,
             scene_id=scene_id,
             updated_at=updated_at,
+            allow_requested_voice=allow_requested_voice,
         )
         committed.set()
         return result

@@ -14,6 +14,7 @@ from dotenv import dotenv_values
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from chatwaifu_runtime.config.group_discussion import GroupDiscussionConfig
 from chatwaifu_runtime.config.mcp_policy import private_mcp_origin
 
 
@@ -352,6 +353,7 @@ class Settings(BaseSettings):
     realtime: RealtimeConfig = RealtimeConfig()
     stt: SttConfig = SttConfig()
     public_web: PublicWebConfig = PublicWebConfig()
+    group_discussion: GroupDiscussionConfig = GroupDiscussionConfig()
 
     @model_validator(mode="after")
     def validate_local_bind(self) -> Self:

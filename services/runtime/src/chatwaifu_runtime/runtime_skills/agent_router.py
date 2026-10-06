@@ -491,7 +491,7 @@ def _model_description(skill: SkillDefinition, capability: SkillCapability) -> s
     )
     if skill.source == "builtin" and skill.skill_id == "channel.voice":
         confirmation = (
-            " Runtime rechecks the active owner private reply and generation."
+            " Runtime rechecks the active authorized QQ reply and generation."
             " This current reply needs no separate desktop confirmation."
         )
     value = (

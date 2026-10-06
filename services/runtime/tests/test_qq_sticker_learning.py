@@ -8,7 +8,6 @@ and the real QQ account remain separate gates. No external messages are sent.
 from __future__ import annotations
 
 import asyncio
-import base64
 import hashlib
 import io
 import json
@@ -23,7 +22,6 @@ from chatwaifu_protocol.channel_groups import ChannelGroupPauseReason, ChannelGr
 from chatwaifu_protocol.channels import (
     ChannelConnectionSnapshot,
     ChannelDeliveryPartStatus,
-    ChannelImageDeliveryPartPayload,
     ChannelPresentationPolicy,
     ChannelPresentationProfile,
     ChannelTurnStatus,
@@ -595,7 +593,7 @@ async def test_private_qq_learning_is_opt_in_and_keeps_photos_off(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("native_confirmed", [False, True])
-async def test_group_sticker_learns_in_its_scene_and_reuses_with_two_receipts(
+async def test_group_sticker_learns_in_its_scene_but_replies_remain_text_only(
     runtime: _Runtime,
     monkeypatch: pytest.MonkeyPatch,
     native_confirmed: bool,
@@ -670,7 +668,7 @@ async def test_group_sticker_learns_in_its_scene_and_reuses_with_two_receipts(
     saved = (await harness.request("GET", "/v1/sticker-library" + query)).json()["items"]
     assert len(saved) == 1
     image_url = "/v1/sticker-library/" + saved[0]["sticker_id"] + "/image"
-    image = await harness.request("GET", image_url + query)
+    await harness.request("GET", image_url + query)
     await harness.request("GET", image_url, status=404)
     await harness.request("GET", image_url + _scope_query(other), status=404)
     assert not (await container.sticker_repository.snapshot("local", "default")).items
@@ -693,25 +691,15 @@ async def test_group_sticker_learns_in_its_scene_and_reuses_with_two_receipts(
     assert second.turn.delivery_status is not None, second
     text = await asyncio.wait_for(harness.peer.group_sends.get(), 5)
     assert _segments(text)[0]["type"] == "text"
-    expression = await asyncio.wait_for(harness.peer.group_sends.get(), 5)
-    segment = _segments(expression)[0]
-    assert segment["type"] == "image"
-    payload = cast(JsonObject, segment["data"])
-    assert payload["sub_type"] == 1
-    assert base64.b64decode(cast(str, payload["file"])[9:], validate=True) == image.content
+    assert harness.peer.group_sends.empty()
     turn = await container.external_channel_repository.get_turn(second.turn.channel_turn_id)
     assert turn is not None and turn.delivery_id is not None
     plan = await container.external_channel_repository.get_delivery_plan(turn.delivery_id)
-    assert plan is not None and len(plan.parts) == 2
-    assert isinstance(plan.parts[-1].payload, ChannelImageDeliveryPartPayload)
-    assert plan.parts[-1].payload.sticker_id == saved[0]["sticker_id"]
-    assert not plan.parts[-1].required
-    assert all(
-        part.status is ChannelDeliveryPartStatus.DELIVERED and part.provider_message_id
-        for part in plan.parts
-    )
+    assert plan is not None and len(plan.parts) == 1
+    assert plan.parts[0].payload.kind.value == "text"
+    assert plan.parts[0].status is ChannelDeliveryPartStatus.DELIVERED
     usage = (await harness.request("GET", "/v1/sticker-library/usage" + query)).json()["items"]
-    assert len(usage) == 1 and usage[0]["status"] == "delivered"
+    assert not usage
     cursor = await container.external_channel_repository.get_adapter_cursor(harness.connection_id)
     assert cursor is not None
     assert json.loads(cursor)["qq-favorite:" + saved[0]["sha256"]] == (

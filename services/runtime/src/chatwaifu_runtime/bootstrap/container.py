@@ -230,6 +230,7 @@ class RuntimeContainer:
             mcp_private_origins=settings.security.mcp_private_origins,
             public_web_config=settings.public_web,
             authorized_generation_handlers={"channel_voice": self.channel_voice},
+            shared_generation_handler_targets=frozenset({"channel_voice"}),
             generation_permission_policy=ChannelPublicWebPolicy(
                 self.external_channel_repository,
                 lambda session_id: self.conversation.active_generation_id(session_id),
@@ -351,9 +352,11 @@ class RuntimeContainer:
             self.event_publisher,
             conversation_repository=self.conversation_repository,
             sticker_library=self.sticker_library,
+            discussion_policy=settings.group_discussion,
         )
         self.channel_groups.set_authenticator(self.external_channels.authenticate_group_transport)
         self.external_channels.set_group_service(self.channel_groups)
+        self.channel_voice.set_group_service(self.channel_groups)
         self.conversation.set_before_scope_reset_hook(self.channel_groups.before_scope_reset)
         self.channel_credentials = (
             EncryptedFileChannelCredentialStore(

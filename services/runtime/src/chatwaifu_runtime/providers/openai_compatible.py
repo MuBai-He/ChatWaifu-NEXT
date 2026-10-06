@@ -404,6 +404,7 @@ def build_messages(request: LlmRequest) -> list[dict[str, object]]:
     messages: list[dict[str, object]] = [{"role": "system", "content": request.system_prompt}]
     messages.extend({"role": role, "content": text} for role, text in request.context)
     messages.extend({"role": role, "content": text} for role, text in request.history)
+    messages.extend({"role": "user", "content": text} for text in request.current_turn_evidence)
     if request.pre_user_system_prompt:
         messages.append({"role": "system", "content": request.pre_user_system_prompt})
     if request.images:

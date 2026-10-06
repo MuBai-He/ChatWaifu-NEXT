@@ -80,3 +80,21 @@ provider = "disabled"
 worker_url = "http://127.0.0.1:8766"
 language = "zh"
 timeout_seconds = 60
+
+# Volatile context only for existing authorized fixed group routes.
+[group_discussion]
+enabled = true
+max_groups = 32
+message_characters = 800
+cache_messages = 96
+cache_characters = 24000
+retention_seconds = 900
+member_messages = 24
+member_characters = 6000
+member_messages_per_window = 6
+frequency_window_seconds = 30
+duplicate_window_seconds = 60
+input_tokens = 1536
+summary_input_tokens = 3072
+summary_output_tokens = 256
+summary_timeout_seconds = 8

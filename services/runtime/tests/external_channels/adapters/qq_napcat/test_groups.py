@@ -149,7 +149,6 @@ def test_group_reply_envelope_rejects_invalid_reference(reference: JsonValue) ->
     [
         [{"type": "text", "data": {"text": "为什么呀"}}],
         [{"type": "at", "data": {"qq": "10003"}}, {"type": "text", "data": {"text": "你好"}}],
-        [{"type": "at", "data": {"qq": ACCOUNT}}],
         [
             {"type": "at", "data": {"qq": ACCOUNT}},
             {"type": "text", "data": {"text": "你好"}},
@@ -178,14 +177,39 @@ def test_group_quote_with_mention_does_not_verify_an_opaque_image_reference() ->
     assert normalized.images[0].invalid_reason == "unverifiable_reference"
 
 
-@pytest.mark.parametrize("text", ["", " \t\n", "x" * 20_001])
-def test_group_requires_bounded_nonempty_text(text: str) -> None:
+def test_group_rejects_oversized_text() -> None:
     event = message()
     event["message"] = [
         {"type": "at", "data": {"qq": ACCOUNT}},
-        {"type": "text", "data": {"text": text}},
+        {"type": "text", "data": {"text": "x" * 20_001}},
     ]
     assert admit(event) is None
+
+
+@pytest.mark.parametrize("text", [None, "", " \t\n"])
+def test_real_bare_mention_keeps_a_structured_trigger_without_inventing_user_text(
+    text: str | None,
+) -> None:
+    event = message()
+    segments: list[JsonValue] = [{"type": "at", "data": {"qq": ACCOUNT}}]
+    if text is not None:
+        segments.append({"type": "text", "data": {"text": text}})
+    event["message"] = segments
+    result = admit(event)
+    assert result is not None and result.bot_mentioned and result.mention_only
+    assert result.text == "" and not result.images
+    event["message"] = [{"type": "text", "data": {"text": text or ""}}]
+    assert admit(event) is None
+
+
+def test_literal_bare_mention_marker_is_still_ordinary_user_text() -> None:
+    event = message()
+    event["message"] = [
+        {"type": "at", "data": {"qq": ACCOUNT}},
+        {"type": "text", "data": {"text": "[仅 @ 角色]"}},
+    ]
+    result = admit(event)
+    assert result is not None and not result.mention_only and result.text == "[仅 @ 角色]"
 
 
 def test_unknown_sender_cannot_be_admitted_by_matching_display_name() -> None:

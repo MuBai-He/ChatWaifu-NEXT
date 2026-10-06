@@ -12,6 +12,7 @@ from uuid import UUID
 from chatwaifu_protocol.character import PromptContextIdentity
 from chatwaifu_protocol.session import GenerationState
 
+from chatwaifu_runtime.conversation.discussion_models import GroupDiscussionContext
 from chatwaifu_runtime.providers.contracts import LlmInputImage, LlmProvider
 from chatwaifu_runtime.providers.model_config import ModelRoleConfig
 
@@ -268,6 +269,8 @@ class ConversationTurnOptions:
         default=None, repr=False, compare=False
     )
     allow_shared_images: bool = False
+    allow_shared_voice: bool = False
+    group_discussion: GroupDiscussionContext | None = field(default=None, repr=False)
     quoted_message_loader: Callable[[], Awaitable[ConversationQuotedMessage | None]] | None = field(
         default=None, repr=False, compare=False
     )

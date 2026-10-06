@@ -542,7 +542,7 @@ function QQGroupRoutesContent({
       <h3>QQ 小群 · 独立管理</h3>
       <p>
         新路由默认关闭。仅注册成员的结构化 @
-        触发回复；可单独开启本群静态表情学习。群聊不支持主动消息、工具或语音。主人私聊设置独立保留。
+        触发回复；可单独开启本群静态表情学习。群聊默认文字；只有单独授权的群可按当前请求发语音，不支持主动消息或其他工具。主人私聊设置独立保留。
       </p>
       <p>
         成员须先在“对话设置 → 添加参与者”中注册。关联 QQ
@@ -728,6 +728,11 @@ function QQGroupRoutesContent({
             {pauseLabel(selected.pause_reason)}
           </p>
           <p>场景由服务器创建。成员变更时需新场景；不能沿用旧受众的上下文。</p>
+          <p>
+            {selected.allow_requested_voice
+              ? "本群已开启按需语音：平时文字，仅当前发言者明确要求时可发送语音。"
+              : "本群按需语音关闭，只回复文字。"}
+          </p>
           {config.character_id === "default" ? (
             <>
               <button

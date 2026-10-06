@@ -51,6 +51,7 @@ from chatwaifu_runtime.character_kernel.service import (
     TurnCharacterContext,
 )
 from chatwaifu_runtime.characters.service import CharacterProfile, CharacterService
+from chatwaifu_runtime.conversation.group_discussion import project_group_discussion
 from chatwaifu_runtime.conversation.models import (
     REDACTED_ASSISTANT_PLACEHOLDER,
     ConfirmedConversationTurn,
@@ -814,6 +815,8 @@ class ConversationService:
             )
         if options.source_context is not None and options.source_context.group_route_id is not None:
             raise ValueError("group input requires persisted conversational identity")
+        if options.group_discussion is not None:
+            raise ValueError("group discussion requires persisted shared identity")
         async with self._start_lock:
             await self.cancel(session_id, "superseded_by_new_turn")
             session = await self._sessions.get_session(session_id)
@@ -969,15 +972,33 @@ class ConversationService:
                 or options.quoted_message_loader is not None
             ):
                 raise ValueError("external input does not match persisted shared identity")
+            discussion = options.group_discussion
+            if discussion is not None and (
+                discussion.connection_id != source.connection_id
+                or discussion.account_key != source.account_key
+                or source.conversation_key != f"group:{discussion.group_id}"
+                or discussion.route_id != source.group_route_id
+                or discussion.route_revision != source.route_revision
+                or discussion.scene_id != identity.scene_id
+                or set(discussion.audience_ids) != set(identity.audience_ids)
+            ):
+                raise ValueError("group discussion does not match persisted shared identity")
             character = self._characters.get(session.character_id)
             if character is None:
                 raise RuntimeError(f"character is not installed: {session.character_id}")
+            shared_voice_skills: frozenset[str] = (
+                frozenset({"channel.voice"})
+                if options.allow_shared_voice
+                and options.allow_tools
+                and options.allowed_skill_ids == frozenset({"channel.voice"})
+                else frozenset()
+            )
             options = replace(
                 options,
                 output_modes=frozenset({"text"}),
-                allow_tools=False,
-                allowed_skill_ids=frozenset(),
-                contextual_skill_ids=frozenset(),
+                allow_tools=bool(shared_voice_skills),
+                allowed_skill_ids=shared_voice_skills,
+                contextual_skill_ids=shared_voice_skills,
             )
             # Invalid identity never cancels another valid generation. Cancellation
             # joins owned work before replacing its active-generation entry.
@@ -1050,7 +1071,10 @@ class ConversationService:
             for event in events:
                 await self._publisher.publish_persisted(event)
             observation: UserTurnMemoryObservation | None = None
-            if self._memory.parse_explicit_command(text) is not None:
+            mention_only = (
+                options.group_discussion is not None and options.group_discussion.mention_only
+            )
+            if not mention_only and self._memory.parse_explicit_command(text) is not None:
                 await self._memory.observe_user_turn(
                     accepted.session_id,
                     accepted.turn_id,
@@ -1058,7 +1082,7 @@ class ConversationService:
                     character.character_id,
                     text,
                 )
-            else:
+            elif not mention_only:
                 observation = UserTurnMemoryObservation(
                     session_id=accepted.session_id,
                     turn_id=accepted.turn_id,
@@ -1638,6 +1662,12 @@ class ConversationService:
                 max_output_tokens=snapshot.chat_config.budget.max_output_tokens,
                 tool_result_max_bytes=snapshot.chat_config.budget.tool_result_max_bytes,
             )
+            if options.group_discussion is not None:
+                await self._check_generation_guard(accepted, options)
+                request = await project_group_discussion(
+                    request, options.group_discussion, self._models, snapshot.memory_summary_config
+                )
+                await self._check_generation_guard(accepted, options)
             if options.quoted_message_loader is not None:
                 self._ensure_current(accepted)
                 quoted = await options.quoted_message_loader()

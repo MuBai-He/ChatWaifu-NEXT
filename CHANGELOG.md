@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Let a genuine QQ group mention without text invite a reply to recent admitted
+  discussion, asking for a topic when none is available. Keep its explicit trigger
+  marker outside listening/memory extraction and preserve speaker grants. Place
+  current untrusted discussion after old history on the complete model wire, so
+  older missing-image replies do not sit nearer a short follow-up question.
+
+- Collect authorized fixed-group text in a volatile, fair bounded cache without
+  replying or calling a model. A valid mention freezes recent attributed originals
+  plus optional source-ID-only extractive compression; summary failures preserve
+  recent context and lifecycle fences discard stale audiences. Keep cache outside
+  history/memory and complete inputs within the admitted model budget. Group
+  replies now remain text-only even when private sticker replies are enabled.
+
 - Preserve complete sentence pauses in short instant-message replies instead of
   bypassing or merging them below the preferred length. Retain canonical text,
   atomic spans, technical/single-text bypass, three-part cadence and tail

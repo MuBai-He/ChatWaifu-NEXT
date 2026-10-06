@@ -277,6 +277,9 @@ class LlmRequest:
     # Included by build_messages in every provider-wire budget estimate.
     pre_user_system_prompt: str | None = None
     response_schema: LlmResponseSchema | None = None
+    # Ephemeral user-role evidence for this turn, after history and before the
+    # trusted output policy/current question. Never persisted history or routing input.
+    current_turn_evidence: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if self.max_output_tokens is not None and (

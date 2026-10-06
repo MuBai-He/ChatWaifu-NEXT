@@ -2,6 +2,18 @@
   "$id": "https://chatwaifu.local/schemas/domain/v1/channel-group-route-update.schema.json",
   "additionalProperties": false,
   "properties": {
+    "allow_requested_voice": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Allow Requested Voice"
+    },
     "enabled": {
       "title": "Enabled",
       "type": "boolean"
