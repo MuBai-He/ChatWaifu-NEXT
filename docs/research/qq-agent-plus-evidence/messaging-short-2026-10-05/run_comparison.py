@@ -1,3 +1,5 @@
+# Frozen Chinese sample punctuation is retained verbatim.
+# Source bootstrap must precede imports from the selected checkout.
 """Fixed-context output-contract comparison; no Runtime startup or channel sends.
 
 Run with the deployed Runtime interpreter, candidate prompt module and output dir.
@@ -23,6 +25,7 @@ for relative in ("services/runtime/src", "packages/protocol-python/src", "packag
     sys.path.insert(0, str(SOURCE / relative))
 
 import httpx2  # noqa: E402
+from chatwaifu_protocol.channels import ChannelPresentationPolicy  # noqa: E402
 from chatwaifu_protocol.character import (  # noqa: E402
     AffectState,
     CharacterKernelSnapshot,
@@ -36,14 +39,15 @@ from chatwaifu_runtime.conversation.models import ConversationSourceContext  # n
 from chatwaifu_runtime.external_channels.presentation import (  # noqa: E402
     InstantMessageDeliveryPlanFactory,
 )
-from chatwaifu_protocol.channels import ChannelPresentationPolicy  # noqa: E402
 from chatwaifu_runtime.providers.contracts import (  # noqa: E402
     LlmInputBudget,
     LlmRequest,
     LlmResponseCompleted,
     LlmTextDelta,
 )
-from chatwaifu_runtime.providers.input_estimation import estimate_reference_input_tokens  # noqa: E402
+from chatwaifu_runtime.providers.input_estimation import (  # noqa: E402
+    estimate_reference_input_tokens,
+)
 from chatwaifu_runtime.providers.model_config import (  # noqa: E402
     LocalModelSecretStore,
     ModelRoleConfig,
@@ -78,8 +82,14 @@ CASES = (
     ),
     (
         "detailed_code",
-        "详细写一个 Python asyncio 例子：主任务用 TaskGroup 同时运行两个子任务，子任务 A 抛 ValueError，"
-        "子任务 B 等待时会被取消。展示可运行完整代码，捕获异常组；解释取消和资源清理为什么放在 finally，不能吞 CancelledError。",
+        (
+            "详细写一个 Python asyncio 例子：主"  # noqa: RUF001
+            "任务用 TaskGroup 同时运行两个子任务，子"
+            "任务 A 抛 ValueError，子任务 B 等"
+            "待时会被取消。展示可运行完整代码，捕获异常组；解释"  # noqa: RUF001
+            "取消和资源清理为什么放在 finally，不能吞 "
+            "CancelledError。"
+        ),
         "answer",
         "serious",
         (),
@@ -125,7 +135,7 @@ class Recorder(httpx2.AsyncBaseTransport):
 
 async def main(args):
     out = Path(args.output)
-    out.mkdir(parents=True, exist_ok=True)
+    await asyncio.to_thread(out.mkdir, parents=True, exist_ok=True)
     assert not (out / "results.jsonl").exists(), "Do not duplicate an existing run"
     with sqlite3.connect(f"file:{STATE / 'data/chatwaifu.db'}?mode=ro", uri=True) as db:
         db.row_factory = sqlite3.Row
@@ -218,7 +228,9 @@ async def main(args):
         "budget": config.budget.model_dump(mode="json"),
         "source": str(SOURCE),
         "baseline_prompt_sha256": hashlib.sha256(baseline_path.read_bytes()).hexdigest(),
-        "candidate_prompt_sha256": hashlib.sha256(Path(args.candidate).read_bytes()).hexdigest(),
+        "candidate_prompt_sha256": hashlib.sha256(
+            await asyncio.to_thread(Path(args.candidate).read_bytes)
+        ).hexdigest(),
         "persona_sha256": hashlib.sha256(
             (SOURCE / "characters/default/persona.md").read_bytes()
         ).hexdigest(),
@@ -226,7 +238,13 @@ async def main(args):
         "repeats": 2,
         "cases": CASES,
         "isolation": isolation,
-        "scope": "compiled fixed output-contract answer comparison; no tools, Runtime fallback, live channel send or playback",
+        "scope": (
+            "compiled fixed output-con"
+            "tract answer comparison; "
+            "no tools, Runtime fallbac"
+            "k, live channel send or p"
+            "layback"
+        ),
     }
     (out / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
     policy = ChannelPresentationPolicy(

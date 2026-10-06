@@ -1,3 +1,4 @@
+# Source bootstrap must precede imports from the selected checkout.
 """One bounded actual-Conversation frozen-source gate, with no live channel IO."""
 
 import argparse
@@ -18,25 +19,38 @@ parser.add_argument("--execute", action="store_true")
 parser.add_argument("--dry-run", action="store_true")
 args = parser.parse_args()
 ROOT, STAGE = args.root.resolve(), args.stage.resolve()
-sys.path[:0] = [str(ROOT / "services/runtime/src"), str(ROOT / "packages/protocol-python/src"),
-               str(ROOT / "packages/model-worker-sdk-python/src"), str(ROOT),
-               "/tmp/cw2-q02-eval-deps"]
+sys.path[:0] = [
+    str(ROOT / "services/runtime/src"),
+    str(ROOT / "packages/protocol-python/src"),
+    str(ROOT / "packages/model-worker-sdk-python/src"),
+    str(ROOT),
+    "/tmp/cw2-q02-eval-deps",
+]
 
-import httpx2
-from chatwaifu_protocol.character import ModelContextBudget
-from chatwaifu_protocol.session import GenerationState
-from chatwaifu_runtime.agent.source_answer_state import SourceAnswerOriginal, supplied_source_context
-from chatwaifu_runtime.agent.source_answer import provided_source_answer_revision_prompt
-import chatwaifu_runtime.agent.tool_calling as tool_calling
-from chatwaifu_runtime.bootstrap.container import RuntimeContainer
-from chatwaifu_runtime.config.settings import Settings
-from chatwaifu_runtime.conversation.models import ConversationTurnOptions
-from chatwaifu_runtime.providers.contracts import LlmResponseCompleted, LlmTextDelta
-from chatwaifu_runtime.providers.input_estimation import estimate_reference_input_tokens
-from chatwaifu_runtime.providers.model_config import ModelRoleConfig
-from chatwaifu_runtime.providers.openai_compatible import OpenAiCompatibleLlmProvider
-from tools.evaluate_character_scenarios import (
-    parse_and_validate_initial_affect, parse_and_validate_initial_relationship,
+import chatwaifu_runtime.agent.tool_calling as tool_calling  # noqa: E402
+import httpx2  # noqa: E402
+from chatwaifu_protocol.character import ModelContextBudget  # noqa: E402
+from chatwaifu_protocol.session import GenerationState  # noqa: E402
+from chatwaifu_runtime.agent.source_answer import (  # noqa: E402
+    provided_source_answer_revision_prompt,
+)
+from chatwaifu_runtime.agent.source_answer_state import (  # noqa: E402
+    SourceAnswerOriginal,
+    supplied_source_context,
+)
+from chatwaifu_runtime.bootstrap.container import RuntimeContainer  # noqa: E402
+from chatwaifu_runtime.config.settings import Settings  # noqa: E402
+from chatwaifu_runtime.conversation.models import ConversationTurnOptions  # noqa: E402
+from chatwaifu_runtime.providers.contracts import LlmResponseCompleted, LlmTextDelta  # noqa: E402
+from chatwaifu_runtime.providers.input_estimation import (  # noqa: E402
+    estimate_reference_input_tokens,
+)
+from chatwaifu_runtime.providers.model_config import ModelRoleConfig  # noqa: E402
+from chatwaifu_runtime.providers.openai_compatible import OpenAiCompatibleLlmProvider  # noqa: E402
+
+from tools.evaluate_character_scenarios import (  # noqa: E402
+    parse_and_validate_initial_affect,
+    parse_and_validate_initial_relationship,
 )
 
 AS_OF = datetime.fromisoformat("2026-10-04T03:30:00+08:00")
@@ -51,11 +65,18 @@ assert PERSONA_SHA == "204644ee525210c1cb253688d7db218a2a2bc3fe6e91bfb3f5d135e9c
 assert len(FIXTURES) == 2 and all(len(s["turns"]) == 4 for s in FIXTURES)
 for source in SOURCES.values():
     assert hashlib.sha256(source["text"].encode()).hexdigest() == source["text_sha256"]
-assert args.execute != args.dry_run and not (STAGE / "admission.json").exists(), "Inspect any existing run first"
+assert args.execute != args.dry_run and not (STAGE / "admission.json").exists(), (
+    "Inspect any existing run first"
+)
 
 # This key stays in this remote process. Never export it or copy a credential file.
-KEY = (json.loads(Path("/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json").read_text())["chat"]
-       if args.execute else "controlled-fixture-key-never-live")
+KEY = (
+    json.loads(
+        Path("/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json").read_text()
+    )["chat"]
+    if args.execute
+    else "controlled-fixture-key-never-live"
+)
 assert isinstance(KEY, str) and KEY
 current = None
 http_count = 0
@@ -69,18 +90,38 @@ def save(name, value, append=False):
         target.write(encoded + "\n")
 
 
-save("admission.json", {
-    "started_at_utc": datetime.now(UTC).isoformat(), "model": MODEL, "endpoint": ENDPOINT,
-    "logical_limit": LOGICAL_LIMIT, "http_limit": HTTP_LIMIT, "new_persona_rules": False,
-    "persona": "closure-c1", "persona_sha256": PERSONA_SHA, "source_origin": "provided",
-    "source_calls": 0, "actual_conversation": True, "source_answer_frames": False,
-    "dry_run": args.dry_run, "pipeline_version": "natural-provided-review",
-    "same_persona": True, "frame_version": None, "frame_schema_changed": False, "new_source_rules": False, "usage_requested": True,
-    "context_window": 32768, "model_budget": BUDGET.model_dump(mode="json"),
-    "prompt_as_of": AS_OF.isoformat(), "production_changed": False,
-    "search_provider": "searxng", "reader_provider": "crawl4ai",
-    "public_read_dns_resolver": "cloudflare", "q02_approval": False,
-})
+save(
+    "admission.json",
+    {
+        "started_at_utc": datetime.now(UTC).isoformat(),
+        "model": MODEL,
+        "endpoint": ENDPOINT,
+        "logical_limit": LOGICAL_LIMIT,
+        "http_limit": HTTP_LIMIT,
+        "new_persona_rules": False,
+        "persona": "closure-c1",
+        "persona_sha256": PERSONA_SHA,
+        "source_origin": "provided",
+        "source_calls": 0,
+        "actual_conversation": True,
+        "source_answer_frames": False,
+        "dry_run": args.dry_run,
+        "pipeline_version": "natural-provided-review",
+        "same_persona": True,
+        "frame_version": None,
+        "frame_schema_changed": False,
+        "new_source_rules": False,
+        "usage_requested": True,
+        "context_window": 32768,
+        "model_budget": BUDGET.model_dump(mode="json"),
+        "prompt_as_of": AS_OF.isoformat(),
+        "production_changed": False,
+        "search_provider": "searxng",
+        "reader_provider": "crawl4ai",
+        "public_read_dns_resolver": "cloudflare",
+        "q02_approval": False,
+    },
+)
 
 original_http_stream = httpx2.AsyncClient.stream
 original_fallback = tool_calling._runtime_fallback
@@ -89,8 +130,11 @@ fallback_events = []
 
 def record_fallback(text, turn):
     assert current is not None
-    names = [name for name, value in vars(tool_calling).items()
-             if name.endswith("_REPLY") and isinstance(value, str) and value == text]
+    names = [
+        name
+        for name, value in vars(tool_calling).items()
+        if name.endswith("_REPLY") and isinstance(value, str) and value == text
+    ]
     assert names, "Only a real Runtime fallback call is classified as fallback"
     event = {**current, "origin": "runtime_fallback", "code": names[0]}
     fallback_events.append(event)
@@ -121,14 +165,24 @@ async def capture_http(client, method, url, **kwargs):
     assert documents[0]["body_sha256"] == expected["body_sha256"]
     http_count += 1
     attempt = http_count
-    save("actual-provider-payloads.jsonl", {
-        **current, "http_attempt": attempt, "payload": body,
-        "source_text_sha256": expected["text_sha256"], "complete_source_verified": True,
-        "payload_sha256": hashlib.sha256(json.dumps(body, ensure_ascii=False, sort_keys=True).encode()).hexdigest(),
-        "all_prior_replies_on_wire": all(
-            {"role": "assistant", "content": reply} in body["messages"]
-            for reply in current["prior_replies"]),
-    }, append=True)
+    save(
+        "actual-provider-payloads.jsonl",
+        {
+            **current,
+            "http_attempt": attempt,
+            "payload": body,
+            "source_text_sha256": expected["text_sha256"],
+            "complete_source_verified": True,
+            "payload_sha256": hashlib.sha256(
+                json.dumps(body, ensure_ascii=False, sort_keys=True).encode()
+            ).hexdigest(),
+            "all_prior_replies_on_wire": all(
+                {"role": "assistant", "content": reply} in body["messages"]
+                for reply in current["prior_replies"]
+            ),
+        },
+        append=True,
+    )
     started = time.monotonic()
     outcome = {"http_attempt": attempt, "status": None, "error_type": None}
     try:
@@ -145,15 +199,24 @@ async def capture_http(client, method, url, **kwargs):
 
 def controlled_transport(request):
     body = json.loads(request.content)
-    reviewed = any(message["role"] == "system" and
-                   "<runtime_source_answer_revision>" in message.get("content", "")
-                   for message in body["messages"])
-    text = ("Controlled reviewed text, not real-model quality evidence." if reviewed
-            else "Unpublished fixture draft, not real-model quality evidence.")
+    reviewed = any(
+        message["role"] == "system"
+        and "<runtime_source_answer_revision>" in message.get("content", "")
+        for message in body["messages"]
+    )
+    text = (
+        "Controlled reviewed text, not real-model quality evidence."
+        if reviewed
+        else "Unpublished fixture draft, not real-model quality evidence."
+    )
     chunks = [
         {"id": "controlled", "model": MODEL, "choices": [{"index": 0, "delta": {"content": text}}]},
-        {"id": "controlled", "model": MODEL, "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
-         "usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30}},
+        {
+            "id": "controlled",
+            "model": MODEL,
+            "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30},
+        },
     ]
     data = "".join("data: " + json.dumps(chunk) + "\n\n" for chunk in chunks) + "data: [DONE]\n\n"
     return httpx2.Response(200, text=data, headers={"Content-Type": "text/event-stream"})
@@ -166,7 +229,11 @@ class RecordedProvider:
 
     def __init__(self):
         self.provider = OpenAiCompatibleLlmProvider(
-            base_url=ENDPOINT, model=MODEL, api_key=lambda: KEY, timeout_seconds=180, request_usage=True,
+            base_url=ENDPOINT,
+            model=MODEL,
+            api_key=lambda: KEY,
+            timeout_seconds=180,
+            request_usage=True,
             transport=httpx2.MockTransport(controlled_transport) if args.dry_run else None,
         )
 
@@ -179,11 +246,18 @@ class RecordedProvider:
         if current["phase"] == "review":
             assert request.continuation_system_prompt == provided_source_answer_revision_prompt()
         current["logical_request"] = logical_count
-        row = {**current, "generation_id": str(request.generation_id), "logical_request": logical_count,
-               "response_schema": request.response_schema.name if request.response_schema else None,
-               "reference_input_tokens": estimate_reference_input_tokens(request),
-               "input_budget": asdict(request.input_budget), "input_budget_report": asdict(request.input_budget_report),
-               "raw_text": "", "terminal": None, "error_type": None}
+        row = {
+            **current,
+            "generation_id": str(request.generation_id),
+            "logical_request": logical_count,
+            "response_schema": request.response_schema.name if request.response_schema else None,
+            "reference_input_tokens": estimate_reference_input_tokens(request),
+            "input_budget": asdict(request.input_budget),
+            "input_budget_report": asdict(request.input_budget_report),
+            "raw_text": "",
+            "terminal": None,
+            "error_type": None,
+        }
         started = time.monotonic()
         try:
             async with contextlib.aclosing(self.provider.stream(request)) as stream:
@@ -208,23 +282,38 @@ async def flow(scenario, repeat):
     frozen = SOURCES[source_key]
     original = SourceAnswerOriginal(frozen["url"], frozen["body_sha256"], frozen["text"])
     runtime_dir = STAGE / "isolated-runtime" / f"{sid}-r{repeat}"
-    settings = Settings.model_validate({
-        "config_dir": runtime_dir / "config", "data_dir": runtime_dir,
-        "characters_dir": ROOT / "characters",
-        "storage": {"database_path": runtime_dir / "runtime.db"},
-        "llm": {"provider": "demo", "demo_chunk_delay_ms": 0}, "tts": {"provider": "fake"},
-        "public_web": {"search_provider": "searxng", "reader_provider": "crawl4ai",
-                       "searxng_endpoint": "http://127.0.0.1:18080",
-                       "crawl4ai_endpoint": "http://127.0.0.1:11235"},
-    })
+    settings = Settings.model_validate(
+        {
+            "config_dir": runtime_dir / "config",
+            "data_dir": runtime_dir,
+            "characters_dir": ROOT / "characters",
+            "storage": {"database_path": runtime_dir / "runtime.db"},
+            "llm": {"provider": "demo", "demo_chunk_delay_ms": 0},
+            "tts": {"provider": "fake"},
+            "public_web": {
+                "search_provider": "searxng",
+                "reader_provider": "crawl4ai",
+                "searxng_endpoint": "http://127.0.0.1:18080",
+                "crawl4ai_endpoint": "http://127.0.0.1:11235",
+            },
+        }
+    )
     container = RuntimeContainer(settings, source_answer_frames=False)
     provider = RecordedProvider()
     replies, running = [], None
     try:
         await container.start()
-        cfg = ModelRoleConfig(role="chat", provider="openai_compatible", model=MODEL,
-                              base_url=ENDPOINT, context_window=32768, budget=BUDGET,
-                              timeout_seconds=180, api_key_configured=True, updated_at=AS_OF)
+        cfg = ModelRoleConfig(
+            role="chat",
+            provider="openai_compatible",
+            model=MODEL,
+            base_url=ENDPOINT,
+            context_window=32768,
+            budget=BUDGET,
+            timeout_seconds=180,
+            api_key_configured=True,
+            updated_at=AS_OF,
+        )
         container.model_configurations._configs["chat"] = cfg
         container.model_configurations.create_chat_provider = lambda _: provider
         character = container.characters.get("default")
@@ -233,59 +322,124 @@ async def flow(scenario, repeat):
         character = character.model_copy(update={"system_prompt": PERSONA, "package_hash": package})
         container.characters._profiles["default"] = character
         now = datetime.now(UTC)
-        affect = parse_and_validate_initial_affect(scenario["initial_state"], now=now, scenario_id=sid)
+        affect = parse_and_validate_initial_affect(
+            scenario["initial_state"], now=now, scenario_id=sid
+        )
         relationship = parse_and_validate_initial_relationship(
-            scenario["initial_state"], character=character, now=now, scenario_id=sid)
+            scenario["initial_state"], character=character, now=now, scenario_id=sid
+        )
         await container.character_kernel._persist("default", affect, relationship, 0)
         snapshot = container.conversation._capture_generation_snapshot
-        container.conversation._capture_generation_snapshot = lambda **kw: replace(snapshot(**kw), admitted_at=AS_OF)
+        container.conversation._capture_generation_snapshot = lambda **kw: replace(
+            snapshot(**kw), admitted_at=AS_OF
+        )
         compile_prompt = container.prompt_compiler.compile
 
         async def with_source(**kw):
             compiled = await compile_prompt(**kw)
-            save("compiled-prompts.jsonl", {
-                **current, "identity": compiled.identity.model_dump(mode="json"),
-                "report": compiled.report.model_dump(mode="json"),
-                "source_generation_ids": [str(g) for g in compiled.source_generation_ids],
-            }, append=True)
+            save(
+                "compiled-prompts.jsonl",
+                {
+                    **current,
+                    "identity": compiled.identity.model_dump(mode="json"),
+                    "report": compiled.report.model_dump(mode="json"),
+                    "source_generation_ids": [str(g) for g in compiled.source_generation_ids],
+                },
+                append=True,
+            )
             assert PERSONA in compiled.system_prompt
-            return replace(compiled, context=(*compiled.context, supplied_source_context((original,))))
+            return replace(
+                compiled, context=(*compiled.context, supplied_source_context((original,)))
+            )
 
         container.prompt_compiler.compile = with_source
         session = (await container.sessions.create_session("default")).session_id
         for turn in scenario["turns"]:
             sample = f"{sid}:r{repeat}:t{turn['turn_id']}"
             if running is False:
-                save("results.jsonl", {"sample_key": sample, "execution": "not_executed",
-                     "user_text": turn["user_text"], "reason": "previous_turn_not_completed"}, append=True)
+                save(
+                    "results.jsonl",
+                    {
+                        "sample_key": sample,
+                        "execution": "not_executed",
+                        "user_text": turn["user_text"],
+                        "reason": "previous_turn_not_completed",
+                    },
+                    append=True,
+                )
                 continue
-            current = {"sample_key": sample, "source_key": source_key, "prior_replies": list(replies)}
+            current = {
+                "sample_key": sample,
+                "source_key": source_key,
+                "prior_replies": list(replies),
+            }
             started = time.monotonic()
             accepted = await container.conversation.submit_text(
-                session, turn["user_text"], options=ConversationTurnOptions(
-                    output_modes=frozenset({"text"}), presentation_profile="detailed_answer", allow_tools=False))
+                session,
+                turn["user_text"],
+                options=ConversationTurnOptions(
+                    output_modes=frozenset({"text"}),
+                    presentation_profile="detailed_answer",
+                    allow_tools=False,
+                ),
+            )
             current["generation_id"] = str(accepted.generation_id)
             task = container.conversation._active[session].task
             assert task is not None
             await asyncio.wait_for(task, timeout=600)
-            record = await container.conversation_repository.generation_result(accepted.generation_id)
+            record = await container.conversation_repository.generation_result(
+                accepted.generation_id
+            )
             assert record is not None
             complete = await container.database.fetchall(
-                "SELECT payload_json FROM events WHERE event_type='assistant.generation_completed' AND json_extract(envelope_json,'$.generation_id')=?",
-                (str(accepted.generation_id),))
+                (
+                    "SELECT payload_json FROM "
+                    "events WHERE event_type='"
+                    "assistant.generation_comp"
+                    "leted' AND json_extract(e"
+                    "nvelope_json,'$.generatio"
+                    "n_id')=?"
+                ),
+                (str(accepted.generation_id),),
+            )
             payload = json.loads(str(complete[0]["payload_json"])) if complete else {}
-            cache = container.conversation._source_answer_coverage._records.get((session, accepted.generation_id))
-            row = {**current, "user_text": turn["user_text"], "state": record.state.value,
-                   "execution": "completed" if record.state is GenerationState.COMPLETED else "failed",
-                   "error_code": record.error_code, "reply_origin": ("runtime_fallback" if any(r["sample_key"] == sample for r in fallback_events) else "provider") if complete else "not_published",
-                   "frame_version": payload.get("source_answer_frame_version"), "reply_text": payload.get("text"),
-                   "completed_gaps": [asdict(g) for g in cache.gaps] if cache else [],
-                   "elapsed_ms": round((time.monotonic() - started) * 1000)}
+            cache = container.conversation._source_answer_coverage._records.get(
+                (session, accepted.generation_id)
+            )
+            row = {
+                **current,
+                "user_text": turn["user_text"],
+                "state": record.state.value,
+                "execution": "completed" if record.state is GenerationState.COMPLETED else "failed",
+                "error_code": record.error_code,
+                "reply_origin": (
+                    "runtime_fallback"
+                    if any(r["sample_key"] == sample for r in fallback_events)
+                    else "provider"
+                )
+                if complete
+                else "not_published",
+                "frame_version": payload.get("source_answer_frame_version"),
+                "reply_text": payload.get("text"),
+                "completed_gaps": [asdict(g) for g in cache.gaps] if cache else [],
+                "elapsed_ms": round((time.monotonic() - started) * 1000),
+            }
             save("results.jsonl", row, append=True)
-            running = record.state is GenerationState.COMPLETED and row["reply_origin"] == "provider"
+            running = (
+                record.state is GenerationState.COMPLETED and row["reply_origin"] == "provider"
+            )
             if running:
                 replies.append(row["reply_text"])
-            print(json.dumps({"sample_key": sample, "state": row["state"], "reply_origin": row["reply_origin"]}), flush=True)
+            print(
+                json.dumps(
+                    {
+                        "sample_key": sample,
+                        "state": row["state"],
+                        "reply_origin": row["reply_origin"],
+                    }
+                ),
+                flush=True,
+            )
     finally:
         await container.stop()
     return running
@@ -301,12 +455,28 @@ httpx2.AsyncClient.stream = capture_http
 try:
     asyncio.run(main())
 except BaseException as error:
-    save("exit.json", {"exit_code": 1, "error_type": type(error).__name__,
-                       "logical_requests": logical_count, "actual_http_attempts": http_count, "actual_model_http_attempts": 0 if args.dry_run else http_count})
+    save(
+        "exit.json",
+        {
+            "exit_code": 1,
+            "error_type": type(error).__name__,
+            "logical_requests": logical_count,
+            "actual_http_attempts": http_count,
+            "actual_model_http_attempts": 0 if args.dry_run else http_count,
+        },
+    )
     print(json.dumps({"error_type": type(error).__name__}), flush=True)
     raise SystemExit(1) from None
 else:
-    save("exit.json", {"exit_code": 0, "logical_requests": logical_count, "actual_http_attempts": http_count, "actual_model_http_attempts": 0 if args.dry_run else http_count})
+    save(
+        "exit.json",
+        {
+            "exit_code": 0,
+            "logical_requests": logical_count,
+            "actual_http_attempts": http_count,
+            "actual_model_http_attempts": 0 if args.dry_run else http_count,
+        },
+    )
 finally:
     httpx2.AsyncClient.stream = original_http_stream
     tool_calling._runtime_fallback = original_fallback
