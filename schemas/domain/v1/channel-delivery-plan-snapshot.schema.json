@@ -1,9 +1,65 @@
 {
   "$defs": {
+    "ChannelAudioDeliveryPartPayload": {
+      "properties": {
+        "asset_id": {
+          "format": "uuid",
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "duration_ms": {
+          "maximum": 120000,
+          "minimum": 1,
+          "title": "Duration Ms",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "audio",
+          "default": "audio",
+          "title": "Kind",
+          "type": "string"
+        },
+        "mime_type": {
+          "default": "audio/wav",
+          "enum": [
+            "audio/wav",
+            "audio/mpeg"
+          ],
+          "title": "Mime Type",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "asset_id",
+        "sha256",
+        "duration_ms",
+        "text"
+      ],
+      "title": "ChannelAudioDeliveryPartPayload",
+      "type": "object"
+    },
     "ChannelDeliveryPartKind": {
       "enum": [
         "text",
-        "image"
+        "image",
+        "audio"
       ],
       "title": "ChannelDeliveryPartKind",
       "type": "string"
@@ -113,6 +169,7 @@
         "payload": {
           "discriminator": {
             "mapping": {
+              "audio": "#/$defs/ChannelAudioDeliveryPartPayload",
               "image": "#/$defs/ChannelImageDeliveryPartPayload",
               "text": "#/$defs/ChannelTextDeliveryPartPayload"
             },
@@ -124,6 +181,9 @@
             },
             {
               "$ref": "#/$defs/ChannelImageDeliveryPartPayload"
+            },
+            {
+              "$ref": "#/$defs/ChannelAudioDeliveryPartPayload"
             }
           ],
           "title": "Payload"

@@ -24,6 +24,7 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryPartsCancelRequest,
     ChannelDeliveryPartStatus,
     ChannelDeliveryStatus,
+    ChannelMessageKind,
     ChannelPresentationPolicy,
     ChannelTextDeliveryPartPayload,
     ChannelTurnStatus,
@@ -32,6 +33,7 @@ from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_protocol.events import GenericCoreEvent, PrivacyLevel
 from pydantic import TypeAdapter
 
+from chatwaifu_runtime.conversation.models import ConversationQuotedMessage
 from chatwaifu_runtime.external_channels.models import (
     ChannelBindingRecord,
     ChannelConnectionRecord,
@@ -103,6 +105,9 @@ def _validate_delivery_part_drafts(parts: Sequence[ChannelDeliveryPartDraft]) ->
                     raise ValueError("image delivery part must follow required text parts")
                 if draft.required:
                     raise ValueError("image delivery part must be optional")
+            elif draft.kind is ChannelDeliveryPartKind.AUDIO:
+                if num_parts != 1 or not draft.required:
+                    raise ValueError("audio delivery must be the sole required part")
             else:
                 raise ValueError(f"unsupported delivery part kind {draft.kind}")
 
@@ -432,6 +437,83 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
         )
         return _turn_record(row) if row is not None else None
 
+    async def resolve_quoted_message(
+        self, connection_id: UUID, binding_id: UUID, external_message_id: str
+    ) -> ConversationQuotedMessage | None:
+        rows = await self._database.fetchall(
+            """
+            WITH candidates AS (
+                SELECT 'user' AS role, u.committed_text AS text, t.session_id,
+                       t.generation_id, u.created_at
+                FROM channel_turns t
+                JOIN turns u ON u.turn_id = t.turn_id AND u.session_id = t.session_id
+                    AND u.role = 'user'
+                WHERE t.connection_id = ? AND t.binding_id = ? AND t.external_message_id = ?
+                UNION ALL
+                SELECT 'assistant' AS role,
+                       CASE WHEN p.kind = 'text' THEN json_extract(p.payload_json, '$.text')
+                            WHEN p.kind = 'audio' THEN t.reply_text
+                            ELSE '[Referenced image or sticker; image bytes are not attached.]'
+                       END AS text, t.session_id, t.generation_id, u.created_at
+                FROM channel_delivery_parts p
+                JOIN channel_deliveries d ON d.delivery_id = p.delivery_id
+                JOIN channel_turns t ON t.channel_turn_id = d.channel_turn_id
+                JOIN generations g ON g.generation_id = t.generation_id AND g.state = 'completed'
+                JOIN turns u ON u.turn_id = t.turn_id AND u.session_id = t.session_id
+                WHERE t.connection_id = ? AND t.binding_id = ?
+                    AND p.provider_message_id = ? AND p.status = 'delivered'
+            )
+            SELECT role, substr(text, 1, 2000) AS text, q.generation_id FROM candidates q
+            JOIN sessions s ON s.session_id = q.session_id
+            JOIN channel_connections c ON c.connection_id = ?
+            WHERE (SELECT count(*) FROM candidates) = 1
+                AND c.enabled = 1 AND c.deleted_at IS NULL AND q.text IS NOT NULL
+                AND trim(q.text) != ''
+                AND NOT EXISTS (SELECT 1 FROM photo_context_redactions r
+                                WHERE r.generation_id = q.generation_id)
+                AND NOT EXISTS (
+                    SELECT 1 FROM memory_scope_resets r
+                    WHERE ((r.character_id = s.character_id AND r.user_scope = s.user_scope)
+                           OR r.character_id = '__all__') AND q.created_at <= r.reset_at
+                )
+            LIMIT 2
+            """,
+            (
+                str(connection_id),
+                str(binding_id),
+                external_message_id,
+                str(connection_id),
+                str(binding_id),
+                external_message_id,
+                str(connection_id),
+            ),
+        )
+        # A provider-ID collision is unavailable rather than choosing a different message.
+        if len(rows) != 1:
+            return None
+        role = str(rows[0]["role"])
+        if role not in {"user", "assistant"}:
+            return None
+        return ConversationQuotedMessage(
+            role="user" if role == "user" else "assistant",
+            text=str(rows[0]["text"]),
+            source_generation_id=UUID(str(rows[0]["generation_id"])),
+        )
+
+    async def quoted_reply_target(self, channel_turn_id: UUID) -> str | None:
+        row = await self._database.fetchone(
+            """
+            SELECT t.external_message_id FROM channel_turns t
+            JOIN turns u ON u.turn_id = t.turn_id AND u.session_id = t.session_id
+            WHERE t.channel_turn_id = ? AND u.source_context_json IS NOT NULL
+                AND json_extract(
+                    u.source_context_json, '$.reply_to_external_message_id'
+                ) IS NOT NULL
+            """,
+            (str(channel_turn_id),),
+        )
+        return str(row["external_message_id"]) if row is not None else None
+
     async def list_inflight_turns(
         self, connection_id: UUID | None = None
     ) -> tuple[ChannelTurnRecord, ...]:
@@ -470,8 +552,8 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 content_sha256, account_key, conversation_key, chat_type,
                 conversation_label, sender_key, sender_display_name, principal_scope,
                 session_id, turn_id, generation_id, status, reply_text, error_json,
-                delivery_id, revision, accepted_at, created_at, updated_at, completed_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                delivery_id, revision, accepted_at, created_at, updated_at, completed_at, input_kind
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 str(turn.channel_turn_id),
@@ -498,6 +580,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 turn.created_at.isoformat(),
                 turn.updated_at.isoformat(),
                 turn.completed_at.isoformat() if turn.completed_at is not None else None,
+                turn.input_kind.value,
             ),
         )
         created = await self.get_turn(turn.channel_turn_id)
@@ -664,7 +747,19 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
             # Both normal output and recovery notices lose to a prior interrupt.
             # Check in the same transaction that creates delivery parts.
             allowed_statuses = ("accepted", "processing")
-            if row["status"] not in allowed_statuses or row["delivery_id"] is not None:
+            existing_audio = False
+            if row["delivery_id"] is not None:
+                cursor = await connection.execute(
+                    "SELECT kind FROM channel_delivery_parts WHERE delivery_id = ? "
+                    "ORDER BY ordinal LIMIT 1",
+                    (str(row["delivery_id"]),),
+                )
+                first = await cursor.fetchone()
+                await cursor.close()
+                existing_audio = first is not None and first["kind"] == "audio"
+            if row["status"] not in allowed_statuses or (
+                row["delivery_id"] is not None and not existing_audio
+            ):
                 cursor = await connection.execute(
                     _TURN_SELECT + " WHERE t.channel_turn_id = ?", (str(channel_turn_id),)
                 )
@@ -751,6 +846,75 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                         persisted_events.append(persisted)
             else:
                 resolved_delivery = UUID(str(existing_delivery))
+                # A voice plan owns the reply; successful audio needs no duplicate text.
+                # Definite failure may append a text recovery under the same durable aggregate.
+                cursor = await connection.execute(
+                    "SELECT d.status, p.payload_json, p.last_error_json FROM channel_deliveries d "
+                    "JOIN channel_delivery_parts p ON p.delivery_id = d.delivery_id "
+                    "WHERE d.delivery_id = ? AND p.ordinal = 0",
+                    (str(resolved_delivery),),
+                )
+                voice = await cursor.fetchone()
+                await cursor.close()
+                if voice is not None and voice["status"] in {"failed", "cancelled"}:
+                    fallback = ChannelTextDeliveryPartPayload(text=reply_text)
+                    await connection.execute(
+                        "UPDATE channel_delivery_parts SET required = 0 "
+                        "WHERE delivery_id = ? AND ordinal = 0 "
+                        "AND status IN ('failed', 'cancelled')",
+                        (str(resolved_delivery),),
+                    )
+                    await connection.execute(
+                        "INSERT INTO channel_delivery_parts(part_id, delivery_id, ordinal, kind, "
+                        "payload_json, "
+                        "required, status, delay_after_ms, attempt, provider_client_id, "
+                        "created_at, updated_at) "
+                        "VALUES (?, ?, 1, 'text', ?, 1, 'pending', 0, 0, ?, ?, ?)",
+                        (
+                            str(uuid4()),
+                            str(resolved_delivery),
+                            fallback.model_dump_json(),
+                            f"chatwaifu-{resolved_delivery.hex}-001",
+                            completed_at.isoformat(),
+                            completed_at.isoformat(),
+                        ),
+                    )
+                    await connection.execute(
+                        "UPDATE channel_deliveries SET status = 'pending', last_error_json = NULL, "
+                        "plan_version = plan_version + 1, "
+                        "cancel_requested_at = NULL, "
+                        "lease_id = NULL, lease_expires_at = NULL, updated_at = ? "
+                        "WHERE delivery_id = ?",
+                        (completed_at.isoformat(), str(resolved_delivery)),
+                    )
+                    if self._event_store is not None:
+                        ctx = await self._get_turn_context_tx(connection, resolved_delivery)
+                        if ctx is not None:
+                            persisted_events.append(
+                                await self._event_store.append_in_transaction(
+                                    connection,
+                                    GenericCoreEvent.model_validate(
+                                        {
+                                            "event_id": uuid4(),
+                                            "event_type": "channel.delivery_plan_created",
+                                            "session_id": ctx.session_id,
+                                            "turn_id": ctx.turn_id,
+                                            "generation_id": ctx.generation_id,
+                                            "occurred_at": completed_at,
+                                            "source": "runtime.external_channels",
+                                            "privacy": PrivacyLevel.PRIVATE,
+                                            "payload": {
+                                                "connection_id": str(ctx.connection_id),
+                                                "channel_turn_id": str(ctx.channel_turn_id),
+                                                "delivery_id": str(resolved_delivery),
+                                                "part_count": 2,
+                                                "plan_version": 2,
+                                                "recovery": "voice_text_fallback",
+                                            },
+                                        }
+                                    ),
+                                )
+                            )
             await connection.execute(
                 """
                 UPDATE channel_turns SET status = ?, reply_text = ?,
@@ -806,7 +970,8 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
         persisted_events: list[GenericCoreEvent] = []
         async with self._database.transaction() as connection:
             cursor = await connection.execute(
-                "SELECT connection_id, delivery_id FROM channel_turns WHERE channel_turn_id = ?",
+                "SELECT connection_id, delivery_id, status FROM channel_turns "
+                "WHERE channel_turn_id = ?",
                 (str(channel_turn_id),),
             )
             turn_row = await cursor.fetchone()
@@ -814,6 +979,24 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
             if turn_row is None:
                 raise KeyError(f"unknown channel turn {channel_turn_id}")
             connection_id = str(turn_row["connection_id"])
+            if any(draft.kind is ChannelDeliveryPartKind.AUDIO for draft in parts):
+                if (
+                    turn_row["status"] not in {"accepted", "processing"}
+                    or turn_row["delivery_id"] is not None
+                ):
+                    raise ValueError("voice delivery requires an active turn without another plan")
+                cursor = await connection.execute(
+                    "SELECT enabled, deleted_at FROM channel_connections WHERE connection_id = ?",
+                    (connection_id,),
+                )
+                owner_connection = await cursor.fetchone()
+                await cursor.close()
+                if (
+                    owner_connection is None
+                    or not owner_connection["enabled"]
+                    or owner_connection["deleted_at"] is not None
+                ):
+                    raise ValueError("voice connection is disabled or removed")
 
             cursor = await connection.execute(
                 "SELECT delivery_id FROM channel_deliveries WHERE delivery_id = ?",
@@ -1232,6 +1415,8 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                     ChannelDeliveryPartStatus.FAILED,
                     ChannelDeliveryPartStatus.CANCELLED,
                 }:
+                    if not prow["required"]:
+                        continue
                     return None
                 target_part = prow
                 break
@@ -2549,7 +2734,7 @@ def _binding_record(row: object) -> ChannelBindingRecord:
 
 
 def _turn_record(row: object) -> ChannelTurnRecord:
-    item = row
+    item = cast(aiosqlite.Row, row)
     return ChannelTurnRecord(
         channel_turn_id=UUID(str(item["channel_turn_id"])),  # type: ignore[index]
         connection_id=UUID(str(item["connection_id"])),  # type: ignore[index]
@@ -2594,6 +2779,11 @@ def _turn_record(row: object) -> ChannelTurnRecord:
         created_at=_required_datetime(item["created_at"]),  # type: ignore[index]
         updated_at=_required_datetime(item["updated_at"]),  # type: ignore[index]
         completed_at=_datetime(item["completed_at"]),  # type: ignore[index]
+        input_kind=(
+            ChannelMessageKind(str(item["input_kind"]))
+            if "input_kind" in item.keys()
+            else ChannelMessageKind.TEXT
+        ),
     )
 
 

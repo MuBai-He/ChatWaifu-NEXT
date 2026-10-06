@@ -255,6 +255,8 @@ class ChannelDeliveryScheduler:
                 if part.status not in (
                     ChannelDeliveryPartStatus.DELIVERED,
                     ChannelDeliveryPartStatus.CANCELLED,
+                    ChannelDeliveryPartStatus.FAILED,
+                    ChannelDeliveryPartStatus.SKIPPED,
                 ):
                     target_part = part
                     break
@@ -293,6 +295,7 @@ class ChannelDeliveryScheduler:
             if claimed_part.kind not in (
                 ChannelDeliveryPartKind.TEXT,
                 ChannelDeliveryPartKind.IMAGE,
+                ChannelDeliveryPartKind.AUDIO,
             ):
                 post_time = self._now(now)
                 err = StructuredError(

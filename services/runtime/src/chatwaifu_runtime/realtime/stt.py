@@ -67,6 +67,13 @@ class FasterWhisperWorkerSttBackend:
         result = SttTranscriptionResult.model_validate(response.json())
         if result.generation_id != request.identity.generation_id:
             raise RuntimeError("STT worker returned a mismatched generation_id")
+        if (
+            result.session_id != body.session_id
+            or result.turn_id != body.turn_id
+            or result.request_id != body.request_id
+            or result.job_id != body.job_id
+        ):
+            raise RuntimeError("STT worker returned a mismatched request identity")
         return SttResult(
             text=result.text,
             language=result.language,

@@ -1311,4 +1311,11 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
         ALTER TABLE model_role_configs ADD COLUMN budget_json TEXT NOT NULL DEFAULT '{}';
         """,
     ),
+    (
+        37,
+        """
+        ALTER TABLE channel_turns ADD COLUMN input_kind TEXT NOT NULL DEFAULT 'text'
+            CHECK(input_kind IN ('text', 'image', 'audio'));
+        """,
+    ),
 )

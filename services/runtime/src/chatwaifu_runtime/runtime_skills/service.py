@@ -43,7 +43,9 @@ from chatwaifu_runtime.conversation.source_context import (
 from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.providers.factory import ProviderSet
 from chatwaifu_runtime.runtime_skills.adapters import (
+    AuthorizedGenerationHandler,
     BuiltinAdapter,
+    GenerationSkillContext,
     McpConnectionAdapter,
     McpStdioAdapter,
     SessionBuiltinHandler,
@@ -119,6 +121,7 @@ class RuntimeSkillService:
         sandbox_launcher: SandboxLauncher | None = None,
         mcp_private_origins: tuple[str, ...] = (),
         session_builtin_handlers: dict[str, SessionBuiltinHandler] | None = None,
+        authorized_generation_handlers: dict[str, AuthorizedGenerationHandler] | None = None,
     ) -> None:
         self._root = root
         self._repository = repository
@@ -135,6 +138,7 @@ class RuntimeSkillService:
         )
         self._permissions = PermissionBroker(repository)
         self._builtin = BuiltinAdapter()
+        self._authorized_generation_handlers = authorized_generation_handlers or {}
         self._builtin.register("runtime_status", self._runtime_status)
         self._public_web = PublicWebReader()
         self._builtin.register("public_web_read", self._public_web.read)
@@ -401,6 +405,20 @@ class RuntimeSkillService:
         if not entry.definition.enabled:
             raise ValueError("skill is disabled")
         capability = _capability(entry, invocation.capability)
+        generation_handler = (
+            self._authorized_generation_handlers.get(entry.adapter.target)
+            if entry.definition.source == "builtin" and entry.adapter.kind == "builtin"
+            else None
+        )
+        generation_authorized = False
+        if generation_handler is not None:
+            generation_authorized = await generation_handler.authorize(
+                GenerationSkillContext(session_id, turn_id, generation_id, origin)
+            )
+            if not generation_authorized:
+                raise PermissionError(
+                    "This capability requires a current authorized channel request"
+                )
         if require_cloud_readonly:
             from chatwaifu_runtime.runtime_skills.agent_router import cloud_realtime_eligible
 
@@ -461,7 +479,7 @@ class RuntimeSkillService:
                 session_id=session_id,
                 plan=plan,
             )
-            if capability.confirmation_required or missing:
+            if (capability.confirmation_required or missing) and not generation_authorized:
                 if not allow_confirmation:
                     detail = (
                         "confirmation_required"
@@ -1013,10 +1031,25 @@ class RuntimeSkillService:
                 session_id, run_id, entry, capability, arguments
             )
             if plan.adapter_kind == "builtin":
-                data = await asyncio.wait_for(
-                    self._builtin.invoke(plan.adapter_target, arguments, str(session_id)),
-                    timeout=capability.timeout_seconds,
-                )
+                generation_handler = self._authorized_generation_handlers.get(plan.adapter_target)
+                if generation_handler is not None:
+                    run = await self.get_run(run_id)
+                    context = GenerationSkillContext(
+                        session_id, run.turn_id, run.generation_id, run.origin
+                    )
+                    if not await generation_handler.authorize(context):
+                        raise SkillExecutionError(
+                            "stale_channel_request",
+                            "The authorized channel request is no longer active",
+                        )
+                    data = await asyncio.wait_for(
+                        generation_handler(context, arguments), timeout=capability.timeout_seconds
+                    )
+                else:
+                    data = await asyncio.wait_for(
+                        self._builtin.invoke(plan.adapter_target, arguments, str(session_id)),
+                        timeout=capability.timeout_seconds,
+                    )
             elif plan.adapter_kind == "mcp":
                 if entry.plugin is None or entry.plugin_root is None:
                     raise SkillExecutionError(

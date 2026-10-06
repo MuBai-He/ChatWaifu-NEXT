@@ -1,6 +1,54 @@
 schema_version: "1.0"
-updated_at: "2026-09-29"
+updated_at: "2026-10-03"
 current_phase: "13.6"
+qq_napcat:
+  status: model_selected_qq_voice_real_record_to_phone_playback_verified
+  adr: "0064"
+  image_reply_adr: "0065"
+  incoming_voice_adr: "0066"
+  voice_selection_adr: "0067"
+  original_plan_stages:
+    A: owner_private_text_core_real_verified_additional_fault_acceptance_pending
+    B: bounded_static_images_stickers_and_scoped_quotes_implemented_real_qq_acceptance_pending
+    C: model_selected_current_reply_voice_real_model_and_phone_playback_verified_additional_fault_acceptance_pending
+    D: incoming_voice_stt_real_text_and_model_selected_voice_verified_proactive_and_group_isolation_not_implemented
+  evidence:
+    - Native OneBot WebSocket adapter, secure pairing, connection supervision and durable send fences implemented in an isolated branch based on e609345
+    - Default text and current-generation channel.voice authorization use the existing character, conversation, memory and Runtime Skill path
+    - Local full Python suite passed with 2063 checks and 46 platform skips, including the 109-case adapter suite and three independent review regressions
+    - Linux server QQ adapter and complete Runtime integration passed 122 checks against local OneBot WebSocket fixtures, with no real QQ account or messages
+    - Protocol 36 checks, Web 333 checks, TypeScript typecheck and ESLint, Python strict typing and Ruff, Web and desktop UI builds verified
+    - Independent Linux staging Runtime and encrypted credential vault run in separate source/state directories; existing search test environment is preserved
+    - Official NapCat v4.18.28 amd64 image verified by layer/config hashes, loaded offline and running healthy; WebUI HTTP 200 and host ports bound only to loopback
+    - Staging chat configured from the existing current server model parameters; separate CPU GPT-SoVITS worker on 8773 passed actual Runtime-adapter WAV synthesis with no chat inference or QQ sends
+    - Real QR login and authenticated OneBot RPC verified; exact owner-private pairing confirmed with one allowed sender, enabled durable connection and ready status
+    - Three real owner-initiated QQ turns verified text then channel.voice audio then text, each with one delivered part and a provider receipt; owner confirmed text receipt, playable voice and no voice on the following ordinary turn
+    - Independent staging Runtime restart restored the same enabled connection with one allowed owner and ready status; confirmed delivery records retained attempt 1
+    - Five meaningful recovery regressions added; combined QQ adapter, complete Runtime and recovery suites passed 127 checks locally and 127 on Linux, with Ruff and strict Pyright passed
+    - Dedicated NapCat container recreation preserved mounts, connection and full ledger identities/journal; role-account quick-login startup setting added, manual QQ reauthentication restored authenticated OneBot and existing Runtime connection without re-pairing or replay
+    - Temporarily stopped only the dedicated staging TTS service; real owner voice request failed before audio publication and delivered one text reply with failure explanation, confirmed on phone; TTS service restored active
+    - Phase B adds authenticated bounded image streams, ephemeral owner image understanding, opt-in local sticker delivery and permissioned durable reply references; quoted history cannot authorize voice
+    - Phase B source 359d080 deployed to the independent Linux stage with all 1449 tracked hashes matched; 278 Linux QQ checks passed, Web assets HTTP 200 and authenticated same-account OneBot RPC online; four existing turn and delivery identities and original services/resources preserved
+    - Phase B independent review fixes raw-ID ambiguity before privacy filtering, rejects retention-disabled burst bypass and registers historical quote photo-deletion lineage
+    - Phase B full Python passed 2219 checks with 46 platform skips; full Web passed 334 checks; Python strict typing, Ruff, TypeScript checks and lint, Web and desktop UI builds passed
+    - Phase D1 implements one bounded owner-private record, authenticated WAV stream, ephemeral local STT, exact request identity and final-transcript Conversation submission; ADR 0067 now leaves reply-medium selection to the model with text generally preferred
+    - Phase D1 registration and owner-revocation races passed six independent checks; clean stop/disable/delete/interrupt prevent loader/model startup, and crash recovery fails orphan audio once without re-download
+    - Phase D1 final full Python passed 2393 checks with 46 platform skips; isolated STT worker passed 22 checks; strict Pyright and Ruff passed, with the existing 334 Web checks, Web/desktop UI builds, lint and TypeScript checks retained
+    - Phase D1 source 02e5801 deployed with all 1457 tracked hashes matched; Linux QQ suite passed 452 and isolated worker suite passed 22; own loopback STT authenticated real adapter round trip passed without downloading models or changing original services/resources
+    - A real owner QQ record was transcribed and completed once with one confirmed TEXT part at attempt 1 and zero voice Skill runs; the owner confirmed correct understanding and no extra voice, while raw audio and the placeholder were not committed
+    - The next recording requesting voice was misrecognized as 用語間說一句話 and delivered TEXT with zero voice runs; the owner corrected an earlier playback confirmation, so this recording is explicitly not accepted as successful voice output
+    - ADR 0067 removes all voice text gates and mandatory reply-tool choice; each admitted QQ owner turn contextually provides only the trusted voice reply tool, with model auto choice and unchanged live owner/generation/manual/provider/cancellation boundaries
+    - Final model-selected-voice source passed 2382 Python checks with 46 platform skips and 514 focused integration checks; isolated ASR worker passed 31, strict Pyright and Ruff passed; scripted models prove both reply media for the same keyword-free input but do not prove live semantic preference or handset playback
+    - Source b21fcbc deployed with all 1457 tracked hashes matched; Linux QQ checks passed 439 and isolated worker checks passed 31; live ASR process confirms beam 5 with a generic Chinese prompt, same authenticated QQ remains online, and all six prior ledger facts plus original services/resources were preserved
+    - A fresh owner AUDIO input after the model-choice deployment committed a nonempty final transcript without the placeholder and completed with exactly one successful agent channel.voice run and one delivered AUDIO part at attempt 1 with a provider receipt; admission dedup count was one and the owner confirmed successful phone playback, while the previous misrecognized recording remains a failed sample
+  remaining:
+    - phase_b_real_phone_static_image_understanding_sticker_and_quote_display_acceptance
+    - model_selected_voice_additional_semantic_preferences_and_fault_acceptance
+    - phase_d2_proactive_delivery_opt_in_and_phase_d3_group_permissions_participant_isolation_implementation
+    - real_qq_denied_sender_group_unsupported_media_interruption_audio_delivery_failure_and_uncertain_receipt_acceptance
+    - automatic_qq_login_without_rescanning_and_long_term_session_recovery
+    - real_character_voice_quality_answer_quality_and_long_term_memory_acceptance
+    - integration_with_concurrent_search_workstream_and_explicit_read_only_search_tool_policy
 personal_assistant:
   status: unified_agenda_google_apple_provider_writes_and_text_chat_verified_offline_acceptance_pending
   evidence:
