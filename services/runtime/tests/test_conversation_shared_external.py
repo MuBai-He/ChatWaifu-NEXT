@@ -106,7 +106,8 @@ async def join(container: RuntimeContainer, session_id: UUID) -> None:
         return
     task = active.task
     assert task is not None
-    await asyncio.wait_for(task, 3)
+    # Completing also waits for durable event publication; guard against deadlock.
+    await asyncio.wait_for(task, 15)
 
 
 async def test_shared_input_keeps_durable_qq_identity_and_has_no_tools_or_photo_paths(
