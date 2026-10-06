@@ -57,3 +57,13 @@ export {
   parsePhotoMemoryDeleteResult,
 } from "./parsers/protocol";
 export * from "./version";
+
+export {
+  parseChannelProactivePolicy,
+  parseChannelProactivePolicyUpdate,
+  parseChannelProactivePolicySnapshot,
+  parseChannelProactivePreview,
+  parseChannelOutboundIntentSnapshot,
+  parseChannelOutboundIntentPage,
+  parseChannelOutboundIntentCancelRequest,
+} from "./parsers/channelProactive";

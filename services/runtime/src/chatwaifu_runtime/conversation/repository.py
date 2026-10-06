@@ -97,6 +97,7 @@ class ConversationRepository(Protocol):
         audio_stream_id: UUID,
         prompt: str,
         backend_kind: str,
+        source_context: ConversationSourceContext | None,
         occurred_at: datetime,
         proactive_event: GenericCoreEvent,
         generation_event: AssistantGenerationStartedEvent,

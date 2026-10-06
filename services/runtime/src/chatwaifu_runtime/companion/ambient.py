@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, time, timedelta
 from typing import Literal
@@ -89,6 +89,7 @@ class AmbientCompanionService:
         *,
         on_trigger: Callable[[], None] = lambda: None,
         poll_seconds: float = 15,
+        session_allowed: Callable[[UUID], Awaitable[bool]] | None = None,
     ) -> None:
         self._database = database
         self._settings = settings
@@ -99,6 +100,7 @@ class AmbientCompanionService:
         self._resource_status = resource_status
         self._on_trigger = on_trigger
         self._poll_seconds = max(1, poll_seconds)
+        self._session_allowed = session_allowed
         self._changed = asyncio.Event()
         self._task: asyncio.Task[None] | None = None
 
@@ -136,6 +138,8 @@ class AmbientCompanionService:
         proactive_today, last_at = await self._daily_usage(current)
         triggered = 0
         for session in await self._sessions.list_ready_sessions():
+            if not await self._allows_session(session.session_id):
+                continue
             decision = decide_proactive(
                 settings,
                 now=current,
@@ -165,6 +169,8 @@ class AmbientCompanionService:
     async def _trigger(
         self, session_id: UUID, reason: str, scheduled_at: datetime
     ) -> GenerationAccepted:
+        if not await self._allows_session(session_id):
+            raise RuntimeError("channel-owned sessions require channel proactive policy")
         action_id = await self._record(session_id, "triggered", reason, scheduled_at)
         try:
             self._on_trigger()
@@ -184,6 +190,9 @@ class AmbientCompanionService:
             (datetime.now(UTC).isoformat(), str(action_id)),
         )
         return accepted
+
+    async def _allows_session(self, session_id: UUID) -> bool:
+        return self._session_allowed is None or await self._session_allowed(session_id)
 
     async def _defer_once(self, session_id: UUID, reason: str, now: datetime) -> None:
         row = await self._database.fetchone(

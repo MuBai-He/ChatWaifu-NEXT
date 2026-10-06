@@ -287,3 +287,26 @@ class ExternalChannelRepository(Protocol):
         cursor: str,
         updated_at: datetime,
     ) -> None: ...
+
+    async def retained_send_journal_keys(
+        self, connection_id: UUID, provider_client_ids: Sequence[str]
+    ) -> frozenset[str]:
+        """Bounded unresolved keys; the adapter additionally retains every unknown send."""
+        ...
+
+    async def reconcile_known_delivery_part_receipt(
+        self,
+        connection_id: UUID,
+        provider_client_id: str,
+        provider_message_id: str,
+        *,
+        observed_at: datetime,
+    ) -> DeliveryTransitionResult:
+        """Trusted durable provider fact, independent of ordinary ACK lease or permission."""
+        ...
+
+    async def list_send_journal_connection_ids(
+        self, *, limit: int = 32, after_connection_id: UUID | None = None
+    ) -> tuple[UUID, ...]:
+        """Include disabled/deleted QQ checkpoints without fetching credentials."""
+        ...

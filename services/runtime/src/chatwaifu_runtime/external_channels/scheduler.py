@@ -71,6 +71,8 @@ class ChannelDeliveryScheduler:
         poll_interval_seconds: float = 1.0,
         on_plan_terminal: Callable[[ChannelDeliveryPlanRecord], Awaitable[None]] | None = None,
         clock: Callable[[], datetime] | None = None,
+        before_claim: Callable[[ChannelDeliveryPlanRecord], Awaitable[bool]] | None = None,
+        reconcile_receipts: Callable[[], Awaitable[None]] | None = None,
     ) -> None:
         self._repository = repository
         self._publisher = publisher
@@ -83,6 +85,8 @@ class ChannelDeliveryScheduler:
         self._poll_interval_seconds = poll_interval_seconds
         self._on_plan_terminal = on_plan_terminal
         self._clock = clock
+        self._before_claim = before_claim
+        self._reconcile_receipts = reconcile_receipts
 
         self._wake_event = asyncio.Event()
         self._running_task: asyncio.Task[None] | None = None
@@ -217,6 +221,8 @@ class ChannelDeliveryScheduler:
         omit it so each transition reads the current UTC time.
         """
         current_time = self._now(now)
+        if self._reconcile_receipts is not None:
+            await self._reconcile_receipts()
         recovery_result = await self._repository.recover_expired_delivery_part_leases(
             as_of=current_time
         )
@@ -237,6 +243,8 @@ class ChannelDeliveryScheduler:
         any_progress = False
 
         for plan in plans:
+            if self._before_claim is not None and not await self._before_claim(plan):
+                continue
             plan_now = self._now(now)
             # Check if this plan currently has a child part actively SENDING
             # under an unexpired lease
@@ -280,13 +288,13 @@ class ChannelDeliveryScheduler:
             claim_result = await self._repository.claim_next_delivery_part(
                 claim, claimed_at=claim_time
             )
-            if claim_result is None or claim_result.part is None:
+            if claim_result is None:
                 continue
-
-            # Publish persisted events from claim
-            if self._publisher is not None:
-                for ev in claim_result.persisted_events:
-                    await self._publisher.publish_persisted(ev)
+            # Rejected authorization can itself durably settle the intent.
+            # Publish that transition before deciding whether a send is owned.
+            await self._handle_transition_result(claim_result)
+            if claim_result.part is None or not claim_result.applied:
+                continue
 
             claimed_part = claim_result.part
             any_progress = True

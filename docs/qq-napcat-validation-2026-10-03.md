@@ -409,6 +409,86 @@ audit uses a read-only committed-WAL transaction. The earlier failed recording
 is not retrospectively counted as success or resent. Additional semantic
 preferences and voice fault acceptance remain separate.
 
-D2 proactive text and D3 group/member isolation remain unimplemented. Their
-concrete scope, dependencies and acceptance package are
-[QQ next slices](qq-next-slices.md).
+D2 proactive text is now implemented in the isolated source branch under
+ADR 0068, disabled by default. It adds migration 38, fixed-owner policy/episode/
+intent persistence, normal text-only character generation, permission rechecks,
+receipt reconciliation and authenticated management/UI. Root's initial full
+source regression completed **2464 passed, 46 platform skips**, with **358 Web**
+and **74 protocol** tests, strict typing, lint and Web/desktop UI builds passing.
+Later cancellation/current-owner fixes independently passed **118 focused tests**
+with normal exit. A real composed-container HTTP/SQLite regression then passed
+with the complete **21-case management suite**, proving default-off and read-only
+GET/preview/history, stale-save 409 without side effects, and unknown-route 404.
+The known lifecycle-only Python process-exit hang is retained separately and is
+not counted as a clean command. These checks make no real model/QQ sends and do
+not establish phone receipt or authorize opt-in. D3 group/member isolation remains
+unimplemented. See [QQ next slices](qq-next-slices.md).
+
+The final frozen D2 source `467bb7dc617b47881f23287f37d5e9f9c5282921`
+completed **2503 Python tests, 46 platform skips**, with normal process exit;
+Ruff, all **677** Python source formatting checks and strict Pyright passed.
+The matching Web rebuild and documentation build passed; prior **358 Web**,
+**74 protocol**, lint/type checks and desktop UI build remain unchanged.
+Linux candidate fixtures completed **579 passed, zero skips/failures**, normal
+exit in 108.766 seconds including the wrapper. All **1484** source hashes and
+**224** loaded project module origins/hashes matched the frozen manifest; all
+nine observed service identities/states were unchanged. No real model/QQ calls,
+business database access, dependency installation or service mutation occurred.
+Evidence is private directory `validation/.qq-d2-467bb7d-fixture-cyc2s3t9/`.
+
+An independent real `Database.open()` migration and reopen on online backup copies
+preserved **73 old tables, 598 old columns and 345 typed rows**, including duplicates
+and all 37 old ledger checksums/timestamps. Seven new delivery binding fields
+matched their original inbound turns. Foreign keys remained enabled, integrity
+passed, and all three proactive tables were empty with repository policy off at
+revision zero. The original nine services stayed unchanged and the verification
+made zero network connection attempts. This copied-database evidence is
+`validation/migration38-710e9a3-9l4hmc3h/` and is distinct from live deployment.
+
+Root independently ran **23** prepared-rollout tests with normal exit. They cover
+preserving the dependency environment, exact source/Web inventories, assets-before-
+index replacement, existing operator-token fallback, terminal Skills, failed stop,
+pre-38 code-only recovery and post-38 failure preserving new business facts without
+ever restoring an old database. The frozen **1484-source / seven-Web-file** bundle
+was uploaded with every archive/helper hash checked. Backup is private directory
+`backups/d2-20261003T143245Z-34ff0fc4/`.
+
+The first live rollout completed source/Web installation, real migration 38,
+health and authenticated default-off management reads, but its all-table startup
+comparison rejected expected journal garbage collection. The script stopped its
+own Runtime and kept schema 38 and the compatible new source; it never restored
+SQLite or modified another service. Root's exact read-only comparison found only
+checkpoint cursor/updated-at changes. Each of the **seven** removed journal keys
+matched exactly one existing **delivered** part with the same provider receipt,
+both before and after. No unknown, conflicting or unacknowledged key was removed.
+All other old business facts were identical. Root retained those facts, restarted
+the compatible default-off Runtime and independently verified its health. The
+original `deployment-evidence.json` remains a failed attempt; separate
+`RESUME-verified-journal-gc.json` records the resolution.
+
+Live authenticated policy/history/preview confirm one connection, policy revision
+**zero/off**, no proactive intents and `disabled` eligibility. Active WebUI and
+OneBot login/status RPC confirm the same QQ account online. Before/after captures
+preserve all **seven** turns, generations, deliveries, parts, attempt-one receipts,
+three Skill records and **44** send lifecycle events by metadata hashes. NapCat,
+own TTS, original three services and **22** resource hashes remain unchanged;
+only own Runtime process identity changes. Evidence is
+`RECOVERY-before-d2-default-off-20261003T142429472085Z.json`,
+`RECOVERY-after-d2-default-off-20261003T143819640178Z.json` and
+`QQ-D2-DEFAULT-OFF-ONLINE.json`. The default-off deployment makes no proactive send.
+The final resolved-deployment verifier passed with all **1484 source files** and
+**seven Web files**, including the HTTP-served bytes, matching the frozen manifest.
+All **38** migration checksums, foreign-key/integrity checks, default-off empty
+tables and seven original receipts passed. The strict startup comparison preserved
+**73 old tables, 597 compared columns and 345 typed rows**; its only allowed change
+was the independently proven collection of seven already-confirmed journal keys.
+The copied-database migration comparison above includes one additional old schema
+column; these are separate comparison inventories. Eight protected unit identities,
+22 resource hashes and configuration were unchanged. Root independently passed
+**37** verifier tests, including rejection of removed unknown/unacknowledged keys,
+changed receipts, retained-key mutations and timestamp-only checkpoint changes.
+The separate successful evidence is
+`validation/d2-resume-467bb7d-root-7fa51511/resolved-deployment-evidence.json`;
+the original failed report remains retained. No old database was restored.
+Real opt-in, phone receipt, quiet hours/disable, new-owner cancellation and restart
+without replay still require separate acceptance. D3 remains unimplemented.

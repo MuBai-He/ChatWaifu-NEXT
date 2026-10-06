@@ -46,9 +46,36 @@ class ConversationSourceContext:
     sender_display_name: str | None = None
     audience_ids: tuple[str, ...] = ()
     reply_to_external_message_id: str | None = None
+    outbound_intent_id: UUID | None = None
+    source_event_key: str | None = None
+    policy_revision: int | None = None
+    route_revision: int | None = None
+
+    def __post_init__(self) -> None:
+        metadata = (
+            self.outbound_intent_id,
+            self.source_event_key,
+            self.policy_revision,
+            self.route_revision,
+        )
+        if all(value is None for value in metadata):
+            return
+        if (
+            not isinstance(self.outbound_intent_id, UUID)
+            or not isinstance(self.source_event_key, str)
+            or not 1 <= len(self.source_event_key) <= 256
+            or any(ord(char) < 32 for char in self.source_event_key)
+            or type(self.policy_revision) is not int
+            or self.policy_revision < 0
+            or type(self.route_revision) is not int
+            or self.route_revision < 0
+            or self.received_at is not None
+            or self.reply_to_external_message_id is not None
+        ):
+            raise ValueError("outbound source requires complete trusted lineage metadata")
 
     def as_dict(self) -> dict[str, object]:
-        return {
+        result: dict[str, object] = {
             "provider_id": self.provider_id,
             "connection_id": str(self.connection_id),
             "account_key": self.account_key,
@@ -62,6 +89,14 @@ class ConversationSourceContext:
             "audience_ids": list(self.audience_ids),
             "reply_to_external_message_id": self.reply_to_external_message_id,
         }
+        if self.outbound_intent_id is not None:
+            result.update(
+                outbound_intent_id=str(self.outbound_intent_id),
+                source_event_key=self.source_event_key,
+                policy_revision=self.policy_revision,
+                route_revision=self.route_revision,
+            )
+        return result
 
     def to_json(self) -> str:
         return json.dumps(self.as_dict(), ensure_ascii=False, separators=(",", ":"))
@@ -76,6 +111,18 @@ class ConversationSourceContext:
         if chat_type not in {"direct", "group"}:
             raise ValueError("unsupported conversation chat type")
         return cls(
+            outbound_intent_id=(
+                UUID(str(payload["outbound_intent_id"]))
+                if payload.get("outbound_intent_id") is not None
+                else None
+            ),
+            source_event_key=(
+                str(payload["source_event_key"])
+                if payload.get("source_event_key") is not None
+                else None
+            ),
+            policy_revision=cast(int | None, payload.get("policy_revision")),
+            route_revision=cast(int | None, payload.get("route_revision")),
             reply_to_external_message_id=(
                 str(payload["reply_to_external_message_id"])
                 if payload.get("reply_to_external_message_id") is not None
@@ -181,6 +228,9 @@ class ConversationTurnOptions:
         default=None, repr=False, compare=False
     )
     quoted_message_loader: Callable[[], Awaitable[ConversationQuotedMessage | None]] | None = field(
+        default=None, repr=False, compare=False
+    )
+    before_generation: Callable[[], Awaitable[bool]] | None = field(
         default=None, repr=False, compare=False
     )
 

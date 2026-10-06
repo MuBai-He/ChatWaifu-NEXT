@@ -1318,4 +1318,144 @@ MIGRATIONS: tuple[tuple[int, str], ...] = (
             CHECK(input_kind IN ('text', 'image', 'audio'));
         """,
     ),
+    (
+        38,
+        """
+        CREATE UNIQUE INDEX channel_bindings_identity_idx
+            ON channel_bindings(binding_id, connection_id);
+        CREATE UNIQUE INDEX channel_turns_identity_idx
+            ON channel_turns(channel_turn_id, binding_id, connection_id);
+        CREATE INDEX channel_turns_owner_idle_idx
+            ON channel_turns(binding_id, accepted_at DESC, channel_turn_id DESC);
+        CREATE INDEX channel_turns_binding_status_idx ON channel_turns(binding_id,status);
+        CREATE INDEX generations_channel_active_idx ON generations(session_id,generation_id)
+            WHERE invalidated_at IS NULL
+              AND state NOT IN ('completed','cancelled','failed','timed_out');
+        CREATE TABLE channel_proactive_policies (
+            connection_id TEXT PRIMARY KEY REFERENCES channel_connections(connection_id),
+            policy_json TEXT NOT NULL CHECK(json_valid(policy_json)),
+            revision INTEGER NOT NULL CHECK(revision >= 1),
+            binding_id TEXT REFERENCES channel_bindings(binding_id),
+            authorized_route_revision INTEGER,
+            updated_at TEXT NOT NULL
+        );
+        CREATE TABLE channel_proactive_episodes (
+            binding_id TEXT NOT NULL REFERENCES channel_bindings(binding_id),
+            source TEXT NOT NULL CHECK(source = 'idle_check_in'),
+            anchor_channel_turn_id TEXT NOT NULL REFERENCES channel_turns(channel_turn_id),
+            not_before_at TEXT NOT NULL, expires_at TEXT NOT NULL,
+            revoked_at TEXT,
+            PRIMARY KEY(binding_id, source, anchor_channel_turn_id)
+        );
+        CREATE TABLE channel_outbound_intents (
+            request_id TEXT PRIMARY KEY,
+            connection_id TEXT NOT NULL REFERENCES channel_connections(connection_id),
+            binding_id TEXT NOT NULL,
+            source TEXT NOT NULL CHECK(source = 'idle_check_in'),
+            source_event_key TEXT NOT NULL UNIQUE,
+            anchor_channel_turn_id TEXT NOT NULL,
+            account_key TEXT NOT NULL, sender_key TEXT NOT NULL, conversation_key TEXT NOT NULL,
+            character_id TEXT NOT NULL, principal_scope TEXT NOT NULL,
+            session_id TEXT NOT NULL REFERENCES sessions(session_id) ON DELETE RESTRICT,
+            turn_id TEXT NOT NULL UNIQUE, generation_id TEXT NOT NULL UNIQUE,
+            audio_stream_id TEXT NOT NULL UNIQUE,
+            policy_revision INTEGER NOT NULL CHECK(policy_revision >= 1),
+            route_revision INTEGER NOT NULL CHECK(route_revision >= 1),
+            revision INTEGER NOT NULL DEFAULT 0 CHECK(revision >= 0),
+            status TEXT NOT NULL CHECK(status IN ('pending','generating','planned','settled')),
+            budget_day TEXT NOT NULL,
+            not_before_at TEXT NOT NULL, expires_at TEXT NOT NULL,
+            created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+            settled_at TEXT, settled_reason TEXT, cancel_requested_at TEXT, cancel_reason TEXT,
+            reply_text TEXT, reply_sha256 TEXT, error_json TEXT,
+            UNIQUE(binding_id, source, anchor_channel_turn_id),
+            UNIQUE(request_id, binding_id, connection_id),
+            FOREIGN KEY(binding_id, connection_id)
+                REFERENCES channel_bindings(binding_id, connection_id),
+            FOREIGN KEY(anchor_channel_turn_id, binding_id, connection_id)
+                REFERENCES channel_turns(channel_turn_id, binding_id, connection_id),
+            CHECK(expires_at > not_before_at),
+            CHECK((status = 'settled') = (settled_at IS NOT NULL)),
+            CHECK(reply_text IS NULL OR length(reply_text) BETWEEN 1 AND 2000)
+        );
+        CREATE UNIQUE INDEX channel_outbound_active_binding_idx
+            ON channel_outbound_intents(binding_id) WHERE status != 'settled';
+        CREATE INDEX channel_outbound_active_idx
+            ON channel_outbound_intents(status, created_at, request_id);
+        CREATE INDEX channel_outbound_budget_idx
+            ON channel_outbound_intents(connection_id, budget_day, created_at);
+        CREATE INDEX channel_outbound_history_idx
+            ON channel_outbound_intents(connection_id, created_at DESC, request_id DESC);
+        CREATE TRIGGER channel_outbound_capacity
+        BEFORE INSERT ON channel_outbound_intents WHEN NEW.status != 'settled'
+          AND (SELECT count(*) FROM channel_outbound_intents WHERE status != 'settled') >= 32
+        BEGIN SELECT RAISE(ABORT, 'proactive global capacity exceeded'); END;
+
+        -- Copy both sides before dropping the old child; foreign keys remain ON throughout.
+        CREATE TABLE channel_deliveries_v38 (
+            delivery_id TEXT PRIMARY KEY,
+            channel_turn_id TEXT UNIQUE,
+            outbound_intent_id TEXT UNIQUE,
+            connection_id TEXT NOT NULL REFERENCES channel_connections(connection_id)
+                ON DELETE CASCADE,
+            binding_id TEXT NOT NULL,
+            status TEXT NOT NULL
+                CHECK(status IN ('pending','sending','delivered','failed','cancelled')),
+            attempt INTEGER NOT NULL DEFAULT 1 CHECK(attempt >= 1),
+            provider_message_id TEXT, last_error_json TEXT,
+            created_at TEXT NOT NULL, updated_at TEXT NOT NULL, delivered_at TEXT,
+            lease_id TEXT, lease_expires_at TEXT,
+            plan_version INTEGER NOT NULL DEFAULT 1 CHECK(plan_version >= 1),
+            cancel_requested_at TEXT,
+            CHECK((channel_turn_id IS NULL) != (outbound_intent_id IS NULL)),
+            FOREIGN KEY(channel_turn_id, binding_id, connection_id)
+                REFERENCES channel_turns(channel_turn_id, binding_id, connection_id)
+                ON DELETE CASCADE,
+            FOREIGN KEY(outbound_intent_id, binding_id, connection_id)
+                REFERENCES channel_outbound_intents(request_id, binding_id, connection_id)
+        );
+        INSERT INTO channel_deliveries_v38
+            SELECT d.delivery_id, d.channel_turn_id, NULL, d.connection_id, t.binding_id,
+                   d.status,d.attempt,d.provider_message_id,d.last_error_json,
+                   d.created_at,d.updated_at,d.delivered_at,d.lease_id,d.lease_expires_at,
+                   d.plan_version,d.cancel_requested_at
+            FROM channel_deliveries d JOIN channel_turns t
+                ON t.channel_turn_id=d.channel_turn_id;
+        CREATE TABLE channel_delivery_parts_v38 (
+            part_id TEXT PRIMARY KEY,
+            delivery_id TEXT NOT NULL REFERENCES channel_deliveries_v38(delivery_id)
+                ON DELETE CASCADE,
+            ordinal INTEGER NOT NULL CHECK(ordinal >= 0), kind TEXT NOT NULL,
+            payload_json TEXT NOT NULL CHECK(json_valid(payload_json)),
+            required INTEGER NOT NULL DEFAULT 1 CHECK(required IN (0,1)),
+            status TEXT NOT NULL
+                CHECK(status IN ('pending','sending','delivered','failed','cancelled','skipped')),
+            delay_after_ms INTEGER NOT NULL DEFAULT 0 CHECK(delay_after_ms >= 0),
+            not_before_at TEXT, attempt INTEGER NOT NULL DEFAULT 0 CHECK(attempt >= 0),
+            lease_id TEXT, lease_expires_at TEXT, provider_client_id TEXT NOT NULL UNIQUE,
+            provider_message_id TEXT, last_error_json TEXT,
+            created_at TEXT NOT NULL, updated_at TEXT NOT NULL, delivered_at TEXT,
+            CHECK(status != 'sending' OR (lease_id IS NOT NULL AND lease_expires_at IS NOT NULL)),
+            CHECK(status != 'delivered' OR delivered_at IS NOT NULL),
+            UNIQUE(delivery_id,ordinal)
+        );
+        INSERT INTO channel_delivery_parts_v38 SELECT * FROM channel_delivery_parts;
+        DROP TABLE channel_delivery_parts;
+        DROP TABLE channel_deliveries;
+        ALTER TABLE channel_deliveries_v38 RENAME TO channel_deliveries;
+        ALTER TABLE channel_delivery_parts_v38 RENAME TO channel_delivery_parts;
+        CREATE INDEX channel_deliveries_connection_status_idx
+            ON channel_deliveries(connection_id,status,updated_at DESC);
+        CREATE INDEX channel_deliveries_binding_status_idx
+            ON channel_deliveries(binding_id,status,created_at);
+        CREATE INDEX channel_deliveries_lease_idx ON channel_deliveries(status,lease_expires_at)
+            WHERE status = 'sending';
+        CREATE INDEX channel_delivery_parts_delivery_idx
+            ON channel_delivery_parts(delivery_id,ordinal ASC);
+        CREATE INDEX channel_delivery_parts_claim_idx
+            ON channel_delivery_parts(delivery_id,status,ordinal ASC,not_before_at ASC);
+        CREATE INDEX channel_delivery_parts_lease_idx
+            ON channel_delivery_parts(status,lease_expires_at) WHERE status = 'sending';
+        """,
+    ),
 )

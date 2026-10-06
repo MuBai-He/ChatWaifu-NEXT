@@ -1,0 +1,155 @@
+{
+  "$defs": {
+    "ChannelProactiveReason": {
+      "enum": [
+        "eligible",
+        "disabled",
+        "unsupported_provider",
+        "connection_unavailable",
+        "owner_binding_required",
+        "no_owner_activity",
+        "idle_threshold_not_reached",
+        "idle_window_expired",
+        "quiet_hours",
+        "conversation_busy",
+        "cooldown_active",
+        "daily_budget_exhausted",
+        "episode_already_reserved",
+        "capacity_reached"
+      ],
+      "title": "ChannelProactiveReason",
+      "type": "string"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-proactive-preview.schema.json",
+  "properties": {
+    "binding_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Binding Id"
+    },
+    "connection_id": {
+      "format": "uuid",
+      "title": "Connection Id",
+      "type": "string"
+    },
+    "eligible": {
+      "title": "Eligible",
+      "type": "boolean"
+    },
+    "evaluated_at": {
+      "format": "date-time",
+      "title": "Evaluated At",
+      "type": "string"
+    },
+    "expires_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Expires At"
+    },
+    "last_owner_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Last Owner At"
+    },
+    "last_reserved_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Last Reserved At"
+    },
+    "next_eligible_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Next Eligible At"
+    },
+    "pending_request_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Pending Request Id"
+    },
+    "policy_revision": {
+      "minimum": 0,
+      "title": "Policy Revision",
+      "type": "integer"
+    },
+    "reason": {
+      "$ref": "#/$defs/ChannelProactiveReason"
+    },
+    "remaining_daily_budget": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Remaining Daily Budget",
+      "type": "integer"
+    },
+    "reserved_today": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Reserved Today",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "connection_id",
+    "policy_revision",
+    "eligible",
+    "reason",
+    "evaluated_at"
+  ],
+  "title": "ChannelProactivePreview",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

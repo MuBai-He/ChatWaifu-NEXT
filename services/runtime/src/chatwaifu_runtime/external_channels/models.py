@@ -133,7 +133,7 @@ class ChannelTurnBurstMemberRecord:
 @dataclass(frozen=True, slots=True)
 class ChannelDeliveryRecord:
     delivery_id: UUID
-    channel_turn_id: UUID
+    channel_turn_id: UUID | None
     connection_id: UUID
     status: ChannelDeliveryStatus
     attempt: int
@@ -148,6 +148,12 @@ class ChannelDeliveryRecord:
     part_count: int = 1
     delivered_part_count: int = 0
     cancel_requested_at: datetime | None = None
+
+    outbound_intent_id: UUID | None = None
+
+    def __post_init__(self) -> None:
+        if (self.channel_turn_id is None) == (self.outbound_intent_id is None):
+            raise ValueError("delivery requires exactly one inbound or outbound source")
 
 
 @dataclass(frozen=True, slots=True)
@@ -182,8 +188,12 @@ class ChannelDeliveryPlanRecord:
         return self.delivery.delivery_id
 
     @property
-    def channel_turn_id(self) -> UUID:
+    def channel_turn_id(self) -> UUID | None:
         return self.delivery.channel_turn_id
+
+    @property
+    def outbound_intent_id(self) -> UUID | None:
+        return self.delivery.outbound_intent_id
 
     @property
     def connection_id(self) -> UUID:

@@ -239,7 +239,7 @@ export type SchemaVersion5 = '1.0'
 export type VerificationCode = string
 export type Attempt = number
 export type CancelRequestedAt = string | null
-export type ChannelTurnId = string
+export type ChannelTurnId = string | null
 export type ConnectionId1 = string
 export type CreatedAt2 = string
 export type DeliveredAt = string | null
@@ -247,10 +247,11 @@ export type DeliveredPartCount = number
 export type DeliveryId = string
 export type LeaseExpiresAt = string | null
 export type LeaseId = string | null
+export type OutboundIntentId = string | null
 export type PartCount = number
 export type PlanVersion = number
 export type ProviderMessageId = string | null
-export type SchemaVersion6 = '1.0'
+export type SchemaVersion6 = '1.0' | '1.1'
 export type ChannelDeliveryStatus = 'pending' | 'sending' | 'delivered' | 'failed' | 'cancelled'
 export type UpdatedAt2 = string
 export type AcknowledgedAt = string
@@ -320,17 +321,18 @@ export type LeaseSeconds1 = number
 export type PartId2 = string | null
 export type SchemaVersion14 = '1.0'
 export type CancelRequestedAt1 = string | null
-export type ChannelTurnId3 = string
+export type ChannelTurnId3 = string | null
 export type ConnectionId2 = string
 export type CreatedAt4 = string
 export type DeliveredAt2 = string | null
 export type DeliveredPartCount1 = number
 export type DeliveryId6 = string
 export type NextPendingOrdinal = number | null
+export type OutboundIntentId1 = string | null
 export type PartCount1 = number
 export type Parts = ChannelDeliveryPartSnapshot[]
 export type PlanVersion1 = number
-export type SchemaVersion15 = '1.0'
+export type SchemaVersion15 = '1.0' | '1.1'
 export type UpdatedAt4 = string
 export type ChannelTurnId4 = string | null
 export type ExternalMessageId = string | null
@@ -379,22 +381,100 @@ export type SenderDisplayName = string | null
  */
 export type SenderKey = string
 export type Text2 = string
-export type AccountLabel = string | null
+export type BindingId = string
+export type CancelReason = string | null
+export type CancelRequestedAt2 = string | null
+export type Cancelable = boolean
+export type ConnectionId4 = string
+export type CreatedAt5 = string
+export type DeliveryId7 = string | null
 export type ExpiresAt1 = string
+export type GenerationId2 = string
+export type NotBeforeAt1 = string
+export type PolicyRevision = number
+export type ProviderReceiptPresent = boolean
+export type ReplyText = string | null
+export type RequestId = string
+export type Revision1 = number
+export type RouteRevision = number
+export type SchemaVersion19 = '1.0'
+export type SessionId = string
+export type SettledAt = string | null
+export type SettledReason = string | null
+export type Source = 'idle_check_in'
+export type ChannelOutboundIntentStatus = 'pending' | 'generating' | 'planned' | 'settled'
+export type TurnId = string
+export type UpdatedAt5 = string
+export type ExpectedRevision = number
+export type SchemaVersion20 = '1.0'
+/**
+ * @maxItems 50
+ */
+export type Items = ChannelOutboundIntentSnapshot[]
+export type NextCursor = string | null
+export type SchemaVersion21 = '1.0'
+export type AccountLabel = string | null
+export type ExpiresAt2 = string
 export type PairingCode = string | null
 export type PairingId = string
 export type ProviderId3 = 'qq_napcat'
-export type SchemaVersion19 = '1.0'
+export type SchemaVersion22 = '1.0'
 export type Status2 = 'pending' | 'confirmed' | 'cancelled' | 'expired' | 'failed'
 export type AccessToken = string
 export type CharacterId2 = string
 export type Endpoint = string
 export type ProviderId4 = 'qq_napcat'
-export type SchemaVersion20 = '1.0'
+export type SchemaVersion23 = '1.0'
+export type CooldownMinutes = number
+export type DailyBudget = number
+export type Enabled1 = boolean
+export type IdleMinutes = number
+export type QuietEnd = string
+export type QuietHoursEnabled = boolean
+export type QuietStart = string
+export type SchemaVersion24 = '1.0'
+export type Source1 = 'idle_check_in'
+export type Timezone = string
+export type TtlMinutes = number
+export type BindingId1 = string | null
+export type ConnectionId5 = string
+export type Revision2 = number
+export type SchemaVersion25 = '1.0'
+export type UpdatedAt6 = string | null
+export type ExpectedRevision1 = number
+export type SchemaVersion26 = '1.0'
+export type BindingId2 = string | null
+export type ConnectionId6 = string
+export type Eligible = boolean
+export type EvaluatedAt = string
+export type ExpiresAt3 = string | null
+export type LastOwnerAt = string | null
+export type LastReservedAt = string | null
+export type NextEligibleAt = string | null
+export type PendingRequestId = string | null
+export type PolicyRevision1 = number
+export type ChannelProactiveReason =
+  | 'eligible'
+  | 'disabled'
+  | 'unsupported_provider'
+  | 'connection_unavailable'
+  | 'owner_binding_required'
+  | 'no_owner_activity'
+  | 'idle_threshold_not_reached'
+  | 'idle_window_expired'
+  | 'quiet_hours'
+  | 'conversation_busy'
+  | 'cooldown_active'
+  | 'daily_budget_exhausted'
+  | 'episode_already_reserved'
+  | 'capacity_reached'
+export type RemainingDailyBudget = number
+export type ReservedToday = number
+export type SchemaVersion27 = '1.0'
 export type Description = string
 export type Name2 = string
 export type ProviderId5 = string
-export type SchemaVersion21 = '1.0'
+export type SchemaVersion28 = '1.0'
 export type Version1 = string
 export type AccountKey2 = string | null
 export type ChannelTurnId5 = string
@@ -403,38 +483,38 @@ export type ChannelTurnId5 = string
  */
 export type ChannelChatType2 = 'direct' | 'group'
 export type CompletedAt = string | null
-export type ConnectionId4 = string
+export type ConnectionId7 = string
 export type ConversationKey1 = string
 /**
  * Untrusted display label only
  */
 export type ConversationLabel1 = string | null
-export type CreatedAt5 = string
-export type DeliveryId7 = string | null
+export type CreatedAt6 = string
+export type DeliveryId8 = string | null
 export type ExternalMessageId2 = string
-export type GenerationId2 = string
+export type GenerationId3 = string
 export type PrincipalScope3 = string
-export type ReplyText = string | null
-export type Revision1 = number
-export type SchemaVersion22 = '1.0'
+export type ReplyText1 = string | null
+export type Revision3 = number
+export type SchemaVersion29 = '1.0'
 /**
  * Untrusted display label only
  */
 export type SenderDisplayName1 = string | null
 export type SenderKey1 = string
-export type SessionId = string
+export type SessionId1 = string
 export type ChannelTurnStatus =
   'accepted' | 'processing' | 'completed' | 'cancelling' | 'cancelled' | 'failed' | 'timed_out'
-export type TurnId = string
-export type UpdatedAt5 = string
+export type TurnId1 = string
+export type UpdatedAt7 = string
 export type Accepted = boolean
 export type AcknowledgedAt2 = string
 export type ChannelTurnId6 = string
-export type Revision2 = number
-export type SchemaVersion23 = '1.0'
+export type Revision4 = number
+export type SchemaVersion30 = '1.0'
 export type Reason = string
 export type RequestedAt = string
-export type SchemaVersion24 = '1.0'
+export type SchemaVersion31 = '1.0'
 export type AcceptedAt = string
 export type AccountKey3 = string | null
 export type ChannelTurnId7 = string
@@ -442,7 +522,7 @@ export type ChannelTurnId7 = string
  * Conversation shapes understood by this schema major.
  */
 export type ChannelChatType3 = 'direct' | 'group'
-export type ConnectionId5 = string
+export type ConnectionId8 = string
 export type ConversationKey2 = string
 /**
  * Untrusted display label only
@@ -450,24 +530,24 @@ export type ConversationKey2 = string
 export type ConversationLabel2 = string | null
 export type Duplicate = boolean
 export type ExternalMessageId3 = string
-export type GenerationId3 = string
+export type GenerationId4 = string
 export type PollAfterMs1 = number | null
 export type PrincipalScope4 = string
-export type Revision3 = number
-export type SchemaVersion25 = '1.0'
+export type Revision5 = number
+export type SchemaVersion32 = '1.0'
 /**
  * Untrusted display label only
  */
 export type SenderDisplayName2 = string | null
 export type SenderKey2 = string
-export type SessionId1 = string
-export type TurnId1 = string
+export type SessionId2 = string
+export type TurnId2 = string
 export type Arousal = number
 export type Attention = number
 export type Embarrassment = number
 export type Energy = number
 export type Tension = number
-export type UpdatedAt6 = string
+export type UpdatedAt8 = string
 export type Valence = number
 export type CharacterId3 = string
 export type Affinity = number
@@ -478,8 +558,8 @@ export type PreferredAddress = string | null
 export type RecentTension = number
 export type Stage = 'acquaintance' | 'familiar' | 'trusted' | 'close'
 export type Trust = number
-export type UpdatedAt7 = string
-export type Revision4 = number
+export type UpdatedAt9 = string
+export type Revision6 = number
 export type UserScope = string
 export type CharacterId4 = string
 export type CharacterPackageHash = string
@@ -501,7 +581,7 @@ export type Role = string
 export type IdentityHash = string
 export type PresentationProfile = string
 export type PromptTemplateVersion = string
-export type SchemaVersion26 = '1.0'
+export type SchemaVersion33 = '1.0'
 export type ToolsDigest = string
 export type Budget = number
 export type ConversationTokens = number
@@ -521,7 +601,7 @@ export type SceneTokens = number
 export type StateTokens = number
 export type SummaryOmittedCharacters = number
 export type Used = number
-export type SchemaVersion27 = '1.0'
+export type SchemaVersion34 = '1.0'
 export type SelectedMemoryIds = string[] | null
 export type OccurredAt = string
 export type PolicyDecision = string
@@ -541,41 +621,41 @@ export type Command = SessionStartCommand | TextSendCommand | ConversationInterr
 export type CommandId = string
 export type CommandType = 'cmd.session.start'
 export type CorrelationId1 = string | null
-export type ExpectedRevision = number | null
-export type GenerationId4 = string | null
+export type ExpectedRevision2 = number | null
+export type GenerationId5 = string | null
 export type IssuedAt = string
 export type Issuer = string
 export type CharacterId5 = string
-export type SchemaVersion28 = string
-export type SessionId2 = string | null
-export type TurnId2 = string | null
+export type SchemaVersion35 = string
+export type SessionId3 = string | null
+export type TurnId3 = string | null
 export type CommandId1 = string
 export type CommandType1 = 'cmd.text.send'
 export type CorrelationId2 = string | null
-export type ExpectedRevision1 = number | null
-export type GenerationId5 = string | null
+export type ExpectedRevision3 = number | null
+export type GenerationId6 = string | null
 export type IssuedAt1 = string
 export type Issuer1 = string
 export type Text3 = string
-export type SchemaVersion29 = string
-export type SessionId3 = string | null
-export type TurnId3 = string | null
+export type SchemaVersion36 = string
+export type SessionId4 = string | null
+export type TurnId4 = string | null
 export type CommandId2 = string
 export type CommandType2 = 'cmd.conversation.interrupt'
 export type CorrelationId3 = string | null
-export type ExpectedRevision2 = number | null
-export type GenerationId6 = string | null
+export type ExpectedRevision4 = number | null
+export type GenerationId7 = string | null
 export type IssuedAt2 = string
 export type Issuer2 = string
 export type Reason2 = string
-export type SchemaVersion30 = string
-export type SessionId4 = string | null
-export type TurnId4 = string | null
+export type SchemaVersion37 = string
+export type SessionId5 = string | null
+export type TurnId5 = string | null
 export type CommandId3 = string
 export type CommandType3 = 'cmd.playback.ack'
 export type CorrelationId4 = string | null
-export type ExpectedRevision3 = number | null
-export type GenerationId7 = string | null
+export type ExpectedRevision5 = number | null
+export type GenerationId8 = string | null
 export type IssuedAt3 = string
 export type Issuer3 = string
 export type BufferedMs = number
@@ -586,15 +666,15 @@ export type Reason3 = ('ended' | 'interrupted' | 'error' | 'queue_cleared') | nu
 export type SegmentId = string
 export type StreamId1 = string
 export type Transport = 'audio_element' | 'webrtc'
-export type SchemaVersion31 = string
-export type SessionId5 = string | null
-export type TurnId5 = string | null
-export type GenerationId8 = string
+export type SchemaVersion38 = string
+export type SessionId6 = string | null
+export type TurnId6 = string | null
+export type GenerationId9 = string
 export type InterruptionInitiator = 'user' | 'system' | 'skill'
 export type InterruptionId = string
 export type Reason4 = string
 export type RequestedAt1 = string
-export type SessionId6 = string
+export type SessionId7 = string
 export type EventModel =
   | SessionCreatedEvent
   | UserTurnCommittedEvent
@@ -616,69 +696,69 @@ export type CausationId = string | null
 export type CorrelationId5 = string | null
 export type EventId = string
 export type EventType = 'session.created'
-export type GenerationId9 = string | null
+export type GenerationId10 = string | null
 export type OccurredAt2 = string
 export type CharacterId6 = string
 export type PrivacyLevel = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion32 = string
+export type SchemaVersion39 = string
 export type Sequence1 = number | null
-export type SessionId7 = string | null
+export type SessionId8 = string | null
 export type SkillRunId = string | null
-export type Source = string
-export type TurnId6 = string | null
+export type Source2 = string
+export type TurnId7 = string | null
 export type CausationId1 = string | null
 export type CorrelationId6 = string | null
 export type EventId1 = string
 export type EventType1 = 'user.turn_committed'
-export type GenerationId10 = string | null
+export type GenerationId11 = string | null
 export type OccurredAt3 = string
 export type Text4 = string
 export type PrivacyLevel1 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion33 = string
+export type SchemaVersion40 = string
 export type Sequence2 = number | null
-export type SessionId8 = string | null
+export type SessionId9 = string | null
 export type SkillRunId1 = string | null
-export type Source1 = string
-export type TurnId7 = string | null
+export type Source3 = string
+export type TurnId8 = string | null
 export type CausationId2 = string | null
 export type CorrelationId7 = string | null
 export type EventId2 = string
 export type EventType2 = 'user.speech_started'
-export type GenerationId11 = string | null
+export type GenerationId12 = string | null
 export type OccurredAt4 = string
 export type AudioStreamId = string
 export type Channels1 = number
 export type SampleRate1 = number
 export type UtteranceId = string
 export type PrivacyLevel2 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion34 = string
+export type SchemaVersion41 = string
 export type Sequence3 = number | null
-export type SessionId9 = string | null
+export type SessionId10 = string | null
 export type SkillRunId2 = string | null
-export type Source2 = string
-export type TurnId8 = string | null
+export type Source4 = string
+export type TurnId9 = string | null
 export type CausationId3 = string | null
 export type CorrelationId8 = string | null
 export type EventId3 = string
 export type EventType3 = 'user.speech_stopped'
-export type GenerationId12 = string | null
+export type GenerationId13 = string | null
 export type OccurredAt5 = string
 export type AudioBytes = number
 export type AudioStreamId1 = string
 export type DurationMs3 = number
 export type UtteranceId1 = string
 export type PrivacyLevel3 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion35 = string
+export type SchemaVersion42 = string
 export type Sequence4 = number | null
-export type SessionId10 = string | null
+export type SessionId11 = string | null
 export type SkillRunId3 = string | null
-export type Source3 = string
-export type TurnId9 = string | null
+export type Source5 = string
+export type TurnId10 = string | null
 export type CausationId4 = string | null
 export type CorrelationId9 = string | null
 export type EventId4 = string
 export type EventType4 = 'user.transcript_partial'
-export type GenerationId13 = string | null
+export type GenerationId14 = string | null
 export type OccurredAt6 = string
 export type IsFinal = boolean
 export type Language = string | null
@@ -686,44 +766,44 @@ export type Provider1 = string
 export type Text5 = string
 export type UtteranceId2 = string
 export type PrivacyLevel4 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion36 = string
+export type SchemaVersion43 = string
 export type Sequence5 = number | null
-export type SessionId11 = string | null
+export type SessionId12 = string | null
 export type SkillRunId4 = string | null
-export type Source4 = string
-export type TurnId10 = string | null
+export type Source6 = string
+export type TurnId11 = string | null
 export type CausationId5 = string | null
 export type CorrelationId10 = string | null
 export type EventId5 = string
 export type EventType5 = 'user.transcript_final'
-export type GenerationId14 = string | null
+export type GenerationId15 = string | null
 export type OccurredAt7 = string
 export type PrivacyLevel5 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion37 = string
+export type SchemaVersion44 = string
 export type Sequence6 = number | null
-export type SessionId12 = string | null
+export type SessionId13 = string | null
 export type SkillRunId5 = string | null
-export type Source5 = string
-export type TurnId11 = string | null
+export type Source7 = string
+export type TurnId12 = string | null
 export type CausationId6 = string | null
 export type CorrelationId11 = string | null
 export type EventId6 = string
 export type EventType6 = 'assistant.generation_started'
-export type GenerationId15 = string | null
+export type GenerationId16 = string | null
 export type OccurredAt8 = string
 export type BackendKind = string
 export type PrivacyLevel6 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion38 = string
+export type SchemaVersion45 = string
 export type Sequence7 = number | null
-export type SessionId13 = string | null
+export type SessionId14 = string | null
 export type SkillRunId6 = string | null
-export type Source6 = string
-export type TurnId12 = string | null
+export type Source8 = string
+export type TurnId13 = string | null
 export type CausationId7 = string | null
 export type CorrelationId12 = string | null
 export type EventId7 = string
 export type EventType7 = 'assistant.playback_started'
-export type GenerationId16 = string | null
+export type GenerationId17 = string | null
 export type OccurredAt9 = string
 export type BufferedMs1 = number
 export type ClientClockMs1 = number
@@ -732,30 +812,30 @@ export type SegmentId1 = string
 export type StreamId2 = string
 export type Transport1 = 'audio_element' | 'webrtc'
 export type PrivacyLevel7 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion39 = string
+export type SchemaVersion46 = string
 export type Sequence8 = number | null
-export type SessionId14 = string | null
+export type SessionId15 = string | null
 export type SkillRunId7 = string | null
-export type Source7 = string
-export type TurnId13 = string | null
+export type Source9 = string
+export type TurnId14 = string | null
 export type CausationId8 = string | null
 export type CorrelationId13 = string | null
 export type EventId8 = string
 export type EventType8 = 'assistant.playback_progress'
-export type GenerationId17 = string | null
+export type GenerationId18 = string | null
 export type OccurredAt10 = string
 export type PrivacyLevel8 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion40 = string
+export type SchemaVersion47 = string
 export type Sequence9 = number | null
-export type SessionId15 = string | null
+export type SessionId16 = string | null
 export type SkillRunId8 = string | null
-export type Source8 = string
-export type TurnId14 = string | null
+export type Source10 = string
+export type TurnId15 = string | null
 export type CausationId9 = string | null
 export type CorrelationId14 = string | null
 export type EventId9 = string
 export type EventType9 = 'assistant.playback_stopped'
-export type GenerationId18 = string | null
+export type GenerationId19 = string | null
 export type OccurredAt11 = string
 export type BufferedMs2 = number
 export type ClientClockMs2 = number
@@ -766,81 +846,81 @@ export type SegmentId2 = string
 export type StreamId3 = string
 export type Transport2 = 'audio_element' | 'webrtc'
 export type PrivacyLevel9 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion41 = string
+export type SchemaVersion48 = string
 export type Sequence10 = number | null
-export type SessionId16 = string | null
+export type SessionId17 = string | null
 export type SkillRunId9 = string | null
-export type Source9 = string
-export type TurnId15 = string | null
+export type Source11 = string
+export type TurnId16 = string | null
 export type CausationId10 = string | null
 export type CorrelationId15 = string | null
 export type EventId10 = string
 export type EventType10 = 'assistant.spoken_text_committed'
-export type GenerationId19 = string | null
+export type GenerationId20 = string | null
 export type OccurredAt12 = string
 export type SegmentId3 = string
 export type SpokenText = string
 export type StreamId4 = string
 export type Text6 = string
 export type PrivacyLevel10 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion42 = string
+export type SchemaVersion49 = string
 export type Sequence11 = number | null
-export type SessionId17 = string | null
+export type SessionId18 = string | null
 export type SkillRunId10 = string | null
-export type Source10 = string
-export type TurnId16 = string | null
+export type Source12 = string
+export type TurnId17 = string | null
 export type CausationId11 = string | null
 export type CorrelationId16 = string | null
 export type EventId11 = string
 export type EventType11 = 'avatar.cue_emitted'
-export type GenerationId20 = string | null
+export type GenerationId21 = string | null
 export type OccurredAt13 = string
 export type PrivacyLevel11 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion43 = string
+export type SchemaVersion50 = string
 export type Sequence12 = number | null
-export type SessionId18 = string | null
+export type SessionId19 = string | null
 export type SkillRunId11 = string | null
-export type Source11 = string
-export type TurnId17 = string | null
+export type Source13 = string
+export type TurnId18 = string | null
 export type CausationId12 = string | null
 export type CorrelationId17 = string | null
 export type EventId12 = string
 export type EventType12 = 'system.error_raised'
-export type GenerationId21 = string | null
+export type GenerationId22 = string | null
 export type OccurredAt14 = string
 export type PrivacyLevel12 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion44 = string
+export type SchemaVersion51 = string
 export type Sequence13 = number | null
-export type SessionId19 = string | null
+export type SessionId20 = string | null
 export type SkillRunId12 = string | null
-export type Source12 = string
-export type TurnId18 = string | null
+export type Source14 = string
+export type TurnId19 = string | null
 export type CausationId13 = string | null
 export type CorrelationId18 = string | null
 export type EventId13 = string
 export type EventType13 = 'cloud.egress_receipt'
-export type GenerationId22 = string | null
+export type GenerationId23 = string | null
 export type OccurredAt15 = string
 export type PrivacyLevel13 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion45 = string
+export type SchemaVersion52 = string
 export type Sequence14 = number | null
-export type SessionId20 = string | null
+export type SessionId21 = string | null
 export type SkillRunId13 = string | null
-export type Source13 = string
-export type TurnId19 = string | null
+export type Source15 = string
+export type TurnId20 = string | null
 export type CausationId14 = string | null
 export type CorrelationId19 = string | null
 export type EventId14 = string
 export type EventType14 = 'cloud.egress_blocked'
-export type GenerationId23 = string | null
+export type GenerationId24 = string | null
 export type OccurredAt16 = string
 export type PrivacyLevel14 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion46 = string
+export type SchemaVersion53 = string
 export type Sequence15 = number | null
-export type SessionId21 = string | null
+export type SessionId22 = string | null
 export type SkillRunId14 = string | null
-export type Source14 = string
-export type TurnId20 = string | null
+export type Source16 = string
+export type TurnId21 = string | null
 export type CausationId15 = string | null
 export type CorrelationId20 = string | null
 export type EventId15 = string
@@ -893,6 +973,10 @@ export type GenericCoreEventType =
   | 'companion.proactive_triggered'
   | 'companion.proactive_deferred'
   | 'channel.delivery_acknowledged'
+  | 'channel.proactive_policy_updated'
+  | 'channel.outbound_intent_reserved'
+  | 'channel.outbound_intent_generating'
+  | 'channel.outbound_intent_settled'
   | 'channel.delivery_plan_created'
   | 'channel.delivery_part_claimed'
   | 'channel.delivery_part_acknowledged'
@@ -906,42 +990,42 @@ export type GenericCoreEventType =
   | 'channel.turn_cancelled'
   | 'resource.models_slept'
   | 'resource.models_woke'
-export type GenerationId24 = string | null
+export type GenerationId25 = string | null
 export type OccurredAt17 = string
 export type PrivacyLevel15 = 'public' | 'local' | 'private' | 'sensitive'
-export type SchemaVersion47 = string
+export type SchemaVersion54 = string
 export type Sequence16 = number | null
-export type SessionId22 = string | null
+export type SessionId23 = string | null
 export type SkillRunId15 = string | null
-export type Source15 = string
-export type TurnId21 = string | null
+export type Source17 = string
+export type TurnId22 = string | null
 export type BackendKind1 = string
 export type CompletedAt1 = string | null
-export type GenerationId25 = string
+export type GenerationId26 = string
 export type InvalidatedAt = string | null
-export type SessionId23 = string
+export type SessionId24 = string
 export type StartedAt = string | null
 export type GenerationState = 'created' | 'running' | 'cancelling' | 'cancelled' | 'completed' | 'failed'
-export type TurnId22 = string
+export type TurnId23 = string
 export type Attempt2 = number
 export type DeliveredAt3 = string | null
 export type Kind6 = string
 export type Ordinal1 = number
 export type PartId3 = string
 export type Required1 = boolean
-export type SchemaVersion48 = '1.0'
+export type SchemaVersion55 = '1.0'
 export type Status3 = string
 export type DeliveryParts = DiagnosticDeliveryPart[]
 export type DeliveryStatus = string | null
 export type CurrentlyVisible = boolean | null
 export type MemoryId = string
-export type SchemaVersion49 = '1.0'
+export type SchemaVersion56 = '1.0'
 export type Score = number | null
 export type SelectedForPrompt = boolean | null
 export type MemoryCandidates = DiagnosticMemoryReference[]
-export type NextCursor = number | null
+export type NextCursor1 = number | null
 export type PlayedPtsMs3 = number
-export type SchemaVersion50 = '1.0'
+export type SchemaVersion57 = '1.0'
 export type SegmentId4 = string
 export type SegmentIndex = number
 export type State = string
@@ -951,23 +1035,23 @@ export type Expression = string | null
 export type Intent = string | null
 export type Motion = string | null
 export type ResponseLength = string | null
-export type SchemaVersion51 = '1.0'
+export type SchemaVersion58 = '1.0'
 export type Tone = string | null
-export type SchemaVersion52 = '1.0'
+export type SchemaVersion59 = '1.0'
 export type SelectedMemoryIds1 = string[] | null
-export type GenerationId26 = string | null
+export type GenerationId27 = string | null
 export type GenerationState1 = string | null
 export type InteractionId1 = string
 export type OccurredAt18 = string
 export type Reason6 = string | null
-export type SchemaVersion53 = '1.0'
-export type SessionId24 = string
+export type SchemaVersion60 = '1.0'
+export type SessionId25 = string
 export type Trigger = 'user' | 'proactive' | 'ignored_voice' | 'proactive_deferred'
-export type TurnId23 = string | null
+export type TurnId24 = string | null
 export type EventType15 = string
 export type OccurredAt19 = string
 export type Reason7 = string | null
-export type SchemaVersion54 = '1.0'
+export type SchemaVersion61 = '1.0'
 export type Sequence17 = number
 export type Status4 = string | null
 /**
@@ -976,7 +1060,7 @@ export type Status4 = string | null
 export type Timeline = DiagnosticTimelineItem[]
 export type DurationMs4 = number | null
 export type ErrorCode = string | null
-export type SchemaVersion55 = '1.0'
+export type SchemaVersion62 = '1.0'
 export type Status5 = string
 export type ToolCallId = string | null
 export type ToolCalls = DiagnosticToolCall[]
@@ -985,20 +1069,20 @@ export type HasMore = boolean
 /**
  * @maxItems 50
  */
-export type Items = InteractionTraceSummary[]
-export type NextCursor1 = string | null
-export type SchemaVersion56 = '1.0'
+export type Items1 = InteractionTraceSummary[]
+export type NextCursor2 = string | null
+export type SchemaVersion63 = '1.0'
 export type ByteSize = number
 export type Description1 = string
 export type Expression1 = 'neutral' | 'happy' | 'sad' | 'angry' | 'surprised' | 'shy' | 'curious'
 export type Label = string
 export type LearnedAt = string
 export type MimeType2 = 'image/png'
-export type SchemaVersion57 = '1.0'
+export type SchemaVersion64 = '1.0'
 export type Sha2562 = string
 export type SourceConnectionId = string
 export type StickerId1 = string
-export type ConnectionId6 = string
+export type ConnectionId9 = string
 export type DiscoveredAt = string | null
 export type Arguments = JsonObject[]
 export type Description2 = string | null
@@ -1030,9 +1114,9 @@ export type BearerTokenConfigured = boolean
  * @maxItems 32
  */
 export type Command1 = string[]
-export type ConnectionId7 = string
-export type CreatedAt6 = string
-export type Enabled1 = boolean
+export type ConnectionId10 = string
+export type CreatedAt7 = string
+export type Enabled2 = boolean
 export type LastError = string | null
 export type LastTestedAt = string | null
 export type Name7 = string
@@ -1044,15 +1128,15 @@ export type Status6 = 'untested' | 'ready' | 'error' | 'disabled'
 export type TimeoutSeconds1 = number
 export type Transport4 = 'stdio' | 'streamable_http' | 'sse'
 export type TrustLevel = 'trusted' | 'untrusted'
-export type UpdatedAt8 = string
+export type UpdatedAt10 = string
 export type Url = string | null
 export type AllowRemote1 = boolean
 /**
  * @maxItems 32
  */
 export type Command2 = string[]
-export type ConnectionId8 = string
-export type Enabled2 = boolean
+export type ConnectionId11 = string
+export type Enabled3 = boolean
 export type Name8 = string
 export type NetworkPolicy1 = 'deny' | 'loopback' | 'allow'
 export type SandboxMode1 = 'required' | 'preferred' | 'disabled'
@@ -1061,7 +1145,7 @@ export type Transport5 = 'stdio' | 'streamable_http' | 'sse'
 export type TrustLevel1 = 'trusted' | 'untrusted'
 export type Url1 = string | null
 export type Confidence = number
-export type CreatedAt7 = string
+export type CreatedAt8 = string
 export type Importance = number
 export type MemoryKind =
   | 'core'
@@ -1086,18 +1170,18 @@ export type SourceEventIds = [string, ...string[]]
 export type SubjectId = string | null
 export type Supersedes = string | null
 export type Text7 = string
-export type UpdatedAt9 = string
+export type UpdatedAt11 = string
 export type ValidFrom = string | null
 export type ValidTo = string | null
 export type AccountKey4 = string | null
 export type ChatType = 'direct' | 'group'
-export type ConnectionId9 = string
+export type ConnectionId12 = string
 export type ConversationKey3 = string
 export type ConversationLabel3 = string | null
 export type PrincipalScope5 = string
 export type ProviderId6 = string
 export type ReceivedAt1 = string
-export type SchemaVersion58 = '1.0'
+export type SchemaVersion65 = '1.0'
 export type SenderDisplayName3 = string | null
 export type SenderKey3 = string
 export type ChannelAttributions = MemoryChannelAttribution[]
@@ -1130,7 +1214,7 @@ export type PrivacyLevel17 = 'public' | 'local' | 'private' | 'sensitive'
 export type SubjectId1 = string | null
 export type Text9 = string
 export type Confidence2 = number
-export type CreatedAt8 = string
+export type CreatedAt9 = string
 export type DecidedAt = string | null
 /**
  * @minItems 1
@@ -1140,13 +1224,13 @@ export type MemoryOperation = 'add' | 'update' | 'supersede' | 'contradict' | 'f
 export type ProposalId = string
 export type Rationale = string
 export type TargetMemoryId = string | null
-export type CreatedAt9 = string
+export type CreatedAt10 = string
 export type MemoryId3 = string
-export type SessionId25 = string
+export type SessionId26 = string
 export type SourceEventId = string
 export type SourceId = string
 export type SourceKind = 'user_turn' | 'assistant_spoken' | 'assistant_delivered' | 'memory_management' | 'migration'
-export type TurnId24 = string | null
+export type TurnId25 = string | null
 export type AdapterVersion = string
 export type Capabilities = string[]
 export type InputModalities = string[]
@@ -1162,40 +1246,40 @@ export type EstimatedRamMb = number | null
 export type EstimatedVramMb = number | null
 export type ExclusiveGpu = boolean
 export type StoresInput = boolean
-export type CreatedAt10 = string
+export type CreatedAt11 = string
 export type DisplayName = string
 export type ParticipantId = string
 export type DecidedAt1 = string
 export type DecidedBy = string
 export type Decision = 'allow_once' | 'allow_session' | 'allow_always' | 'deny'
 export type Reason8 = string | null
-export type RequestId = string
+export type RequestId1 = string
 export type Capability = string
-export type CreatedAt11 = string
-export type ExpiresAt2 = string | null
+export type CreatedAt12 = string
+export type ExpiresAt4 = string | null
 export type GrantId = string
 export type Permission = string
 export type Principal = string
 export type RevokedAt = string | null
 export type Scope1 = 'once' | 'session' | 'always'
-export type SessionId26 = string | null
+export type SessionId27 = string | null
 export type SkillId = string
 export type Capability1 = string
 export type Permission1 = string
 export type Principal1 = string
 export type Reason9 = string
-export type RequestId1 = string
+export type RequestId2 = string
 export type RequestedAt2 = string
 export type SideEffect = 'read' | 'write' | 'destructive' | 'external_communication' | 'device_control'
 export type Deleted = boolean
-export type Revision5 = number
-export type SchemaVersion59 = '1.0'
+export type Revision7 = number
+export type SchemaVersion66 = '1.0'
 export type RetentionEnabled = boolean
-export type Revision6 = number
-export type SchemaVersion60 = '1.0'
-export type ExpectedRevision4 = number
+export type Revision8 = number
+export type SchemaVersion67 = '1.0'
+export type ExpectedRevision6 = number
 export type RetentionEnabled1 = boolean
-export type SchemaVersion61 = '1.0'
+export type SchemaVersion68 = '1.0'
 export type Capacity = 200
 export type ByteSize1 = number
 export type Caption = string
@@ -1228,7 +1312,7 @@ export type OriginalWidth = number | null
 export type PhotoId = string
 export type ReceivedAt2 = string
 export type SavedAt = string
-export type SchemaVersion62 = '1.0'
+export type SchemaVersion69 = '1.0'
 export type Sha2563 = string
 export type SourceConnectionId1 = string
 export type SourceGenerationId = string
@@ -1239,7 +1323,7 @@ export type AnnotationId = string
 export type Kind8 = 'date' | 'event' | 'context'
 export type ObservedAt2 = string
 export type Quote = string
-export type SchemaVersion63 = '1.0'
+export type SchemaVersion70 = '1.0'
 export type SourceGenerationId1 = string
 export type Superseded = boolean
 /**
@@ -1250,11 +1334,11 @@ export type Width = number
 /**
  * @maxItems 200
  */
-export type Items1 = SavedPhoto[]
-export type SchemaVersion64 = '1.0'
+export type Items2 = SavedPhoto[]
+export type SchemaVersion71 = '1.0'
 export type TotalBytes = number
 export type Description7 = string
-export type Enabled3 = boolean
+export type Enabled4 = boolean
 export type InstallPath = string
 export type InstalledAt = string
 export type Name9 = string
@@ -1264,12 +1348,12 @@ export type SandboxBackend1 = string | null
 export type SandboxLimitsEnforced1 = string[]
 export type SandboxMode2 = 'required' | 'preferred' | 'disabled'
 export type TrustLevel2 = 'trusted' | 'untrusted'
-export type UpdatedAt10 = string
+export type UpdatedAt12 = string
 export type Version3 = string
 export type Description8 = string
 export type Name10 = string
 export type PluginId1 = string
-export type SchemaVersion65 = '1.0'
+export type SchemaVersion72 = '1.0'
 /**
  * @minItems 1
  * @maxItems 32
@@ -1298,7 +1382,7 @@ export type FallbackChain = string[]
 export type ModelId1 = string
 export type ProviderId7 = string
 export type ReasonCodes = string[]
-export type CreatedAt12 = string
+export type CreatedAt13 = string
 export type DisplayName1 = string
 /**
  * @minItems 2
@@ -1310,14 +1394,14 @@ export type AudienceIds = string[]
 export type CharacterId7 = string
 export type ConversationState =
   'idle' | 'listening' | 'committing_user_turn' | 'planning' | 'generating' | 'speaking' | 'interrupting' | 'recovering'
-export type CreatedAt13 = string
+export type CreatedAt14 = string
 export type ParticipantId1 = string
-export type Revision7 = number
+export type Revision9 = number
 export type SceneId1 = string | null
 export type SceneKind = 'private' | 'shared'
-export type SessionId27 = string
+export type SessionId28 = string
 export type SessionState = 'created' | 'connecting' | 'ready' | 'degraded' | 'recovering' | 'closing' | 'closed'
-export type UpdatedAt11 = string
+export type UpdatedAt13 = string
 export type UserScope1 = string
 export type BackgroundAllowed = boolean
 export type AdapterOperation = 'invoke' | 'resource_read' | 'prompt_get'
@@ -1330,13 +1414,13 @@ export type SideEffect1 = 'read' | 'write' | 'destructive' | 'external_communica
 export type TimeoutSeconds3 = number
 export type Capabilities1 = SkillCapability[]
 export type Description10 = string
-export type Enabled4 = boolean
+export type Enabled5 = boolean
 export type Interruptible1 = boolean
 export type McpConnectionId = string | null
 export type Name12 = string
 export type PluginId2 = string | null
 export type SkillId1 = string
-export type Source16 = 'builtin' | 'plugin' | 'mcp_connection'
+export type Source18 = 'builtin' | 'plugin' | 'mcp_connection'
 export type Version5 = string
 export type Background = boolean
 export type Capability2 = string
@@ -1351,14 +1435,14 @@ export type UiCards = JsonObject[]
 export type Capability3 = string
 export type CompletedAt2 = string | null
 export type ConfirmationRequestId = string | null
-export type CreatedAt14 = string
-export type GenerationId27 = string | null
+export type CreatedAt15 = string
+export type GenerationId28 = string | null
 export type McpConnectionId1 = string | null
 export type Origin = 'manual' | 'agent' | 'external_mcp'
 export type PluginId3 = string | null
 export type Progress = number | null
 export type ProviderToolCallId = string | null
-export type SessionId28 = string
+export type SessionId29 = string
 export type SkillId3 = string
 export type SkillRunId16 = string
 export type SkillVersion = string
@@ -1375,51 +1459,51 @@ export type SkillRunState =
   | 'cancelling'
   | 'cancelled'
   | 'expired'
-export type TurnId25 = string | null
-export type UpdatedAt12 = string
+export type TurnId26 = string | null
+export type UpdatedAt14 = string
 export type Deleted1 = boolean
-export type Revision8 = number
-export type SchemaVersion66 = '1.0'
+export type Revision10 = number
+export type SchemaVersion73 = '1.0'
 export type LearningEnabled = boolean
-export type Revision9 = number
-export type SchemaVersion67 = '1.0'
-export type ExpectedRevision5 = number
+export type Revision11 = number
+export type SchemaVersion74 = '1.0'
+export type ExpectedRevision7 = number
 export type LearningEnabled1 = boolean
-export type SchemaVersion68 = '1.0'
+export type SchemaVersion75 = '1.0'
 export type Capacity1 = 100
 /**
  * @maxItems 100
  */
-export type Items2 = LearnedSticker[]
-export type SchemaVersion69 = '1.0'
+export type Items3 = LearnedSticker[]
+export type SchemaVersion76 = '1.0'
 export type TotalBytes1 = number
 export type HasMore1 = boolean
 export type Attempt3 = number
-export type CreatedAt15 = string
+export type CreatedAt16 = string
 export type DeliveredAt4 = string | null
 export type Label1 = string
 export type Origin1 = 'preset' | 'learned'
 export type PartId4 = string
-export type SchemaVersion70 = '1.0'
+export type SchemaVersion77 = '1.0'
 export type Status8 = 'pending' | 'sending' | 'delivered' | 'failed' | 'cancelled' | 'skipped'
 export type StickerId2 = string
-export type UpdatedAt13 = string
+export type UpdatedAt15 = string
 /**
  * @maxItems 50
  */
-export type Items3 = StickerUsageRecord[]
+export type Items4 = StickerUsageRecord[]
 export type ScanLimit = 200
-export type SchemaVersion71 = '1.0'
+export type SchemaVersion78 = '1.0'
 export type ActiveSkillIds = string[]
 export type CommittedAt = string | null
 export type CommittedText = string | null
 export type SceneSnapshotId = string | null
-export type SessionId29 = string
-export type TurnId26 = string
+export type SessionId30 = string
+export type TurnId27 = string
 export type ByteLength1 = number
 export type Codec1 = 'jpeg' | 'png' | 'h264' | 'vp8'
 export type EndOfStream1 = boolean
-export type GenerationId28 = string | null
+export type GenerationId29 = string | null
 export type Height1 = number
 export type PtsMs1 = number
 export type Sequence18 = number
@@ -1449,9 +1533,16 @@ export interface ProtocolCatalog {
   channel_error: ChannelErrorResponse
   channel_gateway_status: ChannelGatewayStatusSnapshot
   channel_inbound_text: ChannelInboundTextMessage
+  channel_outbound_intent: ChannelOutboundIntentSnapshot
+  channel_outbound_intent_cancel_request: ChannelOutboundIntentCancelRequest
+  channel_outbound_intent_page: ChannelOutboundIntentPage
   channel_pairing: ChannelPairingSnapshot
   channel_pairing_start_request: ChannelPairingStartRequest
   channel_presentation_policy: ChannelPresentationPolicy
+  channel_proactive_policy: ChannelProactivePolicy
+  channel_proactive_policy_snapshot: ChannelProactivePolicySnapshot
+  channel_proactive_policy_update: ChannelProactivePolicyUpdate
+  channel_proactive_preview: ChannelProactivePreview
   channel_provider: ChannelProviderRegistration
   channel_turn: ChannelTurnSnapshot
   channel_turn_cancel_receipt: ChannelTurnCancelReceipt
@@ -1697,7 +1788,7 @@ export interface ChannelAuthorizationVerificationRequest {
 export interface ChannelDeliverySnapshot {
   attempt?: Attempt
   cancel_requested_at?: CancelRequestedAt
-  channel_turn_id: ChannelTurnId
+  channel_turn_id?: ChannelTurnId
   connection_id: ConnectionId1
   created_at: CreatedAt2
   delivered_at?: DeliveredAt
@@ -1706,6 +1797,7 @@ export interface ChannelDeliverySnapshot {
   last_error?: StructuredError | null
   lease_expires_at?: LeaseExpiresAt
   lease_id?: LeaseId
+  outbound_intent_id?: OutboundIntentId
   part_count?: PartCount
   plan_version?: PlanVersion
   provider_message_id?: ProviderMessageId
@@ -1806,13 +1898,14 @@ export interface ChannelDeliveryPartClaimRequest {
 }
 export interface ChannelDeliveryPlanSnapshot {
   cancel_requested_at?: CancelRequestedAt1
-  channel_turn_id: ChannelTurnId3
+  channel_turn_id?: ChannelTurnId3
   connection_id: ConnectionId2
   created_at: CreatedAt4
   delivered_at?: DeliveredAt2
   delivered_part_count?: DeliveredPartCount1
   delivery_id: DeliveryId6
   next_pending_ordinal?: NextPendingOrdinal
+  outbound_intent_id?: OutboundIntentId1
   part_count: PartCount1
   parts?: Parts
   plan_version?: PlanVersion1
@@ -1878,15 +1971,60 @@ export interface ChannelInboundTextMessage {
   text: Text2
   [k: string]: unknown
 }
+/**
+ * Intent lifecycle and actual provider facts remain separate.
+ *
+ * A settled cancellation does not erase a provider success which arrived
+ * during cancellation. UI must also display delivery_status/receipt presence.
+ */
+export interface ChannelOutboundIntentSnapshot {
+  binding_id: BindingId
+  cancel_reason?: CancelReason
+  cancel_requested_at?: CancelRequestedAt2
+  cancelable?: Cancelable
+  connection_id: ConnectionId4
+  created_at: CreatedAt5
+  delivery_id?: DeliveryId7
+  delivery_status?: ChannelDeliveryStatus | null
+  error?: StructuredError | null
+  expires_at: ExpiresAt1
+  generation_id: GenerationId2
+  not_before_at: NotBeforeAt1
+  policy_revision: PolicyRevision
+  provider_receipt_present?: ProviderReceiptPresent
+  reply_text?: ReplyText
+  request_id: RequestId
+  revision: Revision1
+  route_revision: RouteRevision
+  schema_version?: SchemaVersion19
+  session_id: SessionId
+  settled_at?: SettledAt
+  settled_reason?: SettledReason
+  source?: Source
+  status: ChannelOutboundIntentStatus
+  turn_id: TurnId
+  updated_at: UpdatedAt5
+  [k: string]: unknown
+}
+export interface ChannelOutboundIntentCancelRequest {
+  expected_revision: ExpectedRevision
+  schema_version?: SchemaVersion20
+}
+export interface ChannelOutboundIntentPage {
+  items?: Items
+  next_cursor?: NextCursor
+  schema_version?: SchemaVersion21
+  [k: string]: unknown
+}
 export interface ChannelPairingSnapshot {
   account_label?: AccountLabel
   connection?: ChannelConnectionSnapshot | null
   error?: StructuredError | null
-  expires_at: ExpiresAt1
+  expires_at: ExpiresAt2
   pairing_code?: PairingCode
   pairing_id: PairingId
   provider_id?: ProviderId3
-  schema_version?: SchemaVersion19
+  schema_version?: SchemaVersion22
   status: Status2
   [k: string]: unknown
 }
@@ -1895,7 +2033,51 @@ export interface ChannelPairingStartRequest {
   character_id?: CharacterId2
   endpoint: Endpoint
   provider_id?: ProviderId4
-  schema_version?: SchemaVersion20
+  schema_version?: SchemaVersion23
+  [k: string]: unknown
+}
+export interface ChannelProactivePolicy {
+  cooldown_minutes?: CooldownMinutes
+  daily_budget?: DailyBudget
+  enabled?: Enabled1
+  idle_minutes?: IdleMinutes
+  quiet_end?: QuietEnd
+  quiet_hours_enabled?: QuietHoursEnabled
+  quiet_start?: QuietStart
+  schema_version?: SchemaVersion24
+  source?: Source1
+  timezone?: Timezone
+  ttl_minutes?: TtlMinutes
+}
+export interface ChannelProactivePolicySnapshot {
+  binding_id?: BindingId1
+  connection_id: ConnectionId5
+  policy?: ChannelProactivePolicy
+  revision?: Revision2
+  schema_version?: SchemaVersion25
+  updated_at?: UpdatedAt6
+  [k: string]: unknown
+}
+export interface ChannelProactivePolicyUpdate {
+  expected_revision: ExpectedRevision1
+  policy: ChannelProactivePolicy
+  schema_version?: SchemaVersion26
+}
+export interface ChannelProactivePreview {
+  binding_id?: BindingId2
+  connection_id: ConnectionId6
+  eligible: Eligible
+  evaluated_at: EvaluatedAt
+  expires_at?: ExpiresAt3
+  last_owner_at?: LastOwnerAt
+  last_reserved_at?: LastReservedAt
+  next_eligible_at?: NextEligibleAt
+  pending_request_id?: PendingRequestId
+  policy_revision: PolicyRevision1
+  reason: ChannelProactiveReason
+  remaining_daily_budget?: RemainingDailyBudget
+  reserved_today?: ReservedToday
+  schema_version?: SchemaVersion27
   [k: string]: unknown
 }
 /**
@@ -1906,7 +2088,7 @@ export interface ChannelProviderRegistration {
   description: Description
   name: Name2
   provider_id: ProviderId5
-  schema_version?: SchemaVersion21
+  schema_version?: SchemaVersion28
   version: Version1
   [k: string]: unknown
 }
@@ -1918,40 +2100,40 @@ export interface ChannelTurnSnapshot {
   channel_turn_id: ChannelTurnId5
   chat_type?: ChannelChatType2
   completed_at?: CompletedAt
-  connection_id: ConnectionId4
+  connection_id: ConnectionId7
   conversation_key: ConversationKey1
   conversation_label?: ConversationLabel1
-  created_at: CreatedAt5
-  delivery_id?: DeliveryId7
+  created_at: CreatedAt6
+  delivery_id?: DeliveryId8
   delivery_status?: ChannelDeliveryStatus | null
   error?: StructuredError | null
   external_message_id: ExternalMessageId2
-  generation_id: GenerationId2
+  generation_id: GenerationId3
   principal_scope: PrincipalScope3
-  reply_text?: ReplyText
-  revision: Revision1
-  schema_version?: SchemaVersion22
+  reply_text?: ReplyText1
+  revision: Revision3
+  schema_version?: SchemaVersion29
   sender_display_name?: SenderDisplayName1
   sender_key: SenderKey1
-  session_id: SessionId
+  session_id: SessionId1
   status: ChannelTurnStatus
-  turn_id: TurnId
-  updated_at: UpdatedAt5
+  turn_id: TurnId1
+  updated_at: UpdatedAt7
   [k: string]: unknown
 }
 export interface ChannelTurnCancelReceipt {
   accepted: Accepted
   acknowledged_at: AcknowledgedAt2
   channel_turn_id: ChannelTurnId6
-  revision: Revision2
-  schema_version?: SchemaVersion23
+  revision: Revision4
+  schema_version?: SchemaVersion30
   status: ChannelTurnStatus
   [k: string]: unknown
 }
 export interface ChannelTurnCancelRequest {
   reason: Reason
   requested_at: RequestedAt
-  schema_version?: SchemaVersion24
+  schema_version?: SchemaVersion31
   [k: string]: unknown
 }
 /**
@@ -1962,28 +2144,28 @@ export interface ChannelTurnReceipt {
   account_key?: AccountKey3
   channel_turn_id: ChannelTurnId7
   chat_type?: ChannelChatType3
-  connection_id: ConnectionId5
+  connection_id: ConnectionId8
   conversation_key: ConversationKey2
   conversation_label?: ConversationLabel2
   duplicate?: Duplicate
   external_message_id: ExternalMessageId3
-  generation_id: GenerationId3
+  generation_id: GenerationId4
   poll_after_ms?: PollAfterMs1
   principal_scope: PrincipalScope4
-  revision: Revision3
-  schema_version?: SchemaVersion25
+  revision: Revision5
+  schema_version?: SchemaVersion32
   sender_display_name?: SenderDisplayName2
   sender_key: SenderKey2
-  session_id: SessionId1
+  session_id: SessionId2
   status: ChannelTurnStatus
-  turn_id: TurnId1
+  turn_id: TurnId2
   [k: string]: unknown
 }
 export interface CharacterKernelSnapshot {
   affect: AffectState
   character_id: CharacterId3
   relationship: RelationshipState
-  revision: Revision4
+  revision: Revision6
   user_scope: UserScope
   [k: string]: unknown
 }
@@ -1993,7 +2175,7 @@ export interface AffectState {
   embarrassment?: Embarrassment
   energy?: Energy
   tension?: Tension
-  updated_at: UpdatedAt6
+  updated_at: UpdatedAt8
   valence?: Valence
   [k: string]: unknown
 }
@@ -2006,13 +2188,13 @@ export interface RelationshipState {
   recent_tension?: RecentTension
   stage?: Stage
   trust?: Trust
-  updated_at: UpdatedAt7
+  updated_at: UpdatedAt9
   [k: string]: unknown
 }
 export interface CharacterPromptCompiledPayload {
   identity?: PromptContextIdentity | null
   report: PromptBudgetReport
-  schema_version?: SchemaVersion27
+  schema_version?: SchemaVersion34
   selected_memory_ids?: SelectedMemoryIds
   [k: string]: unknown
 }
@@ -2024,7 +2206,7 @@ export interface PromptContextIdentity {
   memory_summary_route: NonsecretModelRoute
   presentation_profile?: PresentationProfile
   prompt_template_version: PromptTemplateVersion
-  schema_version?: SchemaVersion26
+  schema_version?: SchemaVersion33
   tools_digest: ToolsDigest
   [k: string]: unknown
 }
@@ -2102,14 +2284,14 @@ export interface SessionStartCommand {
   command_id: CommandId
   command_type?: CommandType
   correlation_id?: CorrelationId1
-  expected_revision?: ExpectedRevision
-  generation_id?: GenerationId4
+  expected_revision?: ExpectedRevision2
+  generation_id?: GenerationId5
   issued_at: IssuedAt
   issuer: Issuer
   payload: SessionStartPayload
-  schema_version?: SchemaVersion28
-  session_id?: SessionId2
-  turn_id?: TurnId2
+  schema_version?: SchemaVersion35
+  session_id?: SessionId3
+  turn_id?: TurnId3
   [k: string]: unknown
 }
 export interface SessionStartPayload {
@@ -2120,14 +2302,14 @@ export interface TextSendCommand {
   command_id: CommandId1
   command_type?: CommandType1
   correlation_id?: CorrelationId2
-  expected_revision?: ExpectedRevision1
-  generation_id?: GenerationId5
+  expected_revision?: ExpectedRevision3
+  generation_id?: GenerationId6
   issued_at: IssuedAt1
   issuer: Issuer1
   payload: TextSendPayload
-  schema_version?: SchemaVersion29
-  session_id?: SessionId3
-  turn_id?: TurnId3
+  schema_version?: SchemaVersion36
+  session_id?: SessionId4
+  turn_id?: TurnId4
   [k: string]: unknown
 }
 export interface TextSendPayload {
@@ -2138,14 +2320,14 @@ export interface ConversationInterruptCommand {
   command_id: CommandId2
   command_type?: CommandType2
   correlation_id?: CorrelationId3
-  expected_revision?: ExpectedRevision2
-  generation_id?: GenerationId6
+  expected_revision?: ExpectedRevision4
+  generation_id?: GenerationId7
   issued_at: IssuedAt2
   issuer: Issuer2
   payload: ConversationInterruptPayload
-  schema_version?: SchemaVersion30
-  session_id?: SessionId4
-  turn_id?: TurnId4
+  schema_version?: SchemaVersion37
+  session_id?: SessionId5
+  turn_id?: TurnId5
   [k: string]: unknown
 }
 export interface ConversationInterruptPayload {
@@ -2156,14 +2338,14 @@ export interface PlaybackAckCommand {
   command_id: CommandId3
   command_type?: CommandType3
   correlation_id?: CorrelationId4
-  expected_revision?: ExpectedRevision3
-  generation_id?: GenerationId7
+  expected_revision?: ExpectedRevision5
+  generation_id?: GenerationId8
   issued_at: IssuedAt3
   issuer: Issuer3
   payload: PlaybackAckPayload
-  schema_version?: SchemaVersion31
-  session_id?: SessionId5
-  turn_id?: TurnId5
+  schema_version?: SchemaVersion38
+  session_id?: SessionId6
+  turn_id?: TurnId6
   [k: string]: unknown
 }
 export interface PlaybackAckPayload {
@@ -2178,12 +2360,12 @@ export interface PlaybackAckPayload {
   [k: string]: unknown
 }
 export interface ConversationInterruption {
-  generation_id: GenerationId8
+  generation_id: GenerationId9
   initiated_by: InterruptionInitiator
   interruption_id: InterruptionId
   reason: Reason4
   requested_at: RequestedAt1
-  session_id: SessionId6
+  session_id: SessionId7
   [k: string]: unknown
 }
 export interface SessionCreatedEvent {
@@ -2191,16 +2373,16 @@ export interface SessionCreatedEvent {
   correlation_id?: CorrelationId5
   event_id: EventId
   event_type?: EventType
-  generation_id?: GenerationId9
+  generation_id?: GenerationId10
   occurred_at: OccurredAt2
   payload: SessionCreatedPayload
   privacy?: PrivacyLevel
-  schema_version?: SchemaVersion32
+  schema_version?: SchemaVersion39
   sequence?: Sequence1
-  session_id?: SessionId7
+  session_id?: SessionId8
   skill_run_id?: SkillRunId
-  source: Source
-  turn_id?: TurnId6
+  source: Source2
+  turn_id?: TurnId7
   [k: string]: unknown
 }
 export interface SessionCreatedPayload {
@@ -2212,16 +2394,16 @@ export interface UserTurnCommittedEvent {
   correlation_id?: CorrelationId6
   event_id: EventId1
   event_type?: EventType1
-  generation_id?: GenerationId10
+  generation_id?: GenerationId11
   occurred_at: OccurredAt3
   payload: UserTurnCommittedPayload
   privacy?: PrivacyLevel1
-  schema_version?: SchemaVersion33
+  schema_version?: SchemaVersion40
   sequence?: Sequence2
-  session_id?: SessionId8
+  session_id?: SessionId9
   skill_run_id?: SkillRunId1
-  source: Source1
-  turn_id?: TurnId7
+  source: Source3
+  turn_id?: TurnId8
   [k: string]: unknown
 }
 export interface UserTurnCommittedPayload {
@@ -2233,16 +2415,16 @@ export interface UserSpeechStartedEvent {
   correlation_id?: CorrelationId7
   event_id: EventId2
   event_type?: EventType2
-  generation_id?: GenerationId11
+  generation_id?: GenerationId12
   occurred_at: OccurredAt4
   payload: UserSpeechStartedPayload
   privacy?: PrivacyLevel2
-  schema_version?: SchemaVersion34
+  schema_version?: SchemaVersion41
   sequence?: Sequence3
-  session_id?: SessionId9
+  session_id?: SessionId10
   skill_run_id?: SkillRunId2
-  source: Source2
-  turn_id?: TurnId8
+  source: Source4
+  turn_id?: TurnId9
   [k: string]: unknown
 }
 export interface UserSpeechStartedPayload {
@@ -2257,16 +2439,16 @@ export interface UserSpeechStoppedEvent {
   correlation_id?: CorrelationId8
   event_id: EventId3
   event_type?: EventType3
-  generation_id?: GenerationId12
+  generation_id?: GenerationId13
   occurred_at: OccurredAt5
   payload: UserSpeechStoppedPayload
   privacy?: PrivacyLevel3
-  schema_version?: SchemaVersion35
+  schema_version?: SchemaVersion42
   sequence?: Sequence4
-  session_id?: SessionId10
+  session_id?: SessionId11
   skill_run_id?: SkillRunId3
-  source: Source3
-  turn_id?: TurnId9
+  source: Source5
+  turn_id?: TurnId10
   [k: string]: unknown
 }
 export interface UserSpeechStoppedPayload {
@@ -2281,16 +2463,16 @@ export interface UserTranscriptPartialEvent {
   correlation_id?: CorrelationId9
   event_id: EventId4
   event_type?: EventType4
-  generation_id?: GenerationId13
+  generation_id?: GenerationId14
   occurred_at: OccurredAt6
   payload: UserTranscriptPayload
   privacy?: PrivacyLevel4
-  schema_version?: SchemaVersion36
+  schema_version?: SchemaVersion43
   sequence?: Sequence5
-  session_id?: SessionId11
+  session_id?: SessionId12
   skill_run_id?: SkillRunId4
-  source: Source4
-  turn_id?: TurnId10
+  source: Source6
+  turn_id?: TurnId11
   [k: string]: unknown
 }
 export interface UserTranscriptPayload {
@@ -2306,16 +2488,16 @@ export interface UserTranscriptFinalEvent {
   correlation_id?: CorrelationId10
   event_id: EventId5
   event_type?: EventType5
-  generation_id?: GenerationId14
+  generation_id?: GenerationId15
   occurred_at: OccurredAt7
   payload: UserTranscriptPayload
   privacy?: PrivacyLevel5
-  schema_version?: SchemaVersion37
+  schema_version?: SchemaVersion44
   sequence?: Sequence6
-  session_id?: SessionId12
+  session_id?: SessionId13
   skill_run_id?: SkillRunId5
-  source: Source5
-  turn_id?: TurnId11
+  source: Source7
+  turn_id?: TurnId12
   [k: string]: unknown
 }
 export interface AssistantGenerationStartedEvent {
@@ -2323,16 +2505,16 @@ export interface AssistantGenerationStartedEvent {
   correlation_id?: CorrelationId11
   event_id: EventId6
   event_type?: EventType6
-  generation_id?: GenerationId15
+  generation_id?: GenerationId16
   occurred_at: OccurredAt8
   payload: AssistantGenerationStartedPayload
   privacy?: PrivacyLevel6
-  schema_version?: SchemaVersion38
+  schema_version?: SchemaVersion45
   sequence?: Sequence7
-  session_id?: SessionId13
+  session_id?: SessionId14
   skill_run_id?: SkillRunId6
-  source: Source6
-  turn_id?: TurnId12
+  source: Source8
+  turn_id?: TurnId13
   [k: string]: unknown
 }
 export interface AssistantGenerationStartedPayload {
@@ -2344,16 +2526,16 @@ export interface AssistantPlaybackStartedEvent {
   correlation_id?: CorrelationId12
   event_id: EventId7
   event_type?: EventType7
-  generation_id?: GenerationId16
+  generation_id?: GenerationId17
   occurred_at: OccurredAt9
   payload: AssistantPlaybackPayload
   privacy?: PrivacyLevel7
-  schema_version?: SchemaVersion39
+  schema_version?: SchemaVersion46
   sequence?: Sequence8
-  session_id?: SessionId14
+  session_id?: SessionId15
   skill_run_id?: SkillRunId7
-  source: Source7
-  turn_id?: TurnId13
+  source: Source9
+  turn_id?: TurnId14
   [k: string]: unknown
 }
 export interface AssistantPlaybackPayload {
@@ -2370,16 +2552,16 @@ export interface AssistantPlaybackProgressEvent {
   correlation_id?: CorrelationId13
   event_id: EventId8
   event_type?: EventType8
-  generation_id?: GenerationId17
+  generation_id?: GenerationId18
   occurred_at: OccurredAt10
   payload: AssistantPlaybackPayload
   privacy?: PrivacyLevel8
-  schema_version?: SchemaVersion40
+  schema_version?: SchemaVersion47
   sequence?: Sequence9
-  session_id?: SessionId15
+  session_id?: SessionId16
   skill_run_id?: SkillRunId8
-  source: Source8
-  turn_id?: TurnId14
+  source: Source10
+  turn_id?: TurnId15
   [k: string]: unknown
 }
 export interface AssistantPlaybackStoppedEvent {
@@ -2387,16 +2569,16 @@ export interface AssistantPlaybackStoppedEvent {
   correlation_id?: CorrelationId14
   event_id: EventId9
   event_type?: EventType9
-  generation_id?: GenerationId18
+  generation_id?: GenerationId19
   occurred_at: OccurredAt11
   payload: AssistantPlaybackStoppedPayload
   privacy?: PrivacyLevel9
-  schema_version?: SchemaVersion41
+  schema_version?: SchemaVersion48
   sequence?: Sequence10
-  session_id?: SessionId16
+  session_id?: SessionId17
   skill_run_id?: SkillRunId9
-  source: Source9
-  turn_id?: TurnId15
+  source: Source11
+  turn_id?: TurnId16
   [k: string]: unknown
 }
 export interface AssistantPlaybackStoppedPayload {
@@ -2415,16 +2597,16 @@ export interface AssistantSpokenTextCommittedEvent {
   correlation_id?: CorrelationId15
   event_id: EventId10
   event_type?: EventType10
-  generation_id?: GenerationId19
+  generation_id?: GenerationId20
   occurred_at: OccurredAt12
   payload: AssistantSpokenTextCommittedPayload
   privacy?: PrivacyLevel10
-  schema_version?: SchemaVersion42
+  schema_version?: SchemaVersion49
   sequence?: Sequence11
-  session_id?: SessionId17
+  session_id?: SessionId18
   skill_run_id?: SkillRunId10
-  source: Source10
-  turn_id?: TurnId16
+  source: Source12
+  turn_id?: TurnId17
   [k: string]: unknown
 }
 export interface AssistantSpokenTextCommittedPayload {
@@ -2439,16 +2621,16 @@ export interface AvatarCueEmittedEvent {
   correlation_id?: CorrelationId16
   event_id: EventId11
   event_type?: EventType11
-  generation_id?: GenerationId20
+  generation_id?: GenerationId21
   occurred_at: OccurredAt13
   payload: AvatarCueEmittedPayload
   privacy?: PrivacyLevel11
-  schema_version?: SchemaVersion43
+  schema_version?: SchemaVersion50
   sequence?: Sequence12
-  session_id?: SessionId18
+  session_id?: SessionId19
   skill_run_id?: SkillRunId11
-  source: Source11
-  turn_id?: TurnId17
+  source: Source13
+  turn_id?: TurnId18
   [k: string]: unknown
 }
 export interface AvatarCueEmittedPayload {
@@ -2460,16 +2642,16 @@ export interface ErrorRaisedEvent {
   correlation_id?: CorrelationId17
   event_id: EventId12
   event_type?: EventType12
-  generation_id?: GenerationId21
+  generation_id?: GenerationId22
   occurred_at: OccurredAt14
   payload: ErrorRaisedPayload
   privacy?: PrivacyLevel12
-  schema_version?: SchemaVersion44
+  schema_version?: SchemaVersion51
   sequence?: Sequence13
-  session_id?: SessionId19
+  session_id?: SessionId20
   skill_run_id?: SkillRunId12
-  source: Source12
-  turn_id?: TurnId18
+  source: Source14
+  turn_id?: TurnId19
   [k: string]: unknown
 }
 export interface ErrorRaisedPayload {
@@ -2481,16 +2663,16 @@ export interface EgressReceiptEvent {
   correlation_id?: CorrelationId18
   event_id: EventId13
   event_type?: EventType13
-  generation_id?: GenerationId22
+  generation_id?: GenerationId23
   occurred_at: OccurredAt15
   payload: EgressReceiptPayload
   privacy?: PrivacyLevel13
-  schema_version?: SchemaVersion45
+  schema_version?: SchemaVersion52
   sequence?: Sequence14
-  session_id?: SessionId20
+  session_id?: SessionId21
   skill_run_id?: SkillRunId13
-  source: Source13
-  turn_id?: TurnId19
+  source: Source15
+  turn_id?: TurnId20
   [k: string]: unknown
 }
 export interface EgressBlockedEvent {
@@ -2498,16 +2680,16 @@ export interface EgressBlockedEvent {
   correlation_id?: CorrelationId19
   event_id: EventId14
   event_type?: EventType14
-  generation_id?: GenerationId23
+  generation_id?: GenerationId24
   occurred_at: OccurredAt16
   payload: EgressBlockedPayload
   privacy?: PrivacyLevel14
-  schema_version?: SchemaVersion46
+  schema_version?: SchemaVersion53
   sequence?: Sequence15
-  session_id?: SessionId21
+  session_id?: SessionId22
   skill_run_id?: SkillRunId14
-  source: Source14
-  turn_id?: TurnId20
+  source: Source16
+  turn_id?: TurnId21
   [k: string]: unknown
 }
 /**
@@ -2518,39 +2700,39 @@ export interface GenericCoreEvent {
   correlation_id?: CorrelationId20
   event_id: EventId15
   event_type: GenericCoreEventType
-  generation_id?: GenerationId24
+  generation_id?: GenerationId25
   occurred_at: OccurredAt17
   payload: JsonObject
   privacy?: PrivacyLevel15
-  schema_version?: SchemaVersion47
+  schema_version?: SchemaVersion54
   sequence?: Sequence16
-  session_id?: SessionId22
+  session_id?: SessionId23
   skill_run_id?: SkillRunId15
-  source: Source15
-  turn_id?: TurnId21
+  source: Source17
+  turn_id?: TurnId22
   [k: string]: unknown
 }
 export interface GenerationSnapshot {
   backend_kind: BackendKind1
   completed_at?: CompletedAt1
-  generation_id: GenerationId25
+  generation_id: GenerationId26
   invalidated_at?: InvalidatedAt
-  session_id: SessionId23
+  session_id: SessionId24
   started_at?: StartedAt
   state: GenerationState
-  turn_id: TurnId22
+  turn_id: TurnId23
   [k: string]: unknown
 }
 export interface InteractionTraceDetail {
   delivery_parts?: DeliveryParts
   delivery_status?: DeliveryStatus
   memory_candidates?: MemoryCandidates
-  next_cursor?: NextCursor
+  next_cursor?: NextCursor1
   playback_segments?: PlaybackSegments
   prompt_budget?: PromptBudgetReport | null
   prompt_identity?: PromptContextIdentity | null
   response_plan?: DiagnosticResponsePlan | null
-  schema_version?: SchemaVersion52
+  schema_version?: SchemaVersion59
   selected_memory_ids?: SelectedMemoryIds1
   summary: InteractionTraceSummary
   timeline?: Timeline
@@ -2565,21 +2747,21 @@ export interface DiagnosticDeliveryPart {
   ordinal: Ordinal1
   part_id: PartId3
   required: Required1
-  schema_version?: SchemaVersion48
+  schema_version?: SchemaVersion55
   status: Status3
   [k: string]: unknown
 }
 export interface DiagnosticMemoryReference {
   currently_visible?: CurrentlyVisible
   memory_id: MemoryId
-  schema_version?: SchemaVersion49
+  schema_version?: SchemaVersion56
   score?: Score
   selected_for_prompt?: SelectedForPrompt
   [k: string]: unknown
 }
 export interface DiagnosticPlaybackSegment {
   played_pts_ms: PlayedPtsMs3
-  schema_version?: SchemaVersion50
+  schema_version?: SchemaVersion57
   segment_id: SegmentId4
   segment_index: SegmentIndex
   state: State
@@ -2591,27 +2773,27 @@ export interface DiagnosticResponsePlan {
   intent?: Intent
   motion?: Motion
   response_length?: ResponseLength
-  schema_version?: SchemaVersion51
+  schema_version?: SchemaVersion58
   tone?: Tone
   [k: string]: unknown
 }
 export interface InteractionTraceSummary {
-  generation_id?: GenerationId26
+  generation_id?: GenerationId27
   generation_state?: GenerationState1
   interaction_id: InteractionId1
   occurred_at: OccurredAt18
   reason?: Reason6
-  schema_version?: SchemaVersion53
-  session_id: SessionId24
+  schema_version?: SchemaVersion60
+  session_id: SessionId25
   trigger: Trigger
-  turn_id?: TurnId23
+  turn_id?: TurnId24
   [k: string]: unknown
 }
 export interface DiagnosticTimelineItem {
   event_type: EventType15
   occurred_at: OccurredAt19
   reason?: Reason7
-  schema_version?: SchemaVersion54
+  schema_version?: SchemaVersion61
   sequence: Sequence17
   status?: Status4
   [k: string]: unknown
@@ -2619,16 +2801,16 @@ export interface DiagnosticTimelineItem {
 export interface DiagnosticToolCall {
   duration_ms?: DurationMs4
   error_code?: ErrorCode
-  schema_version?: SchemaVersion55
+  schema_version?: SchemaVersion62
   status: Status5
   tool_call_id?: ToolCallId
   [k: string]: unknown
 }
 export interface InteractionTracePage {
   has_more?: HasMore
-  items?: Items
-  next_cursor?: NextCursor1
-  schema_version?: SchemaVersion56
+  items?: Items1
+  next_cursor?: NextCursor2
+  schema_version?: SchemaVersion63
   [k: string]: unknown
 }
 export interface LearnedSticker {
@@ -2638,14 +2820,14 @@ export interface LearnedSticker {
   label: Label
   learned_at: LearnedAt
   mime_type?: MimeType2
-  schema_version?: SchemaVersion57
+  schema_version?: SchemaVersion64
   sha256: Sha2562
   source_connection_id: SourceConnectionId
   sticker_id: StickerId1
   [k: string]: unknown
 }
 export interface McpCapabilitySnapshot {
-  connection_id: ConnectionId6
+  connection_id: ConnectionId9
   discovered_at?: DiscoveredAt
   prompts?: Prompts
   protocol_version?: ProtocolVersion
@@ -2692,9 +2874,9 @@ export interface McpConnectionSnapshot {
   bearer_token_configured?: BearerTokenConfigured
   capabilities: McpCapabilitySnapshot
   command?: Command1
-  connection_id: ConnectionId7
-  created_at: CreatedAt6
-  enabled?: Enabled1
+  connection_id: ConnectionId10
+  created_at: CreatedAt7
+  enabled?: Enabled2
   last_error?: LastError
   last_tested_at?: LastTestedAt
   name: Name7
@@ -2706,7 +2888,7 @@ export interface McpConnectionSnapshot {
   timeout_seconds?: TimeoutSeconds1
   transport: Transport4
   trust_level?: TrustLevel
-  updated_at: UpdatedAt8
+  updated_at: UpdatedAt10
   url?: Url
   [k: string]: unknown
 }
@@ -2716,8 +2898,8 @@ export interface McpConnectionSnapshot {
 export interface McpConnectionConfiguration {
   allow_remote?: AllowRemote1
   command?: Command2
-  connection_id: ConnectionId8
-  enabled?: Enabled2
+  connection_id: ConnectionId11
+  enabled?: Enabled3
   name: Name8
   network_policy?: NetworkPolicy1
   sandbox_mode?: SandboxMode1
@@ -2729,7 +2911,7 @@ export interface McpConnectionConfiguration {
 }
 export interface MemoryRecord {
   confidence: Confidence
-  created_at: CreatedAt7
+  created_at: CreatedAt8
   importance: Importance
   kind: MemoryKind
   memory_id: MemoryId1
@@ -2744,7 +2926,7 @@ export interface MemoryRecord {
   subject_id?: SubjectId
   supersedes?: Supersedes
   text: Text7
-  updated_at: UpdatedAt9
+  updated_at: UpdatedAt11
   valid_from?: ValidFrom
   valid_to?: ValidTo
   value?:
@@ -2769,13 +2951,13 @@ export interface MemoryRecord {
 export interface MemoryChannelAttribution {
   account_key?: AccountKey4
   chat_type: ChatType
-  connection_id: ConnectionId9
+  connection_id: ConnectionId12
   conversation_key: ConversationKey3
   conversation_label?: ConversationLabel3
   principal_scope: PrincipalScope5
   provider_id: ProviderId6
   received_at: ReceivedAt1
-  schema_version?: SchemaVersion58
+  schema_version?: SchemaVersion65
   sender_display_name?: SenderDisplayName3
   sender_key: SenderKey3
   [k: string]: unknown
@@ -2806,7 +2988,7 @@ export interface MemoryExcerpt {
 export interface MemoryProposal {
   candidate?: MemoryRecordDraft | null
   confidence: Confidence2
-  created_at: CreatedAt8
+  created_at: CreatedAt9
   decided_at?: DecidedAt
   evidence_event_ids: EvidenceEventIds
   operation: MemoryOperation
@@ -2839,13 +3021,13 @@ export interface MemoryRecordDraft {
 }
 export interface MemorySource {
   channel_attribution?: MemoryChannelAttribution | null
-  created_at: CreatedAt9
+  created_at: CreatedAt10
   memory_id: MemoryId3
-  session_id: SessionId25
+  session_id: SessionId26
   source_event_id: SourceEventId
   source_id: SourceId
   source_kind: SourceKind
-  turn_id?: TurnId24
+  turn_id?: TurnId25
   [k: string]: unknown
 }
 export interface ModelManifest {
@@ -2875,7 +3057,7 @@ export interface ModelResourceProfile {
   [k: string]: unknown
 }
 export interface ParticipantSnapshot {
-  created_at: CreatedAt10
+  created_at: CreatedAt11
   display_name: DisplayName
   participant_id: ParticipantId
   [k: string]: unknown
@@ -2885,19 +3067,19 @@ export interface PermissionDecision {
   decided_by: DecidedBy
   decision: Decision
   reason?: Reason8
-  request_id: RequestId
+  request_id: RequestId1
   [k: string]: unknown
 }
 export interface PermissionGrant {
   capability: Capability
-  created_at: CreatedAt11
-  expires_at?: ExpiresAt2
+  created_at: CreatedAt12
+  expires_at?: ExpiresAt4
   grant_id: GrantId
   permission: Permission
   principal: Principal
   revoked_at?: RevokedAt
   scope: Scope1
-  session_id?: SessionId26
+  session_id?: SessionId27
   skill_id: SkillId
   [k: string]: unknown
 }
@@ -2907,33 +3089,33 @@ export interface PermissionRequest {
   permission: Permission1
   principal: Principal1
   reason: Reason9
-  request_id: RequestId1
+  request_id: RequestId2
   requested_at: RequestedAt2
   side_effect: SideEffect
   [k: string]: unknown
 }
 export interface PhotoMemoryDeleteResult {
   deleted: Deleted
-  revision: Revision5
-  schema_version?: SchemaVersion59
+  revision: Revision7
+  schema_version?: SchemaVersion66
   [k: string]: unknown
 }
 export interface PhotoMemorySettings {
   retention_enabled?: RetentionEnabled
-  revision?: Revision6
-  schema_version?: SchemaVersion60
+  revision?: Revision8
+  schema_version?: SchemaVersion67
   [k: string]: unknown
 }
 export interface PhotoMemorySettingsUpdate {
-  expected_revision: ExpectedRevision4
+  expected_revision: ExpectedRevision6
   retention_enabled: RetentionEnabled1
-  schema_version?: SchemaVersion61
+  schema_version?: SchemaVersion68
   [k: string]: unknown
 }
 export interface PhotoMemorySnapshot {
   capacity?: Capacity
-  items?: Items1
-  schema_version?: SchemaVersion64
+  items?: Items2
+  schema_version?: SchemaVersion71
   settings: PhotoMemorySettings
   total_bytes: TotalBytes
   [k: string]: unknown
@@ -2954,7 +3136,7 @@ export interface SavedPhoto {
   photo_id: PhotoId
   received_at: ReceivedAt2
   saved_at: SavedAt
-  schema_version?: SchemaVersion62
+  schema_version?: SchemaVersion69
   sha256: Sha2563
   source_connection_id: SourceConnectionId1
   source_generation_id: SourceGenerationId
@@ -2970,14 +3152,14 @@ export interface PhotoUserAnnotation {
   kind: Kind8
   observed_at: ObservedAt2
   quote: Quote
-  schema_version?: SchemaVersion63
+  schema_version?: SchemaVersion70
   source_generation_id: SourceGenerationId1
   superseded?: Superseded
   [k: string]: unknown
 }
 export interface PluginSnapshot {
   description: Description7
-  enabled: Enabled3
+  enabled: Enabled4
   install_path: InstallPath
   installed_at: InstalledAt
   name: Name9
@@ -2987,7 +3169,7 @@ export interface PluginSnapshot {
   sandbox_limits_enforced?: SandboxLimitsEnforced1
   sandbox_mode?: SandboxMode2
   trust_level?: TrustLevel2
-  updated_at: UpdatedAt10
+  updated_at: UpdatedAt12
   version: Version3
   [k: string]: unknown
 }
@@ -2995,7 +3177,7 @@ export interface PluginManifest {
   description: Description8
   name: Name10
   plugin_id: PluginId1
-  schema_version?: SchemaVersion65
+  schema_version?: SchemaVersion72
   skills: Skills
   transport: PluginTransport
   version: Version4
@@ -3029,7 +3211,7 @@ export interface RouteDecision {
   [k: string]: unknown
 }
 export interface SceneSnapshot {
-  created_at: CreatedAt12
+  created_at: CreatedAt13
   display_name: DisplayName1
   participant_ids: ParticipantIds
   scene_id: SceneId
@@ -3039,14 +3221,14 @@ export interface SessionSnapshot {
   audience_ids?: AudienceIds
   character_id: CharacterId7
   conversation_state: ConversationState
-  created_at: CreatedAt13
+  created_at: CreatedAt14
   participant_id?: ParticipantId1
-  revision: Revision7
+  revision: Revision9
   scene_id?: SceneId1
   scene_kind?: SceneKind
-  session_id: SessionId27
+  session_id: SessionId28
   state: SessionState
-  updated_at: UpdatedAt11
+  updated_at: UpdatedAt13
   user_scope?: UserScope1
   [k: string]: unknown
 }
@@ -3054,13 +3236,13 @@ export interface SkillDefinition {
   background_allowed?: BackgroundAllowed
   capabilities?: Capabilities1
   description: Description10
-  enabled?: Enabled4
+  enabled?: Enabled5
   interruptible?: Interruptible1
   mcp_connection_id?: McpConnectionId
   name: Name12
   plugin_id?: PluginId2
   skill_id: SkillId1
-  source?: Source16
+  source?: Source18
   version: Version5
   [k: string]: unknown
 }
@@ -3107,47 +3289,47 @@ export interface SkillRunSnapshot {
   capability: Capability3
   completed_at?: CompletedAt2
   confirmation_request_id?: ConfirmationRequestId
-  created_at: CreatedAt14
+  created_at: CreatedAt15
   error?: StructuredError | null
-  generation_id?: GenerationId27
+  generation_id?: GenerationId28
   mcp_connection_id?: McpConnectionId1
   origin?: Origin
   plugin_id?: PluginId3
   progress?: Progress
   provider_tool_call_id?: ProviderToolCallId
   result?: SkillResult | null
-  session_id: SessionId28
+  session_id: SessionId29
   skill_id: SkillId3
   skill_run_id: SkillRunId16
   skill_version: SkillVersion
   started_at?: StartedAt1
   state: SkillRunState
-  turn_id?: TurnId25
-  updated_at: UpdatedAt12
+  turn_id?: TurnId26
+  updated_at: UpdatedAt14
   [k: string]: unknown
 }
 export interface StickerLibraryDeleteResult {
   deleted: Deleted1
-  revision: Revision8
-  schema_version?: SchemaVersion66
+  revision: Revision10
+  schema_version?: SchemaVersion73
   [k: string]: unknown
 }
 export interface StickerLibrarySettings {
   learning_enabled?: LearningEnabled
-  revision?: Revision9
-  schema_version?: SchemaVersion67
+  revision?: Revision11
+  schema_version?: SchemaVersion74
   [k: string]: unknown
 }
 export interface StickerLibrarySettingsUpdate {
-  expected_revision: ExpectedRevision5
+  expected_revision: ExpectedRevision7
   learning_enabled: LearningEnabled1
-  schema_version?: SchemaVersion68
+  schema_version?: SchemaVersion75
   [k: string]: unknown
 }
 export interface StickerLibrarySnapshot {
   capacity?: Capacity1
-  items?: Items2
-  schema_version?: SchemaVersion69
+  items?: Items3
+  schema_version?: SchemaVersion76
   settings: StickerLibrarySettings
   total_bytes: TotalBytes1
   [k: string]: unknown
@@ -3160,9 +3342,9 @@ export interface StickerLibrarySnapshot {
  */
 export interface StickerUsageHistory {
   has_more?: HasMore1
-  items?: Items3
+  items?: Items4
   scan_limit?: ScanLimit
-  schema_version?: SchemaVersion71
+  schema_version?: SchemaVersion78
   [k: string]: unknown
 }
 /**
@@ -3170,15 +3352,15 @@ export interface StickerUsageHistory {
  */
 export interface StickerUsageRecord {
   attempt: Attempt3
-  created_at: CreatedAt15
+  created_at: CreatedAt16
   delivered_at?: DeliveredAt4
   label: Label1
   origin: Origin1
   part_id: PartId4
-  schema_version?: SchemaVersion70
+  schema_version?: SchemaVersion77
   status: Status8
   sticker_id: StickerId2
-  updated_at: UpdatedAt13
+  updated_at: UpdatedAt15
   [k: string]: unknown
 }
 export interface TurnSnapshot {
@@ -3186,15 +3368,15 @@ export interface TurnSnapshot {
   committed_at?: CommittedAt
   committed_text?: CommittedText
   scene_snapshot_id?: SceneSnapshotId
-  session_id: SessionId29
-  turn_id: TurnId26
+  session_id: SessionId30
+  turn_id: TurnId27
   [k: string]: unknown
 }
 export interface VideoFrameHeader {
   byte_length: ByteLength1
   codec: Codec1
   end_of_stream?: EndOfStream1
-  generation_id?: GenerationId28
+  generation_id?: GenerationId29
   height: Height1
   pts_ms: PtsMs1
   sequence: Sequence18
