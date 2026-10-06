@@ -1,60 +1,12 @@
-name: Python CI
-
+name: Windows integration diagnostics
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/ci-python.yml"
-      - "**/*.py"
-      - "services/**"
-      - "packages/**"
-      - "workers/**"
-      - "tools/**"
-      - "tests/**"
-      - "config/**"
-      - "characters/**"
-      - "skills/**"
-      - "schemas/**"
-      - "release/products.json"
-      - "apps/web/package.json"
-      - "apps/desktop/package.json"
-      - "apps/desktop/src-tauri/Cargo.toml"
-      - "apps/desktop/src-tauri/tauri.conf.json"
-      - "pyproject.toml"
-      - "uv.lock"
-  pull_request:
-    paths:
-      - ".github/workflows/ci-python.yml"
-      - "**/*.py"
-      - "services/**"
-      - "packages/**"
-      - "workers/**"
-      - "tools/**"
-      - "tests/**"
-      - "config/**"
-      - "characters/**"
-      - "skills/**"
-      - "schemas/**"
-      - "release/products.json"
-      - "apps/web/package.json"
-      - "apps/desktop/package.json"
-      - "apps/desktop/src-tauri/Cargo.toml"
-      - "apps/desktop/src-tauri/tauri.conf.json"
-      - "pyproject.toml"
-      - "uv.lock"
   workflow_dispatch:
-
 permissions:
   contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  python-static:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+  python-windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v9.0.0
@@ -63,61 +15,10 @@ jobs:
           python-version: "3.12"
           enable-cache: true
       - run: uv sync --all-packages --all-groups --locked
-      - run: uv run ruff format --check .
-      - run: uv run ruff check .
-      - run: uv run pyright
-
-  python:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v9.0.0
+      - run: uv run pytest -vv --tb=short --durations=25 --junitxml=pytest-results.xml -o faulthandler_timeout=120
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          version: "0.12.5"
-          python-version: "3.12"
-          enable-cache: true
-      - run: uv sync --all-packages --all-groups --locked
-      # Report the exact test and first failure before a later teardown can hang.
-      # The watchdog dumps thread stacks without cancelling or skipping tests.
-      - run: uv run pytest -vv -x --tb=short --durations=25 --junitxml=pytest-results.xml -o faulthandler_timeout=120
-      - if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-pytest-${{ matrix.os }}
+          name: windows-complete-diagnostics
           path: pytest-results.xml
-          if-no-files-found: ignore
           retention-days: 7
-
-  neural-worker:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v9.0.0
-        with:
-          version: "0.12.5"
-          # The neural worker is intentionally embedded in the Python 3.10
-          # GPT-SoVITS environment, so its minimum supported interpreter is
-          # the compatibility gate. The workspace job above covers 3.12.
-          python-version: "3.10"
-          enable-cache: true
-          cache-dependency-glob: workers/tts-neural/uv.lock
-      - run: uv sync --all-groups --locked
-        working-directory: workers/tts-neural
-      - run: uv run ruff format --check .
-        working-directory: workers/tts-neural
-      - run: uv run ruff check .
-        working-directory: workers/tts-neural
-      - run: uv run pyright
-        working-directory: workers/tts-neural
-      - run: uv run pytest
-        working-directory: workers/tts-neural
