@@ -103,6 +103,9 @@ describe("QQChannelPanel", () => {
       await openSetup();
       fireEvent.click(screen.getByRole("button", { name: "开始 QQ 配对" }));
       await screen.findByText("CW2 PAIR1234");
+      await waitFor(() =>
+        expect(qqClient.getQQPairing).toHaveBeenCalledTimes(1),
+      );
       const b = {
         ...connection(),
         configuration: { ...connection().configuration, name: "Runtime B QQ" },

@@ -168,6 +168,21 @@ async def test_unavailable_or_nonlocal_backend_performs_no_download(kind: str) -
         wav_data() + b"private-trailing-content",
         b"0" * (5 * 1024 * 1024 + 1),
     ],
+    ids=[
+        "empty",
+        "native-silk",
+        "invalid-riff",
+        "empty-frames",
+        "sample-rate-too-low",
+        "sample-rate-too-high",
+        "too-many-channels",
+        "sample-width-too-small",
+        "sample-width-too-large",
+        "duration-too-long",
+        "truncated-data",
+        "trailing-content",
+        "file-too-large",
+    ],
 )
 async def test_invalid_or_oversized_wav_never_reaches_stt(data: bytes) -> None:
     transport, backend = Transport(data), Backend()

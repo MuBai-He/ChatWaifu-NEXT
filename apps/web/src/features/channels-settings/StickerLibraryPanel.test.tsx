@@ -302,6 +302,7 @@ describe("StickerLibraryPanel", () => {
     const toggle = await screen.findByRole<HTMLInputElement>("switch", {
       name: "学习我发来的表情",
     });
+    await waitFor(() => expect(toggle.disabled).toBe(false));
     expect(toggle.checked).toBe(false);
 
     fireEvent.click(toggle);
