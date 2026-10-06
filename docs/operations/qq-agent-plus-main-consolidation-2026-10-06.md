@@ -41,6 +41,11 @@
 
 02 中的 `cl100k_base.tiktoken` 是已有来源的固定词表，约十万行；审阅时将词表及许可与输入估算逻辑分别核对。
 
+首次 GitHub 门禁发现并修复两类问题，修复随对应分项同步到整个系列：
+
+- 00 将 `multidict` 升至 6.9.1、`source-map-js` 升至 1.2.2，分别对应 [Multidict 公告](https://github.com/advisories/GHSA-54p9-h82j-f925)和 [source-map-js 公告](https://github.com/advisories/GHSA-68fv-2mgg-jv7q)，保留原审计门禁。
+- 01 将 48 个含冒号的归档文件名改为 Windows 可 checkout 的名称，内容 SHA-256 不变。历史记录里的标识和路径字段保留；通过[旧、新路径映射](../research/qq-agent-plus-evidence/portable-paths-2026-10-06.json)查找现存文件，原提交链也继续保留。
+
 ## 已验证范围
 
 以下结果来自完整整合候选的本地 macOS 检查。各个中间 PR 的 CI 结果单独确认，不能由最终候选通过推断所有中间版本通过。
