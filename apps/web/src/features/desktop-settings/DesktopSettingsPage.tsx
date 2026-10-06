@@ -75,7 +75,7 @@ export function DesktopSettingsPage() {
   const SelectedSection = selected.component;
 
   return (
-    <main className="desktop-settings-page">
+    <main className="desktop-settings-page settings-controls">
       <aside className="desktop-settings-sidebar">
         <header>
           <span className="desktop-settings-app-icon">

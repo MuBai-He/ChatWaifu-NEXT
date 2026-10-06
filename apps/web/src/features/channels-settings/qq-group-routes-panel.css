@@ -29,17 +29,6 @@
   display: grid;
   gap: 6px;
 }
-.qq-group-fields :is(input:not([type="checkbox"]), select) {
-  box-sizing: border-box;
-  min-width: 0;
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--settings-line);
-  border-radius: 7px;
-  color: var(--settings-text);
-  background: rgb(255 255 255 / 70%);
-  font: inherit;
-}
 .qq-group-fields .qq-group-check {
   display: flex;
   align-items: start;
@@ -68,8 +57,4 @@
 }
 .qq-group-reply {
   white-space: pre-wrap;
-}
-.qq-group-routes-panel :is(button, input, select):focus-visible {
-  outline: 2px solid #8d527d;
-  outline-offset: 3px;
 }

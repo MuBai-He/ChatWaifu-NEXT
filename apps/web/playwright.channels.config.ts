@@ -26,6 +26,14 @@ export default defineConfig({
   projects: [
     { name: "channels-web", use: { baseURL: "http://127.0.0.1:4183" } },
     { name: "channels-desktop", use: { baseURL: "http://127.0.0.1:4184" } },
+    {
+      name: "channels-desktop-webkit",
+      use: {
+        ...devices["Desktop Safari"],
+        baseURL: "http://127.0.0.1:4184",
+      },
+      grep: /settings controls/,
+    },
   ],
   webServer: [
     {

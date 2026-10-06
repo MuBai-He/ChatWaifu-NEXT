@@ -983,13 +983,6 @@
   background: #e5dfe5;
 }
 
-.desktop-settings-page .model-role-card input:not([type="checkbox"]),
-.desktop-settings-page .model-role-card select {
-  border-color: rgb(86 67 91 / 14%);
-  color: var(--settings-text);
-  background: rgb(255 255 255 / 82%);
-}
-
 .desktop-settings-page .model-role-card footer button {
   border-color: rgb(86 67 91 / 14%);
   color: #625864;

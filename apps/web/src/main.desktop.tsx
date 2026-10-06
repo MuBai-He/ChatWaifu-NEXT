@@ -7,6 +7,7 @@ import "./features/desktop-settings/desktop-settings.css";
 import { DesktopProductApp } from "./product/desktop/DesktopProductApp";
 import { resolveDesktopSurface } from "./product/desktop/desktopSurface";
 import { mountProduct } from "./product/mountProduct";
+import "./features/settings/settings-controls.css";
 
 const surface = resolveDesktopSurface();
 mountProduct({

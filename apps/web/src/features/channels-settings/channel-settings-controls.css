@@ -14,6 +14,11 @@
 .channel-settings-body {
   padding: 20px;
 }
+.channel-settings-body > h3 {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
 .channel-settings-section-heading {
   padding: 20px;
   border-bottom: 1px solid var(--settings-line);
@@ -113,17 +118,6 @@
   color: var(--settings-muted);
   font-size: 0.7rem;
 }
-.channel-settings-fields :is(input, select),
-.channel-settings-select select {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 9px 10px;
-  border: 1px solid var(--settings-line);
-  border-radius: 7px;
-  color: var(--settings-text);
-  background: white;
-  font: inherit;
-}
 .channel-settings-facts {
   display: grid;
   grid-template-columns: minmax(100px, 1fr) 2fr;
@@ -148,10 +142,6 @@
 }
 .channel-settings-confirm p {
   width: 100%;
-}
-.channels-settings-section :is(button, input, select, summary):focus-visible {
-  outline: 2px solid #8d527d;
-  outline-offset: 3px;
 }
 .channels-settings-section :is(button, input, select):disabled {
   cursor: default;
@@ -249,12 +239,17 @@
     .channels-settings-primary-action,
     .qq-channel-secondary-action,
     .qq-channel-content p,
+    .qq-channel-offline,
     .qq-channel-form small,
     .qq-channel-form label,
     .channels-settings-state,
     .channels-settings-provider-heading p
   ) {
   font-size: 0.78rem;
+}
+.channels-settings-section .qq-channel-form label {
+  display: grid;
+  gap: 6px;
 }
 .channels-settings-section .channels-settings-provider-heading h2 {
   font-size: 1rem;
