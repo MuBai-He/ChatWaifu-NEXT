@@ -9,6 +9,7 @@ from typing import Literal
 from uuid import UUID
 
 from chatwaifu_protocol.character import (
+    PROMPT_TEMPLATE_VERSION,
     CharacterKernelSnapshot,
     ModelContextBudget,
     PromptBudgetReport,
@@ -24,6 +25,7 @@ from chatwaifu_protocol.memory import (
 from chatwaifu_runtime.characters.service import CharacterProfile
 from chatwaifu_runtime.conversation.models import (
     ConversationHistoryEntry,
+    ConversationOrigin,
     ConversationSourceContext,
     GenerationContextSnapshot,
 )
@@ -78,25 +80,38 @@ _SAFETY = (
 
 _INSTANT_MESSAGE_OUTPUT_CONTRACT = (
     "[OUTPUT CONTRACT]\n"
-    "You are messaging in an instant chat. Stay in character, answer the current user turn, "
-    "and express the Response Plan naturally. Priority: safety, truth and source facts; "
-    "explicit user boundaries and requested tasks; relationship constraints; character "
-    "traits; casual chat brevity. Casual replies usually need one or two brief sentences "
-    "about the immediate point, never a paragraph/bubble quota. This brevity overrides "
-    "generic persona paragraph counts. Do not guess needs, imitate verbose history, or add "
-    "unsolicited plans, routines, stock reassurance, repeated advice, generic help offers "
-    "or exaggerated promises. Offer advice only when requested or a concrete suggestion "
-    "clearly helps. Let warmth and gentle humor fit the situation. Default to no follow-up; "
-    "ask at most one genuine useful question per reply. Acknowledgements and goodbyes end "
-    "without more advice, questions or topics. If the user just wants to chat, chat without "
-    "explaining companionship or interviewing them. Stop requested jokes immediately and "
-    "answer serious matters supportively, without silence or refusal. Explicit detailed, "
-    "technical, code, multiple-topic or question-list requests override casual brevity and "
-    "question limits: fulfill them completely, including any requested number of sentences "
-    "per topic. Never invent physical actions or shared experiences. Use paragraph breaks "
-    "for real topic shifts; output no internal tags, state labels/scores, delimiters "
-    "(such as |||), or stage directions."
+    "You are messaging in an instant chat. Stay in character and express the Response Plan "
+    "naturally. Priority: safety, truth and source facts; explicit user boundaries and requested "
+    "tasks; relationship constraints; character traits; casual brevity. "
+    "For casual chat, the WHOLE reply is usually 5-30 Chinese characters or a similarly "
+    "brief utterance in another language. Default to one natural short response to the "
+    "immediate point, then stop. Express warmth, hesitation or playful character in that "
+    "response itself; do not follow a short opening reaction with a longer explanation, "
+    "rephrasing, emotional commentary or description of how you will accompany the user. "
+    "A second message needs content the user actually requested or a necessary clarification; "
+    "continuing the same reaction is not a separate reason to speak. Use blank lines only "
+    "between such distinct complete messages. Never split a sentence, truncate content or "
+    "add filler to meet a paragraph/bubble quota. "
+    "This brevity overrides generic persona paragraph counts and verbose assistant history. "
+    "Say the useful thing and stop: no unsolicited plans, routines, repeated advice, stock "
+    "reassurance, exaggerated promises, self-explanations, summaries or generic help offers. "
+    "Default to no follow-up; ask at most one genuine useful question. Acknowledgements and "
+    "goodbyes end without more advice, questions or topics, e.g. '在呀。' or '嗯，晚安。'. "
+    "If the user wants to chat, chat without interviewing them. Stop requested jokes "
+    "immediately and take serious matters supportively, without silence or refusal. "
+    "Explicit detailed, technical, code, multiple-topic or question-list requests override "
+    "casual brevity and question limits: fulfill every requested element, including any requested "
+    "number of sentences per topic, necessary facts, conditions, uncertainty and code. "
+    "Never invent physical actions or shared experiences; output no internal tags, state "
+    "labels/scores, delimiters (such as |||), or stage directions."
 )
+
+
+def prompt_template_version_for_origin(origin: ConversationOrigin) -> str:
+    """Only messaging generations change identity when their output contract changes."""
+    if origin == "external_channel":
+        return f"{PROMPT_TEMPLATE_VERSION}.messaging2"
+    return PROMPT_TEMPLATE_VERSION
 
 
 _STANDARD_OUTPUT_CONTRACT = (
@@ -153,6 +168,7 @@ class PromptCompiler:
         user_text: str,
         source_context: ConversationSourceContext | None = None,
         presentation_profile: str | None = None,
+        conversation_origin: ConversationOrigin | None = None,
         photo_evidence: str = "",
         source_evidence: str = "",
         snapshot: GenerationContextSnapshot | None = None,
@@ -275,7 +291,9 @@ class PromptCompiler:
                 summary_omitted = _omitted_characters(summary, fitted_summary)
                 context.append(("system", f"Earlier Conversation Summary:\n{fitted_summary}"))
 
-        if presentation_profile == "instant_message":
+        if conversation_origin == "external_channel" or (
+            conversation_origin is None and presentation_profile == "instant_message"
+        ):
             output_contract = _INSTANT_MESSAGE_OUTPUT_CONTRACT
         else:
             output_contract = _STANDARD_OUTPUT_CONTRACT

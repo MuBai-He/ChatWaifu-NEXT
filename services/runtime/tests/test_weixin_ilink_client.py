@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import AsyncIterator
 
 import httpx
@@ -155,6 +156,133 @@ async def test_text_reply_reuses_context_and_caller_stable_client_id() -> None:
     assert message["to_user_id"] == "owner-1"
     assert message["context_token"] == "reply-context-token"
     assert message["client_id"] == "chatwaifu-stable-delivery"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("operation", ["updates", "text", "typing_config", "notify_start"])
+@pytest.mark.parametrize("field", ["ret", "errcode"])
+async def test_http_200_session_timeout_is_not_a_successful_provider_response(
+    operation: str,
+    field: str,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.INFO)
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(
+            lambda _: httpx.Response(200, json={field: -14, "errmsg": "private-provider-detail"})
+        )
+    ) as http:
+        client = WeixinILinkClient(http)
+        with pytest.raises(WeixinILinkError) as caught:
+            if operation == "updates":
+                await client.get_updates(_credentials(), "cursor-before")
+            elif operation == "text":
+                await client.send_text(
+                    _credentials(),
+                    recipient_user_id="owner-1",
+                    context_token="private-context",
+                    client_id="stable-client-id",
+                    text="private-reply",
+                )
+            elif operation == "typing_config":
+                await client.get_typing_ticket(
+                    _credentials(),
+                    recipient_user_id="owner-1",
+                    context_token="private-context",
+                )
+            else:
+                await client.notify_start(_credentials())
+    assert caught.value.code == "weixin.session_expired"
+    assert caught.value.retryable is False
+    assert "private-provider-detail" not in str(caught.value)
+    if operation == "text":
+        entry = next(
+            json.loads(record.getMessage())
+            for record in caplog.records
+            if '"event": "weixin.send_response"' in record.getMessage()
+        )
+        assert entry[field] == -14
+        assert "private-provider-detail" not in json.dumps(entry)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("errcode", ["-14", True, None, 7])
+async def test_error_code_without_ret_cannot_be_accepted_as_an_empty_update(
+    errcode: object,
+) -> None:
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda _: httpx.Response(200, json={"errcode": errcode}))
+    ) as http:
+        with pytest.raises(WeixinILinkError):
+            await WeixinILinkClient(http).get_updates(_credentials(), "cursor-before")
+
+
+@pytest.mark.asyncio
+async def test_zero_error_code_with_optional_ret_remains_compatible() -> None:
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda _: httpx.Response(200, json={"errcode": 0}))
+    ) as http:
+        result = await WeixinILinkClient(http).get_updates(_credentials(), "cursor-before")
+    assert result.messages == ()
+    assert result.cursor == "cursor-before"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("server_id", "expected_id"),
+    [
+        (123456, "123456"),
+        ("18446744073709551615", "18446744073709551615"),
+        (None, "stable-client-id"),
+        (True, "stable-client-id"),
+        ("private-invalid-id", "stable-client-id"),
+        (0, "stable-client-id"),
+        (-1, "stable-client-id"),
+        (18446744073709551616, "stable-client-id"),
+    ],
+)
+async def test_send_preserves_server_receipt_and_logs_only_safe_metadata(
+    server_id: object,
+    expected_id: str,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.INFO)
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(
+            lambda _: httpx.Response(
+                200,
+                json={"message_id": server_id, "errmsg": "private-provider-detail"},
+            )
+        )
+    ) as http:
+        result = await WeixinILinkClient(http).send_text(
+            _credentials(),
+            recipient_user_id="owner-1",
+            context_token="private-context",
+            client_id="stable-client-id",
+            text="private-reply",
+        )
+    assert result == expected_id
+    entries = [
+        json.loads(record.getMessage())
+        for record in caplog.records
+        if '"event": "weixin.send_response"' in record.getMessage()
+    ]
+    assert len(entries) == 1
+    assert entries[0]["ret_present"] is False
+    assert entries[0]["receipt_kind"] == (
+        "server_message_id" if expected_id != "stable-client-id" else "client_id"
+    )
+    for value in (
+        "provider-token",
+        "owner-1",
+        "bot-1",
+        "private-context",
+        "private-reply",
+        "private-provider-detail",
+        "private-invalid-id",
+    ):
+        assert value not in json.dumps(entries)
 
 
 @pytest.mark.asyncio

@@ -90,8 +90,8 @@ async def test_delivery_changes_next_equivalent_selection_across_restart(
             # A selected/pending image does not count; only actual adapter acknowledgements do.
             before = await container.sticker_usage.history("local", "default", {})
             assert sum(p.status == "delivered" for p in before.items) == index
-            await _ack_next(container.external_channel_repository, turn.delivery_id)
-            await _ack_next(container.external_channel_repository, turn.delivery_id)
+            for _ in parts:
+                await _ack_next(container.external_channel_repository, turn.delivery_id)
             history = await container.sticker_usage.history("local", "default", {})
             assert sum(p.status == "delivered" for p in history.items) == index + 1
             # Reconstruct every service and DB connection; no in-memory usage counters survive.

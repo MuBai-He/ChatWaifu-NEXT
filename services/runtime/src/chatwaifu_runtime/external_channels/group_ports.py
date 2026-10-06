@@ -5,6 +5,7 @@ from typing import Protocol
 from uuid import UUID
 
 from chatwaifu_protocol.channel_groups import ChannelGroupPauseReason
+from chatwaifu_protocol.channels import ChannelDeliveryPartDraft
 
 from chatwaifu_runtime.external_channels.group_models import (
     ChannelGroupAdmission,
@@ -116,6 +117,7 @@ class ChannelGroupRepository(Protocol):
         reply_text: str,
         delivery_id: UUID,
         completed_at: datetime,
+        parts: tuple[ChannelDeliveryPartDraft, ...] | None = None,
     ) -> ChannelGroupPlanResult: ...
 
     async def cancel_group_turn(

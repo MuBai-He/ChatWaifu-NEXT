@@ -12,7 +12,7 @@ from uuid import UUID, uuid4
 
 import aiosqlite
 from chatwaifu_protocol.channel_groups import ChannelGroupDeliveryTarget, ChannelGroupPauseReason
-from chatwaifu_protocol.channels import ChannelTextDeliveryPartPayload
+from chatwaifu_protocol.channels import ChannelDeliveryPartDraft
 from chatwaifu_protocol.events import GenericCoreEvent, PrivacyLevel
 
 from chatwaifu_runtime.external_channels.group_models import (
@@ -34,6 +34,7 @@ from chatwaifu_runtime.external_channels.group_models import (
 )
 from chatwaifu_runtime.external_channels.group_ports import ChannelGroupRepository
 from chatwaifu_runtime.external_channels.models import ChannelBindingRecord
+from chatwaifu_runtime.external_channels.presentation import group_text_parts_match_reply
 from chatwaifu_runtime.external_channels.service import (
     ChannelBusyError,
     ChannelConflictError,
@@ -46,7 +47,9 @@ from chatwaifu_runtime.persistence.sqlite_external_channels import (
     _TURN_SELECT,
     SQLiteExternalChannelRepository,
     _binding_record,
+    _single_part_draft,
     _turn_record,
+    _validate_delivery_part_drafts,
 )
 
 
@@ -1281,9 +1284,18 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
         reply_text: str,
         delivery_id: UUID,
         completed_at: datetime,
+        parts: tuple[ChannelDeliveryPartDraft, ...] | None = None,
     ) -> ChannelGroupPlanResult:
         if type(reply_text) is not str or not reply_text.strip() or len(reply_text) > 20000:
             raise ValueError("group reply must be nonempty and bounded")
+        draft_parts = parts if parts is not None else _single_part_draft(reply_text)
+        _validate_delivery_part_drafts(draft_parts)
+        if not group_text_parts_match_reply(draft_parts, reply_text) or any(
+            part.not_before_at is not None for part in draft_parts
+        ):
+            raise ValueError(
+                "group parts require ordered complete text and receipt-based scheduling"
+            )
         stamp = _stamp(completed_at)
         async with self._database.transaction() as db:
             auth = await self._authorization_tx(db, lineage)
@@ -1355,25 +1367,26 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
                     route.revision,
                 ),
             )
-            part_id = uuid4()
-            payload = ChannelTextDeliveryPartPayload(text=reply_text)
-            await db.execute(
-                (
-                    "INSERT INTO "
-                    "channel_delivery_parts(part_id,delivery_id,ordinal,kind,payl"
-                    "oad_json,required,status,delay_after_ms,attempt,provider_cli"
-                    "ent_id,created_at,updated_at) "
-                    "VALUES(?,?,0,'text',?,1,'pending',0,0,?,?,?)"
-                ),
-                (
-                    str(part_id),
-                    str(delivery_id),
-                    payload.model_dump_json(),
-                    f"chatwaifu-{delivery_id.hex}-000",
-                    stamp.isoformat(),
-                    stamp.isoformat(),
-                ),
-            )
+            for part in draft_parts:
+                await db.execute(
+                    (
+                        "INSERT INTO "
+                        "channel_delivery_parts(part_id,delivery_id,ordinal,kind,payl"
+                        "oad_json,required,status,delay_after_ms,attempt,provider_cli"
+                        "ent_id,created_at,updated_at) "
+                        "VALUES(?,?,?,'text',?,1,'pending',?,0,?,?,?)"
+                    ),
+                    (
+                        str(uuid4()),
+                        str(delivery_id),
+                        part.ordinal,
+                        part.payload.model_dump_json(),
+                        part.delay_after_ms,
+                        f"chatwaifu-{delivery_id.hex}-{part.ordinal:03d}",
+                        stamp.isoformat(),
+                        stamp.isoformat(),
+                    ),
+                )
             await db.execute(
                 (
                     "UPDATE channel_turns SET "
@@ -1397,7 +1410,7 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
                     connection_id=str(route.connection_id),
                     channel_turn_id=str(lineage.channel_turn_id),
                     delivery_id=str(delivery_id),
-                    part_count=1,
+                    part_count=len(draft_parts),
                     chat_type="group",
                     conversation_key=f"group:{route.group_id}",
                     sender_key=turn["sender_key"],

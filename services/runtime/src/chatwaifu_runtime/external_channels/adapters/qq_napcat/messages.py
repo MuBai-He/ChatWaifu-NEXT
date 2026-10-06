@@ -43,10 +43,12 @@ def normalize_group_inbound(
     group_id: str,
     allowed_senders: frozenset[str] | None,
 ) -> NapCatGroupInboundMessage | None:
-    """Normalize a structured mention without granting participant or scope.
+    """Normalize a structured mention, including its optional reply envelope.
 
     A supplied transport whitelist also filters senders. With None, the result
     remains unresolved and must pass the group's durable application admission.
+    Reply metadata neither grants a trigger nor loads provider-quoted content;
+    Conversation continues to use its existing scope-checked group history.
     """
     sender = qq_group_identifier(event.get("user_id"))
     message_id = event.get("message_id")
@@ -76,6 +78,7 @@ def normalize_group_inbound(
         return None
     texts: list[str] = []
     mentions = 0
+    has_reply = False
     size = 0
     for segment in segments:
         if not isinstance(segment, dict) or not isinstance(segment.get("data"), dict):
@@ -93,6 +96,17 @@ def normalize_group_inbound(
             if size > 20_000:
                 return None
             texts.append(value)
+        elif segment.get("type") == "reply":
+            reference = data.get("id")
+            if (
+                has_reply
+                or type(reference) not in {str, int}
+                or not re.fullmatch(r"-?[0-9]{1,20}", str(reference))
+                or str(int(str(reference))) != str(reference)
+                or int(str(reference)) == 0
+            ):
+                return None
+            has_reply = True
         else:
             return None
     text = "".join(texts).strip()

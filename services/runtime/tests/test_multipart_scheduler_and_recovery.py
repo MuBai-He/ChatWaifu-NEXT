@@ -29,6 +29,7 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryStatus,
     ChannelInboundTextMessage,
     ChannelPresentationPolicy,
+    ChannelPresentationProfile,
     ChannelTextDeliveryPartPayload,
     ChannelTurnStatus,
 )
@@ -651,10 +652,17 @@ async def test_legacy_whole_delivery_api_single_and_multipart(runtime_settings: 
     await container.start()
     try:
         connection_id = uuid4()
-        created = await container.external_channels.create_connection(_configuration(connection_id))
+        configuration = _configuration(connection_id).model_copy(
+            update={
+                "presentation_policy": ChannelPresentationPolicy(
+                    profile=ChannelPresentationProfile.SINGLE_TEXT
+                )
+            }
+        )
+        created = await container.external_channels.create_connection(configuration)
         access_token = created.access_token
 
-        # Case 1: Single-part plan (default factory)
+        # Case 1: Explicit single-text policy remains compatible with the legacy API.
         receipt1 = await container.external_channels.ingest(
             _message(connection_id, external_message_id="legacy-single-msg"),
             access_token=access_token,
@@ -1139,7 +1147,14 @@ async def test_repeated_ack_does_not_duplicate_domain_events(runtime_settings: S
     await container.start()
     try:
         connection_id = uuid4()
-        created = await container.external_channels.create_connection(_configuration(connection_id))
+        configuration = _configuration(connection_id).model_copy(
+            update={
+                "presentation_policy": ChannelPresentationPolicy(
+                    profile=ChannelPresentationProfile.SINGLE_TEXT
+                )
+            }
+        )
+        created = await container.external_channels.create_connection(configuration)
         access_token = created.access_token
 
         # Subscribe to all events
@@ -1463,7 +1478,14 @@ async def test_legacy_whole_delivery_cancelled_delegates_to_cancel_without_error
     await container.start()
     try:
         connection_id = uuid4()
-        created = await container.external_channels.create_connection(_configuration(connection_id))
+        configuration = _configuration(connection_id).model_copy(
+            update={
+                "presentation_policy": ChannelPresentationPolicy(
+                    profile=ChannelPresentationProfile.SINGLE_TEXT
+                )
+            }
+        )
+        created = await container.external_channels.create_connection(configuration)
         access_token = created.access_token
 
         # Ingest turn 1

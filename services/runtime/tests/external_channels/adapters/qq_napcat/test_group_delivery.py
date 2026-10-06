@@ -21,6 +21,7 @@ from chatwaifu_protocol.base import JsonObject
 from chatwaifu_protocol.channels import (
     ChannelChatType,
     ChannelDeliveryPartKind,
+    ChannelDeliveryPartStatus,
     ChannelDeliveryStatus,
     ChannelGroupDeliveryTarget,
     ChannelImageDeliveryPartPayload,
@@ -216,6 +217,80 @@ async def test_group_text_goes_only_to_fixed_group_without_private_reply(
     assert checks == [group_state.plan] * 4
     assert group_state.repository.quoted_reads == 0
     assert await group_state.journal() == {group_state.part.provider_client_id: RECEIPT}
+
+
+async def test_two_group_bubbles_send_in_order_and_known_receipt_never_replays(
+    group_state: GroupState,
+) -> None:
+    first_text, second_text = "第一句。\n\n", "第二句。"
+    first = replace(group_state.part, payload=ChannelTextDeliveryPartPayload(text=first_text))
+    second = replace(
+        group_state.part,
+        part_id=uuid4(),
+        ordinal=1,
+        provider_client_id=f"chatwaifu-{group_state.plan.delivery_id.hex}-001",
+        payload=ChannelTextDeliveryPartPayload(text=second_text),
+        status=ChannelDeliveryPartStatus.PENDING,
+        lease_id=None,
+        lease_expires_at=None,
+    )
+    plan = replace(
+        group_state.plan,
+        delivery=replace(group_state.plan.delivery, part_count=2),
+        parts=(first, second),
+    )
+    repo = group_state.repository
+    assert repo.turn is not None
+    repo.turn = replace(repo.turn, reply_text=first_text + second_text)
+    repo.plan = replace(plan, delivery=replace(plan.delivery, status=ChannelDeliveryStatus.SENDING))
+    actions: list[JsonObject] = []
+
+    async def peer(socket: ServerConnection) -> None:
+        for text, receipt in (("第一句。", "-801"), (second_text, "-802")):
+            login = await request(socket)
+            actions.append(login)
+            await reply(socket, login, {"user_id": ACCOUNT})
+            outgoing = await request(socket)
+            actions.append(outgoing)
+            assert outgoing["params"] == {
+                "group_id": GROUP,
+                "message": [{"type": "text", "data": {"text": text}}],
+            }
+            await reply(socket, outgoing, {"message_id": receipt})
+        await socket.wait_closed()
+
+    async with connected(peer) as client:
+        executor = group_state.executor(client, allowed)
+        sent = await asyncio.wait_for(executor.execute_part(plan, first), 2)
+        assert sent.outcome is DeliveryPartOutcome.DELIVERED
+        delivered = replace(
+            first, status=ChannelDeliveryPartStatus.DELIVERED, provider_message_id="-801"
+        )
+        second = replace(
+            second,
+            status=ChannelDeliveryPartStatus.SENDING,
+            lease_id=uuid4(),
+            lease_expires_at=datetime.now(UTC) + timedelta(seconds=30),
+        )
+        plan = replace(plan, parts=(delivered, second))
+        repo.plan = replace(
+            plan, delivery=replace(plan.delivery, status=ChannelDeliveryStatus.SENDING)
+        )
+        sent = await asyncio.wait_for(executor.execute_part(plan, second), 2)
+        assert sent.outcome is DeliveryPartOutcome.DELIVERED
+        assert sent.provider_message_id == "-802"
+        replay = await asyncio.wait_for(executor.execute_part(plan, second), 2)
+        assert replay.provider_message_id == "-802"
+    assert [item["action"] for item in actions] == [
+        "get_login_info",
+        "send_group_msg",
+        "get_login_info",
+        "send_group_msg",
+    ]
+    assert await group_state.journal() == {
+        first.provider_client_id: "-801",
+        second.provider_client_id: "-802",
+    }
 
 
 @pytest.mark.parametrize("callback", ["absent", "denied"])
