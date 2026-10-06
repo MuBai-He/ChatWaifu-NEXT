@@ -1,0 +1,121 @@
+{
+  "date": "2026-10-06",
+  "workspace": "/Users/mubai/.codex/worktrees/messaging-short-replies/CW2",
+  "branch": "mubai/messaging-short-replies",
+  "agy_used": false,
+  "scope": "Participant display labels and Web/Desktop conversation-scope dialog",
+  "python": {
+    "targeted_tests": 120,
+    "passed": true,
+    "checks": [
+      "participant identity and scene/session preservation",
+      "duplicate names remain separate",
+      "CAS conflict",
+      "name bounds and operator authentication",
+      "existing sessions, scene memory subjects and QQ group API"
+    ],
+    "server_linux_targeted_tests": 120
+  },
+  "web_unit": {
+    "test_files": 64,
+    "tests": 453,
+    "passed": true,
+    "final_focus_related_regression": {
+      "test_files": 3,
+      "tests": 23,
+      "passed": true
+    }
+  },
+  "browser": {
+    "unique_acceptance_cases_passed": 8,
+    "prior_settings_cases_retained": 5,
+    "new_scope_cases": 3,
+    "engines": [
+      "Chromium Web",
+      "Chromium Desktop",
+      "WebKit Desktop"
+    ],
+    "disposable_runtime": true,
+    "providers": {
+      "llm": "demo",
+      "tts": "fake",
+      "stt": "disabled"
+    },
+    "fixture_participants": true,
+    "checks": [
+      "real API rename and reload",
+      "original scene unchanged",
+      "ID-based selection with duplicate names",
+      "40px height, 10px radius, 13px font and 16px checkbox",
+      "Tab and Shift+Tab trap",
+      "Escape and cancel restore opener focus",
+      "390px width no overflow",
+      "visible fixed header and footer with scrolling body",
+      "no conversation turns, group permission or scene writes from UI"
+    ],
+    "initial_findings": [
+      {
+        "class": "test setup",
+        "issue": "Desktop default pet section lacked the connection-section click",
+        "resolution": "navigate the visible connection section"
+      },
+      {
+        "class": "test fixture",
+        "issue": "Repeated run produced duplicate labels",
+        "resolution": "select checkbox using participant ID and assert its accessible name"
+      },
+      {
+        "class": "production UI",
+        "issue": "WebKit pointer focus and inert lost the opener",
+        "resolution": "capture explicit opener element for dialog focus restoration"
+      },
+      {
+        "class": "check process race",
+        "issue": "ESLint scanned the generated output directory while Playwright cleaned it",
+        "resolution": "complete ESLint passed after the browser run"
+      }
+    ]
+  },
+  "limits": [
+    "Screenshots use fixture participants",
+    "No new QQ/WeChat handset or voice acceptance",
+    "No Q02 quality retest"
+  ],
+  "deployment": {
+    "verified": true,
+    "evidence": [
+      "staged.json",
+      "cutover.json",
+      "deployment-public.json",
+      "web-api-public.json"
+    ],
+    "web_files_verified": 7,
+    "unchanged_source_files": 1301,
+    "database_schema": 44,
+    "new_schema_or_dependency_changes": false
+  },
+  "product_commit": "d801d526b0e78babbecd391e71e31d58662a74b9",
+  "checks": {
+    "typescript": true,
+    "eslint": true,
+    "prettier": true,
+    "ruff": true,
+    "python_types": true,
+    "web_build": true,
+    "desktop_build": true,
+    "product_artifact_isolation": true,
+    "diff_whitespace": true
+  },
+  "native_mac": {
+    "verified": true,
+    "client": "native macOS WebKit development client",
+    "connection": "existing remote Runtime",
+    "real_participant_names_visible": 6,
+    "placeholder_labels_remaining": 0,
+    "dialog_layout": "shared controls, fixed footer and scrollable body/list",
+    "escape_restored_focus_to": "管理对话",
+    "conversation_scope_changed": false,
+    "channel_permissions_changed": false,
+    "handset_or_audio_test": false
+  }
+}

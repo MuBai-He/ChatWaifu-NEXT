@@ -1,0 +1,12 @@
+{
+  "web_artifact_hashes_verified": 7,
+  "web_route_verified": true,
+  "all_four_placeholder_names_updated": true,
+  "auth_rejection": 401,
+  "name_conflict_rejection": 409,
+  "participants_unchanged_by_negative_checks": true,
+  "mac_patch_cors_verified": true,
+  "hostname_verified_https": true,
+  "private_token_scan": "absent",
+  "private_model_assets": "excluded"
+}

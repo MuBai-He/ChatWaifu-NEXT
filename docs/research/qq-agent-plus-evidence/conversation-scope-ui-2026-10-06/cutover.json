@@ -1,0 +1,12 @@
+{
+  "product_commit": "d801d526b0e78babbecd391e71e31d58662a74b9",
+  "source": "/home/mubai/chatwaifu-server/releases/conversation-scope-20261006-d801d52/source",
+  "web": "/home/mubai/chatwaifu-server/releases/conversation-scope-20261006-d801d52/web",
+  "status": "started",
+  "configuration_unchanged": true,
+  "policy_unchanged": true,
+  "scenes_unchanged": true,
+  "participants_unchanged": true,
+  "web_process_unchanged": true,
+  "runtime_pid": 1524500
+}

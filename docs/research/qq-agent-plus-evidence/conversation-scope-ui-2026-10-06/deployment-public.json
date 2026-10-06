@@ -1,0 +1,36 @@
+{
+  "product_commit": "d801d526b0e78babbecd391e71e31d58662a74b9",
+  "groups": [
+    {
+      "group_id": "931709239",
+      "member_count": 5,
+      "allow_requested_voice": true,
+      "enabled": true
+    },
+    {
+      "group_id": "596912632",
+      "member_count": 2,
+      "allow_requested_voice": false,
+      "enabled": true
+    }
+  ],
+  "renamed_placeholder_count": 4,
+  "original_manual_labels_preserved": true,
+  "participant_identity_unchanged": true,
+  "participant_links_unchanged": true,
+  "scenes_unchanged": true,
+  "policy_unchanged": true,
+  "schema_version": 44,
+  "sqlite_integrity": "ok",
+  "foreign_key_violations": 0,
+  "channel_status_counts": {
+    "weixin_ilink": {
+      "error": 1,
+      "ready": 1
+    },
+    "qq_napcat": {
+      "ready": 1
+    }
+  },
+  "handset_test": false
+}

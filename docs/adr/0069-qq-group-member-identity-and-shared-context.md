@@ -105,6 +105,16 @@ new scene when the audience changes. Do not silently union private memories or
 resume an old audience. The UI states this observation limitation explicitly;
 it cannot claim instantaneous or atomic membership fencing.
 
+## Operator display labels, 2026-10-06
+
+The participant dialog exposes operator-managed display-name changes with an
+expected-current-name precondition. Only the label is updated; participant IDs,
+QQ links, scene audiences, sessions and memory/state namespaces remain unchanged.
+Duplicate names do not merge identities. Existing QQ placeholder labels can be
+replaced after reading nicknames by the already-linked account and sender IDs.
+Global labels do not automatically follow group-specific cards or override manual
+aliases. See [the UI and API verification record](../operations/conversation-scope-ui-2026-10-06.md).
+
 ## Integration and acceptance
 
 Implement identity/state/memory isolation first, then fixed route persistence,
