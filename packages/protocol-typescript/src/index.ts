@@ -7,6 +7,8 @@ export {
   parseAvatarCapabilityManifest,
   parseAvatarCue,
   parseAvatarInteractionEvent,
+  parseChannelPairingSnapshot,
+  parseChannelPairingStartRequest,
   parseChannelAuthorizationSnapshot,
   parseChannelAuthorizationStartRequest,
   parseChannelAuthorizationVerificationRequest,

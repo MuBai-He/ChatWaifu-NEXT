@@ -19,6 +19,7 @@ import { SettingsIcon } from "./SettingsIcon";
 import { SettingsSectionIntro, SettingsToggle } from "./SettingsPrimitives";
 import { StickerLibraryPanel } from "./StickerLibraryPanel";
 import { PhotoMemoryPanel } from "./PhotoMemoryPanel";
+import { QQChannelPanel } from "./QQChannelPanel";
 import "./channels-settings.css";
 
 const WEIXIN_PROVIDER_ID = "weixin_ilink";
@@ -221,7 +222,7 @@ export function ChannelsSettingsSection({
         <SettingsSectionIntro
           icon="channels"
           title="消息渠道"
-          description="把微信消息接入同一个宁宁角色、关系和记忆。绑定凭据只保存在本机安全存储中。"
+          description="把微信和 QQ 消息接入同一个角色、关系和记忆。绑定凭据由 Runtime 安全托管。"
         />
       </section>
 
@@ -302,6 +303,11 @@ export function ChannelsSettingsSection({
           </p>
         ) : null}
       </section>
+      <QQChannelPanel
+        key={characterId}
+        characterId={characterId}
+        runtimeOnline={runtimeOnline}
+      />
     </div>
   );
 }

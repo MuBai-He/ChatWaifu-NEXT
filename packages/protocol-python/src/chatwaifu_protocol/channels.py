@@ -12,7 +12,7 @@ from enum import StrEnum
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import AwareDatetime, Field, model_validator
+from pydantic import AwareDatetime, Field, SecretStr, model_validator
 
 from chatwaifu_protocol.base import ProtocolModel
 from chatwaifu_protocol.errors import StructuredError
@@ -36,6 +36,7 @@ class ChannelMessageKind(StrEnum):
 
     TEXT = "text"
     IMAGE = "image"
+    AUDIO = "audio"
 
 
 class ChannelConnectionStatus(StrEnum):
@@ -552,6 +553,7 @@ class ChannelDeliverySnapshot(ChannelVersionedModel):
 class ChannelDeliveryPartKind(StrEnum):
     TEXT = "text"
     IMAGE = "image"
+    AUDIO = "audio"
 
 
 class ChannelDeliveryPartStatus(StrEnum):
@@ -590,10 +592,53 @@ class ChannelImageDeliveryPartPayload(ChannelVersionedModel):
     )
 
 
+class ChannelAudioDeliveryPartPayload(ChannelVersionedModel):
+    kind: Literal[ChannelDeliveryPartKind.AUDIO] = ChannelDeliveryPartKind.AUDIO
+    asset_id: UUID
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    mime_type: Literal["audio/wav", "audio/mpeg"] = "audio/wav"
+    duration_ms: int = Field(ge=1, le=120_000)
+    text: str = Field(min_length=1, max_length=2000)
+
+
 ChannelDeliveryPartPayload = Annotated[
-    ChannelTextDeliveryPartPayload | ChannelImageDeliveryPartPayload,
+    ChannelTextDeliveryPartPayload
+    | ChannelImageDeliveryPartPayload
+    | ChannelAudioDeliveryPartPayload,
     Field(discriminator="kind"),
 ]
+
+
+class ChannelPairingStartRequest(ChannelVersionedModel):
+    provider_id: Literal["qq_napcat"] = "qq_napcat"
+    endpoint: str = Field(min_length=1, max_length=2048)
+    access_token: SecretStr = Field(min_length=16, max_length=4096, repr=False)
+    character_id: str = Field(default="default", min_length=1, max_length=256)
+
+
+class ChannelPairingSnapshot(ChannelVersionedModel):
+    pairing_id: UUID
+    provider_id: Literal["qq_napcat"] = "qq_napcat"
+    status: Literal["pending", "confirmed", "cancelled", "expired", "failed"]
+    pairing_code: str | None = None
+    account_label: str | None = None
+    expires_at: AwareDatetime
+    connection: ChannelConnectionSnapshot | None = None
+    error: StructuredError | None = None
+
+    @model_validator(mode="after")
+    def validate_pairing(self) -> ChannelPairingSnapshot:
+        if self.status == "pending" and not self.pairing_code:
+            raise ValueError("pending pairing requires a code")
+        if self.status != "pending" and self.pairing_code is not None:
+            raise ValueError("terminal pairing cannot include a code")
+        if self.status == "confirmed" and self.connection is None:
+            raise ValueError("confirmed pairing requires a connection")
+        if self.status != "confirmed" and self.connection is not None:
+            raise ValueError("only confirmed pairing includes a connection")
+        if (self.status == "failed") != (self.error is not None):
+            raise ValueError("only failed pairing requires an error")
+        return self
 
 
 class ChannelDeliveryPartSnapshot(ChannelVersionedModel):

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import cast
+from typing import Protocol, cast
+from uuid import UUID
 
 from chatwaifu_protocol.base import JsonObject
 from chatwaifu_protocol.skills import McpConnectionConfiguration, PluginManifest
@@ -21,6 +23,21 @@ from chatwaifu_runtime.runtime_skills.transports import (
 SessionBuiltinHandler = Callable[[str, JsonObject], Awaitable[JsonObject]]
 
 BuiltinHandler = Callable[[JsonObject], Awaitable[JsonObject]]
+
+
+@dataclass(frozen=True)
+class GenerationSkillContext:
+    session_id: UUID
+    turn_id: UUID | None
+    generation_id: UUID | None
+    origin: str
+
+
+class AuthorizedGenerationHandler(Protocol):
+    async def authorize(self, context: GenerationSkillContext) -> bool: ...
+    async def __call__(
+        self, context: GenerationSkillContext, arguments: JsonObject
+    ) -> JsonObject: ...
 
 
 class BuiltinAdapter:

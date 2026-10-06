@@ -4,6 +4,8 @@ import type {
   AvatarCapabilityManifest,
   AvatarCue,
   AvatarInteractionEvent,
+  ChannelPairingSnapshot,
+  ChannelPairingStartRequest,
   ChannelAuthorizationSnapshot,
   ChannelAuthorizationStartRequest,
   ChannelAuthorizationVerificationRequest,
@@ -702,7 +704,7 @@ const channelDeliveryStatusSchema = z.enum([
   "failed",
   "cancelled",
 ]);
-const channelMessageKindSchema = z.enum(["text", "image"]);
+const channelMessageKindSchema = z.enum(["text", "image", "audio"]);
 
 const channelProviderCapabilitiesSchema = z
   .object({
@@ -901,6 +903,67 @@ const channelAuthorizationSnapshotSchema = z
     }
   });
 
+const channelPairingStartRequestSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    provider_id: z.literal("qq_napcat").default("qq_napcat"),
+    endpoint: z.string().min(1).max(2048),
+    access_token: z.string().min(16).max(4096),
+    character_id: z.string().min(1).max(256).default("default"),
+  })
+  .strict();
+
+const channelPairingSnapshotSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    pairing_id: uuid,
+    provider_id: z.literal("qq_napcat").default("qq_napcat"),
+    status: z.enum(["pending", "confirmed", "cancelled", "expired", "failed"]),
+    pairing_code: z.string().nullish(),
+    account_label: z.string().nullish(),
+    expires_at: awareDateTime,
+    connection: channelConnectionSnapshotSchema.nullish(),
+    error: structuredErrorSchema.nullish(),
+  })
+  .passthrough()
+  .superRefine((snapshot, context) => {
+    if (snapshot.status !== "pending" && snapshot.pairing_code != null) {
+      context.addIssue({
+        code: "custom",
+        message: "Terminal pairing cannot include a code",
+        path: ["pairing_code"],
+      });
+    }
+    if (snapshot.status !== "confirmed" && snapshot.connection != null) {
+      context.addIssue({
+        code: "custom",
+        message: "Only confirmed pairing includes a connection",
+        path: ["connection"],
+      });
+    }
+    if ((snapshot.status === "failed") !== (snapshot.error != null)) {
+      context.addIssue({
+        code: "custom",
+        message: "Only failed pairing requires an error",
+        path: ["error"],
+      });
+    }
+    if (snapshot.status === "confirmed" && !snapshot.connection) {
+      context.addIssue({
+        code: "custom",
+        message: "Confirmed pairing requires a connection",
+        path: ["connection"],
+      });
+    }
+    if (snapshot.status === "pending" && !snapshot.pairing_code) {
+      context.addIssue({
+        code: "custom",
+        message: "Pending pairing requires a code",
+        path: ["pairing_code"],
+      });
+    }
+  });
+
 const channelGatewayStatusSnapshotSchema = z
   .object({
     schema_version: channelSchemaVersion.default("1.0"),
@@ -1055,7 +1118,7 @@ const channelDeliverySnapshotSchema = z
     }
   });
 
-const channelDeliveryPartKindSchema = z.enum(["text", "image"]);
+const channelDeliveryPartKindSchema = z.enum(["text", "image", "audio"]);
 
 const channelDeliveryPartStatusSchema = z.enum([
   "pending",
@@ -1084,9 +1147,22 @@ const channelImageDeliveryPartPayloadSchema = z
   })
   .passthrough();
 
+const channelAudioDeliveryPartPayloadSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    kind: z.literal("audio"),
+    asset_id: uuid,
+    sha256: z.string().regex(/^[0-9a-f]{64}$/),
+    mime_type: z.enum(["audio/wav", "audio/mpeg"]).default("audio/wav"),
+    duration_ms: z.number().int().min(1).max(120000),
+    text: z.string().min(1).max(2000),
+  })
+  .passthrough();
+
 const channelDeliveryPartPayloadSchema = z.discriminatedUnion("kind", [
   channelTextDeliveryPartPayloadSchema,
   channelImageDeliveryPartPayloadSchema,
+  channelAudioDeliveryPartPayloadSchema,
 ]);
 
 const channelDeliveryPartSnapshotSchema = z
@@ -1664,6 +1740,19 @@ export function parseCharacterKernelSnapshot(
   return characterKernelSnapshotSchema.parse(input) as CharacterKernelSnapshot;
 }
 
+export function parseChannelPairingSnapshot(
+  input: unknown,
+): ChannelPairingSnapshot {
+  return channelPairingSnapshotSchema.parse(input) as ChannelPairingSnapshot;
+}
+export function parseChannelPairingStartRequest(
+  input: unknown,
+): ChannelPairingStartRequest {
+  return channelPairingStartRequestSchema.parse(
+    input,
+  ) as ChannelPairingStartRequest;
+}
+
 export function parseChannelProviderRegistration(
   input: unknown,
 ): ChannelProviderRegistration {
@@ -1926,6 +2015,8 @@ export {
   avatarCapabilityManifestSchema,
   avatarCueSchema,
   avatarInteractionEventSchema,
+  channelPairingSnapshotSchema,
+  channelPairingStartRequestSchema,
   channelAuthorizationSnapshotSchema,
   channelAuthorizationStartRequestSchema,
   channelAuthorizationVerificationRequestSchema,
@@ -1945,6 +2036,7 @@ export {
   channelErrorResponseSchema,
   channelGatewayStatusSnapshotSchema,
   channelImageDeliveryPartPayloadSchema,
+  channelAudioDeliveryPartPayloadSchema,
   channelInboundTextMessageSchema,
   channelMessageKindSchema,
   channelPresentationPolicySchema,

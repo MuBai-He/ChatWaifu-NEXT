@@ -1,0 +1,45 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-pairing-start-request.schema.json",
+  "properties": {
+    "access_token": {
+      "format": "password",
+      "maxLength": 4096,
+      "minLength": 16,
+      "title": "Access Token",
+      "type": "string",
+      "writeOnly": true
+    },
+    "character_id": {
+      "default": "default",
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Character Id",
+      "type": "string"
+    },
+    "endpoint": {
+      "maxLength": 2048,
+      "minLength": 1,
+      "title": "Endpoint",
+      "type": "string"
+    },
+    "provider_id": {
+      "const": "qq_napcat",
+      "default": "qq_napcat",
+      "title": "Provider Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "endpoint",
+    "access_token"
+  ],
+  "title": "ChannelPairingStartRequest",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

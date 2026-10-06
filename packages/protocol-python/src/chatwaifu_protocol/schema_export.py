@@ -24,6 +24,8 @@ from chatwaifu_protocol.channels import (
     ChannelErrorResponse,
     ChannelGatewayStatusSnapshot,
     ChannelInboundTextMessage,
+    ChannelPairingSnapshot,
+    ChannelPairingStartRequest,
     ChannelPresentationPolicy,
     ChannelProviderRegistration,
     ChannelTurnCancelReceipt,
@@ -117,6 +119,8 @@ class ProtocolCatalog(ProtocolModel):
     channel_authorization_start_request: ChannelAuthorizationStartRequest
     channel_authorization_verification_request: ChannelAuthorizationVerificationRequest
     channel_authorization: ChannelAuthorizationSnapshot
+    channel_pairing_start_request: ChannelPairingStartRequest
+    channel_pairing: ChannelPairingSnapshot
     channel_provider: ChannelProviderRegistration
     channel_presentation_policy: ChannelPresentationPolicy
     channel_connection_configuration: ChannelConnectionConfiguration
@@ -175,6 +179,8 @@ SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "avatar-cue": AvatarCue,
     "avatar-interaction-event": AvatarInteractionEvent,
     "character-kernel-snapshot": CharacterKernelSnapshot,
+    "channel-pairing-snapshot": ChannelPairingSnapshot,
+    "channel-pairing-start-request": ChannelPairingStartRequest,
     "channel-authorization-snapshot": ChannelAuthorizationSnapshot,
     "channel-authorization-start-request": ChannelAuthorizationStartRequest,
     "channel-authorization-verification-request": ChannelAuthorizationVerificationRequest,

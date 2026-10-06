@@ -12,6 +12,45 @@ from chatwaifu_runtime.runtime_skills.registry import SkillRegistry
 from chatwaifu_runtime.runtime_skills.tool_names import allocate_tool_names
 
 
+def test_host_context_projects_only_safe_enabled_builtin_within_existing_limits() -> None:
+    capability = _capability(
+        "reply",
+        "Present the current reply.",
+        side_effect=SideEffect.EXTERNAL_COMMUNICATION,
+        permission="channel.reply",
+        confirmation=True,
+    )
+    definitions = [
+        _skill("safe.reply", "Reply", "Current reply surface.", [capability]),
+        _skill("disabled.reply", "Reply", "Current reply.", [capability], enabled=False),
+        _skill("plugin.reply", "Reply", "Current reply.", [capability], source="plugin"),
+        _skill(
+            "unsafe.reply",
+            "Reply",
+            "Current reply.",
+            [_capability("reply", "Current reply.", side_effect=SideEffect.WRITE)],
+        ),
+    ]
+    router = RuntimeSkillRouter(lambda: definitions)
+    contextual = frozenset(skill.skill_id for skill in definitions)
+    assert router.select("🙂") == ()
+    selected = router.select("🙂", contextual_skill_ids=contextual)
+    assert [tool.skill_id for tool in selected] == ["safe.reply"]
+    assert router.select("🙂", contextual_skill_ids=contextual, schema_budget_bytes=1) == ()
+    assert router.select("🙂", contextual_skill_ids=contextual, limit=0) == ()
+
+
+def test_current_reply_context_does_not_make_voice_a_global_desktop_tool() -> None:
+    registry = SkillRegistry(Path(__file__).resolve().parents[3] / "skills" / "builtin")
+    registry.reload([])
+    router = RuntimeSkillRouter(registry.list)
+    assert not any(tool.skill_id == "channel.voice" for tool in router.select("🙂"))
+    selected = router.select("🙂", contextual_skill_ids=frozenset({"channel.voice"}))
+    assert [tool.skill_id for tool in selected] == ["channel.voice"]
+    assert selected[0].completes_channel_reply
+    assert "no separate desktop confirmation" in selected[0].description
+
+
 @pytest.mark.parametrize(
     "query",
     [
