@@ -1,0 +1,12 @@
+{
+  "flash_models": [
+    {
+      "id": "gemini-3.8-flash-high",
+      "owned_by": "antigravity"
+    }
+  ],
+  "http_status": 200,
+  "mapping_verified": false,
+  "paid_model_calls": 0,
+  "requested_model": "gemini-3.8-flash-high"
+}

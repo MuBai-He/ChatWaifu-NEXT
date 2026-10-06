@@ -1,0 +1,17 @@
+{
+  "corrected_exit_code": 0,
+  "correction": "explicit three source directories in PYTHONPATH, uv --project services/runtime",
+  "error_type": "ModuleNotFoundError",
+  "exit_code": 1,
+  "first_command": "uv run python audit_pipeline.py.txt --write-reports",
+  "missing_module": "chatwaifu_runtime",
+  "new_model_calls": 0,
+  "product_or_model_failure": false,
+  "snapshot_setup_failure": {
+    "correction": "read observed files wrapper; no raw results changed",
+    "error_type": "KeyError",
+    "key": "services/runtime/src/chatwaifu_runtime/providers/input_estimation.py",
+    "model_calls": 0,
+    "reason": "assumed flat SHA map; existing manifest wraps entries in files"
+  }
+}

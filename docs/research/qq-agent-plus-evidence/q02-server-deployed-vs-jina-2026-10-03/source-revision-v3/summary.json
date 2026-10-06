@@ -1,0 +1,52 @@
+{
+  "usage": {
+    "prompt_tokens": {
+      "reported_rounds": 45,
+      "total_rounds": 45,
+      "known_subtotal": 325578,
+      "complete_total": 325578
+    },
+    "completion_tokens": {
+      "reported_rounds": 45,
+      "total_rounds": 45,
+      "known_subtotal": 14245,
+      "complete_total": 14245
+    },
+    "reasoning_tokens": {
+      "reported_rounds": 43,
+      "total_rounds": 45,
+      "known_subtotal": 33258,
+      "complete_total": null
+    },
+    "total_tokens": {
+      "reported_rounds": 45,
+      "total_rounds": 45,
+      "known_subtotal": 373081,
+      "complete_total": 373081
+    }
+  },
+  "reply_latency": {
+    "n": 24,
+    "p50_nearest_rank_ms": 7037,
+    "p95_nearest_rank_ms": 46831
+  },
+  "revision_latency": {
+    "n": 6,
+    "p50_nearest_rank_ms": 13393,
+    "p95_nearest_rank_ms": 16175
+  },
+  "tool_outcomes": {
+    "web.search:succeeded": 4,
+    "web.read:succeeded": 6,
+    "web.read:failed": 1
+  },
+  "max_actual_input": 12359,
+  "max_reference_estimate": 16527,
+  "reference_error_pct_range": [
+    -28.934,
+    36.967
+  ],
+  "history_omission_count": 0,
+  "tool_preamble_omission_count": 0,
+  "quality_approved": false
+}

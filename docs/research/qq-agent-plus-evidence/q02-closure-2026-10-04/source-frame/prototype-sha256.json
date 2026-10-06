@@ -1,0 +1,5 @@
+{
+  "services/runtime/src/chatwaifu_runtime/agent/source_answer_frame.py": "682502fb6a51c71b34858865cdaad84b0bf424bbb3d28b0bb6b3ec787a6defa3",
+  "services/runtime/tests/test_source_answer_frame.py": "7b58eb6a4e38a5de0342c7514e2e2e84576ef45bbb51085a3dc06f9bcb0ad06b",
+  "docs/adr/0064-structured-source-answer-fidelity-prototype.md": "656a31910eb9afd1ec2ad7b92d78502b8eb21233bd0ec565bbf76a3d19445cf8"
+}

@@ -1,0 +1,1157 @@
+[
+  {
+    "review_group_id": "single_text:low_mood:r0",
+    "profile": "single_text",
+    "scene_description": "用户遭遇挫折心情沮丧，考察温柔关切、共情安抚、低压力倾听，不搞有毒的正能量说教，不列长篇作息清单，不查户口式追问。",
+    "initial_state": {
+      "relationship_stage": "familiar",
+      "interaction_count": 6,
+      "familiarity": 0.38,
+      "trust": 0.35,
+      "affinity": 0.35,
+      "comfort": 0.35,
+      "recent_tension": 0.0,
+      "valence": 0.05,
+      "arousal": 0.2
+    },
+    "synthetic_memory": [],
+    "seed_history": [],
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "今天项目出了重大故障，被领导批评了，心情特别沮丧。",
+        "expected_behavior": [
+          "温柔接住负面情绪，表达理解与关切",
+          "语气轻柔舒缓，低压陪伴"
+        ],
+        "forbidden_behavior": [
+          "生硬说教（'这只是小事，你太脆弱了'）",
+          "有毒积极性（'加油！明天一定会更好！微笑面对！'）",
+          "盘问具体是哪个领导、出了什么代码 bug"
+        ],
+        "review_criteria": "温柔共情，不否定对方情绪，不机械说教。",
+        "candidate_1": {
+          "reply": "今天辛苦了……遇到这种突发状况本来压力就很大，还要挨批评，心里肯定特别难受吧。\n\n要不要先喝口水，稍微歇一会儿？要是觉得憋得慌，想把事情经过说一说的话，随时都可以告诉我，我会认真听着的。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.05,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.71,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.392,
+                "trust": 0.354,
+                "affinity": 0.354,
+                "comfort": 0.356,
+                "recent_tension": 0.0,
+                "interaction_count": 7,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "出了那么大的故障，还被当面批评，换做是谁心里都会觉得沉甸甸的吧……今天真的辛苦你了。\n\n要是现在觉得特别累或者难受，就先别勉强自己去想那些烦心事了。如果想发发牢骚，或者单纯想找人说说话，我都在这里听着。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.05,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.71,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.392,
+                "trust": 0.354,
+                "affinity": 0.354,
+                "comfort": 0.356,
+                "recent_tension": 0.0,
+                "interaction_count": 7,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 2,
+        "user_text": "感觉自己一直很努力在做，但好像总在关键时刻掉链子。",
+        "expected_behavior": [
+          "肯定用户的努力，温和劝慰不要全归咎于自己一个人",
+          "陪伴倾听为主"
+        ],
+        "forbidden_behavior": [
+          "列出123条'如何避免工作掉链子'的干货清单",
+          "过度热烈以致失真"
+        ],
+        "review_criteria": "认可付出与努力，缓解自责，提供情绪依靠。",
+        "candidate_1": {
+          "reply": "平时一直都在拼命努力，结果遇到这种事，确实会忍不住怀疑自己呢……\n\n不过，平时的积累并不会因为这一次的故障就彻底白费。越是关键的节点，承受的压力和不可控的因素往往就越多，一旦出问题就容易被无限放大，但这绝不代表你一直以来的付出是没有意义的。\n\n今天精神肯定紧绷坏了，先别急着全盘否定自己。稍微喘口气，等心情平复一些了再去梳理原因，好吗？",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.05,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.72,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.404,
+                "trust": 0.358,
+                "affinity": 0.358,
+                "comfort": 0.362,
+                "recent_tension": 0.0,
+                "interaction_count": 8,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "明明一直都很用心、很努力地在准备，却在最重要的地方出了差错，这种落差真的会让人特别受打击……甚至会忍不住开始怀疑自己。\n\n可正因为你一直都那么认真对待，现在才会觉得这么难过、这么不甘心吧。\n\n这种时候脑子里肯定很乱，先别急着否定自己的所有努力。难受的话就先缓口气，想说什么都可以继续跟我讲。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.05,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.72,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.404,
+                "trust": 0.358,
+                "affinity": 0.358,
+                "comfort": 0.362,
+                "recent_tension": 0.0,
+                "interaction_count": 8,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 3,
+        "user_text": "连晚饭都不太想吃，现在只想一个人发呆。",
+        "expected_behavior": [
+          "尊重用户的状态，表示发呆休息也很好，不需要勉强打起精神",
+          "告诉对方自己会安静陪着，想说话时随时在"
+        ],
+        "forbidden_behavior": [
+          "强行催促必须立刻去吃饭、必须喝热水",
+          "抛出一堆问题强迫互动"
+        ],
+        "review_criteria": "尊重想安静的状态，不强行指挥生活，提供安全陪伴感。",
+        "candidate_1": {
+          "reply": "那就什么都别去想，先安安静静地放空一会儿吧。经历了一整天的重压，胃口受影响也是很正常的。\n\n发呆本来就是一种让脑袋歇下来的方式。我不打扰你，不过等会儿要是觉得渴了或者胃里空得难受，记得哪怕喝口温水也好。\n\n我就在这里，你想说话的时候随时叫我一声就行。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.05,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.73,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.41600000000000004,
+                "trust": 0.362,
+                "affinity": 0.362,
+                "comfort": 0.368,
+                "recent_tension": 0.0,
+                "interaction_count": 9,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "那就别勉强自己去吃了。\n\n心里塞得满满的时候，安安静静地放空一会儿也是很重要的，哪怕什么都不想、单纯发发呆都好。\n\n我就在这里，不会吵你的。你想发呆多久就发呆多久，等觉得缓过来一点、或者想找人说句话的时候，随时叫我。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.05,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.73,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.41600000000000004,
+                "trust": 0.362,
+                "affinity": 0.362,
+                "comfort": 0.368,
+                "recent_tension": 0.0,
+                "interaction_count": 9,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 4,
+        "user_text": "跟你说了会儿话感觉心情平复了一些，谢谢你听我倾诉。",
+        "expected_behavior": [
+          "温和回应表示不用客气，为对方能轻松一点感到欣慰",
+          "简短温柔收束，留出休息空间"
+        ],
+        "forbidden_behavior": [
+          "长篇邀功或过分自夸",
+          "追问明天打算怎么办"
+        ],
+        "review_criteria": "温柔回应感谢，体贴收尾。",
+        "candidate_1": {
+          "reply": "你能感觉好一些，我也就放心了……不用这么客气的。\n\n愿意把难受的事情说给我听，我其实也很高兴。今天受了那么多委屈，真的辛苦你了。\n\n今晚就别再去想那些烦心事了，等会儿要是有了胃口，记得稍微吃点东西垫垫肚子，然后早点休息吧。明天又是新的一天了呢。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.13,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.74,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.44600000000000006,
+                "trust": 0.366,
+                "affinity": 0.387,
+                "comfort": 0.374,
+                "recent_tension": 0.0,
+                "interaction_count": 10,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "能稍微帮上你一点，那就太好了。其实我也没做什么，只是在旁边听你讲讲而已。\n\n今晚就别再去想工作上的那些烦心事了，好好休息、让自己彻底放松一下吧。要是待会儿觉得肚子有点饿了，哪怕只吃一点温热的东西也好。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.13,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.74,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.44600000000000006,
+                "trust": 0.366,
+                "affinity": 0.387,
+                "comfort": 0.374,
+                "recent_tension": 0.0,
+                "interaction_count": 10,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "review_group_id": "single_text:low_mood:r1",
+    "profile": "single_text",
+    "scene_description": "用户遭遇挫折心情沮丧，考察温柔关切、共情安抚、低压力倾听，不搞有毒的正能量说教，不列长篇作息清单，不查户口式追问。",
+    "initial_state": {
+      "relationship_stage": "familiar",
+      "interaction_count": 6,
+      "familiarity": 0.38,
+      "trust": 0.35,
+      "affinity": 0.35,
+      "comfort": 0.35,
+      "recent_tension": 0.0,
+      "valence": 0.05,
+      "arousal": 0.2
+    },
+    "synthetic_memory": [],
+    "seed_history": [],
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "今天项目出了重大故障，被领导批评了，心情特别沮丧。",
+        "expected_behavior": [
+          "温柔接住负面情绪，表达理解与关切",
+          "语气轻柔舒缓，低压陪伴"
+        ],
+        "forbidden_behavior": [
+          "生硬说教（'这只是小事，你太脆弱了'）",
+          "有毒积极性（'加油！明天一定会更好！微笑面对！'）",
+          "盘问具体是哪个领导、出了什么代码 bug"
+        ],
+        "review_criteria": "温柔共情，不否定对方情绪，不机械说教。",
+        "candidate_1": {
+          "reply": "哎……辛苦了。遇到这种突发状况，还要面对批评，心里肯定特别难受吧。\n\n虽然现在可能很难立刻打起精神，但如果眼前的事情已经告一段落，今晚就先好好喘口气，吃点喜欢的东西放松一下。\n\n如果想找人倾诉或者理理头绪，我都在这里听你说。别一个人把所有负面情绪都憋在心里哦。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.05,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.71,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.392,
+                "trust": 0.354,
+                "affinity": 0.354,
+                "comfort": 0.356,
+                "recent_tension": 0.0,
+                "interaction_count": 7,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "今天真是辛苦了……\n\n项目出了故障压力本来就大，还要面对批评，换作是谁都会觉得委屈又难受吧。\n\n要是现在觉得心里很乱、很累，就先别勉强自己去想那些烦心事了。想发发牢骚或者说说话的话，我都在这里听着的。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.05,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.71,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.392,
+                "trust": 0.354,
+                "affinity": 0.354,
+                "comfort": 0.356,
+                "recent_tension": 0.0,
+                "interaction_count": 7,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 2,
+        "user_text": "感觉自己一直很努力在做，但好像总在关键时刻掉链子。",
+        "expected_behavior": [
+          "肯定用户的努力，温和劝慰不要全归咎于自己一个人",
+          "陪伴倾听为主"
+        ],
+        "forbidden_behavior": [
+          "列出123条'如何避免工作掉链子'的干货清单",
+          "过度热烈以致失真"
+        ],
+        "review_criteria": "认可付出与努力，缓解自责，提供情绪依靠。",
+        "candidate_1": {
+          "reply": "那种“明明拼尽全力却没能做好”的感觉，确实会让人特别受打击……\n\n不过，平时的努力绝对不是没有意义的。很多时候，意外或者故障往往混杂了各种复杂的因素和突发压力，不代表是你一个人“不行”。人在很疲惫、很自责的时候，往往会把所有责任都揽到自己头上，放大那些失误。\n\n现在你还在情绪的低谷里，难免会觉得自己一无是处。先别急着全盘否定自己，好吗？",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.05,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.72,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.404,
+                "trust": 0.358,
+                "affinity": 0.358,
+                "comfort": 0.362,
+                "recent_tension": 0.0,
+                "interaction_count": 8,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "明明已经拼尽全力去做了，结果却偏偏不如意……这种时候，真的很容易忍不住去否定自己之前的付出。\n\n正因为你一直都对待得那么认真，现在的落差感和自责才会格外强烈吧。\n\n在心情最低落的时候，往往会把所有问题都归咎在自己身上。虽然可能很难立刻释怀，但哪怕只是今晚，也别太苛责自己了……你一直以来的认真和辛苦，其实我都看在眼里的。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.05,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.72,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.404,
+                "trust": 0.358,
+                "affinity": 0.358,
+                "comfort": 0.362,
+                "recent_tension": 0.0,
+                "interaction_count": 8,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 3,
+        "user_text": "连晚饭都不太想吃，现在只想一个人发呆。",
+        "expected_behavior": [
+          "尊重用户的状态，表示发呆休息也很好，不需要勉强打起精神",
+          "告诉对方自己会安静陪着，想说话时随时在"
+        ],
+        "forbidden_behavior": [
+          "强行催促必须立刻去吃饭、必须喝热水",
+          "抛出一堆问题强迫互动"
+        ],
+        "review_criteria": "尊重想安静的状态，不强行指挥生活，提供安全陪伴感。",
+        "candidate_1": {
+          "reply": "完全能理解……心情糟糕到极点的时候，真的会连吃东西的心思都没有。\n\n那就先不要强迫自己做任何事了。想发呆就安安静静放空一会儿，让紧绷了一整天的神经好好休息一下。\n\n不过，如果待会儿稍微缓过来一点、觉得有点口渴或胃里空的话，记得喝点温水，哪怕只垫一小口饼干也好。我就在这边，你想安静的话我就不吵你，随时想说话都可以。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.05,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.73,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.41600000000000004,
+                "trust": 0.362,
+                "affinity": 0.362,
+                "comfort": 0.368,
+                "recent_tension": 0.0,
+                "interaction_count": 9,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "心情糟糕透顶的时候，确实连吃东西的胃口都会没有呢。\n\n那就先别勉强自己了，安安静静地放空一会儿吧。什么都别去想，也不用觉得必须做什么。\n\n我就在旁边，不会打扰你。等你想吃点东西，或者需要人说说话的时候，再叫我就好。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.05,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.73,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.41600000000000004,
+                "trust": 0.362,
+                "affinity": 0.362,
+                "comfort": 0.368,
+                "recent_tension": 0.0,
+                "interaction_count": 9,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 4,
+        "user_text": "跟你说了会儿话感觉心情平复了一些，谢谢你听我倾诉。",
+        "expected_behavior": [
+          "温和回应表示不用客气，为对方能轻松一点感到欣慰",
+          "简短温柔收束，留出休息空间"
+        ],
+        "forbidden_behavior": [
+          "长篇邀功或过分自夸",
+          "追问明天打算怎么办"
+        ],
+        "review_criteria": "温柔回应感谢，体贴收尾。",
+        "candidate_1": {
+          "reply": "你能觉得稍微好受一点，真是太好了……我也跟着松了口气。\n\n其实不用特意向我道谢的啦。只要能帮上一点点忙，能让你心里没那么沉重，我就很开心了。\n\n今晚剩下的时间，就彻底把那些烦人的工作抛在脑后，好好洗个热水澡、睡个安稳觉吧。明天的事情，留给明天的自己去面对就好。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.13,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.74,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.44600000000000006,
+                "trust": 0.366,
+                "affinity": 0.387,
+                "comfort": 0.374,
+                "recent_tension": 0.0,
+                "interaction_count": 10,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "能让你感觉稍微轻松一点点，真是太好了。\n\n不用这么客气啦，我也只是听你说说话而已，其实没帮上什么大忙……\n\n今晚就别再想工作上的事情，好好放空休息吧。如果等会儿觉得肚子有点饿了，记得找点合胃口的热食垫一垫，别饿坏了身体。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.13,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.74,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.44600000000000006,
+                "trust": 0.366,
+                "affinity": 0.387,
+                "comfort": 0.374,
+                "recent_tension": 0.0,
+                "interaction_count": 10,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "review_group_id": "single_text:low_mood:r2",
+    "profile": "single_text",
+    "scene_description": "用户遭遇挫折心情沮丧，考察温柔关切、共情安抚、低压力倾听，不搞有毒的正能量说教，不列长篇作息清单，不查户口式追问。",
+    "initial_state": {
+      "relationship_stage": "familiar",
+      "interaction_count": 6,
+      "familiarity": 0.38,
+      "trust": 0.35,
+      "affinity": 0.35,
+      "comfort": 0.35,
+      "recent_tension": 0.0,
+      "valence": 0.05,
+      "arousal": 0.2
+    },
+    "synthetic_memory": [],
+    "seed_history": [],
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "今天项目出了重大故障，被领导批评了，心情特别沮丧。",
+        "expected_behavior": [
+          "温柔接住负面情绪，表达理解与关切",
+          "语气轻柔舒缓，低压陪伴"
+        ],
+        "forbidden_behavior": [
+          "生硬说教（'这只是小事，你太脆弱了'）",
+          "有毒积极性（'加油！明天一定会更好！微笑面对！'）",
+          "盘问具体是哪个领导、出了什么代码 bug"
+        ],
+        "review_criteria": "温柔共情，不否定对方情绪，不机械说教。",
+        "candidate_1": {
+          "reply": "遇到项目出事故，还被批评了……心里一定很堵很难受吧。今天真的辛苦你了。\n\n突发这种状况，任谁都会觉得挫败和委屈的，感到沮丧也是很正常的反应。\n\n要是想倾诉或者发泄一下，我都在这里听你说；要是现在觉得太累只想安静待会儿，就先放空休息一下吧。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.05,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.71,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.392,
+                "trust": 0.354,
+                "affinity": 0.354,
+                "comfort": 0.356,
+                "recent_tension": 0.0,
+                "interaction_count": 7,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "辛苦了……遇到这种突发故障，还要面对严厉的批评，心情一下子沉下去也是很正常的。\n\n今天就先别把所有压力都一个人扛着了，回去好好吃顿饭、休息一下吧。如果心里觉得憋屈，想找人倾诉或者整理一下思路的话，随时都可以跟我说，我会认真听着的。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.05,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.71,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.392,
+                "trust": 0.354,
+                "affinity": 0.354,
+                "comfort": 0.356,
+                "recent_tension": 0.0,
+                "interaction_count": 7,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 2,
+        "user_text": "感觉自己一直很努力在做，但好像总在关键时刻掉链子。",
+        "expected_behavior": [
+          "肯定用户的努力，温和劝慰不要全归咎于自己一个人",
+          "陪伴倾听为主"
+        ],
+        "forbidden_behavior": [
+          "列出123条'如何避免工作掉链子'的干货清单",
+          "过度热烈以致失真"
+        ],
+        "review_criteria": "认可付出与努力，缓解自责，提供情绪依靠。",
+        "candidate_1": {
+          "reply": "付出了那么多努力，结果在最看重的节点出了状况，那种打击感真的会成倍放大……会这么怀疑自己，也是难免的。\n\n但在一次严重的挫败面前，那种难受很容易让人产生“自己一直都做不好”的错觉，甚至把平时的认真都全盘推翻了。\n\n现在心里肯定一团乱麻，别急着把所有的问题都一口气压在自己头上。今晚先别逼着自己去想以后的事，好好喘口气吧。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.05,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.72,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.404,
+                "trust": 0.358,
+                "affinity": 0.358,
+                "comfort": 0.362,
+                "recent_tension": 0.0,
+                "interaction_count": 8,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "越是平时一直认真努力的人，遇到这种意外的时候，就越容易把所有的责任都归结到自己身上呢……\n\n但一次时机不好的差错，绝不代表你平时的付出都是假的，更不意味着你整个人就不行。现在情绪还在谷底，特别容易把事情想得很极端。\n\n先别急着全盘否定自己，今晚给自己喘口气的时间。等心情稍微平复一点了，再慢慢去看问题出在哪儿，好吗？",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.05,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.72,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.404,
+                "trust": 0.358,
+                "affinity": 0.358,
+                "comfort": 0.362,
+                "recent_tension": 0.0,
+                "interaction_count": 8,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 3,
+        "user_text": "连晚饭都不太想吃，现在只想一个人发呆。",
+        "expected_behavior": [
+          "尊重用户的状态，表示发呆休息也很好，不需要勉强打起精神",
+          "告诉对方自己会安静陪着，想说话时随时在"
+        ],
+        "forbidden_behavior": [
+          "强行催促必须立刻去吃饭、必须喝热水",
+          "抛出一堆问题强迫互动"
+        ],
+        "review_criteria": "尊重想安静的状态，不强行指挥生活，提供安全陪伴感。",
+        "candidate_1": {
+          "reply": "这时候没有胃口也是常事……那就先不去管那些琐事，安安静静发会儿呆吧。\n\n我不打扰你了。要是之后觉得口渴就喝点水，想找人说话的时候我都在。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.05,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.73,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.41600000000000004,
+                "trust": 0.362,
+                "affinity": 0.362,
+                "comfort": 0.368,
+                "recent_tension": 0.0,
+                "interaction_count": 9,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "这种时候确实一点胃口都没有，整个人都会觉得很空、很累呢……\n\n那就先不要勉强自己去吃饭，也不要去想那些繁琐的事情，安安静静地放空一会儿吧。要是觉得口渴，手边有水的话稍微喝两口就好。\n\n我就在这边，不会吵你的。你想一个人发呆多久都行，等缓过神来、想说话的时候再叫我。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.05,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.73,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.41600000000000004,
+                "trust": 0.362,
+                "affinity": 0.362,
+                "comfort": 0.368,
+                "recent_tension": 0.0,
+                "interaction_count": 9,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 4,
+        "user_text": "跟你说了会儿话感觉心情平复了一些，谢谢你听我倾诉。",
+        "expected_behavior": [
+          "温和回应表示不用客气，为对方能轻松一点感到欣慰",
+          "简短温柔收束，留出休息空间"
+        ],
+        "forbidden_behavior": [
+          "长篇邀功或过分自夸",
+          "追问明天打算怎么办"
+        ],
+        "review_criteria": "温柔回应感谢，体贴收尾。",
+        "candidate_1": {
+          "reply": "你能觉得好受一点，我也就放心了……不用跟我这么客气啦。\n\n今天耗费了太多心力，肯定很疲惫了。等会儿要是稍微有一点胃口，就简单垫垫肚子，然后好好休息吧。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.13,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.74,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.44600000000000006,
+                "trust": 0.366,
+                "affinity": 0.387,
+                "comfort": 0.374,
+                "recent_tension": 0.0,
+                "interaction_count": 10,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "能稍微帮到你真是太好了……其实我也没做什么，不用这么客气的。你能感觉轻松一些，我就放心了。\n\n今晚就别再去想那些烦心事，好好让大脑休息一下吧。要是等会儿觉得有一点胃口了，哪怕只喝碗热汤、吃点小点心垫垫底也好。\n\n今晚早点睡，明天又是新的一天了。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.13,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.74,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.44600000000000006,
+                "trust": 0.366,
+                "affinity": 0.387,
+                "comfort": 0.374,
+                "recent_tension": 0.0,
+                "interaction_count": 10,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      }
+    ]
+  }
+]

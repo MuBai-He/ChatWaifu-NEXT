@@ -1,0 +1,12 @@
+[
+  {
+    "profile": "instant_message",
+    "position": "pre_user",
+    "exit_code": 1
+  },
+  {
+    "profile": "single_text",
+    "position": "system",
+    "exit_code": 1
+  }
+]

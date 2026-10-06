@@ -1,0 +1,78 @@
+{
+  "schema_version": "1.0",
+  "recorded_at": "2026-10-01T21:14:42Z",
+  "scope": "Q02 next execution phase 0; non-secret route and source freeze",
+  "source_commit": "e6093459ffa5105892e61172af5ca1804dd89a9b",
+  "working_tree_change": "only this phase-0 evidence file and q02-next-execution-plan-2026-10-02.md are new",
+  "no_agy": true,
+  "production_persona": {
+    "path": "characters/default/persona.md",
+    "sha256": "3ab060352dcb8e25eed5c0b729905f0d5f0eab51c2afef091440c0c38f0cb808",
+    "version": "default-v4"
+  },
+  "implementation_fingerprints": {
+    "evaluator": {
+      "path": "tools/evaluate_character_scenarios.py",
+      "sha256": "a44fa621677387feae216722d815f3d1a62e584427f79576e4c9abb6e86c0497",
+      "tool_version": "1.14.0"
+    },
+    "prompt_compiler": {
+      "path": "services/runtime/src/chatwaifu_runtime/character_kernel/prompt.py",
+      "sha256": "acc75cb9b2d336180dabecdc307086f6ddf4777fc89b175d546c8713ad7ed5b3",
+      "template": "v12"
+    },
+    "recommended_budget": {
+      "path": "docs/research/qq-agent-plus-evidence/model-budget-2026-10-02/recommended-budget.json",
+      "sha256": "956b7b4eda8067229cfb75c470ef5233bcb16970bd8cb07b4bd57d016d684fc6",
+      "context_window": 32768,
+      "output_reserve_tokens": 8192,
+      "max_output_tokens": 8192,
+      "estimate_margin_ratio": 0.15,
+      "section_policy": "scaled",
+      "history_turn_limit": 32,
+      "memory_candidate_limit": 24,
+      "tool_result_max_bytes": 131072
+    }
+  },
+  "live_runtime_route": {
+    "provider": "openai_compatible",
+    "port": 8318,
+    "scheme": "https",
+    "path": "/v1",
+    "base_url_sha256": "937c7a5a291b7e56db4b0f98cc3054b5443743de0cb8d3ca60189a15e1686b14",
+    "configured_chat_model": "gemini-3.1-flash-lite",
+    "configured_context_window": 8192,
+    "inventory_http_status": 200,
+    "inventory_models": [
+      "gemini-3.6-flash-high",
+      "gemini-3.7-flash-high",
+      "gemini-3-flash",
+      "gemini-3.1-flash-image",
+      "gpt-6.1-sol",
+      "gpt-6-luna",
+      "gemini-pro-agent",
+      "gemini-3.1-pro-low",
+      "gemini-3.1-flash-lite",
+      "gpt-6-sol",
+      "claude-opus-4-6-thinking",
+      "gpt-oss-120b-medium",
+      "gemini-3.5-flash-lite",
+      "gpt-image-2.5-flare",
+      "gpt-image-2.5-sunburst",
+      "gpt-image-2.5",
+      "claude-sonnet-4-6",
+      "gemini-3.8-flash-high"
+    ]
+  },
+  "evaluation_policy": {
+    "target_model": "gemini-3.8-flash-high",
+    "sampling_parameters_sent": {
+      "temperature": null,
+      "top_p": null,
+      "seed": null
+    },
+    "pricing": "unknown; do not infer dollars from token usage",
+    "production_database_written": false,
+    "credentials_saved": false
+  }
+}

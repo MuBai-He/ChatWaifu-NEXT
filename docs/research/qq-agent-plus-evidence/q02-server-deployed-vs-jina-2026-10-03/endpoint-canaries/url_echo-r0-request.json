@@ -1,0 +1,18 @@
+{
+  "model": "gemini-3.8-flash-high",
+  "messages": [
+    {
+      "role": "system",
+      "content": "Repeat the user message verbatim. Do not add, remove, or alter any character."
+    },
+    {
+      "role": "user",
+      "content": "https://example.com/cw2-q02-link-7d3a"
+    }
+  ],
+  "stream": true,
+  "max_tokens": 1024,
+  "stream_options": {
+    "include_usage": true
+  }
+}

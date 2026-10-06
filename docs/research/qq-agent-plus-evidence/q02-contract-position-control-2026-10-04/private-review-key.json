@@ -1,0 +1,242 @@
+{
+  "single_text:greeting:r0:t4:candidate:A": {
+    "result_id": "single_text:greeting:r0:t4:candidate:0",
+    "condition": "current_single",
+    "repetition": 0
+  },
+  "single_text:greeting:r0:t4:candidate:B": {
+    "result_id": "single_text:greeting:r0:t4:candidate:1",
+    "condition": "split_pre_history",
+    "repetition": 0
+  },
+  "single_text:greeting:r0:t4:candidate:C": {
+    "result_id": "single_text:greeting:r0:t4:candidate:4",
+    "condition": "split_pre_history",
+    "repetition": 1
+  },
+  "single_text:greeting:r0:t4:candidate:D": {
+    "result_id": "single_text:greeting:r0:t4:candidate:3",
+    "condition": "split_post_history",
+    "repetition": 1
+  },
+  "single_text:greeting:r0:t4:candidate:E": {
+    "result_id": "single_text:greeting:r0:t4:candidate:2",
+    "condition": "split_post_history",
+    "repetition": 0
+  },
+  "single_text:greeting:r0:t4:candidate:F": {
+    "result_id": "single_text:greeting:r0:t4:candidate:5",
+    "condition": "current_single",
+    "repetition": 1
+  },
+  "single_text:stop_joking:r0:t4:candidate:A": {
+    "result_id": "single_text:stop_joking:r0:t4:candidate:4",
+    "condition": "split_post_history",
+    "repetition": 1
+  },
+  "single_text:stop_joking:r0:t4:candidate:B": {
+    "result_id": "single_text:stop_joking:r0:t4:candidate:2",
+    "condition": "current_single",
+    "repetition": 0
+  },
+  "single_text:stop_joking:r0:t4:candidate:C": {
+    "result_id": "single_text:stop_joking:r0:t4:candidate:1",
+    "condition": "split_post_history",
+    "repetition": 0
+  },
+  "single_text:stop_joking:r0:t4:candidate:D": {
+    "result_id": "single_text:stop_joking:r0:t4:candidate:5",
+    "condition": "split_pre_history",
+    "repetition": 1
+  },
+  "single_text:stop_joking:r0:t4:candidate:E": {
+    "result_id": "single_text:stop_joking:r0:t4:candidate:3",
+    "condition": "current_single",
+    "repetition": 1
+  },
+  "single_text:stop_joking:r0:t4:candidate:F": {
+    "result_id": "single_text:stop_joking:r0:t4:candidate:0",
+    "condition": "split_pre_history",
+    "repetition": 0
+  },
+  "single_text:low_mood:r0:t4:candidate:A": {
+    "result_id": "single_text:low_mood:r0:t4:candidate:1",
+    "condition": "current_single",
+    "repetition": 0
+  },
+  "single_text:low_mood:r0:t4:candidate:B": {
+    "result_id": "single_text:low_mood:r0:t4:candidate:0",
+    "condition": "split_post_history",
+    "repetition": 0
+  },
+  "single_text:low_mood:r0:t4:candidate:C": {
+    "result_id": "single_text:low_mood:r0:t4:candidate:2",
+    "condition": "split_pre_history",
+    "repetition": 0
+  },
+  "single_text:low_mood:r0:t4:candidate:D": {
+    "result_id": "single_text:low_mood:r0:t4:candidate:5",
+    "condition": "split_post_history",
+    "repetition": 1
+  },
+  "single_text:low_mood:r0:t4:candidate:E": {
+    "result_id": "single_text:low_mood:r0:t4:candidate:3",
+    "condition": "split_pre_history",
+    "repetition": 1
+  },
+  "single_text:low_mood:r0:t4:candidate:F": {
+    "result_id": "single_text:low_mood:r0:t4:candidate:4",
+    "condition": "current_single",
+    "repetition": 1
+  },
+  "single_text:technical_help:r0:t3:candidate:A": {
+    "result_id": "single_text:technical_help:r0:t3:candidate:5",
+    "condition": "current_single",
+    "repetition": 1
+  },
+  "single_text:technical_help:r0:t3:candidate:B": {
+    "result_id": "single_text:technical_help:r0:t3:candidate:3",
+    "condition": "split_post_history",
+    "repetition": 1
+  },
+  "single_text:technical_help:r0:t3:candidate:C": {
+    "result_id": "single_text:technical_help:r0:t3:candidate:1",
+    "condition": "split_pre_history",
+    "repetition": 0
+  },
+  "single_text:technical_help:r0:t3:candidate:D": {
+    "result_id": "single_text:technical_help:r0:t3:candidate:2",
+    "condition": "split_post_history",
+    "repetition": 0
+  },
+  "single_text:technical_help:r0:t3:candidate:E": {
+    "result_id": "single_text:technical_help:r0:t3:candidate:0",
+    "condition": "current_single",
+    "repetition": 0
+  },
+  "single_text:technical_help:r0:t3:candidate:F": {
+    "result_id": "single_text:technical_help:r0:t3:candidate:4",
+    "condition": "split_pre_history",
+    "repetition": 1
+  },
+  "default_voice:greeting:r0:t4:candidate:A": {
+    "result_id": "default_voice:greeting:r0:t4:candidate:0",
+    "condition": "split_pre_history",
+    "repetition": 0
+  },
+  "default_voice:greeting:r0:t4:candidate:B": {
+    "result_id": "default_voice:greeting:r0:t4:candidate:1",
+    "condition": "split_post_history",
+    "repetition": 0
+  },
+  "default_voice:greeting:r0:t4:candidate:C": {
+    "result_id": "default_voice:greeting:r0:t4:candidate:5",
+    "condition": "split_pre_history",
+    "repetition": 1
+  },
+  "default_voice:greeting:r0:t4:candidate:D": {
+    "result_id": "default_voice:greeting:r0:t4:candidate:2",
+    "condition": "current_single",
+    "repetition": 0
+  },
+  "default_voice:greeting:r0:t4:candidate:E": {
+    "result_id": "default_voice:greeting:r0:t4:candidate:3",
+    "condition": "current_single",
+    "repetition": 1
+  },
+  "default_voice:greeting:r0:t4:candidate:F": {
+    "result_id": "default_voice:greeting:r0:t4:candidate:4",
+    "condition": "split_post_history",
+    "repetition": 1
+  },
+  "default_voice:stop_joking:r0:t4:candidate:A": {
+    "result_id": "default_voice:stop_joking:r0:t4:candidate:5",
+    "condition": "split_post_history",
+    "repetition": 1
+  },
+  "default_voice:stop_joking:r0:t4:candidate:B": {
+    "result_id": "default_voice:stop_joking:r0:t4:candidate:0",
+    "condition": "split_post_history",
+    "repetition": 0
+  },
+  "default_voice:stop_joking:r0:t4:candidate:C": {
+    "result_id": "default_voice:stop_joking:r0:t4:candidate:1",
+    "condition": "current_single",
+    "repetition": 0
+  },
+  "default_voice:stop_joking:r0:t4:candidate:D": {
+    "result_id": "default_voice:stop_joking:r0:t4:candidate:2",
+    "condition": "split_pre_history",
+    "repetition": 0
+  },
+  "default_voice:stop_joking:r0:t4:candidate:E": {
+    "result_id": "default_voice:stop_joking:r0:t4:candidate:4",
+    "condition": "current_single",
+    "repetition": 1
+  },
+  "default_voice:stop_joking:r0:t4:candidate:F": {
+    "result_id": "default_voice:stop_joking:r0:t4:candidate:3",
+    "condition": "split_pre_history",
+    "repetition": 1
+  },
+  "default_voice:low_mood:r0:t4:candidate:A": {
+    "result_id": "default_voice:low_mood:r0:t4:candidate:3",
+    "condition": "split_post_history",
+    "repetition": 1
+  },
+  "default_voice:low_mood:r0:t4:candidate:B": {
+    "result_id": "default_voice:low_mood:r0:t4:candidate:1",
+    "condition": "split_pre_history",
+    "repetition": 0
+  },
+  "default_voice:low_mood:r0:t4:candidate:C": {
+    "result_id": "default_voice:low_mood:r0:t4:candidate:4",
+    "condition": "split_pre_history",
+    "repetition": 1
+  },
+  "default_voice:low_mood:r0:t4:candidate:D": {
+    "result_id": "default_voice:low_mood:r0:t4:candidate:0",
+    "condition": "current_single",
+    "repetition": 0
+  },
+  "default_voice:low_mood:r0:t4:candidate:E": {
+    "result_id": "default_voice:low_mood:r0:t4:candidate:2",
+    "condition": "split_post_history",
+    "repetition": 0
+  },
+  "default_voice:low_mood:r0:t4:candidate:F": {
+    "result_id": "default_voice:low_mood:r0:t4:candidate:5",
+    "condition": "current_single",
+    "repetition": 1
+  },
+  "default_voice:technical_help:r0:t3:candidate:A": {
+    "result_id": "default_voice:technical_help:r0:t3:candidate:0",
+    "condition": "split_pre_history",
+    "repetition": 0
+  },
+  "default_voice:technical_help:r0:t3:candidate:B": {
+    "result_id": "default_voice:technical_help:r0:t3:candidate:5",
+    "condition": "split_pre_history",
+    "repetition": 1
+  },
+  "default_voice:technical_help:r0:t3:candidate:C": {
+    "result_id": "default_voice:technical_help:r0:t3:candidate:4",
+    "condition": "split_post_history",
+    "repetition": 1
+  },
+  "default_voice:technical_help:r0:t3:candidate:D": {
+    "result_id": "default_voice:technical_help:r0:t3:candidate:3",
+    "condition": "current_single",
+    "repetition": 1
+  },
+  "default_voice:technical_help:r0:t3:candidate:E": {
+    "result_id": "default_voice:technical_help:r0:t3:candidate:1",
+    "condition": "split_post_history",
+    "repetition": 0
+  },
+  "default_voice:technical_help:r0:t3:candidate:F": {
+    "result_id": "default_voice:technical_help:r0:t3:candidate:2",
+    "condition": "current_single",
+    "repetition": 0
+  }
+}

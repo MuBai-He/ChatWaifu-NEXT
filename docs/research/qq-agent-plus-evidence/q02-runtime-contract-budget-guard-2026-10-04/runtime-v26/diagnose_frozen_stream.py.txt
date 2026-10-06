@@ -1,0 +1,40 @@
+import asyncio,json
+from datetime import datetime,timezone
+from pathlib import Path
+import httpx
+stage=Path('/tmp/cw2-q02-v26-contract-runtime-20261004')
+assert not (stage/'frozen-stream-diagnostic.json').exists(), 'Do not duplicate probe'
+async def main():
+    key=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+    payload=json.loads((stage/'results/single_text/pre_user/actual-provider-payloads.jsonl').read_text().splitlines()[0])['payload']
+    row={'probe':'one frozen failed first-turn payload; diagnostic only','at_utc':datetime.now(timezone.utc).isoformat(),'requested_model':payload['model']}
+    async with httpx.AsyncClient(timeout=45,trust_env=False) as client:
+        try:
+            async with client.stream('POST','https://mubai.website:8318/v1/chat/completions',headers={'Authorization':'Bearer '+key},json=payload) as response:
+                row['http_status']=response.status_code
+                size=0;chunks=0
+                if response.status_code>=400:
+                    raw=b''
+                    async for chunk in response.aiter_bytes():
+                        raw+=chunk
+                        if len(raw)>16384:break
+                    try:
+                        error=json.loads(raw).get('error',{})
+                        row['error']={k:v[:500].replace(key,'[redacted]') if isinstance(v,str) else v for k,v in error.items() if k in {'code','type','message'} and isinstance(v,(str,int,type(None)))}
+                    except Exception:row['error_body_not_structured']=True
+                else:
+                    models=set()
+                    async for line in response.aiter_lines():
+                        size+=len(line.encode())
+                        if size>65536:row['response_limit_reached']=True;break
+                        if line.startswith('data: ') and line!='data: [DONE]':
+                            data=json.loads(line[6:]);chunks+=1
+                            model=data.get('model')
+                            if isinstance(model,str) and len(model)<=256:models.add(model)
+                            if data.get('usage'):row['usage']=data['usage']
+                    row['sse_chunks']=chunks;row['reported_models']=sorted(models)
+        except Exception as exc:row['error_type']=type(exc).__name__
+    assert key not in json.dumps(row)
+    (stage/'frozen-stream-diagnostic.json').write_text(json.dumps(row,ensure_ascii=False,indent=2)+'\n')
+    print(json.dumps(row,ensure_ascii=False))
+asyncio.run(main())

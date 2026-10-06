@@ -1,0 +1,135 @@
+FFFFFF                                                                   [100%]
+=================================== FAILURES ===================================
+______ test_response_model_labels_survive_all_terminal_paths[False-False] ______
+
+usage = False, done = False
+
+    @pytest.mark.parametrize("usage", [False, True])
+    @pytest.mark.parametrize("done", [False, True])
+    async def test_response_model_labels_survive_all_terminal_paths(usage: bool, done: bool) -> None:
+        body = _TrackedBody(
+            [
+                b'data: {"model":"upstream-a","choices":[{"delta":{"content":"ok"}}]}\n\n',
+                b'data: {"model":"upstream-b","choices":[{"delta":{},"finish_reason":"stop"}]}\n\n',
+                *([b"data: [DONE]\n\n"] if done else []),
+            ],
+            hold_open=False,
+        )
+        events = [event async for event in _provider(body, usage=usage).stream(_request())]
+        identity = getattr(events[-1], "identity", None)
+>       assert identity is not None
+E       assert None is not None
+
+services/runtime/tests/test_llm_stream_lifecycle.py:151: AssertionError
+______ test_response_model_labels_survive_all_terminal_paths[False-True] _______
+
+usage = True, done = False
+
+    @pytest.mark.parametrize("usage", [False, True])
+    @pytest.mark.parametrize("done", [False, True])
+    async def test_response_model_labels_survive_all_terminal_paths(usage: bool, done: bool) -> None:
+        body = _TrackedBody(
+            [
+                b'data: {"model":"upstream-a","choices":[{"delta":{"content":"ok"}}]}\n\n',
+                b'data: {"model":"upstream-b","choices":[{"delta":{},"finish_reason":"stop"}]}\n\n',
+                *([b"data: [DONE]\n\n"] if done else []),
+            ],
+            hold_open=False,
+        )
+        events = [event async for event in _provider(body, usage=usage).stream(_request())]
+        identity = getattr(events[-1], "identity", None)
+>       assert identity is not None
+E       assert None is not None
+
+services/runtime/tests/test_llm_stream_lifecycle.py:151: AssertionError
+______ test_response_model_labels_survive_all_terminal_paths[True-False] _______
+
+usage = False, done = True
+
+    @pytest.mark.parametrize("usage", [False, True])
+    @pytest.mark.parametrize("done", [False, True])
+    async def test_response_model_labels_survive_all_terminal_paths(usage: bool, done: bool) -> None:
+        body = _TrackedBody(
+            [
+                b'data: {"model":"upstream-a","choices":[{"delta":{"content":"ok"}}]}\n\n',
+                b'data: {"model":"upstream-b","choices":[{"delta":{},"finish_reason":"stop"}]}\n\n',
+                *([b"data: [DONE]\n\n"] if done else []),
+            ],
+            hold_open=False,
+        )
+        events = [event async for event in _provider(body, usage=usage).stream(_request())]
+        identity = getattr(events[-1], "identity", None)
+>       assert identity is not None
+E       assert None is not None
+
+services/runtime/tests/test_llm_stream_lifecycle.py:151: AssertionError
+_______ test_response_model_labels_survive_all_terminal_paths[True-True] _______
+
+usage = True, done = True
+
+    @pytest.mark.parametrize("usage", [False, True])
+    @pytest.mark.parametrize("done", [False, True])
+    async def test_response_model_labels_survive_all_terminal_paths(usage: bool, done: bool) -> None:
+        body = _TrackedBody(
+            [
+                b'data: {"model":"upstream-a","choices":[{"delta":{"content":"ok"}}]}\n\n',
+                b'data: {"model":"upstream-b","choices":[{"delta":{},"finish_reason":"stop"}]}\n\n',
+                *([b"data: [DONE]\n\n"] if done else []),
+            ],
+            hold_open=False,
+        )
+        events = [event async for event in _provider(body, usage=usage).stream(_request())]
+        identity = getattr(events[-1], "identity", None)
+>       assert identity is not None
+E       assert None is not None
+
+services/runtime/tests/test_llm_stream_lifecycle.py:151: AssertionError
+__ test_response_model_metadata_is_bounded_and_invalid_values_are_not_labels ___
+
+    async def test_response_model_metadata_is_bounded_and_invalid_values_are_not_labels() -> None:
+        labels = ["same", "same", None, 4, "", "bad\nlabel", "x" * 257]
+        labels.extend(f"model-{i}" for i in range(10))
+        chunks = [
+            ("data: " + json.dumps({"model": label, "choices": []}) + "\n\n").encode()
+            for label in labels
+        ]
+        chunks += [
+            b'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\n',
+            b"data: [DONE]\n\n",
+        ]
+        events = [event async for event in _provider(_TrackedBody(chunks), usage=True).stream(_request())]
+        identity = getattr(events[-1], "identity", None)
+>       assert identity is not None
+E       assert None is not None
+
+services/runtime/tests/test_llm_stream_lifecycle.py:172: AssertionError
+____ test_model_on_usage_tail_is_preserved_without_filling_a_missing_model _____
+
+    async def test_model_on_usage_tail_is_preserved_without_filling_a_missing_model() -> None:
+        body = _TrackedBody(
+            [
+                b'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\n',
+                b'data: {"model":"reported-only-on-tail","choices":[],"usage":{"total_tokens":3}}\n\n',
+                b"data: [DONE]\n\n",
+            ]
+        )
+        events = [event async for event in _provider(body, usage=True).stream(_request())]
+        identity = getattr(events[-1], "identity", None)
+>       assert identity is not None
+E       assert None is not None
+
+services/runtime/tests/test_llm_stream_lifecycle.py:188: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/pipecat/audio/utils.py:14
+  /Users/mubai/Desktop/CW2/.worktrees/qq-agent-plus-adoption/.venv/lib/python3.12/site-packages/pipecat/audio/utils.py:14: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13
+    import audioop
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED services/runtime/tests/test_llm_stream_lifecycle.py::test_response_model_labels_survive_all_terminal_paths[False-False]
+FAILED services/runtime/tests/test_llm_stream_lifecycle.py::test_response_model_labels_survive_all_terminal_paths[False-True]
+FAILED services/runtime/tests/test_llm_stream_lifecycle.py::test_response_model_labels_survive_all_terminal_paths[True-False]
+FAILED services/runtime/tests/test_llm_stream_lifecycle.py::test_response_model_labels_survive_all_terminal_paths[True-True]
+FAILED services/runtime/tests/test_llm_stream_lifecycle.py::test_response_model_metadata_is_bounded_and_invalid_values_are_not_labels
+FAILED services/runtime/tests/test_llm_stream_lifecycle.py::test_model_on_usage_tail_is_preserved_without_filling_a_missing_model
+6 failed, 9 deselected, 1 warning in 0.26s

@@ -1,0 +1,44 @@
+"""Isolated same-query SearXNG engine probe with the candidate's existing proxy."""
+import hashlib,json,secrets,subprocess,time
+from pathlib import Path
+import requests,yaml
+root=Path('/tmp/cw2-q02-searx-proxy-matrix-20261003');root.mkdir(mode=0o700,exist_ok=True)
+name='cw2-q02-searx-proxy-matrix'
+if subprocess.run(['docker','inspect',name],capture_output=True).returncode==0:raise SystemExit('Existing container must be inspected; no replacement')
+base=json.loads(subprocess.check_output(['docker','inspect','cw2-q02-searx-engines']))[0]
+c=yaml.safe_load(Path('/tmp/cw2-q02-searx-engines-20261003/settings.yml').read_text())
+assert c.get('outgoing',{}).get('proxies'),'Candidate proxy missing'
+engines=['bing','google','brave','duckduckgo','360search','yandex']
+c['use_default_settings']={'engines':{'keep_only':engines}};c['engines']=[{'name':e,'disabled':False} for e in engines]
+c.setdefault('server',{})['secret_key']=secrets.token_hex(32);c['server']['limiter']=False
+c.setdefault('search',{})['formats']=['html','json']
+config=root/'settings.yml';config.write_text(yaml.safe_dump(c,allow_unicode=True));config.chmod(0o600)
+args=['docker','run','-d','--name',name,'--cpus','2','--memory','1g','--network',next(iter(base['NetworkSettings']['Networks'])),'-p','127.0.0.1:18082:8080','-v',f'{config}:/etc/searxng/settings.yml:ro']
+for dns in base['HostConfig']['Dns']:args+=['--dns',dns]
+args += [base['Image']]
+subprocess.run(args,check=True,stdout=subprocess.DEVNULL)
+s=requests.Session();s.trust_env=False
+for _ in range(30):
+ try:
+  if s.get('http://127.0.0.1:18082/healthz',timeout=3).ok:break
+ except requests.RequestException:pass
+ time.sleep(1)
+else:raise SystemExit('Isolated instance did not become healthy')
+queries=['民航局 旅客 携带 充电宝 规定 额定能量 托运','民航 充电宝 随身携带 乘机 规定 调整','raft consensus algorithm election timeout heartbeat interval timing requirement']
+(root/'scope.json').write_text(json.dumps({'image_id':base['Image'],'engines':engines,'queries':queries,'proxy_from_existing_candidate':True,'repeats':1,'port':18082,'production_and_current_eval_unchanged':True,'language_parameter_omitted_like_runtime':True},ensure_ascii=False,indent=2)+'\n')
+for qi,q in enumerate(queries):
+ for e in engines:
+  started=time.monotonic();r={'query_index':qi,'query':q,'engine':e}
+  try:
+   response=s.get('http://127.0.0.1:18082/search',params={'q':q,'format':'json','engines':e},timeout=25)
+   r.update(http_status=response.status_code,body_sha256=hashlib.sha256(response.content).hexdigest())
+   if response.ok:
+    p=response.json();r['unresponsive_engines']=p.get('unresponsive_engines',[])
+    r['results']=[{k:v.get(k) for k in ['url','title','content','engine','publishedDate','score']} for v in p.get('results',[])[:20]]
+   else:r['error']='http_error'
+  except (requests.RequestException,ValueError) as exc:r['error']=type(exc).__name__
+  r['latency_ms']=round((time.monotonic()-started)*1000)
+  with (root/'results.jsonl').open('a') as f:f.write(json.dumps(r,ensure_ascii=False)+'\n')
+  print(json.dumps({'q':qi,'engine':e,'count':len(r.get('results',[])),'errors':r.get('unresponsive_engines',r.get('error')),'latency_ms':r['latency_ms']}),flush=True)
+(root/'exit-code.json').write_text('{"exit_code":0}\n')
+print('complete',flush=True)

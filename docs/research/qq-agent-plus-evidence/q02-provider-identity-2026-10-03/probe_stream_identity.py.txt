@@ -1,0 +1,68 @@
+"""Real SSE identity capture with request/response metadata only; no auth logging."""
+import asyncio,contextlib,hashlib,json,sys,time
+from dataclasses import asdict
+from datetime import datetime,timezone
+from pathlib import Path
+from uuid import uuid4
+snapshot=Path('/tmp/cw2-q02-provider-identity-v25-eval')
+sys.path[:0]=[str(snapshot/'services/runtime/src'),str(snapshot/'packages/protocol-python/src'),str(snapshot/'packages/model-worker-sdk-python/src'),'/tmp/cw2-q02-eval-deps',str(snapshot)]
+import httpx2
+import chatwaifu_runtime.providers.openai_compatible as adapter
+from chatwaifu_runtime.providers.contracts import LlmRequest,LlmResponseCompleted,LlmTextDelta
+from tools.runtime_source_evaluation import _RecordedProvider
+root=Path('/tmp/cw2-q02-v25-identity-20261003');root.mkdir(mode=0o700,exist_ok=True)
+assert not (root/'attempts.jsonl').exists(),'Existing live attempts; inspect before resuming'
+key=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+request=LlmRequest(generation_id=uuid4(),user_text='用一句中文说明网页摘要与原文的区别。',system_prompt='准确、简洁地回答用户问题。',max_output_tokens=256)
+original_stream=httpx2.AsyncClient.stream
+original_lines=adapter._iter_sse_lines
+current=None
+
+def stream(self,method,url,**kwargs):
+ p=kwargs.get('json')
+ if method.upper()=='POST' and isinstance(p,dict) and str(url).endswith('/chat/completions'):
+  assert current is not None
+  current['actual_requests'].append(p)
+ return original_stream(self,method,url,**kwargs)
+
+async def lines(response):
+ async with contextlib.aclosing(original_lines(response)) as iterator:
+  async for line in iterator:
+   if line.startswith('data:') and line.removeprefix('data:').strip()!='[DONE]':
+    payload=json.loads(line.removeprefix('data:').strip())
+    if 'model' in payload:
+     assert current is not None
+     current['raw_model_fields'].append(payload['model'])
+   yield line
+httpx2.AsyncClient.stream=stream
+adapter._iter_sse_lines=lines
+
+async def main():
+ global current
+ for i,usage in enumerate([True,False,False,True]):
+  current={'index':i,'request_usage':usage,'actual_requests':[],'raw_model_fields':[],'started_at_utc':datetime.now(timezone.utc).isoformat()}
+  with (root/'attempts.jsonl').open('a') as f:f.write(json.dumps({'index':i,'request_usage':usage})+'\n')
+  provider=adapter.OpenAiCompatibleLlmProvider(base_url='https://mubai.website:8318/v1',model='gemini-3.8-flash-high',api_key=key,timeout_seconds=60,request_usage=usage)
+  journal=_RecordedProvider(provider,root/'provider-rounds.jsonl',maximum=4);journal.sample_key=f'identity:{i}'
+  begin=time.monotonic();text='';terminal=None
+  try:
+   async for event in journal.stream(request):
+    if isinstance(event,LlmTextDelta):text+=event.text
+    elif isinstance(event,LlmResponseCompleted):terminal=event
+   current.update(reply=text,terminal=asdict(terminal) if terminal else None,latency_ms=round((time.monotonic()-begin)*1000))
+   raw=current['raw_model_fields'];unique=list(dict.fromkeys(raw))
+   assert terminal is not None and terminal.identity is not None
+   assert list(terminal.identity.reported_model_ids)==unique and not terminal.identity.incomplete
+   assert len(current['actual_requests'])==1 and current['actual_requests'][0]['model']=='gemini-3.8-flash-high'
+   assert journal.calls[0]['response_identity']==asdict(terminal.identity)
+   current['identity_matches_observed_sse']=True
+  except Exception as error:
+   current['error_type']=type(error).__name__
+  assert key not in json.dumps(current,ensure_ascii=False)
+  with (root/'results.jsonl').open('a') as f:f.write(json.dumps(current,ensure_ascii=False)+'\n')
+  print(json.dumps({k:current.get(k) for k in ['index','request_usage','terminal','latency_ms','identity_matches_observed_sse','error_type']}),flush=True)
+ results=[json.loads(s) for s in (root/'results.jsonl').read_text().splitlines()]
+ code=0 if all(r.get('identity_matches_observed_sse') for r in results) else 1
+ (root/'exit-code.json').write_text(json.dumps({'exit_code':code})+'\n')
+ return code
+raise SystemExit(asyncio.run(main()))

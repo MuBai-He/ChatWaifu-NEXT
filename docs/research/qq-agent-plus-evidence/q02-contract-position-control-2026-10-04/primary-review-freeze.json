@@ -1,0 +1,14 @@
+{
+  "phase": "48 direct masked judgments saved before condition reveal",
+  "mapping_revealed": false,
+  "files_sha256": {
+    "primary-judgments.json": "f3f745dafbf9a4eda43d2b60ffc77741e0c81a60e7c6d438d609c0091c7086ee",
+    "masked-packets.json": "e0803c6a7f2e8120dedace17e5fd5ae0695df67274273e051316e59df651a6fb",
+    "scope-and-gates.json": "ebdf08e2a9c41a49f8315b90889ff871f23bc61ba1d49bd9e72424d75e80787f",
+    "preflight-integrity.json": "1cec8aa766af9dc8b60d5708172116812c9138cb35f2de1b26764957ae435d6f",
+    "actual-requests.jsonl": "c0efd12df428a7218e7cb6563897fe921dc78f48796ad4a1a7f3cbf6e440fd37",
+    "results.jsonl": "5d210932e3da803a29659ec1f0ab5f62508e1c440e5128037ae5daddeda9d5c9",
+    "technical-code-execution.json": "b350d38b7bac1b3be02e19c3ba7763de173753b642fafce0d9f2326a5769e5e1"
+  },
+  "quality_approved": false
+}

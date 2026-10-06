@@ -1,0 +1,52 @@
+{
+  "scope": "gemini-route-controls",
+  "release_approved": false,
+  "source_urls": [
+    "https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html",
+    "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227950.html"
+  ],
+  "groups": {
+    "gemini-3.1-pro-low": {
+      "completed": 3,
+      "stop": 3,
+      "source_url_present": 0,
+      "all_two_source_urls_present": 0,
+      "provider_usage": {
+        "prompt_tokens": 29130,
+        "completion_tokens": 947,
+        "reasoning_tokens": 4842,
+        "total_tokens": 34919
+      },
+      "latency_ms": [
+        16586,
+        17348,
+        20201
+      ],
+      "median_ms": 17348,
+      "latency_p50_ms": 17348,
+      "latency_p95_ms": 20201
+    },
+    "gemini-pro-agent": {
+      "completed": 3,
+      "stop": 3,
+      "source_url_present": 1,
+      "all_two_source_urls_present": 1,
+      "provider_usage": {
+        "prompt_tokens": 29130,
+        "completion_tokens": 1026,
+        "reasoning_tokens": 5057,
+        "total_tokens": 35213
+      },
+      "latency_ms": [
+        16320,
+        16611,
+        22268
+      ],
+      "median_ms": 16611,
+      "latency_p50_ms": 16611,
+      "latency_p95_ms": 22268
+    }
+  },
+  "metrics_note": "URL presence is a diagnostic observation, not factual approval; aliases do not independently verify the underlying model.",
+  "percentile_method": "nearest_rank; tiny samples describe this batch only"
+}

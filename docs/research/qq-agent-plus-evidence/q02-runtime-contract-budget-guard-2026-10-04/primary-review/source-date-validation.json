@@ -1,0 +1,12 @@
+{
+  "scope": "Read-only validation after the first 21 judgments froze; original ratings preserved",
+  "case": "instant_message/system detailed_answer turn 2",
+  "successful_read_source_dates": [
+    "2014-08-08",
+    "2025-07-10",
+    "2025-06-28"
+  ],
+  "source_reading_and_post_read_search_succeeded": true,
+  "full_current_applicability_verified": false,
+  "judgment_changed": false
+}

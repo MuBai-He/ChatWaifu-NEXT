@@ -1,0 +1,830 @@
+"""Small, pinned HTTP adapters for optional public web providers.
+
+Provider SDKs are deliberately not used here. Each request validates the provider
+origin once, uses the same pinned transport as MCP, bounds the response, and
+normalizes provider failures into Runtime Skill errors.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import hashlib
+import ipaddress
+import json
+from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from typing import Literal, cast
+from urllib.parse import quote, urlencode, urlsplit
+
+import httpx2
+from chatwaifu_protocol.base import JsonObject, JsonValue
+
+from chatwaifu_runtime.config.settings import PublicWebConfig
+from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
+from chatwaifu_runtime.runtime_skills.public_web import (
+    MAX_SOURCE_RESPONSE_BYTES,
+    normalize_public_source_url,
+    validate_public_url_with_resolver,
+)
+from chatwaifu_runtime.runtime_skills.transports import (
+    PinnedAsyncHTTPTransport,
+    ValidatedMcpEndpoint,
+    validate_mcp_url,
+)
+
+MAX_PROVIDER_RESPONSE_BYTES = MAX_SOURCE_RESPONSE_BYTES
+TransportFactory = Callable[[ValidatedMcpEndpoint], httpx2.AsyncBaseTransport]
+LocalTransportFactory = Callable[[], httpx2.AsyncBaseTransport]
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderSearchResult:
+    url: str
+    title: str
+    snippet: str
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderSearchResponse:
+    provider: str
+    endpoint: str
+    retrieved_at: str
+    body: bytes
+    results: tuple[ProviderSearchResult, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderPage:
+    provider: str
+    source_url: str
+    title: str
+    text: str
+    body: bytes
+    content_type: str
+    retrieved_at: str
+
+
+async def _validate_provider_endpoint(
+    origin: str,
+    *,
+    dns_resolver: Literal["system", "cloudflare"] = "system",
+    transport_factory: TransportFactory | None = None,
+) -> ValidatedMcpEndpoint:
+    parsed = urlsplit(origin)
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.port not in {None, 443}
+        or parsed.path not in {"", "/"}
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise SkillExecutionError(
+            "web_provider_endpoint_forbidden",
+            "Public web provider endpoint must be an HTTPS origin",
+        )
+    try:
+        if dns_resolver == "cloudflare":
+            endpoint = await validate_public_url_with_resolver(
+                origin, "cloudflare", transport_factory=transport_factory
+            )
+        else:
+            endpoint = await validate_mcp_url(origin, allow_remote=True)
+    except SkillExecutionError as error:
+        raise SkillExecutionError(
+            "web_provider_endpoint_forbidden",
+            "Public web provider endpoint must resolve only to public addresses",
+            retryable=error.structured.retryable,
+        ) from error
+    if any(not address.is_global for address in endpoint.addresses):
+        raise SkillExecutionError(
+            "web_provider_endpoint_forbidden",
+            "Public web provider endpoint must resolve only to public addresses",
+        )
+    return endpoint
+
+
+async def _read_response_body(response: httpx2.Response) -> bytes:
+    declared = response.headers.get("content-length")
+    if declared is not None:
+        try:
+            if int(declared) > MAX_PROVIDER_RESPONSE_BYTES:
+                raise SkillExecutionError(
+                    "web_response_limit", "Public web provider response exceeded its limit"
+                )
+        except ValueError as error:
+            raise SkillExecutionError(
+                "web_provider_format_changed", "Public web provider returned an invalid length"
+            ) from error
+    if response.is_stream_consumed:
+        if len(response.content) > MAX_PROVIDER_RESPONSE_BYTES:
+            raise SkillExecutionError(
+                "web_response_limit", "Public web provider response exceeded its limit"
+            )
+        return response.content
+    body = bytearray()
+    received = 0
+    try:
+        async for chunk in response.aiter_raw(chunk_size=16_384):
+            received += len(chunk)
+            if received > MAX_PROVIDER_RESPONSE_BYTES:
+                raise SkillExecutionError(
+                    "web_response_limit", "Public web provider response exceeded its limit"
+                )
+            body.extend(chunk)
+    except httpx2.HTTPError as error:
+        raise SkillExecutionError(
+            "web_provider_network_error",
+            "Public web provider response could not be read",
+            retryable=True,
+        ) from error
+    return bytes(body)
+
+
+class _ProviderClient:
+    def __init__(
+        self,
+        *,
+        origin: str,
+        api_key: str | None,
+        require_api_key: bool = True,
+        timeout_seconds: float,
+        transport_factory: TransportFactory | None = None,
+    ) -> None:
+        self._origin = origin.rstrip("/")
+        self._api_key = api_key.strip() if api_key else None
+        self._require_api_key = require_api_key
+        self._timeout_seconds = timeout_seconds
+        self._transport_factory = transport_factory or PinnedAsyncHTTPTransport
+
+    async def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        json_body: JsonObject | None = None,
+        accept: str = "application/json",
+        extra_headers: dict[str, str] | None = None,
+        dns_resolver: Literal["system", "cloudflare"] = "system",
+    ) -> tuple[bytes, str, str]:
+        if self._require_api_key and not self._api_key:
+            raise SkillExecutionError(
+                "web_provider_auth", "The selected public web provider requires an API key"
+            )
+        endpoint = await _validate_provider_endpoint(
+            self._origin,
+            dns_resolver=dns_resolver,
+            transport_factory=self._transport_factory,
+        )
+        headers = {
+            "Accept": accept,
+            "Accept-Encoding": "identity",
+            "User-Agent": "ChatWaifu-NEXT/0.1 public-web-provider",
+        }
+        if self._api_key:
+            headers["Authorization"] = f"Bearer {self._api_key}"
+        headers.update(extra_headers or {})
+        url = f"{self._origin}{path}"
+        try:
+            async with asyncio.timeout(self._timeout_seconds):
+                async with httpx2.AsyncClient(
+                    transport=self._transport_factory(endpoint),
+                    timeout=httpx2.Timeout(self._timeout_seconds),
+                    follow_redirects=False,
+                    trust_env=False,
+                    headers=headers,
+                ) as client:
+                    response = await client.request(method, url, json=json_body)
+                    try:
+                        status = response.status_code
+                        if status in {401, 403}:
+                            raise SkillExecutionError(
+                                "web_provider_auth", "Public web provider rejected authentication"
+                            )
+                        if status == 429:
+                            raise SkillExecutionError(
+                                "web_provider_rate_limit",
+                                "Public web provider rate limit was reached",
+                                retryable=True,
+                                details={"status_code": status},
+                            )
+                        if status >= 500:
+                            raise SkillExecutionError(
+                                "web_provider_unavailable",
+                                "Public web provider is temporarily unavailable",
+                                retryable=True,
+                                details={"status_code": status},
+                            )
+                        if status != 200:
+                            raise SkillExecutionError(
+                                "web_provider_http_error",
+                                "Public web provider returned an unsuccessful HTTP status",
+                                details={"status_code": status},
+                            )
+                        body = await _read_response_body(response)
+                        content_type = (
+                            response.headers.get("content-type", "")
+                            .split(";", 1)[0]
+                            .strip()
+                            .lower()
+                        )
+                    finally:
+                        await response.aclose()
+        except (TimeoutError, httpx2.TimeoutException) as error:
+            raise SkillExecutionError(
+                "web_timeout", "Public web provider request timed out", retryable=True
+            ) from error
+        except httpx2.HTTPError as error:
+            raise SkillExecutionError(
+                "web_provider_network_error",
+                "Public web provider request failed",
+                retryable=True,
+            ) from error
+        return body, content_type, datetime.now(UTC).isoformat()
+
+    async def _json_request(
+        self,
+        method: str,
+        path: str,
+        *,
+        json_body: JsonObject,
+        dns_resolver: Literal["system", "cloudflare"] = "system",
+    ) -> tuple[JsonObject, bytes, str]:
+        body, _, retrieved_at = await self._request(
+            method, path, json_body=json_body, dns_resolver=dns_resolver
+        )
+        try:
+            payload = cast(JsonValue, json.loads(body))
+        except (TypeError, ValueError) as error:
+            raise SkillExecutionError(
+                "web_provider_format_changed", "Public web provider returned invalid JSON"
+            ) from error
+        if not isinstance(payload, dict):
+            raise SkillExecutionError(
+                "web_provider_format_changed",
+                "Public web provider returned an unexpected JSON shape",
+            )
+        return payload, body, retrieved_at
+
+
+def _validate_local_provider_origin(origin: str) -> str:
+    parsed = urlsplit(origin)
+    hostname = parsed.hostname or ""
+    try:
+        loopback = ipaddress.ip_address(hostname).is_loopback
+    except ValueError:
+        loopback = hostname.lower().rstrip(".") == "localhost"
+    try:
+        port = parsed.port
+    except ValueError as error:
+        raise SkillExecutionError(
+            "web_provider_endpoint_forbidden",
+            "Local web provider endpoint must use a valid port",
+        ) from error
+    if (
+        parsed.scheme not in {"http", "https"}
+        or not hostname
+        or not loopback
+        or parsed.username is not None
+        or parsed.password is not None
+        or (port is not None and not 1 <= port <= 65_535)
+        or parsed.path not in {"", "/"}
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise SkillExecutionError(
+            "web_provider_endpoint_forbidden",
+            "Local web provider endpoint must be a loopback HTTP origin",
+        )
+    return origin.rstrip("/")
+
+
+class _LocalProviderClient:
+    """HTTP boundary for explicitly loopback companion services."""
+
+    def __init__(
+        self,
+        *,
+        origin: str,
+        api_token: str | None,
+        require_api_token: bool,
+        timeout_seconds: float,
+        transport_factory: LocalTransportFactory | None = None,
+    ) -> None:
+        self._origin = _validate_local_provider_origin(origin)
+        self._api_token = api_token.strip() if api_token else None
+        self._require_api_token = require_api_token
+        self._timeout_seconds = timeout_seconds
+        self._transport_factory = transport_factory
+
+    def _ensure_auth(self) -> None:
+        if self._require_api_token and not self._api_token:
+            raise SkillExecutionError(
+                "web_provider_auth", "The selected local web provider requires an API token"
+            )
+
+    async def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        json_body: JsonObject | None = None,
+        accept: str = "application/json",
+    ) -> tuple[bytes, str, str]:
+        self._ensure_auth()
+        headers = {
+            "Accept": accept,
+            "Accept-Encoding": "identity",
+            "User-Agent": "ChatWaifu-NEXT/0.1 local-web-provider",
+        }
+        if self._api_token:
+            headers["Authorization"] = f"Bearer {self._api_token}"
+        try:
+            async with asyncio.timeout(self._timeout_seconds):
+                transport = self._transport_factory() if self._transport_factory else None
+                async with httpx2.AsyncClient(
+                    transport=transport,
+                    timeout=httpx2.Timeout(self._timeout_seconds),
+                    follow_redirects=False,
+                    trust_env=False,
+                    headers=headers,
+                ) as client:
+                    response = await client.request(
+                        method, f"{self._origin}{path}", json=json_body
+                    )
+                    try:
+                        status = response.status_code
+                        if status in {401, 403}:
+                            raise SkillExecutionError(
+                                "web_provider_auth",
+                                "Local web provider rejected authentication",
+                            )
+                        if status == 429:
+                            raise SkillExecutionError(
+                                "web_provider_rate_limit",
+                                "Local web provider rate limit was reached",
+                                retryable=True,
+                                details={"status_code": status},
+                            )
+                        if status >= 500:
+                            raise SkillExecutionError(
+                                "web_provider_unavailable",
+                                "Local web provider is temporarily unavailable",
+                                retryable=True,
+                                details={"status_code": status},
+                            )
+                        if status != 200:
+                            raise SkillExecutionError(
+                                "web_provider_http_error",
+                                "Local web provider returned an unsuccessful HTTP status",
+                                details={"status_code": status},
+                            )
+                        body = await _read_response_body(response)
+                        content_type = (
+                            response.headers.get("content-type", "")
+                            .split(";", 1)[0]
+                            .strip()
+                            .lower()
+                        )
+                    finally:
+                        await response.aclose()
+        except (TimeoutError, httpx2.TimeoutException) as error:
+            raise SkillExecutionError(
+                "web_timeout", "Local web provider request timed out", retryable=True
+            ) from error
+        except httpx2.HTTPError as error:
+            raise SkillExecutionError(
+                "web_provider_network_error",
+                "Local web provider request failed",
+                retryable=True,
+            ) from error
+        return body, content_type, datetime.now(UTC).isoformat()
+
+    async def _json_request(
+        self,
+        method: str,
+        path: str,
+        *,
+        json_body: JsonObject | None = None,
+    ) -> tuple[JsonObject, bytes, str]:
+        body, _, retrieved_at = await self._request(method, path, json_body=json_body)
+        try:
+            payload = cast(JsonValue, json.loads(body))
+        except (TypeError, ValueError) as error:
+            raise SkillExecutionError(
+                "web_provider_format_changed", "Local web provider returned invalid JSON"
+            ) from error
+        if not isinstance(payload, dict):
+            raise SkillExecutionError(
+                "web_provider_format_changed",
+                "Local web provider returned an unexpected JSON shape",
+            )
+        return payload, body, retrieved_at
+
+
+class SearxngSearchClient(_LocalProviderClient):
+    def __init__(
+        self,
+        config: PublicWebConfig,
+        *,
+        transport_factory: LocalTransportFactory | None = None,
+    ) -> None:
+        super().__init__(
+            origin=config.searxng_endpoint,
+            api_token=None,
+            require_api_token=False,
+            timeout_seconds=config.timeout_seconds,
+            transport_factory=transport_factory,
+        )
+
+    async def search(
+        self,
+        query: str,
+        maximum: int,
+    ) -> ProviderSearchResponse:
+        path = "/search?" + urlencode({"q": query, "format": "json"})
+        payload, body, retrieved_at = await self._json_request("GET", path)
+        raw_results = payload.get("results")
+        if not isinstance(raw_results, list):
+            raise SkillExecutionError(
+                "web_provider_format_changed", "SearXNG search returned no result list"
+            )
+        unresponsive = payload.get("unresponsive_engines", [])
+        if not isinstance(unresponsive, list):
+            raise SkillExecutionError(
+                "web_provider_format_changed", "SearXNG returned an invalid engine status list"
+            )
+        if not raw_results and unresponsive:
+            raise SkillExecutionError(
+                "web_search_engine_error",
+                "SearXNG upstream engines failed; this is not an empty search result",
+                retryable=True,
+                details={"unresponsive_engine_count": len(unresponsive)},
+            )
+        results: list[ProviderSearchResult] = []
+        for item in raw_results:
+            if not isinstance(item, dict):
+                continue
+            url, title = item.get("url"), item.get("title", "")
+            snippet = item.get("content", item.get("snippet", ""))
+            if isinstance(url, str) and isinstance(title, str) and isinstance(snippet, str):
+                results.append(
+                    ProviderSearchResult(url=url, title=title[:240], snippet=snippet[:480])
+                )
+        return ProviderSearchResponse(
+            provider="searxng",
+            endpoint=f"{self._origin}/search",
+            retrieved_at=retrieved_at,
+            body=body,
+            results=tuple(results[:maximum]),
+        )
+
+
+class Crawl4aiReaderClient(_LocalProviderClient):
+    def __init__(
+        self,
+        config: PublicWebConfig,
+        *,
+        transport_factory: LocalTransportFactory | None = None,
+    ) -> None:
+        super().__init__(
+            origin=config.crawl4ai_endpoint,
+            api_token=(
+                config.crawl4ai_api_token.get_secret_value()
+                if config.crawl4ai_api_token is not None
+                else None
+            ),
+            require_api_token=True,
+            timeout_seconds=config.timeout_seconds,
+            transport_factory=transport_factory,
+        )
+
+    async def read(
+        self,
+        source_url: str,
+        *,
+        fresh: bool,
+        dns_resolver: Literal["system", "cloudflare"] = "system",
+    ) -> ProviderPage:
+        del fresh  # /md owns HTML cache policy; the PDF branch always bypasses cache.
+        self._ensure_auth()
+        normalized = normalize_public_source_url(source_url)
+        await validate_public_url_with_resolver(normalized, dns_resolver)
+        if urlsplit(normalized).path.lower().endswith(".pdf"):
+            payload, body, retrieved_at = await self._read_pdf(normalized)
+        else:
+            payload, body, retrieved_at = await self._json_request(
+                "POST", "/md", json_body={"url": normalized}
+            )
+        markdown = payload.get("markdown")
+        if not isinstance(markdown, str) and isinstance(payload.get("result"), dict):
+            markdown = cast(dict[str, JsonValue], payload["result"]).get("markdown")
+        if not isinstance(markdown, str) or not markdown.strip():
+            raise SkillExecutionError(
+                "web_provider_format_changed", "Crawl4AI returned no markdown content"
+            )
+        title = payload.get("title", "")
+        if not isinstance(title, str):
+            title = ""
+        if not title:
+            metadata = payload.get("metadata")
+            if isinstance(metadata, dict) and isinstance(metadata.get("title"), str):
+                title = cast(str, metadata["title"])
+        if not title:
+            for line in markdown.splitlines():
+                if line.strip().startswith("# "):
+                    title = line.strip()[2:]
+                    break
+        return ProviderPage(
+            provider="crawl4ai",
+            source_url=normalized,
+            title=title[:240],
+            text=markdown.strip(),
+            body=body,
+            content_type="text/plain",
+            retrieved_at=retrieved_at,
+        )
+
+    async def _read_pdf(self, normalized: str) -> tuple[JsonObject, bytes, str]:
+        """Crawl4AI 0.9.3+ pairs this fixed strategy with its PDF crawler.
+
+        The HTML /md path cannot render PDF downloads. The companion service
+        owns parsing, redirect validation and resource limits; Runtime sends no
+        arbitrary strategy, hooks, image paths or provider SDK objects.
+        """
+        payload, body, retrieved_at = await self._json_request(
+            "POST",
+            "/crawl",
+            json_body={
+                "urls": [normalized],
+                "crawler_config": {
+                    "type": "CrawlerRunConfig",
+                    "params": {
+                        "scraping_strategy": {"type": "PDFContentScrapingStrategy", "params": {}},
+                        "cache_mode": {"type": "CacheMode", "params": "bypass"},
+                    },
+                },
+            },
+        )
+        results = payload.get("results")
+        if (
+            payload.get("success") is not True
+            or not isinstance(results, list)
+            or len(results) != 1
+            or not isinstance(results[0], dict)
+        ):
+            raise SkillExecutionError(
+                "web_provider_format_changed", "Crawl4AI returned no single PDF result"
+            )
+        result = results[0]
+        if result.get("success") is not True or result.get("status_code") != 200:
+            raise SkillExecutionError(
+                "web_provider_crawl_failed", "The PDF source could not be extracted"
+            )
+        if result.get("url") != normalized:
+            raise SkillExecutionError(
+                "web_provider_format_changed", "Crawl4AI returned a different PDF source"
+            )
+        markdown = result.get("markdown")
+        if not isinstance(markdown, dict) or not isinstance(markdown.get("raw_markdown"), str):
+            raise SkillExecutionError(
+                "web_provider_format_changed", "Crawl4AI returned no PDF markdown"
+            )
+        return (
+            {"markdown": markdown["raw_markdown"], "metadata": result.get("metadata")},
+            body,
+            retrieved_at,
+        )
+
+
+def _raise_firecrawl_failure(payload: JsonObject, *, operation: str) -> None:
+    """Normalize Firecrawl's HTTP-200 error envelope without retaining secrets."""
+    raw_reason = payload.get("reason")
+    raw_error = payload.get("error")
+    reason = raw_reason.strip() if isinstance(raw_reason, str) else ""
+    error_text = raw_error.strip() if isinstance(raw_error, str) else ""
+    normalized = f"{reason} {error_text}".lower()
+    details: dict[str, object] = {}
+    if reason:
+        details["provider_reason"] = reason[:80]
+    retry_after = payload.get("retry_after_seconds")
+    if isinstance(retry_after, int) and not isinstance(retry_after, bool) and retry_after >= 0:
+        details["retry_after_seconds"] = retry_after
+    if reason in {"credits", "rate_limit", "quota"} or "rate limit" in normalized:
+        raise SkillExecutionError(
+            "web_provider_rate_limit",
+            f"Firecrawl {operation} rate limit was reached",
+            retryable=True,
+            details=details,
+        )
+    if "unauthorized" in normalized or "api key" in normalized or "authentication" in normalized:
+        raise SkillExecutionError(
+            "web_provider_auth",
+            f"Firecrawl {operation} rejected authentication",
+            details=details,
+        )
+    raise SkillExecutionError(
+        "web_provider_format_changed",
+        f"Firecrawl {operation} did not report success",
+        details=details,
+    )
+
+
+class FirecrawlSearchClient(_ProviderClient):
+    def __init__(
+        self,
+        config: PublicWebConfig,
+        *,
+        transport_factory: TransportFactory | None = None,
+    ) -> None:
+        super().__init__(
+            origin=config.firecrawl_endpoint,
+            api_key=(
+                config.firecrawl_api_key.get_secret_value()
+                if config.firecrawl_api_key is not None
+                else None
+            ),
+            require_api_key=not config.firecrawl_allow_anonymous,
+            timeout_seconds=config.timeout_seconds,
+            transport_factory=transport_factory,
+        )
+
+    async def search(
+        self,
+        query: str,
+        maximum: int,
+        *,
+        dns_resolver: Literal["system", "cloudflare"] = "system",
+    ) -> ProviderSearchResponse:
+        payload, body, retrieved_at = await self._json_request(
+            "POST",
+            "/v2/search",
+            json_body={"query": query, "limit": maximum},
+            dns_resolver=dns_resolver,
+        )
+        if payload.get("success") is not True:
+            _raise_firecrawl_failure(payload, operation="search")
+        raw_results: JsonValue = payload.get("data", [])
+        if isinstance(raw_results, dict):
+            raw_results = raw_results.get("web", [])
+        if not isinstance(raw_results, list):
+            raise SkillExecutionError(
+                "web_provider_format_changed", "Firecrawl search returned no result list"
+            )
+        results: list[ProviderSearchResult] = []
+        for item in raw_results:
+            if not isinstance(item, dict):
+                continue
+            url, title = item.get("url"), item.get("title", "")
+            snippet = item.get("description", item.get("snippet", ""))
+            if isinstance(url, str) and isinstance(title, str) and isinstance(snippet, str):
+                results.append(
+                    ProviderSearchResult(url=url, title=title[:240], snippet=snippet[:480])
+                )
+        return ProviderSearchResponse(
+            provider="firecrawl",
+            endpoint=f"{self._origin}/v2/search",
+            retrieved_at=retrieved_at,
+            body=body,
+            results=tuple(results),
+        )
+
+
+class JinaReaderClient(_ProviderClient):
+    def __init__(
+        self,
+        config: PublicWebConfig,
+        *,
+        transport_factory: TransportFactory | None = None,
+    ) -> None:
+        super().__init__(
+            origin=config.jina_endpoint,
+            api_key=(
+                config.jina_api_key.get_secret_value() if config.jina_api_key is not None else None
+            ),
+            timeout_seconds=config.timeout_seconds,
+            transport_factory=transport_factory,
+            require_api_key=False,
+        )
+
+    async def read(
+        self,
+        source_url: str,
+        *,
+        fresh: bool,
+        dns_resolver: Literal["system", "cloudflare"] = "system",
+    ) -> ProviderPage:
+        normalized = normalize_public_source_url(source_url)
+        await validate_public_url_with_resolver(
+            normalized, dns_resolver, transport_factory=self._transport_factory
+        )
+        # Encoding the complete source URL avoids ambiguity between the reader
+        # path and source query/fragment components.
+        path = "/" + quote(normalized, safe="")
+        body, _content_type, retrieved_at = await self._request(
+            "GET",
+            path,
+            accept="text/markdown,text/plain",
+            extra_headers={"X-No-Cache": "true"} if fresh else None,
+            dns_resolver=dns_resolver,
+        )
+        text = body.decode("utf-8", errors="replace").strip()
+        if not text:
+            raise SkillExecutionError(
+                "web_empty_content", "Public source contained no readable text"
+            )
+        title = ""
+        for line in text.splitlines():
+            candidate = line.strip()
+            if candidate.startswith("# "):
+                title = candidate[2:].strip()[:240]
+                break
+            if candidate.lower().startswith("title:"):
+                title = candidate.split(":", 1)[1].strip()[:240]
+                break
+        return ProviderPage(
+            provider="jina",
+            source_url=normalized,
+            title=title,
+            text=text,
+            body=body,
+            content_type="text/plain",
+            retrieved_at=retrieved_at,
+        )
+
+
+class FirecrawlReaderClient(_ProviderClient):
+    def __init__(
+        self,
+        config: PublicWebConfig,
+        *,
+        transport_factory: TransportFactory | None = None,
+    ) -> None:
+        super().__init__(
+            origin=config.firecrawl_endpoint,
+            api_key=(
+                config.firecrawl_api_key.get_secret_value()
+                if config.firecrawl_api_key is not None
+                else None
+            ),
+            require_api_key=not config.firecrawl_allow_anonymous,
+            timeout_seconds=config.timeout_seconds,
+            transport_factory=transport_factory,
+        )
+
+    async def read(
+        self,
+        source_url: str,
+        *,
+        fresh: bool,
+        dns_resolver: Literal["system", "cloudflare"] = "system",
+    ) -> ProviderPage:
+        normalized = normalize_public_source_url(source_url)
+        await validate_public_url_with_resolver(
+            normalized, dns_resolver, transport_factory=self._transport_factory
+        )
+        request_body: JsonObject = {
+            "url": normalized,
+            "formats": ["markdown"],
+            "onlyMainContent": True,
+        }
+        if fresh:
+            request_body["maxAge"] = 0
+        payload, body, retrieved_at = await self._json_request(
+            "POST",
+            "/v2/scrape",
+            json_body=request_body,
+            dns_resolver=dns_resolver,
+        )
+        if payload.get("success") is not True:
+            _raise_firecrawl_failure(payload, operation="scrape")
+        data = payload.get("data")
+        if not isinstance(data, dict) or not isinstance(data.get("markdown"), str):
+            raise SkillExecutionError(
+                "web_provider_format_changed", "Firecrawl scrape returned no markdown"
+            )
+        text = cast(str, data["markdown"]).strip()
+        if not text:
+            raise SkillExecutionError(
+                "web_empty_content", "Public source contained no readable text"
+            )
+        metadata = data.get("metadata")
+        title = ""
+        if isinstance(metadata, dict) and isinstance(metadata.get("title"), str):
+            title = cast(str, metadata["title"])[:240]
+        return ProviderPage(
+            provider="firecrawl",
+            source_url=normalized,
+            title=title,
+            text=text,
+            body=body,
+            content_type="text/plain",
+            retrieved_at=retrieved_at,
+        )
+
+
+def provider_body_sha256(body: bytes) -> str:
+    return hashlib.sha256(body).hexdigest()

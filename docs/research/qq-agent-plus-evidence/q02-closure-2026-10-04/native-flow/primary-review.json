@@ -1,0 +1,33 @@
+{
+  "flow_completed": true,
+  "reviewer": "implementation author, direct review",
+  "complete": 2,
+  "partial": 2,
+  "items": [
+    {
+      "sample_key": "icao_provided_source_recovery:r0:t1:baseline",
+      "grade": "partial",
+      "reason": "日期、2个、禁充及机组运行例外正确；“提供给成员国实施”超出公告仅说明提供补篇的措辞，不将其等同全部国内实际执行。",
+      "reply_sha256": "eb820d235e837ba199ffeee1679682fd550faedb67031b7c5f50fdfec74805da"
+    },
+    {
+      "sample_key": "icao_provided_source_recovery:r0:t2:baseline",
+      "grade": "complete",
+      "reason": "正确说明该公告未列出Wh分档。",
+      "reply_sha256": "c918a1953fade99bc8c1d7a309854af42c5e884cbe112d1e160a48b1a03e49a7"
+    },
+    {
+      "sample_key": "icao_provided_source_recovery:r0:t3:baseline",
+      "grade": "partial",
+      "reason": "明确不能证明全部境内航班统一，保留核查缺口；但国内法规转化机制的补充解释没有该公告正文依据。",
+      "reply_sha256": "7f55e8e944aedca50fd520ec0e67981ca0d1576457c499951c505d34bb95fb6c"
+    },
+    {
+      "sample_key": "icao_provided_source_recovery:r0:t4:baseline",
+      "grade": "complete",
+      "reason": "三条保留日期、链接、数量、禁止行为、机组运行例外和国内执行未核实状态。",
+      "reply_sha256": "eacf87377724b74758c21c4a7a29314496d47dda412ce5c8ae70d4d46a37ed07"
+    }
+  ],
+  "q02_approval": false
+}

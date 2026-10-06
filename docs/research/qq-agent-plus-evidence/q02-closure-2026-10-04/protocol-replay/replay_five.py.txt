@@ -1,0 +1,58 @@
+"""One exact failed-wire retry; no source execution or hidden reasoning capture."""
+import asyncio, hashlib, json, sys, time
+from dataclasses import asdict
+from pathlib import Path
+from uuid import uuid4
+ROOT=Path('/tmp/cw2-q02-scope-receipts-v30-eval')
+STAGE=Path('/tmp/cw2-q02-v30-scope-receipts-20261004')
+sys.path[:0]=[str(ROOT/'services/runtime/src'),str(ROOT/'packages/protocol-python/src'),str(ROOT/'packages/model-worker-sdk-python/src'),'/tmp/cw2-q02-eval-deps',str(ROOT)]
+import httpx2
+from chatwaifu_runtime.providers.contracts import LlmRequest,LlmToolDefinition
+from chatwaifu_runtime.providers.openai_compatible import _accumulate_tool_calls,_finalize_tool_calls
+OUT=Path('/tmp/cw2-q02-v33-response-protocol-20261004');OUT.mkdir(mode=0o700)
+current=0
+key=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+wire=json.loads((STAGE/'actual-provider-payloads.jsonl').read_text().splitlines()[-1]);body=wire['payload']
+assert body['model']=='gemini-3.8-flash-high'
+request=LlmRequest(uuid4(),'validation only','validation only',tools=tuple(LlmToolDefinition(t['function']['name'],t['function'].get('description',''),t['function']['parameters']) for t in body.get('tools',[])))
+def write(name,row):
+ text=json.dumps(row,ensure_ascii=False,default=str);assert key not in text
+ with (OUT/name).open('a') as target:target.write(text+'\n')
+write('actual-provider-payloads.jsonl',wire)
+write('plan.json',{'scope':'one exact replay of the last failed provider payload, no model action or Runtime tool execution','strict_resume_of_original_scenario':False,'max_http_attempts':5,'source_payload_sha256':wire['payload_sha256'],'q02_approval':False})
+async def attempt(index):
+ parts={};identities=[];usage=None;finish=None;answer='';parse_error=None;before=time.monotonic();status=None;done=False
+ async with httpx2.AsyncClient(timeout=180) as client:
+  try:
+   async with client.stream('POST','https://mubai.website:8318/v1/chat/completions',headers={'Authorization':'Bearer '+key},json=body) as response:
+    status=response.status_code;response.raise_for_status()
+    async for line in response.aiter_lines():
+     if not line.startswith('data:'):continue
+     payload=line.removeprefix('data:').strip()
+     if payload=='[DONE]':done=True;break
+     value=json.loads(payload)
+     if isinstance(value.get('model'),str) and value['model'] not in identities:identities.append(value['model'])
+     if isinstance(value.get('usage'),dict):usage=value['usage']
+     for choice in value.get('choices',[]):
+      delta=choice.get('delta') or {}
+      if isinstance(delta.get('content'),str):answer+=delta['content']
+      try:_accumulate_tool_calls(parts,delta)
+      except RuntimeError as error:parse_error={'type':type(error).__name__,'message_sha256':hashlib.sha256(str(error).encode()).hexdigest()}
+      if choice.get('finish_reason') is not None:finish=choice['finish_reason']
+  except Exception as error:
+   parse_error={'type':type(error).__name__}
+ calls=[];validation=None
+ if parts:
+  try:calls=[asdict(c) for c in _finalize_tool_calls(parts,request)]
+  except RuntimeError as error:
+   known={'OpenAI-compatible LLM requested an unknown tool':'unknown_tool','OpenAI-compatible LLM returned malformed tool arguments':'malformed_arguments','OpenAI-compatible LLM tool arguments must be a JSON object':'arguments_not_object','OpenAI-compatible LLM returned duplicate tool call ids':'duplicate_ids','OpenAI-compatible LLM ended with no complete tool calls':'incomplete_calls'}
+   validation=known.get(str(error),'unclassified_runtime_error')
+ result={'http_attempt':index,'http_status':status,'sse_done':done,'finish_reason':finish,'reported_model_ids':identities,'usage':usage,'text':answer,'normalized_calls':calls,'received_tool_names':[p.name for p in parts.values()],'validation_error':validation,'parse_error':parse_error,'latency_ms':round((time.monotonic()-before)*1000),'actual_source_tool_execution':False,'q02_approval':False,'original_failed_stream_cause_not_retrospectively_proven':True,'tool_fragment_sizes':[{'id_characters':len(p.call_id),'name_characters':len(p.name),'arguments_characters':len(p.arguments)} for p in parts.values()]}
+ write('result.json',result)
+ print(json.dumps({k:v for k,v in result.items() if k not in ['text','normalized_calls','usage']},ensure_ascii=False),flush=True)
+async def main():
+ for i in range(1,6):
+  write('attempts.jsonl',{'http_attempt':i,'payload_sha256':wire['payload_sha256']})
+  await attempt(i)
+ write('exit.json',{'http_attempts':5,'exit_code':0})
+asyncio.run(main())

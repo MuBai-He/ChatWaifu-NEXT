@@ -1,0 +1,113 @@
+{
+  "groups": [
+    {
+      "dataset": "sections",
+      "model": "gemini-3.1-flash-lite",
+      "variant": "current",
+      "samples": 18,
+      "markdown_fences": 0,
+      "not_direct_json": 0,
+      "string_null_fact": 1
+    },
+    {
+      "dataset": "sections",
+      "model": "gemini-3.1-flash-lite",
+      "variant": "window_only",
+      "samples": 18,
+      "markdown_fences": 0,
+      "not_direct_json": 0,
+      "string_null_fact": 0
+    },
+    {
+      "dataset": "sections",
+      "model": "gemini-3.8-flash-high",
+      "variant": "window_only",
+      "samples": 18,
+      "markdown_fences": 6,
+      "not_direct_json": 6,
+      "string_null_fact": 0
+    },
+    {
+      "dataset": "sections",
+      "model": "gemini-3.1-flash-lite",
+      "variant": "scaled_sections",
+      "samples": 18,
+      "markdown_fences": 0,
+      "not_direct_json": 0,
+      "string_null_fact": 0
+    },
+    {
+      "dataset": "sections",
+      "model": "gemini-3.8-flash-high",
+      "variant": "scaled_sections",
+      "samples": 18,
+      "markdown_fences": 5,
+      "not_direct_json": 5,
+      "string_null_fact": 0
+    },
+    {
+      "dataset": "sections",
+      "model": "gemini-3.8-flash-high",
+      "variant": "current",
+      "samples": 18,
+      "markdown_fences": 4,
+      "not_direct_json": 4,
+      "string_null_fact": 0
+    },
+    {
+      "dataset": "whole_request",
+      "model": "gemini-3.1-flash-lite",
+      "variant": "current",
+      "samples": 3,
+      "markdown_fences": 0,
+      "not_direct_json": 0,
+      "string_null_fact": 0
+    },
+    {
+      "dataset": "whole_request",
+      "model": "gemini-3.8-flash-high",
+      "variant": "window_only",
+      "samples": 3,
+      "markdown_fences": 2,
+      "not_direct_json": 2,
+      "string_null_fact": 0
+    },
+    {
+      "dataset": "whole_request",
+      "model": "gemini-3.1-flash-lite",
+      "variant": "window_only",
+      "samples": 3,
+      "markdown_fences": 0,
+      "not_direct_json": 0,
+      "string_null_fact": 0
+    },
+    {
+      "dataset": "whole_request",
+      "model": "gemini-3.8-flash-high",
+      "variant": "current",
+      "samples": 3,
+      "markdown_fences": 1,
+      "not_direct_json": 1,
+      "string_null_fact": 0
+    },
+    {
+      "dataset": "production",
+      "model": "gemini-3.1-flash-lite",
+      "variant": "configured_production",
+      "samples": 18,
+      "markdown_fences": 0,
+      "not_direct_json": 0,
+      "string_null_fact": 0
+    },
+    {
+      "dataset": "production",
+      "model": "gemini-3.8-flash-high",
+      "variant": "configured_production",
+      "samples": 18,
+      "markdown_fences": 3,
+      "not_direct_json": 3,
+      "string_null_fact": 0
+    }
+  ],
+  "rule": "Question requests only a JSON object. Fenced valid JSON is retained as fact-correct but fails direct JSON format; string null is a semantic null-format error, not a fabricated identifier. Fact coverage and complete instruction compliance are separate."
+}

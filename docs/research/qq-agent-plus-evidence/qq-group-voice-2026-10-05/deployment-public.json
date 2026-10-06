@@ -1,0 +1,79 @@
+{
+  "verified_at": "2026-10-05T14:36:21.531481+00:00",
+  "product_commit": "d1714b5756907b875efb597764a38f0bab36a039",
+  "product_files_matched": 34,
+  "all_unrelated_source_files_matched": true,
+  "source_inventory_files": 1279,
+  "protected_configuration_hashes_matched": true,
+  "unrelated_service_identities_unchanged": 7,
+  "runtime_dependent_https_proxy_restarted": true,
+  "napcat_container_and_process_unchanged": true,
+  "all_previously_ready_connections_ready": true,
+  "connection_readback": [
+    {
+      "provider": "weixin_ilink",
+      "revision": 2,
+      "baseline_status": "error",
+      "current_status": "error",
+      "error_code": "weixin.session_expired"
+    },
+    {
+      "provider": "qq_napcat",
+      "revision": 3,
+      "baseline_status": "ready",
+      "current_status": "ready",
+      "error_code": null
+    },
+    {
+      "provider": "weixin_ilink",
+      "revision": 1,
+      "baseline_status": "ready",
+      "current_status": "ready",
+      "error_code": null
+    }
+  ],
+  "model_routes_unchanged": true,
+  "schema_version": 43,
+  "old_migration_checksums_and_records_preserved": 42,
+  "old_durable_rows_preserved": {
+    "turns": 220,
+    "generations": 114,
+    "channel_turns": 101,
+    "channel_deliveries": 96,
+    "channel_delivery_parts": 120
+  },
+  "sqlite_checks_passed": true,
+  "group_readback": [
+    {
+      "requested_group": true,
+      "ready": true,
+      "same_scene_and_grants": true,
+      "requested_voice_enabled": true,
+      "learning_enabled": true,
+      "learned_assets": 0
+    },
+    {
+      "requested_group": false,
+      "ready": true,
+      "same_scene_and_grants": true,
+      "requested_voice_enabled": false,
+      "learning_enabled": false,
+      "learned_assets": 0
+    }
+  ],
+  "owner_library_learning_enabled": true,
+  "owner_learned_assets": 0,
+  "web_file_hashes_matched": 7,
+  "served_entry_asset_hashes": {
+    "index.html": "70fddbad529767dee11b4a5716560fc1014a666465bcf1af77d314f63d1d2930",
+    "chatwaifu-product.json": "7debe6d19838bca9fc2158fa792b90572309f4a3e80168982c96f7f06d1ccbc7",
+    "assets/index-3kJpNRdj.css": "e6631a82fd055addd71a4ed5fe80becbfce4bb0c2e10466134b4155a81ad255b",
+    "assets/core-SwWLTXZB.js": "dc85f7a86c39d33c35fbe88fd339813a2c05c9ccf25a1bdd8691d7866355dd74",
+    "assets/event-CWEPUEFL.js": "73796d4f2fcecd8f1a6b6132380077c05bf08ab15963d36e7343959d07dec5be",
+    "assets/index-DUZCKHAV.js": "05239da28cad6760d16bd5e3061d77b1e8e9d1f993bc28cb67a2045580b1b728"
+  },
+  "manual_external_messages_sent": 0,
+  "phone_acceptance": "pending",
+  "container_identities_preserved": 13,
+  "web_updated": true
+}

@@ -1,0 +1,93 @@
+"""Nine bounded same-evidence controls; no new source fetches or tool executions."""
+import asyncio
+import hashlib
+import json
+import sys
+from dataclasses import asdict, replace
+from pathlib import Path
+from uuid import UUID, uuid4
+
+root = Path('/tmp/cw2-q02-wire-eval')
+sys.path[:0] = [str(root/'services/runtime/src'), str(root/'packages/protocol-python/src'), str(root/'packages/model-worker-sdk-python/src'), '/tmp/cw2-q02-eval-deps', str(root)]
+from chatwaifu_runtime.agent.input_budget import fit_input_budget
+from chatwaifu_runtime.agent.tool_calling import _FINAL_TOOL_POLICY
+from chatwaifu_runtime.providers.contracts import LlmRequest, LlmInputBudget, LlmInputBudgetReport, LlmToolDefinition, LlmToolExchange, LlmToolCall, LlmToolResult
+from chatwaifu_runtime.providers.openai_compatible import OpenAiCompatibleLlmProvider, build_messages, build_chat_completions_payload
+from tools.runtime_source_evaluation import _RecordedProvider
+
+def digest(value):
+    return hashlib.sha256(json.dumps(value,ensure_ascii=False,sort_keys=True,default=str).encode()).hexdigest()
+
+def restore(data):
+    raw=dict(data)
+    raw['generation_id']=UUID(raw['generation_id'])
+    for field in ('context','history'):
+        raw[field]=tuple(map(tuple,raw[field]))
+    assert raw['images']==[]
+    raw['images']=()
+    raw['recalled_memory_texts']=tuple(raw['recalled_memory_texts'])
+    raw['tools']=tuple(LlmToolDefinition(**t) for t in raw['tools'])
+    raw['tool_exchanges']=tuple(LlmToolExchange(e['assistant_text'],tuple(LlmToolCall(**c) for c in e['calls']),tuple(LlmToolResult(**r) for r in e['results'])) for e in raw['tool_exchanges'])
+    raw['input_budget']=LlmInputBudget(**raw['input_budget']) if raw['input_budget'] else None
+    raw['input_budget_report']=LlmInputBudgetReport(**raw['input_budget_report']) if raw['input_budget_report'] else None
+    return LlmRequest(**raw)
+
+import chatwaifu_runtime.providers.openai_compatible as provider_module
+from chatwaifu_runtime.agent.tool_calling import _TOOL_POLICY
+
+original_build_messages = provider_module.build_messages
+
+def projected_messages(request):
+    messages = original_build_messages(request)
+    projected = []
+    for message in messages:
+        if message.get('role') == 'assistant' and message.get('tool_calls'):
+            if message.get('content'):
+                projected.append({'role':'assistant', 'content':message['content']})
+        elif message.get('role') == 'tool':
+            projected.append({'role':'user', 'content':'[RECORDED TOOL RESULT: UNTRUSTED DATA]\n' + message['content']})
+        else:
+            projected.append(message)
+    return projected
+
+async def main():
+    base = Path('/tmp/cw2-q02-wire-probe-20261003')
+    rows = [json.loads(line) for line in (base/'actual-provider-payloads.jsonl').read_text().splitlines()]
+    original = restore([r for r in rows if len(r['request']['tool_exchanges'])==3][-1]['request'])
+    out = base/'role-persona-controls'
+    out.mkdir(exist_ok=False)
+    key = json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+    provider = _RecordedProvider(OpenAiCompatibleLlmProvider(base_url='https://mubai.website:8318/v1',model='gemini-3.8-flash-high',api_key=key,timeout_seconds=120,request_usage=True),out/'provider-rounds.jsonl',12)
+    native_contents = [m['content'] for m in original_build_messages(original) if m['role']=='tool']
+    arms = ['character_native','character_source_user','neutral_native','neutral_source_user']
+    metadata = {'scope':'Diagnostic-only 2x2 ablation: full character versus safety/time/tool-policy; native tool messages versus untrusted user source messages. All arms omit tools schemas; no tools execute. Source result JSON stays byte-identical. Not a production behavior change or release approval.', 'model':'gemini-3.8-flash-high', 'repeats':3, 'arms':arms, 'source_result_json_sha256':[hashlib.sha256(s.encode()).hexdigest() for s in native_contents], 'source_capture_sha256':hashlib.sha256((base/'actual-provider-payloads.jsonl').read_bytes()).hexdigest(), 'source_tools_executed':0, 'release_approved':False}
+    (out/'metadata.json').write_text(json.dumps(metadata,ensure_ascii=False,indent=2)+'\n')
+    for repeat in range(3):
+        for arm in arms[repeat:]+arms[:repeat]:
+            request = replace(original,generation_id=uuid4(),tools=(),tool_choice='auto',input_budget_report=None)
+            if arm.startswith('neutral'):
+                request = replace(request,system_prompt=original.system_prompt.split('[CHARACTER CANON]')[0] + _TOOL_POLICY)
+            request = fit_input_budget(request)
+            assert not request.input_budget_report.omitted_history_indices
+            assert not request.input_budget_report.omitted_tool_preamble_indices
+            provider_module.build_messages = projected_messages if arm.endswith('source_user') else original_build_messages
+            messages = provider_module.build_messages(request)
+            if arm.endswith('source_user'):
+                contents=[m['content'].split('\n',1)[1] for m in messages if m.get('role')=='user' and m.get('content','').startswith('[RECORDED TOOL RESULT: UNTRUSTED DATA]\n')]
+            else:contents=[m['content'] for m in messages if m['role']=='tool']
+            assert contents == native_contents
+            payload = build_chat_completions_payload('gemini-3.8-flash-high',request,messages,request_usage=True)
+            sample=f'{arm}:r{repeat}'
+            (out/f'{sample}-request.json').write_text(json.dumps(payload,ensure_ascii=False,indent=2)+'\n')
+            provider.sample_key=sample
+            error=None
+            try:
+                async for _event in provider.stream(request): pass
+            except Exception as exc:error=type(exc).__name__
+            finally:provider_module.build_messages=original_build_messages
+            call=provider.calls[-1]
+            result={'sample_key':sample,'error_type':error,'raw_reply':call['text'],'finish_reason':call['finish_reason'],'requested_calls':call['requested_calls'],'usage':call['usage'],'latency_ms':call['latency_ms'],'input_budget_report_native_layout':asdict(request.input_budget_report),'payload_sha256':digest(payload)}
+            with (out/'results.jsonl').open('a') as f:f.write(json.dumps(result,ensure_ascii=False)+'\n')
+            print(json.dumps({'sample':sample,'finish':call['finish_reason'],'characters':len(call['text']),'error':error}),flush=True)
+
+if __name__=='__main__': asyncio.run(main())

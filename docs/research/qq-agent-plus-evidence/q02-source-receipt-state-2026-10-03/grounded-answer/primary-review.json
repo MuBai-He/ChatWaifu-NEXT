@@ -1,0 +1,191 @@
+{
+  "reviewer": "primary Codex",
+  "version_masked": true,
+  "independent_human_review": false,
+  "quality_approved": false,
+  "review_saved_before_unmask": true,
+  "items": [
+    {
+      "id": "m01",
+      "result": "fail",
+      "findings": [
+        "Requested three-rule structure and basic conditions are retained.",
+        "No explicit currency/original-publication gap; presents old secondary material as applicable current rules.",
+        "No evidence of later overall quantity limit; quality remains incomplete."
+      ],
+      "sample_key": "regulations:2:grounded"
+    },
+    {
+      "id": "m02",
+      "result": "fail",
+      "findings": [
+        "Preserves timing inequality and paper URL.",
+        "Still claims every valid heartbeat/timer reset re-randomizes as a general protocol rule.",
+        "Misattributes broadcast-time order-of-magnitude requirement to heartbeat interval.",
+        "150-300ms example is outside the actual supplied timing excerpt."
+      ],
+      "sample_key": "raft:1:original"
+    },
+    {
+      "id": "m03",
+      "result": "fail",
+      "findings": [
+        "Requested three-rule structure and basic conditions are retained.",
+        "No explicit currency/original-publication gap; presents old secondary material as applicable current rules.",
+        "No evidence of later overall quantity limit; quality remains incomplete."
+      ],
+      "sample_key": "regulations:1:answer_only"
+    },
+    {
+      "id": "m04",
+      "result": "fail",
+      "findings": [
+        "Requested three-rule structure and basic conditions are retained.",
+        "No explicit currency/original-publication gap; presents old secondary material as applicable current rules.",
+        "No evidence of later overall quantity limit; quality remains incomplete."
+      ],
+      "sample_key": "regulations:0:original"
+    },
+    {
+      "id": "m05",
+      "result": "fail",
+      "findings": [
+        "Preserves timing inequality and paper URL.",
+        "Still claims every valid heartbeat/timer reset re-randomizes as a general protocol rule."
+      ],
+      "sample_key": "raft:2:answer_only"
+    },
+    {
+      "id": "m06",
+      "result": "partial_improvement",
+      "findings": [
+        "Avoids unsupported 150-300ms excerpt attribution and universal redraw-on-heartbeat claim.",
+        "Separates timing inequality from implementation configuration and retains the paper citation.",
+        "Some mechanism details are not established by the single provided excerpt; not full source coverage acceptance."
+      ],
+      "sample_key": "raft:0:grounded"
+    },
+    {
+      "id": "m07",
+      "result": "fail",
+      "findings": [
+        "Requested three-rule structure and basic conditions are retained.",
+        "No explicit currency/original-publication gap; presents old secondary material as applicable current rules.",
+        "No evidence of later overall quantity limit; quality remains incomplete."
+      ],
+      "sample_key": "regulations:2:original"
+    },
+    {
+      "id": "m08",
+      "result": "fail",
+      "findings": [
+        "Requested three-rule structure and basic conditions are retained.",
+        "No explicit currency/original-publication gap; presents old secondary material as applicable current rules.",
+        "No evidence of later overall quantity limit; quality remains incomplete."
+      ],
+      "sample_key": "regulations:1:original"
+    },
+    {
+      "id": "m09",
+      "result": "fail",
+      "findings": [
+        "Requested three-rule structure and basic conditions are retained.",
+        "No explicit currency/original-publication gap; presents old secondary material as applicable current rules.",
+        "No evidence of later overall quantity limit; quality remains incomplete."
+      ],
+      "sample_key": "regulations:0:grounded"
+    },
+    {
+      "id": "m10",
+      "result": "fail",
+      "findings": [
+        "Preserves timing inequality and paper URL.",
+        "Still claims every valid heartbeat/timer reset re-randomizes as a general protocol rule.",
+        "150-300ms example is outside the actual supplied timing excerpt."
+      ],
+      "sample_key": "raft:0:answer_only"
+    },
+    {
+      "id": "m11",
+      "result": "fail",
+      "findings": [
+        "Requested three-rule structure and basic conditions are retained.",
+        "No explicit currency/original-publication gap; presents old secondary material as applicable current rules.",
+        "No evidence of later overall quantity limit; quality remains incomplete."
+      ],
+      "sample_key": "regulations:1:grounded"
+    },
+    {
+      "id": "m12",
+      "result": "fail",
+      "findings": [
+        "Preserves timing inequality and paper URL.",
+        "Still claims every valid heartbeat/timer reset re-randomizes as a general protocol rule.",
+        "150-300ms example is outside the actual supplied timing excerpt."
+      ],
+      "sample_key": "raft:0:original"
+    },
+    {
+      "id": "m13",
+      "result": "fail",
+      "findings": [
+        "Preserves timing inequality and paper URL.",
+        "Still claims every valid heartbeat/timer reset re-randomizes as a general protocol rule.",
+        "150-300ms example is outside the actual supplied timing excerpt."
+      ],
+      "sample_key": "raft:1:answer_only"
+    },
+    {
+      "id": "m14",
+      "result": "fail",
+      "findings": [
+        "Preserves timing inequality and paper URL.",
+        "Still claims every valid heartbeat/timer reset re-randomizes as a general protocol rule.",
+        "Misattributes broadcast-time order-of-magnitude requirement to heartbeat interval.",
+        "150-300ms example is outside the actual supplied timing excerpt."
+      ],
+      "sample_key": "raft:2:original"
+    },
+    {
+      "id": "m15",
+      "result": "fail",
+      "findings": [
+        "Requested three-rule structure and basic conditions are retained.",
+        "No explicit currency/original-publication gap; presents old secondary material as applicable current rules.",
+        "No evidence of later overall quantity limit; quality remains incomplete."
+      ],
+      "sample_key": "regulations:0:answer_only"
+    },
+    {
+      "id": "m16",
+      "result": "partial_improvement",
+      "findings": [
+        "Avoids unsupported 150-300ms excerpt attribution and universal redraw-on-heartbeat claim.",
+        "Separates timing inequality from implementation configuration and retains the paper citation.",
+        "Some mechanism details are not established by the single provided excerpt; not full source coverage acceptance."
+      ],
+      "sample_key": "raft:1:grounded"
+    },
+    {
+      "id": "m17",
+      "result": "fail",
+      "findings": [
+        "Requested three-rule structure and basic conditions are retained.",
+        "No explicit currency/original-publication gap; presents old secondary material as applicable current rules.",
+        "No evidence of later overall quantity limit; quality remains incomplete."
+      ],
+      "sample_key": "regulations:2:answer_only"
+    },
+    {
+      "id": "m18",
+      "result": "partial_improvement_with_citation_failure",
+      "findings": [
+        "Avoids the universal re-randomization claim and the unsupported 150-300ms example.",
+        "No actual source URL in final answer; violates citation retention.",
+        "No new read or discovery performed in this frozen-input probe."
+      ],
+      "sample_key": "raft:2:grounded"
+    }
+  ],
+  "unmasked_after_review": true
+}

@@ -1,0 +1,664 @@
+{
+  "v41-final": {
+    "source_admission": {
+      "root": "/tmp/cw2-q02-source-dns-v41-eval",
+      "window": 32768,
+      "budget": {
+        "version": "1.0",
+        "input_token_limit": null,
+        "output_token_limit": null,
+        "output_reserve_tokens": 8192,
+        "max_output_tokens": 8192,
+        "estimate_margin_ratio": 0.15,
+        "section_policy": "scaled",
+        "history_turn_limit": 16,
+        "memory_candidate_limit": 12,
+        "tool_result_max_bytes": 131072
+      },
+      "limits": {
+        "input_tokens": 21370,
+        "persona": 3846,
+        "memory": 3419,
+        "history": 7265,
+        "summary": 1709,
+        "photo": 1780,
+        "source_ledger": 2137,
+        "retrieval_characters": 3419
+      },
+      "network_dispatches": 0,
+      "credentials_loaded": false,
+      "native_usage_from_replay": null,
+      "cached_responses_are_quality_evidence": false,
+      "cached_responses_for_changed_requests_are_counterfactual_controls": true,
+      "published_history_is_frozen_v41": true
+    },
+    "turns": [
+      {
+        "sample_key": "autonomous_sources:r0:t1:closure_c1",
+        "consumed": 7,
+        "equal_payloads": 7,
+        "fallback_events": [],
+        "outcome": "replay_completed",
+        "error_type": null,
+        "historical_published_reply_equal": true,
+        "historical_cached_rounds": 7
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t2:closure_c1",
+        "consumed": 2,
+        "equal_payloads": 2,
+        "fallback_events": [
+          "TOOL_UNAVAILABLE_REPLY"
+        ],
+        "outcome": "replay_completed",
+        "error_type": null,
+        "historical_published_reply_equal": true,
+        "historical_cached_rounds": 2
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t3:closure_c1",
+        "consumed": 6,
+        "equal_payloads": 6,
+        "fallback_events": [
+          "TOOL_RESULT_BUDGET_REPLY"
+        ],
+        "outcome": "replay_completed",
+        "error_type": null,
+        "historical_published_reply_equal": true,
+        "historical_cached_rounds": 6
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t4:closure_c1",
+        "consumed": 0,
+        "equal_payloads": 0,
+        "fallback_events": [
+          "TOOL_INPUT_BUDGET_REPLY"
+        ],
+        "outcome": "replay_completed",
+        "error_type": null,
+        "historical_published_reply_equal": true,
+        "historical_cached_rounds": 0
+      }
+    ],
+    "blocked_guards": [
+      {
+        "sample_key": "autonomous_sources:r0:t3:closure_c1",
+        "original_request_reference_tokens": 25753,
+        "report": {
+          "estimated_token_limit": 21370,
+          "estimated_original_tokens": 25753,
+          "estimated_input_tokens": 24917,
+          "omitted_history_indices": [
+            0,
+            1,
+            3
+          ],
+          "omitted_tool_preamble_indices": [],
+          "estimated_image_tokens": 0,
+          "estimator": "cl100k_chat_json_v1",
+          "version": "1.1"
+        }
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t4:closure_c1",
+        "original_request_reference_tokens": 21601,
+        "report": {
+          "estimated_token_limit": 21370,
+          "estimated_original_tokens": 22168,
+          "estimated_input_tokens": 21530,
+          "omitted_history_indices": [
+            0,
+            1,
+            2,
+            3,
+            5
+          ],
+          "omitted_tool_preamble_indices": [],
+          "estimated_image_tokens": 0,
+          "estimator": "cl100k_chat_json_v1",
+          "version": "1.1"
+        }
+      }
+    ],
+    "uncached_boundaries": []
+  },
+  "v42-final": {
+    "source_admission": {
+      "root": "/tmp/cw2-q02-existing-material-v42-eval",
+      "window": 32768,
+      "budget": {
+        "version": "1.0",
+        "input_token_limit": null,
+        "output_token_limit": null,
+        "output_reserve_tokens": 8192,
+        "max_output_tokens": 8192,
+        "estimate_margin_ratio": 0.15,
+        "section_policy": "scaled",
+        "history_turn_limit": 16,
+        "memory_candidate_limit": 12,
+        "tool_result_max_bytes": 131072
+      },
+      "limits": {
+        "input_tokens": 21370,
+        "persona": 3846,
+        "memory": 3419,
+        "history": 7265,
+        "summary": 1709,
+        "photo": 1780,
+        "source_ledger": 2137,
+        "retrieval_characters": 3419
+      },
+      "network_dispatches": 0,
+      "credentials_loaded": false,
+      "native_usage_from_replay": null,
+      "cached_responses_are_quality_evidence": false,
+      "cached_responses_for_changed_requests_are_counterfactual_controls": true,
+      "published_history_is_frozen_v41": true
+    },
+    "turns": [
+      {
+        "sample_key": "autonomous_sources:r0:t1:closure_c1",
+        "consumed": 7,
+        "equal_payloads": 7,
+        "fallback_events": [],
+        "outcome": "replay_completed",
+        "error_type": null,
+        "historical_published_reply_equal": true,
+        "historical_cached_rounds": 7
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t2:closure_c1",
+        "consumed": 1,
+        "equal_payloads": 0,
+        "fallback_events": [],
+        "outcome": "replay_completed",
+        "error_type": null,
+        "historical_published_reply_equal": false,
+        "historical_cached_rounds": 2
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t3:closure_c1",
+        "consumed": 6,
+        "equal_payloads": 6,
+        "fallback_events": [
+          "TOOL_RESULT_BUDGET_REPLY"
+        ],
+        "outcome": "replay_completed",
+        "error_type": null,
+        "historical_published_reply_equal": true,
+        "historical_cached_rounds": 6
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t4:closure_c1",
+        "consumed": 0,
+        "equal_payloads": 0,
+        "fallback_events": [],
+        "outcome": "unrecorded_model_boundary",
+        "error_type": null,
+        "historical_published_reply_equal": false,
+        "historical_cached_rounds": 0
+      }
+    ],
+    "blocked_guards": [
+      {
+        "sample_key": "autonomous_sources:r0:t3:closure_c1",
+        "original_request_reference_tokens": 25753,
+        "report": {
+          "estimated_token_limit": 21370,
+          "estimated_original_tokens": 25753,
+          "estimated_input_tokens": 24917,
+          "omitted_history_indices": [
+            0,
+            1,
+            3
+          ],
+          "omitted_tool_preamble_indices": [],
+          "estimated_image_tokens": 0,
+          "estimator": "cl100k_chat_json_v1",
+          "version": "1.1"
+        }
+      }
+    ],
+    "uncached_boundaries": [
+      {
+        "sample_key": "autonomous_sources:r0:t4:closure_c1",
+        "input_budget_report": {
+          "estimated_token_limit": 21370,
+          "estimated_original_tokens": 22005,
+          "estimated_input_tokens": 21217,
+          "omitted_history_indices": [
+            1
+          ],
+          "omitted_tool_preamble_indices": [],
+          "estimated_image_tokens": 0,
+          "estimator": "cl100k_chat_json_v1",
+          "version": "1.1"
+        }
+      }
+    ]
+  },
+  "v42-large-final": {
+    "source_admission": {
+      "root": "/tmp/cw2-q02-existing-material-v42-eval",
+      "window": 65536,
+      "budget": {
+        "version": "1.0",
+        "input_token_limit": null,
+        "output_token_limit": null,
+        "output_reserve_tokens": 8192,
+        "max_output_tokens": 8192,
+        "estimate_margin_ratio": 0.15,
+        "section_policy": "scaled",
+        "history_turn_limit": 16,
+        "memory_candidate_limit": 12,
+        "tool_result_max_bytes": 131072
+      },
+      "limits": {
+        "input_tokens": 49864,
+        "persona": 8975,
+        "memory": 7978,
+        "history": 16953,
+        "summary": 3989,
+        "photo": 4155,
+        "source_ledger": 4986,
+        "retrieval_characters": 7978
+      },
+      "network_dispatches": 0,
+      "credentials_loaded": false,
+      "native_usage_from_replay": null,
+      "cached_responses_are_quality_evidence": false,
+      "cached_responses_for_changed_requests_are_counterfactual_controls": true,
+      "published_history_is_frozen_v41": true
+    },
+    "turns": [
+      {
+        "sample_key": "autonomous_sources:r0:t1:closure_c1",
+        "consumed": 7,
+        "equal_payloads": 7,
+        "fallback_events": [],
+        "outcome": "replay_completed",
+        "error_type": null,
+        "historical_published_reply_equal": true,
+        "historical_cached_rounds": 7
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t2:closure_c1",
+        "consumed": 1,
+        "equal_payloads": 0,
+        "fallback_events": [],
+        "outcome": "replay_completed",
+        "error_type": null,
+        "historical_published_reply_equal": false,
+        "historical_cached_rounds": 2
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t3:closure_c1",
+        "consumed": 6,
+        "equal_payloads": 6,
+        "fallback_events": [],
+        "outcome": "unrecorded_model_boundary",
+        "error_type": null,
+        "historical_published_reply_equal": false,
+        "historical_cached_rounds": 6
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t4:closure_c1",
+        "consumed": 0,
+        "equal_payloads": 0,
+        "fallback_events": [],
+        "outcome": "unrecorded_model_boundary",
+        "error_type": null,
+        "historical_published_reply_equal": false,
+        "historical_cached_rounds": 0
+      }
+    ],
+    "blocked_guards": [],
+    "uncached_boundaries": [
+      {
+        "sample_key": "autonomous_sources:r0:t3:closure_c1",
+        "input_budget_report": {
+          "estimated_token_limit": 49864,
+          "estimated_original_tokens": 25753,
+          "estimated_input_tokens": 25753,
+          "omitted_history_indices": [],
+          "omitted_tool_preamble_indices": [],
+          "estimated_image_tokens": 0,
+          "estimator": "cl100k_chat_json_v1",
+          "version": "1.1"
+        }
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t4:closure_c1",
+        "input_budget_report": {
+          "estimated_token_limit": 49864,
+          "estimated_original_tokens": 24713,
+          "estimated_input_tokens": 24713,
+          "omitted_history_indices": [],
+          "omitted_tool_preamble_indices": [],
+          "estimated_image_tokens": 0,
+          "estimator": "cl100k_chat_json_v1",
+          "version": "1.1"
+        }
+      }
+    ]
+  },
+  "v42-large-legacy-final": {
+    "source_admission": {
+      "root": "/tmp/cw2-q02-existing-material-v42-eval",
+      "window": 65536,
+      "budget": {
+        "version": "1.0",
+        "input_token_limit": null,
+        "output_token_limit": null,
+        "output_reserve_tokens": 8192,
+        "max_output_tokens": 8192,
+        "estimate_margin_ratio": 0.15,
+        "section_policy": "legacy",
+        "history_turn_limit": 16,
+        "memory_candidate_limit": 12,
+        "tool_result_max_bytes": 131072
+      },
+      "limits": {
+        "input_tokens": 49864,
+        "persona": 1800,
+        "memory": 1400,
+        "history": 3600,
+        "summary": 700,
+        "photo": 1000,
+        "source_ledger": 1200,
+        "retrieval_characters": 700
+      },
+      "network_dispatches": 0,
+      "credentials_loaded": false,
+      "native_usage_from_replay": null,
+      "cached_responses_are_quality_evidence": false,
+      "cached_responses_for_changed_requests_are_counterfactual_controls": true,
+      "published_history_is_frozen_v41": true
+    },
+    "turns": [
+      {
+        "sample_key": "autonomous_sources:r0:t1:closure_c1",
+        "consumed": 7,
+        "equal_payloads": 7,
+        "fallback_events": [],
+        "outcome": "replay_completed",
+        "error_type": null,
+        "historical_published_reply_equal": true,
+        "historical_cached_rounds": 7
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t2:closure_c1",
+        "consumed": 1,
+        "equal_payloads": 0,
+        "fallback_events": [],
+        "outcome": "replay_completed",
+        "error_type": null,
+        "historical_published_reply_equal": false,
+        "historical_cached_rounds": 2
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t3:closure_c1",
+        "consumed": 6,
+        "equal_payloads": 6,
+        "fallback_events": [],
+        "outcome": "unrecorded_model_boundary",
+        "error_type": null,
+        "historical_published_reply_equal": false,
+        "historical_cached_rounds": 6
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t4:closure_c1",
+        "consumed": 0,
+        "equal_payloads": 0,
+        "fallback_events": [],
+        "outcome": "unrecorded_model_boundary",
+        "error_type": null,
+        "historical_published_reply_equal": false,
+        "historical_cached_rounds": 0
+      }
+    ],
+    "blocked_guards": [],
+    "uncached_boundaries": [
+      {
+        "sample_key": "autonomous_sources:r0:t3:closure_c1",
+        "input_budget_report": {
+          "estimated_token_limit": 49864,
+          "estimated_original_tokens": 25753,
+          "estimated_input_tokens": 25753,
+          "omitted_history_indices": [],
+          "omitted_tool_preamble_indices": [],
+          "estimated_image_tokens": 0,
+          "estimator": "cl100k_chat_json_v1",
+          "version": "1.1"
+        }
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t4:closure_c1",
+        "input_budget_report": {
+          "estimated_token_limit": 49864,
+          "estimated_original_tokens": 24713,
+          "estimated_input_tokens": 24713,
+          "omitted_history_indices": [],
+          "omitted_tool_preamble_indices": [],
+          "estimated_image_tokens": 0,
+          "estimator": "cl100k_chat_json_v1",
+          "version": "1.1"
+        }
+      }
+    ]
+  },
+  "candidate-current": {
+    "source_admission": {
+      "root": "/tmp/cw2-q02-budget-candidate-v43-eval",
+      "window": 32768,
+      "budget": {
+        "version": "1.0",
+        "input_token_limit": null,
+        "output_token_limit": null,
+        "output_reserve_tokens": 8192,
+        "max_output_tokens": 8192,
+        "estimate_margin_ratio": 0.15,
+        "section_policy": "scaled",
+        "history_turn_limit": 16,
+        "memory_candidate_limit": 12,
+        "tool_result_max_bytes": 131072
+      },
+      "limits": {
+        "input_tokens": 21370,
+        "persona": 3846,
+        "memory": 3419,
+        "history": 7265,
+        "summary": 1709,
+        "photo": 1780,
+        "source_ledger": 2137,
+        "retrieval_characters": 3419
+      },
+      "network_dispatches": 0,
+      "credentials_loaded": false,
+      "native_usage_from_replay": null,
+      "cached_responses_are_quality_evidence": false,
+      "cached_responses_for_changed_requests_are_counterfactual_controls": true,
+      "published_history_is_frozen_v41": true
+    },
+    "turns": [
+      {
+        "sample_key": "autonomous_sources:r0:t1:closure_c1",
+        "consumed": 7,
+        "equal_payloads": 7,
+        "fallback_events": [],
+        "outcome": "replay_completed",
+        "error_type": null,
+        "historical_published_reply_equal": true,
+        "historical_cached_rounds": 7
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t2:closure_c1",
+        "consumed": 1,
+        "equal_payloads": 0,
+        "fallback_events": [],
+        "outcome": "replay_completed",
+        "error_type": null,
+        "historical_published_reply_equal": false,
+        "historical_cached_rounds": 2
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t3:closure_c1",
+        "consumed": 6,
+        "equal_payloads": 6,
+        "fallback_events": [],
+        "outcome": "unrecorded_model_boundary",
+        "error_type": null,
+        "historical_published_reply_equal": false,
+        "historical_cached_rounds": 6
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t4:closure_c1",
+        "consumed": 0,
+        "equal_payloads": 0,
+        "fallback_events": [],
+        "outcome": "unrecorded_model_boundary",
+        "error_type": null,
+        "historical_published_reply_equal": false,
+        "historical_cached_rounds": 0
+      }
+    ],
+    "blocked_guards": [],
+    "uncached_boundaries": [
+      {
+        "sample_key": "autonomous_sources:r0:t3:closure_c1",
+        "input_budget_report": {
+          "estimated_token_limit": 21370,
+          "estimated_original_tokens": 21708,
+          "estimated_input_tokens": 20920,
+          "omitted_history_indices": [
+            1
+          ],
+          "omitted_tool_preamble_indices": [],
+          "estimated_image_tokens": 0,
+          "estimator": "cl100k_chat_json_v1",
+          "version": "1.1"
+        }
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t4:closure_c1",
+        "input_budget_report": {
+          "estimated_token_limit": 21370,
+          "estimated_original_tokens": 22005,
+          "estimated_input_tokens": 21217,
+          "omitted_history_indices": [
+            1
+          ],
+          "omitted_tool_preamble_indices": [],
+          "estimated_image_tokens": 0,
+          "estimator": "cl100k_chat_json_v1",
+          "version": "1.1"
+        }
+      }
+    ]
+  },
+  "candidate-large": {
+    "source_admission": {
+      "root": "/tmp/cw2-q02-budget-candidate-v43-eval",
+      "window": 65536,
+      "budget": {
+        "version": "1.0",
+        "input_token_limit": null,
+        "output_token_limit": null,
+        "output_reserve_tokens": 8192,
+        "max_output_tokens": 8192,
+        "estimate_margin_ratio": 0.15,
+        "section_policy": "scaled",
+        "history_turn_limit": 16,
+        "memory_candidate_limit": 12,
+        "tool_result_max_bytes": 131072
+      },
+      "limits": {
+        "input_tokens": 49864,
+        "persona": 8975,
+        "memory": 7978,
+        "history": 16953,
+        "summary": 3989,
+        "photo": 4155,
+        "source_ledger": 4986,
+        "retrieval_characters": 7978
+      },
+      "network_dispatches": 0,
+      "credentials_loaded": false,
+      "native_usage_from_replay": null,
+      "cached_responses_are_quality_evidence": false,
+      "cached_responses_for_changed_requests_are_counterfactual_controls": true,
+      "published_history_is_frozen_v41": true
+    },
+    "turns": [
+      {
+        "sample_key": "autonomous_sources:r0:t1:closure_c1",
+        "consumed": 7,
+        "equal_payloads": 7,
+        "fallback_events": [],
+        "outcome": "replay_completed",
+        "error_type": null,
+        "historical_published_reply_equal": true,
+        "historical_cached_rounds": 7
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t2:closure_c1",
+        "consumed": 1,
+        "equal_payloads": 0,
+        "fallback_events": [],
+        "outcome": "replay_completed",
+        "error_type": null,
+        "historical_published_reply_equal": false,
+        "historical_cached_rounds": 2
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t3:closure_c1",
+        "consumed": 6,
+        "equal_payloads": 6,
+        "fallback_events": [],
+        "outcome": "unrecorded_model_boundary",
+        "error_type": null,
+        "historical_published_reply_equal": false,
+        "historical_cached_rounds": 6
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t4:closure_c1",
+        "consumed": 0,
+        "equal_payloads": 0,
+        "fallback_events": [],
+        "outcome": "unrecorded_model_boundary",
+        "error_type": null,
+        "historical_published_reply_equal": false,
+        "historical_cached_rounds": 0
+      }
+    ],
+    "blocked_guards": [],
+    "uncached_boundaries": [
+      {
+        "sample_key": "autonomous_sources:r0:t3:closure_c1",
+        "input_budget_report": {
+          "estimated_token_limit": 49864,
+          "estimated_original_tokens": 25753,
+          "estimated_input_tokens": 25753,
+          "omitted_history_indices": [],
+          "omitted_tool_preamble_indices": [],
+          "estimated_image_tokens": 0,
+          "estimator": "cl100k_chat_json_v1",
+          "version": "1.1"
+        }
+      },
+      {
+        "sample_key": "autonomous_sources:r0:t4:closure_c1",
+        "input_budget_report": {
+          "estimated_token_limit": 49864,
+          "estimated_original_tokens": 24713,
+          "estimated_input_tokens": 24713,
+          "omitted_history_indices": [],
+          "omitted_tool_preamble_indices": [],
+          "estimated_image_tokens": 0,
+          "estimator": "cl100k_chat_json_v1",
+          "version": "1.1"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "status": "completed_artifacts_recovered",
+  "ssh_session_id": 60061,
+  "remote_output": "/tmp/cw2-q02-v13-source-smoke-20261003",
+  "snapshot": "/tmp/cw2-q02-source-revision-v13-eval",
+  "reason": "Connection recovered; 8 unique rows, 20 complete provider journals, execution-complete log, and no matching active launcher. Stale local SSH transport was closed after recovery; remote launcher exit status was not received. No rerun launched.",
+  "quality_approved": false,
+  "production_changed": false,
+  "logical_completed": 8,
+  "provider_started": 20,
+  "provider_finished": 20,
+  "active_remote_launcher": false,
+  "launcher_exit_code": null,
+  "local_ssh_transport_exit_code": 255
+}

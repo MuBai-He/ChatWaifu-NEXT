@@ -1,0 +1,36 @@
+{
+  "arguments": {
+    "url": "https://webresource.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml",
+    "focus": "充电宝",
+    "max_characters": 6000,
+    "max_links": 20,
+    "dns_resolver": "cloudflare",
+    "fresh": true
+  },
+  "scope": "read of target actually linked by discovered airline index; no model, no Runtime receipt",
+  "ok": true,
+  "result": {
+    "url": "https://webresource.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml",
+    "provider": "crawl4ai",
+    "title": "",
+    "text": "图片标签\n关于加强充电宝、锂电池机上安全风险管控的提示\n按照中国民航局要求，为保障航班飞行安全，请您乘坐航班时严格遵守充电宝、锂电池运输相关要求：\n一、禁运要求：\n生产厂家召回（召回信息在“国家市场监督管理总局缺陷产品召回技术中心”官方网站“消费品召回”栏目查询）、鼓包、变形、开裂、标识不清、无法确认额定能量或锂金属含量的充电宝。\n二、数量限制：\n每位旅客最多携带2块充电宝。\n三、能量限制：\n1.单个充电宝的额定能量不得超过160Wh；\n2.100Wh及以下的充电宝，无需国航批准；\n3.超过100Wh但不超过160Wh的充电宝，须经国航批准。\n四、其他要求：\n1.乘坐中国境内航班须有清晰3C标识；\n2.充电宝只能随身携带，不允许托运；\n3.如果充电宝具备电源开关功能，需要将电源关闭；\n4.机上全程不得将充电宝放入行李架，不得使用充电宝给任何设备供电，不得使用机上电源给充电宝充电；\n5.充电宝做好绝缘防护，放置于前方座椅下方的手提行李或座椅靠背口袋内。\n中国国际航空股份有限公司\n二〇二六年八月四日\n[关于国航](https://webresource.airchina.com.cn/zh-CN/content/about_us/company/) | [运输总条件](https://webresource.airchina.com.cn/zh-CN/content/trans_conditions/general/) | [法律声明](https://webresource.airchina.com.cn/zh-CN/content/website/info/legal_statement/) | [隐私条款](https://webresource.airchina.com.cn/zh-CN/content/website/info/privacy_policy/) | [cookie声明](https://webresource.airchina.com.cn/zh-CN/content/website/info/cookie/) | [国货航](http://www.airchinacargo.com/) | [投资者关系](https://www.airchina.com.cn/investor-relations?type=HOME) | [中航集团](http://www.airchinagroup.com/cnah/) | [国家会议中心](https://www.cnccchina.com/) | [汉莎航空](https://www.lufthansa.com/cn/hk/homepage) | [星盟环球程产品](https://webresource.airchina.com.cn/zh-CN/content/about_us/solidarity/25054/) | [营业执照](https://webresource.airchina.com.cn/zh-CN/content/website/info/business_license/) |\nCopyright 2022 Air China, All Rights Reserved. | 京ICP证 030872号-1",
+    "retrieved_at": "2026-10-03T20:50:15.820529+00:00",
+    "content_type": "text/plain",
+    "body_sha256": "f2d3fddcdffe693b27929c5db019193d6bbed8a617bd154f3d0e6d6a345d9305",
+    "total_characters": 1371,
+    "text_offset": 0,
+    "truncated": false,
+    "focus_matched": true,
+    "dns_resolver": "cloudflare",
+    "extraction_method": "plain_text",
+    "document_characters": 1371,
+    "links": [],
+    "links_requested": true,
+    "links_truncated": true,
+    "links_scope": "selected_source",
+    "read_url_schemes": [
+      "https"
+    ]
+  },
+  "latency_ms": 1611
+}

@@ -1,0 +1,24 @@
+{
+  "applied_at": "2026-10-03T05:29:29.384064+00:00",
+  "backup": "/home/mubai/chatwaifu-server/q02-backups/searxng-search-20261003",
+  "files": {
+    "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web_search.py": {
+      "before_sha256": "a5dcc18ab0b0670ff2cf60f87f724e68c6b331debdd54ab698490e93e697f7b0",
+      "after_sha256": "72863f82136cd961db1e3360e80aaa48719a58e073a80cc0d4a65a1642a628db"
+    },
+    "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web_providers.py": {
+      "before_sha256": "be7719baab4514c49ea7d86d67f18864cca8f131cb755a2cae32b1f474e2a7a3",
+      "after_sha256": "5a9073cede807269d606b79e80622346970c42c0f6e0d2043f104af511a5ff60"
+    },
+    "skills/builtin/web-search/chatwaifu.yaml": {
+      "before_sha256": "5e7b40815e9645f7e8ee4d83d3d0745adbbae400410d0ab10071706378a7d804",
+      "after_sha256": "76e20fca8d379240638491d389a4b3603652b23a821c0dd1f0363d7e692e85ab"
+    },
+    "skills/builtin/web-search/SKILL.md": {
+      "before_sha256": "b0ff488576088277417b2ecab8bfed79ae1c81a0af44ab551bd90c0c798b9930",
+      "after_sha256": "06b1d6acf70612fc2be2c163d27ab220f8a78d4d54e65d4b36c4c6bd0aa6766c"
+    }
+  },
+  "provider_configuration_changed": false,
+  "prompt_changed": false
+}

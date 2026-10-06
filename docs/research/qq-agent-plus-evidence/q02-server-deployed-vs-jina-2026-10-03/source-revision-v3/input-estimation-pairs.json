@@ -1,0 +1,407 @@
+[
+  {
+    "sample_key": "topic_switch:r0:t1:baseline",
+    "call_id": "8b9eb382-28ab-45cd-b3c8-fd545916b163",
+    "actual_prompt_tokens": 3469,
+    "reference_estimated_tokens": 4048,
+    "relative_error_pct": 16.691,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r0:t2:baseline",
+    "call_id": "0567287d-8b46-439e-9225-aaad022cc747",
+    "actual_prompt_tokens": 2842,
+    "reference_estimated_tokens": 3177,
+    "relative_error_pct": 11.787,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r0:t3:baseline",
+    "call_id": "cfdc0526-562c-40a0-9c9c-305fc6aeff2b",
+    "actual_prompt_tokens": 3190,
+    "reference_estimated_tokens": 3379,
+    "relative_error_pct": 5.925,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r0:t4:baseline",
+    "call_id": "0a2c3750-c99c-498a-83b5-1957db20cece",
+    "actual_prompt_tokens": 3415,
+    "reference_estimated_tokens": 3552,
+    "relative_error_pct": 4.012,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r0:t1:baseline",
+    "call_id": "ef6eda35-d855-4cb5-a904-35f87f2e936e",
+    "actual_prompt_tokens": 1909,
+    "reference_estimated_tokens": 2567,
+    "relative_error_pct": 34.468,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:baseline",
+    "call_id": "8f4af06a-b70c-4c52-9a83-c3a348973518",
+    "actual_prompt_tokens": 2767,
+    "reference_estimated_tokens": 3235,
+    "relative_error_pct": 16.914,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:baseline",
+    "call_id": "7d0be3c8-e721-45f0-ab08-cb500bd32eca",
+    "actual_prompt_tokens": 6262,
+    "reference_estimated_tokens": 6450,
+    "relative_error_pct": 3.002,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:baseline",
+    "call_id": "fa6a13dd-a207-4e7b-9617-acc6be700396",
+    "actual_prompt_tokens": 10970,
+    "reference_estimated_tokens": 13277,
+    "relative_error_pct": 21.03,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:baseline",
+    "call_id": "9fc568bd-7469-4219-b469-252200b895f3",
+    "actual_prompt_tokens": 11216,
+    "reference_estimated_tokens": 13579,
+    "relative_error_pct": 21.068,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:baseline",
+    "call_id": "ef893bf9-ac60-4e41-ba0a-91ce77aa677e",
+    "actual_prompt_tokens": 11845,
+    "reference_estimated_tokens": 14643,
+    "relative_error_pct": 23.622,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:baseline",
+    "call_id": "3382fd3a-4a0f-4c77-b091-023fa808e86f",
+    "actual_prompt_tokens": 11835,
+    "reference_estimated_tokens": 15094,
+    "relative_error_pct": 27.537,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r0:t3:baseline",
+    "call_id": "da666623-128e-4d7f-a11b-598507dc02a1",
+    "actual_prompt_tokens": 10358,
+    "reference_estimated_tokens": 14187,
+    "relative_error_pct": 36.967,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r0:t4:baseline",
+    "call_id": "87dde692-a2ce-4457-9608-1df46c21da75",
+    "actual_prompt_tokens": 11180,
+    "reference_estimated_tokens": 14865,
+    "relative_error_pct": 32.961,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r0:t4:baseline",
+    "call_id": "58c88605-9c8e-4da9-9a4a-a87a5d950b32",
+    "actual_prompt_tokens": 12359,
+    "reference_estimated_tokens": 16527,
+    "relative_error_pct": 33.724,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r1:t1:baseline",
+    "call_id": "5f0cac76-c651-41e8-a0ba-62a548f120ba",
+    "actual_prompt_tokens": 3469,
+    "reference_estimated_tokens": 4048,
+    "relative_error_pct": 16.691,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r1:t2:baseline",
+    "call_id": "428bd1f3-6cf2-4412-8171-954755c6bd63",
+    "actual_prompt_tokens": 3784,
+    "reference_estimated_tokens": 3107,
+    "relative_error_pct": -17.891,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r1:t3:baseline",
+    "call_id": "eea9a3f7-b1e9-4372-9a48-16c3424b76ba",
+    "actual_prompt_tokens": 4441,
+    "reference_estimated_tokens": 3289,
+    "relative_error_pct": -25.94,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r1:t4:baseline",
+    "call_id": "f0196659-1fa5-4a1d-b498-8d09d8c3ca8f",
+    "actual_prompt_tokens": 4849,
+    "reference_estimated_tokens": 3446,
+    "relative_error_pct": -28.934,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r1:t1:baseline",
+    "call_id": "d0cd4e5e-a070-429f-96c1-036cee3d830f",
+    "actual_prompt_tokens": 1909,
+    "reference_estimated_tokens": 2567,
+    "relative_error_pct": 34.468,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r1:t2:baseline",
+    "call_id": "3b9e7187-dd99-4a0c-b1f9-5060bcea237c",
+    "actual_prompt_tokens": 2753,
+    "reference_estimated_tokens": 3205,
+    "relative_error_pct": 16.418,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r1:t2:baseline",
+    "call_id": "73d87a30-9387-4190-81a1-cd39e1c55cc0",
+    "actual_prompt_tokens": 6111,
+    "reference_estimated_tokens": 6419,
+    "relative_error_pct": 5.04,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r1:t2:baseline",
+    "call_id": "c407bd7f-20c4-4cbe-847e-1072df43314f",
+    "actual_prompt_tokens": 10765,
+    "reference_estimated_tokens": 12863,
+    "relative_error_pct": 19.489,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r1:t2:baseline",
+    "call_id": "f7e58485-596b-4e57-82c3-cccd82d19d2b",
+    "actual_prompt_tokens": 10835,
+    "reference_estimated_tokens": 13165,
+    "relative_error_pct": 21.504,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r1:t2:baseline",
+    "call_id": "e02d1492-7e6a-4be9-81a6-87c78348240d",
+    "actual_prompt_tokens": 11417,
+    "reference_estimated_tokens": 14101,
+    "relative_error_pct": 23.509,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r1:t2:baseline",
+    "call_id": "0894d380-d9cf-4e03-9c7b-d861c321fcbe",
+    "actual_prompt_tokens": 11421,
+    "reference_estimated_tokens": 14564,
+    "relative_error_pct": 27.519,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r1:t3:baseline",
+    "call_id": "c9a7e3e4-cd1b-423e-a52b-97088b400d71",
+    "actual_prompt_tokens": 10048,
+    "reference_estimated_tokens": 13592,
+    "relative_error_pct": 35.271,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r1:t4:baseline",
+    "call_id": "4a7fd020-d7c6-44e3-984c-7e9fb08cde43",
+    "actual_prompt_tokens": 10963,
+    "reference_estimated_tokens": 14197,
+    "relative_error_pct": 29.499,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r1:t4:baseline",
+    "call_id": "d01acf9c-2d77-4538-aae2-832f65f5dc8e",
+    "actual_prompt_tokens": 12022,
+    "reference_estimated_tokens": 15665,
+    "relative_error_pct": 30.303,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r2:t1:baseline",
+    "call_id": "1f9baecf-fd97-4ac9-aa80-2fa3305ea165",
+    "actual_prompt_tokens": 3469,
+    "reference_estimated_tokens": 4048,
+    "relative_error_pct": 16.691,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r2:t1:baseline",
+    "call_id": "a51212e2-1b71-4465-9ac4-39d1364b2b11",
+    "actual_prompt_tokens": 4064,
+    "reference_estimated_tokens": 4664,
+    "relative_error_pct": 14.764,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r2:t1:baseline",
+    "call_id": "4b43da76-8260-4926-8f93-96ba5577a27e",
+    "actual_prompt_tokens": 4186,
+    "reference_estimated_tokens": 4851,
+    "relative_error_pct": 15.886,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r2:t1:baseline",
+    "call_id": "62674cc0-4389-4492-9a09-e65682c54626",
+    "actual_prompt_tokens": 4285,
+    "reference_estimated_tokens": 4935,
+    "relative_error_pct": 15.169,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r2:t2:baseline",
+    "call_id": "a1a56b06-b05f-457f-bc58-b15c6b045dc7",
+    "actual_prompt_tokens": 3223,
+    "reference_estimated_tokens": 3832,
+    "relative_error_pct": 18.895,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r2:t3:baseline",
+    "call_id": "b5ff5ffd-aaae-4ac7-9732-d4e7fb90b710",
+    "actual_prompt_tokens": 4647,
+    "reference_estimated_tokens": 3988,
+    "relative_error_pct": -14.181,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r2:t4:baseline",
+    "call_id": "55f09877-2ec7-4e2d-8350-2f49a4c31c56",
+    "actual_prompt_tokens": 5224,
+    "reference_estimated_tokens": 4114,
+    "relative_error_pct": -21.248,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r2:t1:baseline",
+    "call_id": "9331f562-3abb-4a71-8d0a-7ed771d2becf",
+    "actual_prompt_tokens": 1909,
+    "reference_estimated_tokens": 2567,
+    "relative_error_pct": 34.468,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r2:t2:baseline",
+    "call_id": "2af1c6ac-f588-4df0-a245-b4a1f04e43f1",
+    "actual_prompt_tokens": 2793,
+    "reference_estimated_tokens": 3258,
+    "relative_error_pct": 16.649,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r2:t2:baseline",
+    "call_id": "83bfc7f1-f55a-4d13-9cbc-fbd4230ad9c4",
+    "actual_prompt_tokens": 6056,
+    "reference_estimated_tokens": 6433,
+    "relative_error_pct": 6.225,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r2:t2:baseline",
+    "call_id": "abc57014-4727-4a92-a211-fb6a3f715412",
+    "actual_prompt_tokens": 10574,
+    "reference_estimated_tokens": 12877,
+    "relative_error_pct": 21.78,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r2:t2:baseline",
+    "call_id": "57d296dd-2ebc-4150-a478-4cd3e5d14ecf",
+    "actual_prompt_tokens": 10721,
+    "reference_estimated_tokens": 13140,
+    "relative_error_pct": 22.563,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r2:t2:baseline",
+    "call_id": "fdd32e77-6ea0-41c6-bb3e-9ffdd6e92339",
+    "actual_prompt_tokens": 11416,
+    "reference_estimated_tokens": 14248,
+    "relative_error_pct": 24.807,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r2:t2:baseline",
+    "call_id": "ac10b7ca-0af5-4a9d-b0e0-3ce692f05c95",
+    "actual_prompt_tokens": 11430,
+    "reference_estimated_tokens": 14708,
+    "relative_error_pct": 28.679,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r2:t3:baseline",
+    "call_id": "d0fd726c-1022-4749-8ede-9e2ec44f7b9d",
+    "actual_prompt_tokens": 10091,
+    "reference_estimated_tokens": 13714,
+    "relative_error_pct": 35.903,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r2:t4:baseline",
+    "call_id": "f1a23fb7-c28b-4609-a926-47dc52a2b3cc",
+    "actual_prompt_tokens": 10933,
+    "reference_estimated_tokens": 14330,
+    "relative_error_pct": 31.071,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r2:t4:baseline",
+    "call_id": "f9db23d3-6c56-45f6-9414-f2a025d2c5ac",
+    "actual_prompt_tokens": 12153,
+    "reference_estimated_tokens": 16002,
+    "relative_error_pct": 31.671,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  }
+]

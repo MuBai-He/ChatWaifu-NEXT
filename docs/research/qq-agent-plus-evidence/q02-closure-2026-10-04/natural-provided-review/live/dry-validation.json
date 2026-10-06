@@ -1,0 +1,12 @@
+{
+  "actual_model_http_attempts": 0,
+  "completed_controlled_replies": 16,
+  "completed_four_turn_flows": 4,
+  "fallbacks": 0,
+  "frames_off": true,
+  "mock_http_requests": 32,
+  "omissions": 0,
+  "quality_approval": false,
+  "raw_review_equals_published": 16,
+  "source_and_history_whole": true
+}

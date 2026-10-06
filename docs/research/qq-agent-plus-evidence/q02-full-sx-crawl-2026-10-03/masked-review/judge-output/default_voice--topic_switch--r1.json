@@ -1,0 +1,66 @@
+{
+  "review_group_id": "default_voice:topic_switch:r1",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "f08c9a5916d1233c5c56a2603b94735e316722b4ed1fdf5789ccc4865a3fff78",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 967,
+    "total_tokens": 5146,
+    "prompt_tokens": 4179,
+    "completion_tokens_details": {
+      "reasoning_tokens": 399
+    }
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"default_voice:topic_switch:r1\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"fail\",\n      \"candidate_2_compliance\": \"fail\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均因搜索/工具未能读取成功而诚实提示未核实，未实际回答 Raft 选举心跳机制，表现相当。\",\n      \"factual_checks_needed\": [\n        \"Raft算法选举超时与心跳超时的计算机制\"\n      ]\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均立刻放下旧的技术话题，自然顺应料理话题，提出盐糖互补的看法并友好反问，切换轻快自然。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"候选2设想浓稠汤汁拌饭的香气并表示好奇，比候选1单纯质疑‘配米饭会不会太甜’更融洽包容。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"候选2给出正餐清淡与甜点喜好的区分，并巧妙回扣上一轮‘两勺糖’的话题，互动感更生动自然。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "default_voice:topic_switch:r1",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "fail",
+        "candidate_2_compliance": "fail",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均因搜索/工具未能读取成功而诚实提示未核实，未实际回答 Raft 选举心跳机制，表现相当。",
+        "factual_checks_needed": [
+          "Raft算法选举超时与心跳超时的计算机制"
+        ]
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均立刻放下旧的技术话题，自然顺应料理话题，提出盐糖互补的看法并友好反问，切换轻快自然。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "候选2设想浓稠汤汁拌饭的香气并表示好奇，比候选1单纯质疑‘配米饭会不会太甜’更融洽包容。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "候选2给出正餐清淡与甜点喜好的区分，并巧妙回扣上一轮‘两勺糖’的话题，互动感更生动自然。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 6603
+}

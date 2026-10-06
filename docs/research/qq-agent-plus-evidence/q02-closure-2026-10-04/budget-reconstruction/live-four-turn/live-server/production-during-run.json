@@ -1,0 +1,13 @@
+{
+  "sha256": {
+    "production_reader": "9095b832c38f799b90eb1243c06f0690694e78fc9b2535604e5780047e51cf37",
+    "production_searxng": "e3ce12a176b2a1dfd976e7da24766738703e557c63364b2b4eea97fc604641bc"
+  },
+  "runtime_user_unit": "active",
+  "crawl4ai_image_id": "sha256:76646f4e6d20c9514828b15e68487aafbb0fd15b52d2666a76891ee7d4b40c17",
+  "health": {
+    "runtime": 401,
+    "crawl4ai": 200
+  },
+  "runtime_health_scope": "Unauthenticated endpoint status only; 401 is not authenticated Runtime health acceptance"
+}

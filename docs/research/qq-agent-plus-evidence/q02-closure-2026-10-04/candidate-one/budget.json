@@ -1,0 +1,7 @@
+{
+  "output_reserve_tokens": 8192,
+  "max_output_tokens": 8192,
+  "estimate_margin_ratio": 0.15,
+  "section_policy": "scaled",
+  "tool_result_max_bytes": 131072
+}

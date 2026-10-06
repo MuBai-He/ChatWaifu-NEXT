@@ -1,0 +1,102 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "read_sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "publication_or_effective_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "issuer_and_scope": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "publication_or_effective_date",
+          "issuer_and_scope"
+        ]
+      }
+    },
+    "unresolved_updates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "publication_or_effective_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "short_evidence_gap": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "publication_or_effective_date",
+          "short_evidence_gap"
+        ]
+      }
+    },
+    "next_action": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "search",
+            "read",
+            "finish_with_evidence",
+            "finish_with_gaps"
+          ]
+        },
+        "query": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "focus": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "query",
+        "url",
+        "focus"
+      ]
+    }
+  },
+  "required": [
+    "read_sources",
+    "unresolved_updates",
+    "next_action"
+  ]
+}

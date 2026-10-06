@@ -1,0 +1,9 @@
+{
+  "attribution": "The model already copied a prior scope into a larger new block. Candidate renderer only avoids an identical whole block, then appends the same old statement again. Repeated mixed facts/limitations are also introduced by whole-block retention; not a retrieval, DNS or input clipping diagnosis.",
+  "new_model_calls": 0,
+  "prior_literal_occurrences_in_model_blocks": 1,
+  "prior_literal_occurrences_in_published_reply": 2,
+  "prior_statement_sha256": "b6d7f1e4be7bda592334b3ab404a5c23bd91d6dc5dcf96be26099a837c1e4b9e",
+  "raw_frame_sha256": "5b8449d09c003578b36c4d0c3ffca83fa1a7e434e65478db9a8dd6768f918168",
+  "sample_key": "frozen_airchina:r0:t3"
+}

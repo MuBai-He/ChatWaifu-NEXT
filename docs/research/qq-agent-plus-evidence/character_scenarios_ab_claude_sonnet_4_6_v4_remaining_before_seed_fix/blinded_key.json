@@ -1,0 +1,290 @@
+{
+  "greeting:r0:t1": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "greeting:r1:t1": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "greeting:r2:t1": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "greeting:r0:t2": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "greeting:r1:t2": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "greeting:r2:t2": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "greeting:r0:t3": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "greeting:r1:t3": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "greeting:r2:t3": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "greeting:r0:t4": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "greeting:r1:t4": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "greeting:r2:t4": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "teasing:r0:t1": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "teasing:r1:t1": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "teasing:r2:t1": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "teasing:r0:t2": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "teasing:r1:t2": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "teasing:r2:t2": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "teasing:r0:t3": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "teasing:r1:t3": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "teasing:r2:t3": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "teasing:r0:t4": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "teasing:r1:t4": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "teasing:r2:t4": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "correction:r0:t1": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "correction:r1:t1": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "correction:r2:t1": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "correction:r0:t2": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "correction:r1:t2": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "correction:r2:t2": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "correction:r0:t3": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "correction:r1:t3": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "correction:r2:t3": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "correction:r0:t4": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "correction:r1:t4": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "correction:r2:t4": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "low_mood:r0:t1": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "low_mood:r1:t1": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "low_mood:r2:t1": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "low_mood:r0:t2": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "low_mood:r1:t2": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "low_mood:r2:t2": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "low_mood:r0:t3": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "low_mood:r1:t3": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "low_mood:r2:t3": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "low_mood:r0:t4": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "low_mood:r1:t4": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "low_mood:r2:t4": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "goodbye:r0:t1": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "goodbye:r1:t1": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "goodbye:r2:t1": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "goodbye:r0:t2": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "goodbye:r1:t2": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "goodbye:r2:t2": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "goodbye:r0:t3": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "goodbye:r1:t3": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "goodbye:r2:t3": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "goodbye:r0:t4": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "goodbye:r1:t4": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "goodbye:r2:t4": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "verbose_history_pressure:r0:t1": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "verbose_history_pressure:r1:t1": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "verbose_history_pressure:r2:t1": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "verbose_history_pressure:r0:t2": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "verbose_history_pressure:r1:t2": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "verbose_history_pressure:r2:t2": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "verbose_history_pressure:r0:t3": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "verbose_history_pressure:r1:t3": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "verbose_history_pressure:r2:t3": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "verbose_history_pressure:r0:t4": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  },
+  "verbose_history_pressure:r1:t4": {
+    "candidate_1": "baseline_v3",
+    "candidate_2": "candidate_v4"
+  },
+  "verbose_history_pressure:r2:t4": {
+    "candidate_1": "candidate_v4",
+    "candidate_2": "baseline_v3"
+  }
+}

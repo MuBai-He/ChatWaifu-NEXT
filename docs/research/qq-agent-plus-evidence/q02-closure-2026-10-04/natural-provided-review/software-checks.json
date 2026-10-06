@@ -1,0 +1,22 @@
+{
+  "default_persona_changed": false,
+  "format_check": "2 files already formatted",
+  "frames_enabled": false,
+  "local_after": "265 passed",
+  "local_before": "11 failed, 10 passed",
+  "local_test_commands": [
+    "test_source_review_pipeline.py",
+    "test_source_answer_state.py",
+    "test_tool_calling_agent.py",
+    "test_source_context_projection.py",
+    "test_conversation_source_answer_state.py",
+    "test_conversation_source_context.py"
+  ],
+  "policy_file_unchanged": true,
+  "primary_diff_reviewed": true,
+  "production_changed": false,
+  "pyright_errors": 0,
+  "quality_approval": false,
+  "ruff_check": "passed",
+  "server_after": "265 passed"
+}

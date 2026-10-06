@@ -1,0 +1,1160 @@
+[
+  {
+    "review_group_id": "single_text:technical_help:r0",
+    "profile": "single_text",
+    "scene_description": "用户进行复杂严肃的技术咨询，考察回答完整、结构严谨、代码正确，绝不因即时消息短句偏好而擅自截断技术内容，绝不装傻推脱。",
+    "initial_state": {
+      "relationship_stage": "acquaintance",
+      "interaction_count": 0,
+      "familiarity": 0.2,
+      "trust": 0.2,
+      "affinity": 0.25,
+      "comfort": 0.2,
+      "recent_tension": 0.0,
+      "valence": 0.1,
+      "arousal": 0.2
+    },
+    "synthetic_memory": [],
+    "seed_history": [],
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "在 Python 中使用 asyncio.gather 并发执行任务时，如果其中一个任务抛出异常，默认行为是什么？",
+        "expected_behavior": [
+          "明确准确指出默认行为：第一个异常会立即向外冒泡抛出，但其他已启动的任务不会被自动取消，仍会在后台继续运行",
+          "技术概念清晰准确"
+        ],
+        "forbidden_behavior": [
+          "装傻表示自己只是二次元角色不懂编程",
+          "错误回答说所有任务都会自动取消",
+          "因限制字数只回答三四个字敷衍"
+        ],
+        "review_criteria": "技术解析严谨准确，不推辞装傻，说明异常冒泡及其他任务仍在运行的事实。",
+        "candidate_1": {
+          "reply": "在 Python 中，`asyncio.gather` 的默认参数是 `return_exceptions=False`。\n\n如果其中一个任务抛出了异常，默认行为会是这样：\n\n1. **立即传播异常**：`gather` 会立刻中断自身的等待，把这个异常向上抛出给 `await asyncio.gather(...)` 的调用方。\n2. **其他任务不会被自动取消**：这一点很容易被忽略——虽然 `gather` 已经抛出异常了，但其余正在运行的任务依然会继续在事件循环里跑完，并不会自动被取消（cancel）。\n\n如果你希望把异常当作普通返回值收集起来，而不是直接打断抛出，可以设置 `return_exceptions=True`；如果你的需求是「一旦有一个任务出错，就把其他并发任务全部取消」，在 Python 3.11 及以上版本通常会更推荐使用 `asyncio.TaskGroup` 呢。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.73,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.21200000000000002,
+                "trust": 0.20400000000000001,
+                "affinity": 0.254,
+                "comfort": 0.20600000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 1,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "在 `asyncio.gather` 中，参数 `return_exceptions` 默认是 `False`。\n\n这种默认设置下的行为主要有两个关键点：\n\n1. **异常会立即向外传播**：只要并发的任务中有一个抛出了异常，`await asyncio.gather(...)` 就会立刻抛出该异常，不会等待其他剩余的任务执行完毕。\n2. **其他任务不会被自动取消**：尽管外层已经感知到了异常，但其他还在运行的任务依然会继续在事件循环中执行，并不会被默认中断或取消。如果这些任务后续也抛出了异常，那些异常通常就不会再被外层的这次 `gather` 捕获了。\n\n如果希望出错时将异常视作普通结果一起收集，可以设置 `return_exceptions=True`；如果希望一人出错立刻取消其余所有任务，在 Python 3.11 及以上更推荐使用 `asyncio.TaskGroup`。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.73,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.21200000000000002,
+                "trust": 0.20400000000000001,
+                "affinity": 0.254,
+                "comfort": 0.20600000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 1,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 2,
+        "user_text": "如果我希望某个任务抛出异常时不影响其他任务继续执行，并且能拿到所有结果（包括异常对象），参数应该怎么配置？",
+        "expected_behavior": [
+          "指明配置 return_exceptions=True 参数",
+          "解释此时异常不会立刻向外抛出，而是作为结果列表的一个元素返回"
+        ],
+        "forbidden_behavior": [
+          "提供错误参数名",
+          "答非所问"
+        ],
+        "review_criteria": "准确给出 return_exceptions=True 及其核心作用机制。",
+        "candidate_1": {
+          "reply": "这种情况只需要把 `return_exceptions` 设置为 `True` 就可以了。\n\n像这样配置：\n\n```python\nimport asyncio\n\nasync def worker(n):\n    if n == 2:\n        raise ValueError(\"出错了！\")\n    return f\"结果 {n}\"\n\nasync def main():\n    tasks = [worker(1), worker(2), worker(3)]\n    # 关键在这里加上 return_exceptions=True\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n    \n    for res in results:\n        if isinstance(res, Exception):\n            print(f\"捕获到异常: {res}\")\n        else:\n            print(f\"正常执行结果: {res}\")\n\nasyncio.run(main())\n```\n\n这样设置之后，`gather` 就会等待所有任务全部执行结束。返回的列表中，成功完成的任务是正常返回值，抛出异常的任务则会直接把那个异常实例（比如 `ValueError`）放进对应位置，方便后续遍历检查。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.76,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.22400000000000003,
+                "trust": 0.20800000000000002,
+                "affinity": 0.258,
+                "comfort": 0.21200000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 2,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "把参数配置为 `return_exceptions=True` 就可以了。\n\n例如这样调用：\n```python\nresults = await asyncio.gather(*tasks, return_exceptions=True)\n```\n\n这样配置后：\n1. **不会中断其他任务**：任何任务抛出异常都不会向外中断，所有任务都会一直运行到完成。\n2. **异常作为结果返回**：返回的列表长度和传入的任务数完全一致，顺序也是对应的。执行成功的任务返回其正常的返回值，抛出异常的任务则直接将异常对象（`Exception` 的实例）放在对应位置。\n\n处理结果时，你可以通过 `isinstance(result, Exception)` 来分别处理成功的数据和报错信息。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.76,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.22400000000000003,
+                "trust": 0.20800000000000002,
+                "affinity": 0.258,
+                "comfort": 0.21200000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 2,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 3,
+        "user_text": "请给出一个简洁完整的 Python 代码示例，展示如何使用 return_exceptions=True 并区分正常结果与异常。",
+        "expected_behavior": [
+          "给出包含 asyncio.gather(*tasks, return_exceptions=True) 的完整可用代码",
+          "使用 isinstance(res, Exception) 进行结果与异常的正确区分",
+          "代码使用 markdown 代码块包裹，保持完整"
+        ],
+        "forbidden_behavior": [
+          "代码被截断或缺少核心判断逻辑",
+          "因短消息限制拒绝给出代码",
+          "代码语法错误"
+        ],
+        "review_criteria": "提供完整、可运行、用 isinstance 判断异常的 Python 代码块。",
+        "candidate_1": {
+          "reply": "好的，写成一个可以直接运行的完整示例给你：\n\n```python\nimport asyncio\n\nasync def fetch_data(task_id: int):\n    await asyncio.sleep(0.1)\n    if task_id == 2:\n        raise ValueError(f\"任务 {task_id} 参数无效\")\n    if task_id == 4:\n        raise RuntimeError(f\"任务 {task_id} 网络连接超时\")\n    return f\"任务 {task_id} 的数据\"\n\nasync def main():\n    tasks = [fetch_data(i) for i in range(1, 5)]\n\n    # 关键参数：return_exceptions=True\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    # 遍历并区分正常结果与异常对象\n    for i, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[失败] 第 {i} 个任务抛出异常 -> 类型: {type(res).__name__}, 内容: {res}\")\n        else:\n            print(f\"[成功] 第 {i} 个任务返回结果 -> {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n运行后的输出会类似这样：\n\n```text\n[成功] 第 1 个任务返回结果 -> 任务 1 的数据\n[失败] 第 2 个任务抛出异常 -> 类型: ValueError, 内容: 任务 2 参数无效\n[成功] 第 3 个任务返回结果 -> 任务 3 的数据\n[失败] 第 4 个任务抛出异常 -> 类型: RuntimeError, 内容: 任务 4 网络连接超时\n```\n\n核心就是使用 `isinstance(res, Exception)` 来判断返回值是常规数据还是异常对象，这样无论任务成功与否，都不会打断主流程的处理。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.77,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.23600000000000004,
+                "trust": 0.21200000000000002,
+                "affinity": 0.262,
+                "comfort": 0.21800000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 3,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "这是一个可以直接运行的完整示例：\n\n```python\nimport asyncio\n\nasync def fetch_data(task_id: int):\n    await asyncio.sleep(0.5)\n    if task_id == 2:\n        raise ValueError(f\"任务 {task_id} 发生错误\")\n    return f\"任务 {task_id} 成功结果\"\n\nasync def main():\n    tasks = [fetch_data(1), fetch_data(2), fetch_data(3)]\n    \n    # 设置 return_exceptions=True，捕获包含异常在内的所有结果\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    for i, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[失败] 第 {i} 个任务抛出异常: {type(res).__name__} - {res}\")\n        else:\n            print(f\"[成功] 第 {i} 个任务返回数据: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n运行后，任务 1 和 3 会正常打印返回的数据，而任务 2 会被 `isinstance(res, Exception)` 识别出来，输出对应的异常类型与错误信息。所有任务都会执行完毕，不会因为任务 2 的异常而中断。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.77,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.23600000000000004,
+                "trust": 0.21200000000000002,
+                "affinity": 0.262,
+                "comfort": 0.21800000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 3,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 4,
+        "user_text": "这样返回的列表中，异常对象是直接作为元素返回，还是会封装在特定类型里？",
+        "expected_behavior": [
+          "准确确认：直接作为列表中的元素返回（即 Exception 实例本身），不另加额外封装类型"
+        ],
+        "forbidden_behavior": [
+          "错误回答会被封装成 Result 或 Task 类",
+          "含糊其辞"
+        ],
+        "review_criteria": "准确回答异常对象直接作为元素返回。",
+        "candidate_1": {
+          "reply": "它是**直接**作为元素返回的，Python 不会做任何额外的封装（比如封装成包装类或元组）。\n\n也就是说，如果那个协程抛出了 `ValueError(\"something went wrong\")`，那么返回列表里对应的位置就**正是**那个 `ValueError` 实例本身。\n\n顺带提醒一下：因为没有额外的包装，如果不小心漏掉了 `isinstance(res, Exception)` 检查，直接把它当作正常的数据（比如调用 `.strip()` 或进行切片）去处理的话，就会在后续代码里抛出类似 `AttributeError` 的二次错误呢。所以拿到结果列表后，先做类型校验是很关键的。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.8,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.24800000000000005,
+                "trust": 0.21600000000000003,
+                "affinity": 0.266,
+                "comfort": 0.22400000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 4,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "它是**直接作为元素返回**的，不会包装在任何特定的容器或包装类（比如类似 `Result`、`Either` 之类的结构）里。\n\n具体来说，任务抛出的是什么异常，列表里对应的位置就是该异常的原始实例（比如直接就是一个 `ValueError` 或 `RuntimeError` 对象）。\n\n因此处理时不需要拆包，直接用 `isinstance(item, Exception)` 判断；如果它不是 `Exception`，那么它就是那个任务的正常返回值。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.8,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.24800000000000005,
+                "trust": 0.21600000000000003,
+                "affinity": 0.266,
+                "comfort": 0.22400000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 4,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "review_group_id": "single_text:technical_help:r1",
+    "profile": "single_text",
+    "scene_description": "用户进行复杂严肃的技术咨询，考察回答完整、结构严谨、代码正确，绝不因即时消息短句偏好而擅自截断技术内容，绝不装傻推脱。",
+    "initial_state": {
+      "relationship_stage": "acquaintance",
+      "interaction_count": 0,
+      "familiarity": 0.2,
+      "trust": 0.2,
+      "affinity": 0.25,
+      "comfort": 0.2,
+      "recent_tension": 0.0,
+      "valence": 0.1,
+      "arousal": 0.2
+    },
+    "synthetic_memory": [],
+    "seed_history": [],
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "在 Python 中使用 asyncio.gather 并发执行任务时，如果其中一个任务抛出异常，默认行为是什么？",
+        "expected_behavior": [
+          "明确准确指出默认行为：第一个异常会立即向外冒泡抛出，但其他已启动的任务不会被自动取消，仍会在后台继续运行",
+          "技术概念清晰准确"
+        ],
+        "forbidden_behavior": [
+          "装傻表示自己只是二次元角色不懂编程",
+          "错误回答说所有任务都会自动取消",
+          "因限制字数只回答三四个字敷衍"
+        ],
+        "review_criteria": "技术解析严谨准确，不推辞装傻，说明异常冒泡及其他任务仍在运行的事实。",
+        "candidate_1": {
+          "reply": "在默认情况下（也就是 `return_exceptions=False` 时），只要有任何一个任务抛出异常，`asyncio.gather` 就会**立即把这个异常向外抛出**给调用方。\n\n不过这里有个需要特别留意的细节：外层虽然立刻抛出了异常，但同批次里其他还在执行的任务**并不会被自动取消**，它们依然会在事件循环中继续运行，直到各自完成或者出错。如果想要把异常也当成普通结果一起收集到返回列表里，就需要显式传参 `return_exceptions=True`。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.73,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.21200000000000002,
+                "trust": 0.20400000000000001,
+                "affinity": 0.254,
+                "comfort": 0.20600000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 1,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "在默认情况下（也就是 `return_exceptions=False`），如果并发的任务中有某一个抛出了异常，`asyncio.gather` 会**立即把这个异常向外抛出**给等待它的调用方。\n\n不过有一个很关键的细节经常容易被忽略：**其他还在运行的任务并不会被自动取消**。它们依然会在事件循环中继续在后台执行，只是 `gather` 本身已经因为遇到异常而提前中断等待了。\n\n如果你希望即使出错也让所有任务跑完，并把异常像普通结果一样收集到列表里，可以将参数设为 `return_exceptions=True`；如果希望一个任务失败就自动取消其余任务，在 Python 3.11 及以上版本通常会更推荐使用 `asyncio.TaskGroup`。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.73,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.21200000000000002,
+                "trust": 0.20400000000000001,
+                "affinity": 0.254,
+                "comfort": 0.20600000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 1,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 2,
+        "user_text": "如果我希望某个任务抛出异常时不影响其他任务继续执行，并且能拿到所有结果（包括异常对象），参数应该怎么配置？",
+        "expected_behavior": [
+          "指明配置 return_exceptions=True 参数",
+          "解释此时异常不会立刻向外抛出，而是作为结果列表的一个元素返回"
+        ],
+        "forbidden_behavior": [
+          "提供错误参数名",
+          "答非所问"
+        ],
+        "review_criteria": "准确给出 return_exceptions=True 及其核心作用机制。",
+        "candidate_1": {
+          "reply": "把参数设置为 `return_exceptions=True` 就可以了。\n\n像这样写：\n```python\nresults = await asyncio.gather(*tasks, return_exceptions=True)\n```\n\n这样配置后，即使某个任务抛出异常，`asyncio.gather` 也不会中断，而是会等所有任务都执行完毕。最终返回的列表里，成功任务的位置是其正常返回值，抛出异常的任务位置则会存放对应的异常对象本身。之后你只要遍历列表，用 `isinstance(r, Exception)` 就能把异常和正常结果区分开了。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.76,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.22400000000000003,
+                "trust": 0.20800000000000002,
+                "affinity": 0.258,
+                "comfort": 0.21200000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 2,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "这种情况下，只需要把 `return_exceptions` 参数设置为 `True` 就可以了。\n\n配置成 `return_exceptions=True` 之后，`asyncio.gather` 会等待所有任务执行完毕。返回的结果列表里，正常完成的任务会保留返回值，而抛出异常的任务，其异常对象（`Exception` 实例）会直接作为对应位置的元素返回，不会中断流程。\n\n代码可以这样写：\n\n```python\nimport asyncio\n\nasync def task_success():\n    await asyncio.sleep(0.1)\n    return \"成功\"\n\nasync def task_fail():\n    await asyncio.sleep(0.1)\n    raise ValueError(\"发生错误\")\n\nasync def main():\n    results = await asyncio.gather(\n        task_success(),\n        task_fail(),\n        return_exceptions=True\n    )\n    \n    # 处理结果时可以用 isinstance 判断是否为异常\n    for res in results:\n        if isinstance(res, Exception):\n            print(f\"任务出错: {res}\")\n        else:\n            print(f\"任务正常返回: {res}\")\n\nasyncio.run(main())\n```\n\n遍历结果时配合 `isinstance(item, Exception)` 检查，就能很清晰地把正常数据和错误对象区分开来了。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.76,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.22400000000000003,
+                "trust": 0.20800000000000002,
+                "affinity": 0.258,
+                "comfort": 0.21200000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 2,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 3,
+        "user_text": "请给出一个简洁完整的 Python 代码示例，展示如何使用 return_exceptions=True 并区分正常结果与异常。",
+        "expected_behavior": [
+          "给出包含 asyncio.gather(*tasks, return_exceptions=True) 的完整可用代码",
+          "使用 isinstance(res, Exception) 进行结果与异常的正确区分",
+          "代码使用 markdown 代码块包裹，保持完整"
+        ],
+        "forbidden_behavior": [
+          "代码被截断或缺少核心判断逻辑",
+          "因短消息限制拒绝给出代码",
+          "代码语法错误"
+        ],
+        "review_criteria": "提供完整、可运行、用 isinstance 判断异常的 Python 代码块。",
+        "candidate_1": {
+          "reply": "这是一段可以直接运行的示例代码，展示了设置 `return_exceptions=True` 并在拿到结果后进行类型判断的过程：\n\n```python\nimport asyncio\n\nasync def worker(task_id: int):\n    if task_id == 2:\n        raise ValueError(f\"任务 {task_id} 遇到了错误！\")\n    await asyncio.sleep(0.1)\n    return f\"任务 {task_id} 成功完成\"\n\nasync def main():\n    tasks = [worker(1), worker(2), worker(3)]\n    \n    # 传入 return_exceptions=True，异常会被作为结果收集\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n    \n    for i, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[失败] 序号 {i} 抛出异常: {type(res).__name__} - {res}\")\n        else:\n            print(f\"[成功] 序号 {i} 返回结果: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n运行后能看到，即使任务 2 抛出了 `ValueError`，任务 1 和 3 依然能正常拿到返回值，遍历时用 `isinstance(res, Exception)` 就能清晰地把它们分开了。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.77,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.23600000000000004,
+                "trust": 0.21200000000000002,
+                "affinity": 0.262,
+                "comfort": 0.21800000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 3,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "好的，这是一个可以直接运行的简洁示例：\n\n```python\nimport asyncio\n\nasync def fetch_data(task_id: int):\n    await asyncio.sleep(0.1)\n    if task_id == 2:\n        raise ValueError(\"ID 为 2 的任务请求失败\")\n    return f\"任务 {task_id} 的数据\"\n\nasync def main():\n    # 创建一组任务\n    tasks = [fetch_data(i) for i in range(1, 4)]\n\n    # 关键参数：return_exceptions=True\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    # 遍历并区分正常结果与异常\n    for index, item in enumerate(results, start=1):\n        if isinstance(item, Exception):\n            print(f\"[任务 {index} 异常] 错误类型: {type(item).__name__}, 原因: {item}\")\n        else:\n            print(f\"[任务 {index} 成功] 返回内容: {item}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n运行输出：\n```text\n[任务 1 成功] 返回内容: 任务 1 的数据\n[任务 2 异常] 错误类型: ValueError, 原因: ID 为 2 的任务请求失败\n[任务 3 成功] 返回内容: 任务 3 的数据\n```\n\n使用 `isinstance(item, Exception)` 就能很方便地将异常对象与常规返回值分流处理了。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.77,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.23600000000000004,
+                "trust": 0.21200000000000002,
+                "affinity": 0.262,
+                "comfort": 0.21800000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 3,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 4,
+        "user_text": "这样返回的列表中，异常对象是直接作为元素返回，还是会封装在特定类型里？",
+        "expected_behavior": [
+          "准确确认：直接作为列表中的元素返回（即 Exception 实例本身），不另加额外封装类型"
+        ],
+        "forbidden_behavior": [
+          "错误回答会被封装成 Result 或 Task 类",
+          "含糊其辞"
+        ],
+        "review_criteria": "准确回答异常对象直接作为元素返回。",
+        "candidate_1": {
+          "reply": "它是**直接作为元素返回**的，不会额外封装在任何自定义包装类（比如 Result 或 Option 这类结构）里。\n\n也就是说，如果任务里执行了 `raise ValueError(\"bad input\")`，列表对应位置拿到的就是那个原汁原味的 `ValueError` 实例。所以你可以直接读取它的属性（比如 `res.args`），或者像刚才那样直接用 `isinstance(res, Exception)` 进行判断。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.8,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.24800000000000005,
+                "trust": 0.21600000000000003,
+                "affinity": 0.266,
+                "comfort": 0.22400000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 4,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "是**直接作为元素返回**的，Python 不会对它做任何额外的封装（没有类似 `Result` 或包装类的结构）。\n\n也就是说，如果在某个任务里执行了 `raise ValueError(\"出错了\")`，那么列表对应位置拿到的就是那个原原本本的 `ValueError` 实例。\n\n你可以像对待普通对象一样直接读取它的属性，比如 `item.args`、`type(item)`，或者需要重新抛出时直接写 `raise item`。但也正因为没有包装层，区分“返回值”与“错误”完全依赖于检查元素类型是否继承自 `Exception`（或者更底层的 `BaseException`）。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.8,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.24800000000000005,
+                "trust": 0.21600000000000003,
+                "affinity": 0.266,
+                "comfort": 0.22400000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 4,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "review_group_id": "single_text:technical_help:r2",
+    "profile": "single_text",
+    "scene_description": "用户进行复杂严肃的技术咨询，考察回答完整、结构严谨、代码正确，绝不因即时消息短句偏好而擅自截断技术内容，绝不装傻推脱。",
+    "initial_state": {
+      "relationship_stage": "acquaintance",
+      "interaction_count": 0,
+      "familiarity": 0.2,
+      "trust": 0.2,
+      "affinity": 0.25,
+      "comfort": 0.2,
+      "recent_tension": 0.0,
+      "valence": 0.1,
+      "arousal": 0.2
+    },
+    "synthetic_memory": [],
+    "seed_history": [],
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "在 Python 中使用 asyncio.gather 并发执行任务时，如果其中一个任务抛出异常，默认行为是什么？",
+        "expected_behavior": [
+          "明确准确指出默认行为：第一个异常会立即向外冒泡抛出，但其他已启动的任务不会被自动取消，仍会在后台继续运行",
+          "技术概念清晰准确"
+        ],
+        "forbidden_behavior": [
+          "装傻表示自己只是二次元角色不懂编程",
+          "错误回答说所有任务都会自动取消",
+          "因限制字数只回答三四个字敷衍"
+        ],
+        "review_criteria": "技术解析严谨准确，不推辞装傻，说明异常冒泡及其他任务仍在运行的事实。",
+        "candidate_1": {
+          "reply": "在默认情况下（也就是 `return_exceptions=False`），只要并发的某一个任务抛出了异常，`await asyncio.gather(...)` 会**立刻向外抛出这个异常**。\n\n不过这里有个需要特别注意的细节：虽然 `gather` 会立刻把异常抛给调用方，但**其他还在运行的任务并不会被自动取消**，它们依然会在后台继续执行，直到各自完成或报错。\n\n如果希望把异常像正常结果一样收集起来而不是直接中断抛出，可以加上 `return_exceptions=True`；而如果是 Python 3.11 及以上版本，想在出错时自动取消其他关联任务，通常更推荐使用 `asyncio.TaskGroup` 呢。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.73,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.21200000000000002,
+                "trust": 0.20400000000000001,
+                "affinity": 0.254,
+                "comfort": 0.20600000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 1,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "在默认情况下（即 `return_exceptions=False` 时），如果其中一个任务抛出了异常，`asyncio.gather` 会立刻将该异常向上抛出给 `await` 它的地方。\n\n不过需要注意它的具体表现：\n\n1. **异常立即传播**：一旦有任务失败，`await asyncio.gather(...)` 会马上唤醒并抛出该任务的异常，不会等待其他任务执行完毕。\n2. **其他任务不会被自动取消**：虽然 `gather` 本身提前抛出了异常，但传入的其他仍在运行的任务并不会被终止，它们依然会在事件循环的后台继续执行。\n\n如果希望即使有任务出错也把所有任务的结果（包括异常对象）都收集起来，可以将参数设为 `return_exceptions=True`；如果希望一个任务失败时自动取消其他关联任务，在 Python 3.11 之后通常更推荐使用 `asyncio.TaskGroup`。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.73,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.21200000000000002,
+                "trust": 0.20400000000000001,
+                "affinity": 0.254,
+                "comfort": 0.20600000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 1,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 2,
+        "user_text": "如果我希望某个任务抛出异常时不影响其他任务继续执行，并且能拿到所有结果（包括异常对象），参数应该怎么配置？",
+        "expected_behavior": [
+          "指明配置 return_exceptions=True 参数",
+          "解释此时异常不会立刻向外抛出，而是作为结果列表的一个元素返回"
+        ],
+        "forbidden_behavior": [
+          "提供错误参数名",
+          "答非所问"
+        ],
+        "review_criteria": "准确给出 return_exceptions=True 及其核心作用机制。",
+        "candidate_1": {
+          "reply": "把参数设置为 `return_exceptions=True` 就可以实现这个效果了。\n\n配置之后，`asyncio.gather` 不会因为个别任务报错而中断，而是会等待所有任务都运行结束。最后返回的结果列表中：\n- 成功的任务：对应的位置是它的正常返回值；\n- 抛出异常的任务：对应的位置不会抛出中断，而是直接存入那个**异常实例对象**本身。\n\n拿到结果后，通常可以遍历列表，用 `isinstance(item, Exception)` 来判断某一项是返回值还是报错对象，再做分别处理。你在排查的具体场景是哪种类型的任务呢？",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.76,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.22400000000000003,
+                "trust": 0.20800000000000002,
+                "affinity": 0.258,
+                "comfort": 0.21200000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 2,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "把参数设置为 `return_exceptions=True` 就可以了。\n\n具体的调用形式是：\n\n```python\nresults = await asyncio.gather(*tasks, return_exceptions=True)\n```\n\n这样配置后：\n1. **等待所有任务完成**：无论中间是否有任务抛出异常，`asyncio.gather` 都会一直等待所有任务执行完毕。\n2. **异常作为结果返回**：返回的列表中，执行成功的任务会存放其正常的返回值；抛出异常的任务，其对应的位置则会直接存放该**异常实例**（不会抛出中断程序）。\n\n后续处理结果时，通常可以通过 `isinstance(result, Exception)` 来判断某个任务是正常完成了还是发生了错误。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.76,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.22400000000000003,
+                "trust": 0.20800000000000002,
+                "affinity": 0.258,
+                "comfort": 0.21200000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 2,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 3,
+        "user_text": "请给出一个简洁完整的 Python 代码示例，展示如何使用 return_exceptions=True 并区分正常结果与异常。",
+        "expected_behavior": [
+          "给出包含 asyncio.gather(*tasks, return_exceptions=True) 的完整可用代码",
+          "使用 isinstance(res, Exception) 进行结果与异常的正确区分",
+          "代码使用 markdown 代码块包裹，保持完整"
+        ],
+        "forbidden_behavior": [
+          "代码被截断或缺少核心判断逻辑",
+          "因短消息限制拒绝给出代码",
+          "代码语法错误"
+        ],
+        "review_criteria": "提供完整、可运行、用 isinstance 判断异常的 Python 代码块。",
+        "candidate_1": {
+          "reply": "好的，这是一个简洁且可以直接运行的示例：\n\n```python\nimport asyncio\n\nasync def worker(task_id: int):\n    await asyncio.sleep(0.1)\n    if task_id == 2:\n        raise ValueError(f\"任务 {task_id} 发生错误\")\n    return f\"任务 {task_id} 成功完成\"\n\nasync def main():\n    # 模拟三个并发任务，其中 task 2 会抛出异常\n    tasks = [worker(1), worker(2), worker(3)]\n    \n    # 设置 return_exceptions=True，异常会被作为普通返回值放进列表\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    for i, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[失败] 任务 {i} 抛出异常: {type(res).__name__} -> {res}\")\n        else:\n            print(f\"[成功] 任务 {i} 结果: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n代码里通过 `isinstance(res, Exception)` 就能清晰地把返回值与捕获到的异常对象分流处理了。如果有哪一部分想进一步调整，随时跟我说就好。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.77,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.23600000000000004,
+                "trust": 0.21200000000000002,
+                "affinity": 0.262,
+                "comfort": 0.21800000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 3,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "这是一个简洁且可以直接运行的示例，演示了如何获取并区分正常结果与异常对象：\n\n```python\nimport asyncio\n\nasync def fetch_data(task_id: int):\n    await asyncio.sleep(0.1)\n    if task_id == 2:\n        raise ValueError(f\"任务 {task_id} 发生错误\")\n    return f\"任务 {task_id} 数据加载完成\"\n\nasync def main():\n    # 创建 3 个并发任务，其中 task_id=2 会抛出异常\n    tasks = [fetch_data(1), fetch_data(2), fetch_data(3)]\n\n    # 使用 return_exceptions=True 收集所有结果\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    # 遍历结果并使用 isinstance 区分\n    for index, result in enumerate(results, start=1):\n        if isinstance(result, Exception):\n            print(f\"[{index}] 失败: {type(result).__name__} -> {result}\")\n        else:\n            print(f\"[{index}] 成功: {result}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n**运行输出：**\n```text\n[1] 成功: 任务 1 数据加载完成\n[2] 失败: ValueError -> 任务 2 发生错误\n[3] 成功: 任务 3 数据加载完成\n```\n\n在遍历结果时，利用 `isinstance(result, Exception)` 即可判断当前项是返回值还是捕获到的异常实例。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.77,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.23600000000000004,
+                "trust": 0.21200000000000002,
+                "affinity": 0.262,
+                "comfort": 0.21800000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 3,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 4,
+        "user_text": "这样返回的列表中，异常对象是直接作为元素返回，还是会封装在特定类型里？",
+        "expected_behavior": [
+          "准确确认：直接作为列表中的元素返回（即 Exception 实例本身），不另加额外封装类型"
+        ],
+        "forbidden_behavior": [
+          "错误回答会被封装成 Result 或 Task 类",
+          "含糊其辞"
+        ],
+        "review_criteria": "准确回答异常对象直接作为元素返回。",
+        "candidate_1": {
+          "reply": "是直接作为元素返回的，不会做任何额外的包装。\n\n也就是说，如果任务里执行的是 `raise ValueError(\"出错了\")`，那么列表对应位置拿到的就是那个具体的 `ValueError` 实例对象，不会被包在诸如 `Result`、元组或自定义容器类型里面。\n\n这也是为什么可以直接用 `isinstance(item, Exception)` 去做类型判断，或者直接通过 `item.__traceback__` 去检查它的回溯信息。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.8,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.24800000000000005,
+                "trust": 0.21600000000000003,
+                "affinity": 0.266,
+                "comfort": 0.22400000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 4,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "它是**直接作为元素返回**的，不会封装在任何特定的类型或包装类里。\n\n也就是说，如果任务内部执行了 `raise ValueError(\"错误信息\")`，列表中对应位置的元素就是这个 `ValueError` 实例本身，既没有被包装成类似于 `Result` 的数据结构，也不会变成元组或字典。\n\n正因为是直接返回原始的异常对象：\n1. 可以直接用 `isinstance(result, Exception)` 来识别。\n2. 异常对象上依然保留着原本的调用栈信息（`__traceback__`），如果后续需要输出详细日志，可以直接传给 `traceback.print_exception(result)`，或者在需要时直接用 `raise result` 重新抛出。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.8,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.24800000000000005,
+                "trust": 0.21600000000000003,
+                "affinity": 0.266,
+                "comfort": 0.22400000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 4,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        }
+      }
+    ]
+  }
+]

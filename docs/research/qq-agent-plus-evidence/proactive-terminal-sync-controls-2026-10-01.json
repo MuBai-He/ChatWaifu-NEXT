@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "base_commit": "21d16004661f0f45ce6033f5292b074850e897a1",
+  "old_test_file_sha256": "7661da6ede3f17ef821a5b0cff456306d45e1c2daa39aa44739b36623895da5c",
+  "current_test_file_sha256": "f89f73c5a2e28c2f5821f016de7fba4392300bf8cd4bdea0811b6f9603859536",
+  "driver_sha256": "6b4c18733abb395753a1d1128a1571d3295566a5cb0a83a1413302fc736b536a",
+  "controls": [
+    {
+      "control": "legacy_slow_demo",
+      "exception_type": "StopIteration",
+      "elapsed_ms": 2115
+    },
+    {
+      "control": "current_slow_demo",
+      "exception_type": null,
+      "elapsed_ms": 2616
+    },
+    {
+      "control": "current_failed_generation",
+      "exception_type": "AssertionError",
+      "elapsed_ms": 89
+    }
+  ],
+  "config": {
+    "model_provider": "demo",
+    "demo_chunk_delay_ms": 400,
+    "tts_provider": "fake"
+  },
+  "startup_downloads_disabled": true,
+  "scope": "Synthetic deliberate Demo delay, not a measurement or reproduction of the Windows host's exact I/O cause. Old fixed two-second poll fails, current pre-admission terminal subscription succeeds, and a failed generation still fails the audit. No live provider, source/network operations, production config/data or device output.",
+  "final_test_file_sha256": "ae0ca8f376f6306991b5055454a30df6963e372c78b97c1123c5f5fb563269d8",
+  "final_format_ast_unchanged": true
+}

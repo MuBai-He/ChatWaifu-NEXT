@@ -1,0 +1,20 @@
+{
+  "image_id": "sha256:85b1794aa5c7ba4d5f382d101426d2af32da2728dd1d17228b9172f444ab7a7b",
+  "engines": [
+    "bing",
+    "google",
+    "brave",
+    "duckduckgo",
+    "sogou",
+    "360search",
+    "yandex"
+  ],
+  "queries": [
+    "2026 国内航班 充电宝 最新 规定",
+    "site:airchina.com.cn 2026 充电宝",
+    "Raft paper election timeout heartbeat 150 300"
+  ],
+  "port": 18081,
+  "production_unchanged": true,
+  "repetitions": 2
+}

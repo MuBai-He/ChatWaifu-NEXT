@@ -1,0 +1,26 @@
+[
+  {
+    "profile": "instant_message",
+    "pairs": 72,
+    "same_input_and_state": 72,
+    "same_system_prompt_hash": 72,
+    "before_after_are_same_persona": true,
+    "quality_approved": false
+  },
+  {
+    "profile": "single_text",
+    "pairs": 72,
+    "same_input_and_state": 72,
+    "same_system_prompt_hash": 0,
+    "before_after_are_same_persona": true,
+    "quality_approved": false
+  },
+  {
+    "profile": "default_voice",
+    "pairs": 72,
+    "same_input_and_state": 72,
+    "same_system_prompt_hash": 0,
+    "before_after_are_same_persona": true,
+    "quality_approved": false
+  }
+]

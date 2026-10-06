@@ -1,0 +1,18 @@
+{
+  "model": "claude-sonnet-4-6",
+  "samples": 288,
+  "pairs": 144,
+  "nonempty_replies": 288,
+  "provider_usage_coverage": 288,
+  "finish_reasons": {
+    "stop": 288
+  },
+  "latency_ms_p50": 3628.0,
+  "latency_ms_p95": 12308,
+  "totals": {
+    "provider_tokens_prompt": 651696,
+    "provider_tokens_completion": 30893,
+    "provider_tokens_reasoning": 0,
+    "provider_tokens_total": 682589
+  }
+}

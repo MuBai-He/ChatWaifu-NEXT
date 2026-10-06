@@ -1,0 +1,48 @@
+{
+  "reviewer": "primary Codex",
+  "scope": "Six inspected asyncio-only standalone turn-3 snippets",
+  "results": [
+    {
+      "sample_key": "technical_help:r0:t3:baseline_v3",
+      "exit_code": 0,
+      "stdout": "[成功] 任务 1 返回结果: 任务 1 处理成功\n[失败] 任务 2 抛出了异常: ValueError: 任务 2 处理失败！\n[成功] 任务 3 返回结果: 任务 3 处理成功\n",
+      "stderr": "",
+      "verdict": "expected three normal/exception results observed"
+    },
+    {
+      "sample_key": "technical_help:r1:t3:baseline_v3",
+      "exit_code": 0,
+      "stdout": "[成功] 任务 1 结果: 任务 1 成功完成\n[失败] 任务 2 捕获到异常: ValueError - 任务 2 发生错误\n[成功] 任务 3 结果: 任务 3 成功完成\n",
+      "stderr": "",
+      "verdict": "expected three normal/exception results observed"
+    },
+    {
+      "sample_key": "technical_help:r2:t3:baseline_v3",
+      "exit_code": 0,
+      "stdout": "任务 1 成功: 任务 1 执行成功\n任务 2 异常: ValueError - 发生错误：参数无效\n任务 3 成功: 任务 2 执行成功\n",
+      "stderr": "",
+      "verdict": "expected three normal/exception results observed"
+    },
+    {
+      "sample_key": "technical_help:r0:t3:candidate_v4",
+      "exit_code": 0,
+      "stdout": "[1] 成功: 任务 1 执行成功\n[2] 异常: ValueError -> 任务 2 遇到了非预期错误\n[3] 成功: 任务 3 执行成功\n",
+      "stderr": "",
+      "verdict": "expected three normal/exception results observed"
+    },
+    {
+      "sample_key": "technical_help:r1:t3:candidate_v4",
+      "exit_code": 0,
+      "stdout": "[1] 正常结果: 任务 1 执行成功\n[2] 捕获到异常: ValueError: 任务 2 出现异常\n[3] 正常结果: 任务 3 执行成功\n",
+      "stderr": "",
+      "verdict": "expected three normal/exception results observed"
+    },
+    {
+      "sample_key": "technical_help:r2:t3:candidate_v4",
+      "exit_code": 0,
+      "stdout": "[成功] 第 1 个任务正常返回: 任务 1 的数据\n[失败] 第 2 个任务抛出异常: ValueError: 任务 2 处理失败\n[成功] 第 3 个任务正常返回: 任务 3 的数据\n",
+      "stderr": "",
+      "verdict": "expected three normal/exception results observed"
+    }
+  ]
+}

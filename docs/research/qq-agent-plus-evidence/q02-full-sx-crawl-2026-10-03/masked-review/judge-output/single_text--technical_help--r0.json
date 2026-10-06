@@ -1,0 +1,63 @@
+{
+  "review_group_id": "single_text:technical_help:r0",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "69e933b362c3ff707a4a696a44af6b9493f12a0e85814edd81467a0dce8e7822",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 554,
+    "total_tokens": 6340,
+    "prompt_tokens": 5786
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"single_text:technical_help:r0\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两候选均清晰准确指明默认行为是异常立即向外抛出且其余后台任务不会自动取消，态度认真专业。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"两候选均准确指出 return_exceptions=True，候选1额外附带了简洁贴切的代码示例，解释更直观。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"两候选均给出了完整可运行的示例代码，候选1额外提供了运行输出展示，解释更详尽完整。\",\n      \"factual_checks_needed\": [\n        \"Python asyncio.gather 运行代码行为核验\"\n      ]\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"两候选均明确指出异常直接作为元素返回无封装，候选1额外补充了未校验可能引发二次错误的贴心提醒，更符角色关切感。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "single_text:technical_help:r0",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两候选均清晰准确指明默认行为是异常立即向外抛出且其余后台任务不会自动取消，态度认真专业。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "两候选均准确指出 return_exceptions=True，候选1额外附带了简洁贴切的代码示例，解释更直观。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "两候选均给出了完整可运行的示例代码，候选1额外提供了运行输出展示，解释更详尽完整。",
+        "factual_checks_needed": [
+          "Python asyncio.gather 运行代码行为核验"
+        ]
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "两候选均明确指出异常直接作为元素返回无封装，候选1额外补充了未校验可能引发二次错误的贴心提醒，更符角色关切感。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 5320
+}

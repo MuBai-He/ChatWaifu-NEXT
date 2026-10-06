@@ -1,0 +1,54 @@
+"""Read-only v44 artifact, actual-input control and unchanged predecessor audit."""
+import argparse
+import hashlib
+import json
+from pathlib import Path
+
+parser=argparse.ArgumentParser()
+parser.add_argument("--check-current",action="store_true")
+args=parser.parse_args()
+phase=Path(__file__).resolve().parent
+root=next(p for p in phase.parents if (p/"services/runtime/src").is_dir())
+def digest(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+def j(p):return json.loads(p.read_text())
+manifest=j(phase/"manifest.json")
+actual={str(p.relative_to(phase)) for p in phase.rglob("*") if p.is_file() and p!=phase/"manifest.json"
+        and not any(v.startswith(".") or v=="__pycache__" for v in p.relative_to(phase).parts)}
+assert actual==manifest.keys()
+for rel,sha in manifest.items():assert digest(phase/rel)==sha,rel
+code=j(phase/"code-sha256.json")
+assert code==j(phase/"server/server-checks.json")["selected_code_sha256"]
+for rel,sha in code.items():
+    assert digest(phase/"candidate-code"/(rel.replace("/","__")+".txt"))==sha
+    if args.check_current:assert digest(root/rel)==sha,rel
+if args.check_current:
+    for f in (phase/"documentation-snapshot").glob("*.txt"):
+        rel=f.name.removesuffix(".txt").replace("__","/")
+        assert digest(root/rel)==digest(f),rel
+for rel,sha in j(phase/"replay-input-sha256.json").items():assert digest(phase.parent/rel)==sha,rel
+for rel,sha in j(phase/"server/export-manifest.json").items():assert digest(phase/"server"/rel)==sha,rel
+old=j(phase/"server/baseline-replay-final/observations.json")
+new=j(phase/"server/candidate-replay-final/observations.json")
+for x,y in zip(old[:2],new[:2],strict=True):
+    assert x["actual_v43_wire_equal"] and not x["latest_answer_retained"]
+    assert y["latest_answer_retained"] and not y["latest_answer_in_context"]
+    history=y["fitted_request"]["history"][-1]
+    assert sum(m.get("content")==history[1] and m["role"]=="assistant" for m in y["payload"]["messages"])==1
+    assert y["report"]["estimated_input_tokens"]<=21370
+    assert history[0]=="assistant" and 5 not in y["report"]["omitted_history_indices"]
+assert sum(x["original_estimate_preserved"] for x in old[2:])==6
+assert sum(x["original_estimate_preserved"] for x in new[2:])==8
+assert not any(x.get("generated_reply") or x.get("native_usage") or x.get("quality_approval") for x in new)
+for label in ("baseline-replay-final","candidate-replay-final"):
+    admission=j(phase/"server"/label/"admission.json")
+    assert admission["network_attempts"]==admission["model_http"]==admission["source_http"]==0
+checks=j(phase/"software-checks.json")
+assert checks["local_unit_affected"]+checks["local_integration_affected"]==checks["server_same_targets"]==361
+assert "5 failed" in (phase/"server/baseline-tests.log").read_text()
+assert "361 passed" in (phase/"server/candidate-tests.log").read_text()
+previous=phase.parent/"budget-reconstruction"
+assert digest(previous/"manifest.json")=="025136b4e919b3ff1876f93926b98f004333caf9ade736a4fe745eea9a2b2796"
+for rel,sha in j(previous/"manifest.json").items():assert digest(previous/rel)==sha,rel
+assert not j(phase/"decision.json")["q02_approval"]
+print(json.dumps({"audit":"passed","entries":len(manifest),"v43":"unchanged",
+                  "model_http":0,"check_current":args.check_current,"q02_approval":False}))

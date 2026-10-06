@@ -1,0 +1,10 @@
+{
+  "codes": {
+    "2": 2,
+    "3": 2,
+    "4": 2,
+    "5": 2
+  },
+  "initial_failure_retained": true,
+  "no_failed_sample_repeated": true
+}

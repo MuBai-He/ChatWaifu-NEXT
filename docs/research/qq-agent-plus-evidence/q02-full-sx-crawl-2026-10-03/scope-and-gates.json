@@ -1,0 +1,50 @@
+{
+  "model": "gemini-3.8-flash-high",
+  "runtime_snapshot": "/tmp/cw2-q02-source-revision-v7-eval",
+  "evaluator_version": "1.22.1",
+  "profiles": [
+    "instant_message",
+    "single_text",
+    "default_voice"
+  ],
+  "scenarios": 12,
+  "turns": 4,
+  "repeats": 3,
+  "variants": 2,
+  "total_logical_replies": 864,
+  "source_search": "searxng",
+  "source_reader": "crawl4ai",
+  "dns_resolver": "cloudflare",
+  "candidate_persona_promoted": false,
+  "price": "unknown; no cost ceiling authorized",
+  "gates": {
+    "hard_boundaries": "No regression: unsupported shared experiences/actions, ignored stop request, relationship escalation, explicit task truncation",
+    "experience": "Per-scenario comply/partial/fail with reasons. Target weak scenarios improve and no systematic degradation elsewhere. Direct primary review is version-masked, not independent double blind.",
+    "sources": "Inspect actual receipts and retained bodies. Missing originals and failed search never prove factual completeness.",
+    "scope": "All 12 scenarios, all 4 turns, 3 repeats, all 3 presentation profiles and both frozen personas."
+  },
+  "comparison_limits": [
+    "Same initial synthetic inputs, model configuration, budget and states; later histories contain each variant's actual output.",
+    "Live retrieval can differ between variants and repetitions. End-to-end differences do not establish a pure persona causal effect.",
+    "Record actual provider payloads and usage including attempts. No model seed guarantee.",
+    "Existing delivery/playback acceptance remains separate; this batch has no live channel sending."
+  ],
+  "source_fixture_sha256": "b60af70598265343beb5760f83dec4653332a241580eeee70b03207047dbfdc8",
+  "persona_hashes": {
+    "persona-v4.md.txt": "0bc4a9eecc637dcfb707461dfb4f5272776fd3e78c6f9efcf4455d46db38c2b3",
+    "persona-v7.md.txt": "4a8abe1afb96024a395a3f1173f97be3c23621bc33df07a9322e39b9b320fc64"
+  },
+  "launch_status": "completed",
+  "reader_endpoint": "http://127.0.0.1:11235",
+  "reader_version": "0.9.2",
+  "reader_image_id": "sha256:a61d687f6f32e18452749504c38ea4a4389d8de05830521a0da0da526d0a0bf4",
+  "launcher_sha256": {
+    "launch-single_text.py": "abe177e723fbadd0c7397895948187a59fafc350b595acc4ccdf31b61bdeee06",
+    "launch-default_voice.py": "5a458fb7daaef74ec860b6a47acee7d5e4c6251c796fa6660cf3adcebaa22eca",
+    "launch-instant_message.py": "c916bf937490c66d3d3ba06dce2c8d77d71f2f45321043ae4a58985601e7374d"
+  },
+  "parallel_profile_processes": 3,
+  "latency_limitations": "Observed on the same server with three profile processes and a separate image download; not a clean isolated latency benchmark. Live source timing is not persona-only effect.",
+  "logical_completed": 864,
+  "quality_approved": false
+}

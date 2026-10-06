@@ -1,0 +1,33 @@
+import asyncio,json
+from datetime import datetime,timezone
+from pathlib import Path
+import httpx
+stage=Path('/tmp/cw2-q02-v26-contract-runtime-20261004')
+assert not (stage/'endpoint-diagnostic.json').exists(), 'Do not duplicate diagnostic calls'
+async def main():
+    key=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+    rows=[]
+    async with httpx.AsyncClient(timeout=45,trust_env=False) as client:
+        for name,method,path,payload in [('model_inventory','GET','models',None),('minimal_completion','POST','chat/completions',{'model':'gemini-3.8-flash-high','messages':[{'role':'user','content':'只回复 OK。'}],'max_tokens':16,'stream':False})]:
+            row={'probe':name,'at_utc':datetime.now(timezone.utc).isoformat()}
+            try:
+                response=await client.request(method,'https://mubai.website:8318/v1/'+path,headers={'Authorization':'Bearer '+key},json=payload)
+                row['http_status']=response.status_code
+                try:data=response.json()
+                except Exception:data={}
+                if isinstance(data,dict):
+                    if name=='model_inventory':
+                        models=[m.get('id') for m in data.get('data',[]) if isinstance(m,dict)]
+                        row['requested_model_present']='gemini-3.8-flash-high' in models
+                        row['model_count']=len(models)
+                    else:
+                        row['reported_model']=data.get('model');row['usage']=data.get('usage')
+                    error=data.get('error')
+                    if isinstance(error,dict):
+                        row['error']={k:v[:500].replace(key,'[redacted]') if isinstance(v,str) else v for k,v in error.items() if k in {'type','code','message'} and isinstance(v,(str,int,type(None)))}
+            except Exception as exc:row['error_type']=type(exc).__name__
+            assert key not in json.dumps(row)
+            rows.append(row)
+    (stage/'endpoint-diagnostic.json').write_text(json.dumps(rows,ensure_ascii=False,indent=2)+'\n')
+    print(json.dumps(rows,ensure_ascii=False))
+asyncio.run(main())

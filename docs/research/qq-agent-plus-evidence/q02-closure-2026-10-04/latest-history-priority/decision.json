@@ -1,0 +1,14 @@
+{
+  "version": "v44",
+  "q02_approval": false,
+  "runtime_priority_and_diagnostic_repair": "validated with exact old-wire baseline and zero-HTTP candidate input control",
+  "model_answer_quality_after_changed_input": "unexecuted; old replies not reassigned",
+  "production_deployed": false,
+  "production_window_changed": false,
+  "agy_used": false,
+  "new_prompt_rules": 0,
+  "cumulative_actual_model_http": 255,
+  "old_unknown_usage": 19,
+  "next_dependency": "S1 targeted official-body coverage using existing production services, then bounded frozen answer/fidelity validation; no full A/B until stable",
+  "old_v43_two_budget_failure_retained": true
+}

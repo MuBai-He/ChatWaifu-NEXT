@@ -1,0 +1,51 @@
+[
+  {
+    "sample_key": "autonomous_sources:r0:t3:closure_c1",
+    "http_attempt": 13,
+    "all_three_received_powerbank_excerpts_sent": true,
+    "own_preceding_published_answer_retained_once": null,
+    "own_preceding_answer_origin": null
+  },
+  {
+    "sample_key": "native_T3_unsent_review",
+    "http_attempt": null,
+    "all_three_received_powerbank_excerpts_sent": true,
+    "own_preceding_published_answer_retained_once": null,
+    "own_preceding_answer_origin": null
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t4:closure_c1",
+    "http_attempt": 14,
+    "all_three_received_powerbank_excerpts_sent": true,
+    "own_preceding_published_answer_retained_once": true,
+    "own_preceding_answer_origin": "runtime_fallback"
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t4:closure_c1",
+    "http_attempt": 15,
+    "all_three_received_powerbank_excerpts_sent": true,
+    "own_preceding_published_answer_retained_once": true,
+    "own_preceding_answer_origin": "runtime_fallback"
+  },
+  {
+    "sample_key": "frozen_guard:T3_review",
+    "http_attempt": 1,
+    "all_three_received_powerbank_excerpts_sent": true,
+    "own_preceding_published_answer_retained_once": null,
+    "own_preceding_answer_origin": null
+  },
+  {
+    "sample_key": "frozen_guard:T4",
+    "http_attempt": 2,
+    "all_three_received_powerbank_excerpts_sent": true,
+    "own_preceding_published_answer_retained_once": true,
+    "own_preceding_answer_origin": "controlled_provider_review"
+  },
+  {
+    "sample_key": "frozen_guard:T4",
+    "http_attempt": 3,
+    "all_three_received_powerbank_excerpts_sent": true,
+    "own_preceding_published_answer_retained_once": true,
+    "own_preceding_answer_origin": "controlled_provider_review"
+  }
+]

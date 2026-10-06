@@ -1,0 +1,21 @@
+{
+  "image_id": "sha256:85b1794aa5c7ba4d5f382d101426d2af32da2728dd1d17228b9172f444ab7a7b",
+  "engines": [
+    "bing",
+    "google",
+    "brave",
+    "duckduckgo",
+    "360search",
+    "yandex"
+  ],
+  "queries": [
+    "民航局 旅客 携带 充电宝 规定 额定能量 托运",
+    "民航 充电宝 随身携带 乘机 规定 调整",
+    "raft consensus algorithm election timeout heartbeat interval timing requirement"
+  ],
+  "proxy_from_existing_candidate": true,
+  "repeats": 1,
+  "port": 18082,
+  "production_and_current_eval_unchanged": true,
+  "language_parameter_omitted_like_runtime": true
+}

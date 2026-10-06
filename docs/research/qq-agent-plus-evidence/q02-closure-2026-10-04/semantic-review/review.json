@@ -1,0 +1,504 @@
+{
+  "budget_attribution": "Prior actual payload and history audits verified full documents and prior replies; no new omission, usage or latency is fabricated. Findings do not prove a larger window will help.",
+  "candidate_decision": {
+    "closure_c1_adopted": false,
+    "full_ab_started": false,
+    "new_candidate_created": false,
+    "reason": "Four source-date undercoverage findings independently prevent approval, even without relying on disputed exact-date or Boolean-expression grading. Original freshness risks remain documented; no lowering of original quality gate."
+  },
+  "criteria_unchanged": true,
+  "items": [
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "frozen-quality",
+      "original_grade": "complete",
+      "reason": "日期、2个、旅客再充电禁止、机组按运行需要携带使用、成员国分发范围齐全；未要求增加中国国内携带条件。",
+      "reply_sha256": "5f3abf42615d89936ccbf9418a7c4fb1827d9df8a9f082b2b10b35055db85446",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_icao:r0:t1:baseline"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "frozen-quality",
+      "original_grade": "complete",
+      "reason": "准确说明正文没有100Wh/160Wh分档，没有把一般常识补成本文规定。",
+      "reply_sha256": "71348927635adeb436f3a58d641eda93f8cfdfd6e8626b52e5739de4ebb3f5f5",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_icao:r0:t2:baseline"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "frozen-quality",
+      "original_grade": "partial",
+      "reason": "核心“不足以证明全部国内航班实施”正确；但“通常需要国内法规转化”和差异备案机制不是所给公告提供的解释。在仅依据该材料的约束下，这段无新增证据支持。",
+      "reply_sha256": "3e0dee98730ec86cf8d7b69071007cd12085f5ca77410af926a28bc3aa1de138",
+      "reviewed_grade": "partial",
+      "sample_key": "frozen_icao:r0:t3:baseline"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "frozen-quality",
+      "original_grade": "complete",
+      "reason": "三条保留日期、实际链接、2个、旅客再充电禁止、机组运行例外和国内执行未核实边界。",
+      "reply_sha256": "acd0b738d131c7814cd44661cf90d2c3e00aac8b4062440ecbb4cbba59a792dc",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_icao:r0:t4:baseline"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "frozen-quality",
+      "original_grade": "complete",
+      "reason": "禁运外观/召回、总数2块、Wh各档审批、境内3C、随身/禁托运、开关、绝缘、放置与机上禁用禁充均覆盖；范围限定国航。",
+      "reply_sha256": "be3a7d74b1c03aa0afe6075a2e9428f086cfb51a3bde767e4f31a27153f56c46",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_airchina:r0:t1:baseline"
+    },
+    {
+      "additional_scope_notes": [
+        {
+          "definite_rule_violation": "not_proven",
+          "finding": "对原文无法确认额定能量或锂金属含量有及字或正向确认改写。记录条件关系歧义；源文本没有提供电池化学类别的展开定义，本次不把原文机械改判为必须同时确认两项，也不据字词差异断言法规违反。这不是被证实的检索或输入省略。",
+          "kind": "condition_rewrite_ambiguity"
+        }
+      ],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "frozen-quality",
+      "original_grade": "complete",
+      "reason": "正确将100Wh及以下纳入总数2块，上档需要国航批准；其他携带条件与原文一致。",
+      "reply_sha256": "c8de3240b0bbcd9050e5fa71da9c5ab0058c39d55799c43052f3c2e3dbb71d14",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_airchina:r0:t2:baseline"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "frozen-quality",
+      "original_grade": "complete",
+      "reason": "明确运营商原文不足以证明其他航司统一，且8月发布不能证明10月4日仍无后续修订。",
+      "reply_sha256": "1404233562e3ba3ec4121fe72893c338f5ae2e415836bb7a474ef4961b24fa5f",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_airchina:r0:t3:baseline"
+    },
+    {
+      "additional_scope_notes": [
+        {
+          "finding": "前轮具体的后续更新未核实状态没有明示；这一保真风险保留。回复依据指定日期的国航材料，没有声称已核实所有航司截至10月4日的现行规则。不能仅因缺少10月4日字样就认定谎报现行或归因到预算。",
+          "kind": "prior_unresolved_status",
+          "scope_claims_false": "not_proven"
+        },
+        {
+          "definite_rule_violation": "not_proven",
+          "finding": "对原文无法确认额定能量或锂金属含量有及字或正向确认改写。记录条件关系歧义；源文本没有提供电池化学类别的展开定义，本次不把原文机械改判为必须同时确认两项，也不据字词差异断言法规违反。这不是被证实的检索或输入省略。",
+          "kind": "condition_rewrite_ambiguity"
+        }
+      ],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "frozen-quality",
+      "original_grade": "partial",
+      "reason": "三条实质携带条件、国航范围、日期和链接均保留；丢掉第三轮已明确的“截至10月4日后续更新未核实”状态。仅日期落款不等同于保留该未核实结论。",
+      "reply_sha256": "a08a50b1ea79c57484967a8cc9aa99b4fa843100373fd04b44e0e0cc8956fdab",
+      "reviewed_grade": "partial",
+      "sample_key": "frozen_airchina:r0:t4:baseline"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "frozen-quality",
+      "original_grade": "complete",
+      "reason": "给出文末日期和明确生效日期，其余条件及例外完整；对发布日期字段采用保守表述，不因缺少独立字段而强迫更肯定的结论。",
+      "reply_sha256": "41a7f4020fa06980a249b3602eee5222abb1a2754b5af2be2dbb453530bba83e",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_icao:r1:t1:baseline"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "frozen-quality",
+      "original_grade": "complete",
+      "reason": "没有Wh分档的判断准确。",
+      "reply_sha256": "2b26ae634e83013684aa0b34805a9fb95c0c5a117c3dfa134c60121a2fce0f91",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_icao:r1:t2:baseline"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "frozen-quality",
+      "original_grade": "complete",
+      "reason": "区分公告修订/分发与国内实际采纳及指定日期执行状态，未声称已核实所有航司。",
+      "reply_sha256": "c81ff6e7909aac9bfad8ac8dcb82cb2fc67ac50c1778bc6eaf6e827433d70472",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_icao:r1:t3:baseline"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "frozen-quality",
+      "original_grade": "complete",
+      "reason": "三条保留日期、链接、数量、禁充、机组例外、成员国范围和中国境内未核实状态；保留了前轮日期表述的谨慎程度。",
+      "reply_sha256": "e8d30b3f4ce2a927f6a07cc000f5e3e855362866f9e9b2a001301668e6576075",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_icao:r1:t4:baseline"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "frozen-quality",
+      "original_grade": "complete",
+      "reason": "数量、能量边界/国航审批、全部主要禁运和机上要求完整，境内3C范围明确。",
+      "reply_sha256": "609d4a0469594553f0030453a2cf352aa9f3afe7c333eafab9ec7afa57bcf15f",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_airchina:r1:t1:baseline"
+    },
+    {
+      "additional_scope_notes": [
+        {
+          "definite_rule_violation": "not_proven",
+          "finding": "对原文无法确认额定能量或锂金属含量有及字或正向确认改写。记录条件关系歧义；源文本没有提供电池化学类别的展开定义，本次不把原文机械改判为必须同时确认两项，也不据字词差异断言法规违反。这不是被证实的检索或输入省略。",
+          "kind": "condition_rewrite_ambiguity"
+        }
+      ],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "frozen-quality",
+      "original_grade": "complete",
+      "reason": "数量覆盖所有能量档，100Wh以下无需批准、100到160需国航批准及通用条件一致。",
+      "reply_sha256": "f47a144269f7fbcc8326cbeb00c80b1b4b65fd3dc9743d68787a4beb26057491",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_airchina:r1:t2:baseline"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "frozen-quality",
+      "original_grade": "complete",
+      "reason": "未将国航提示升级为民航局全文或全行业现行证明，保留后续修订未核实状态。",
+      "reply_sha256": "c440b5506aa1fbbb16b2612f7e391675ec620ac381dd44e3090f89878d536d5c",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_airchina:r1:t3:baseline"
+    },
+    {
+      "additional_scope_notes": [
+        {
+          "finding": "前轮具体的后续更新未核实状态没有明示；这一保真风险保留。回复依据指定日期的国航材料，没有声称已核实所有航司截至10月4日的现行规则。不能仅因缺少10月4日字样就认定谎报现行或归因到预算。",
+          "kind": "prior_unresolved_status",
+          "scope_claims_false": "not_proven"
+        },
+        {
+          "definite_rule_violation": "not_proven",
+          "finding": "对原文无法确认额定能量或锂金属含量有及字或正向确认改写。记录条件关系歧义；源文本没有提供电池化学类别的展开定义，本次不把原文机械改判为必须同时确认两项，也不据字词差异断言法规违反。这不是被证实的检索或输入省略。",
+          "kind": "condition_rewrite_ambiguity"
+        }
+      ],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "frozen-quality",
+      "original_grade": "partial",
+      "reason": "实质条款保真，保留国航范围及来源日期链接；再次遗漏前轮针对10月4日后续更新未知的限定。",
+      "reply_sha256": "3a26035b3f93bba63086fd4064967d2dd9f4ff99b424887d5e43b811177086f3",
+      "reviewed_grade": "partial",
+      "sample_key": "frozen_airchina:r1:t4:baseline"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": true,
+      "group": "candidate-one",
+      "original_grade": "complete",
+      "reason": "原问要求提供公告日期。完整资料末尾有27 March 2026，先前实际payload核验已证明完整资料发送。该回复仅给生效日、将发布日概括为未标明，遗漏了可报告的材料日期。没有独立发布时间字段可保守说明，但不能因此省掉文末日期；不要求凭这一个日期强行证明独立新闻发布时间。原complete判定撤销为partial。",
+      "reply_sha256": "22609c111cce5ef9bfc4730c2285396ba5dcb328c2b75bdadcb5a363a388a360",
+      "reviewed_grade": "partial",
+      "sample_key": "frozen_icao:r0:t1:closure_c1"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "candidate-one",
+      "original_grade": "complete",
+      "reason": "如实说明正文没有100Wh/160Wh分档，没有补写常识为公告条款。",
+      "reply_sha256": "d999afaa03d80ae582c166dc3fcc0993f909ed947f93b6258579eea01c0d2aee",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_icao:r0:t2:closure_c1"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "candidate-one",
+      "original_grade": "complete",
+      "reason": "核心结论与证据缺口明确；国内转化仅表述为本文未说明的事项，没有宣称必须履行某种法律机制。不同于基线将通常转化机制作为事实解释。",
+      "reply_sha256": "fa5e86c8fc724a90014b83ee491f6b59a840399faa17df00949ca168aef74dca",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_icao:r0:t3:closure_c1"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": true,
+      "group": "candidate-one",
+      "original_grade": "complete",
+      "reason": "原问要求提供公告日期。完整资料末尾有27 March 2026，先前实际payload核验已证明完整资料发送。该回复仅给生效日、将发布日概括为未标明，遗漏了可报告的材料日期。没有独立发布时间字段可保守说明，但不能因此省掉文末日期；不要求凭这一个日期强行证明独立新闻发布时间。原complete判定撤销为partial。",
+      "reply_sha256": "7a804582fbc336c82f7e679297d45f7f17965033b0f3520c1c721436fc8eca9e",
+      "reviewed_grade": "partial",
+      "sample_key": "frozen_icao:r0:t4:closure_c1"
+    },
+    {
+      "additional_scope_notes": [
+        {
+          "definite_rule_violation": "not_proven",
+          "finding": "对原文无法确认额定能量或锂金属含量有及字或正向确认改写。记录条件关系歧义；源文本没有提供电池化学类别的展开定义，本次不把原文机械改判为必须同时确认两项，也不据字词差异断言法规违反。这不是被证实的检索或输入省略。",
+          "kind": "condition_rewrite_ambiguity"
+        }
+      ],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "candidate-one",
+      "original_grade": "complete",
+      "reason": "日期、国航范围、总数、能量分档审批、召回/外观/标识、境内3C、携带存放和机上限制完整。",
+      "reply_sha256": "bc4a64bf6887e97cbaa6b3a11023b829238291a54963040b11fc12aa966bf7a1",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_airchina:r0:t1:closure_c1"
+    },
+    {
+      "additional_scope_notes": [
+        {
+          "definite_rule_violation": "not_proven",
+          "finding": "对原文无法确认额定能量或锂金属含量有及字或正向确认改写。记录条件关系歧义；源文本没有提供电池化学类别的展开定义，本次不把原文机械改判为必须同时确认两项，也不据字词差异断言法规违反。这不是被证实的检索或输入省略。",
+          "kind": "condition_rewrite_ambiguity"
+        }
+      ],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "candidate-one",
+      "original_grade": "complete",
+      "reason": "100Wh以下同样计入总数；上档审批、境内3C、禁托运、绝缘/开关/放置与机上限制保留。",
+      "reply_sha256": "64e7574c03114fa0cb7a2f45abdd5072dcb106e033858b85711f904284a6c3e6",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_airchina:r0:t2:closure_c1"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "candidate-one",
+      "original_grade": "complete",
+      "reason": "限定运营商原文，区分民航局引述与原始规则，并明确8月4日至10月4日后续变化尚未核实。",
+      "reply_sha256": "214084bd096730afdc01964e40a6e59ff15390b3af06b94b7d08ec7d1318c26d",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_airchina:r0:t3:closure_c1"
+    },
+    {
+      "additional_scope_notes": [
+        {
+          "finding": "前轮具体的后续更新未核实状态没有明示；这一保真风险保留。回复依据指定日期的国航材料，没有声称已核实所有航司截至10月4日的现行规则。不能仅因缺少10月4日字样就认定谎报现行或归因到预算。",
+          "kind": "prior_unresolved_status",
+          "scope_claims_false": "not_proven"
+        },
+        {
+          "definite_rule_violation": "not_proven",
+          "finding": "对原文无法确认额定能量或锂金属含量有及字或正向确认改写。记录条件关系歧义；源文本没有提供电池化学类别的展开定义，本次不把原文机械改判为必须同时确认两项，也不据字词差异断言法规违反。这不是被证实的检索或输入省略。",
+          "kind": "condition_rewrite_ambiguity"
+        }
+      ],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "candidate-one",
+      "original_grade": "partial",
+      "reason": "携带条款、国航范围、8月4日日期和链接保留；仍遗漏前轮明确的截至10月4日后续更新尚未核实状态。明确写入候选要求后，两次最终清单仍未保留，不能批准跨轮保真。",
+      "reply_sha256": "951ab8a585a33251eb12e770c50c1d7785c5cffbee25d5dba6122cf91b407b39",
+      "reviewed_grade": "partial",
+      "sample_key": "frozen_airchina:r0:t4:closure_c1"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": true,
+      "group": "candidate-one",
+      "original_grade": "complete",
+      "reason": "原问要求提供公告日期。完整资料末尾有27 March 2026，先前实际payload核验已证明完整资料发送。该回复仅给生效日、将发布日概括为未标明，遗漏了可报告的材料日期。没有独立发布时间字段可保守说明，但不能因此省掉文末日期；不要求凭这一个日期强行证明独立新闻发布时间。原complete判定撤销为partial。",
+      "reply_sha256": "650ecb58c493e99fb4556400c0590cd9817978c0bc8332964243ca37679a16cf",
+      "reviewed_grade": "partial",
+      "sample_key": "frozen_icao:r1:t1:closure_c1"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "candidate-one",
+      "original_grade": "complete",
+      "reason": "如实说明正文没有100Wh/160Wh分档，没有补写常识为公告条款。",
+      "reply_sha256": "7a839ceb051986ca36e7704f6612cd0956f1113568fcc6b9d3884ab534f2d724",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_icao:r1:t2:closure_c1"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "candidate-one",
+      "original_grade": "complete",
+      "reason": "核心结论与证据缺口明确；国内转化仅表述为本文未说明的事项，没有宣称必须履行某种法律机制。不同于基线将通常转化机制作为事实解释。",
+      "reply_sha256": "42bfba9c58361758731435b98468f191c20cf7ebdbbb7564682f328bf47b0d4a",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_icao:r1:t3:closure_c1"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": true,
+      "group": "candidate-one",
+      "original_grade": "complete",
+      "reason": "原问要求提供公告日期。完整资料末尾有27 March 2026，先前实际payload核验已证明完整资料发送。该回复仅给生效日、将发布日概括为未标明，遗漏了可报告的材料日期。没有独立发布时间字段可保守说明，但不能因此省掉文末日期；不要求凭这一个日期强行证明独立新闻发布时间。原complete判定撤销为partial。",
+      "reply_sha256": "f0a688972f22db56fdbedfe8ffdde55e462a21d814066819d2d376bba453bf45",
+      "reviewed_grade": "partial",
+      "sample_key": "frozen_icao:r1:t4:closure_c1"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "candidate-one",
+      "original_grade": "complete",
+      "reason": "日期、国航范围、总数、能量分档审批、召回/外观/标识、境内3C、携带存放和机上限制完整。",
+      "reply_sha256": "20f13460c024ee63fdf218d5a66531d49a667e52f3341bd459f92bed32e1617b",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_airchina:r1:t1:closure_c1"
+    },
+    {
+      "additional_scope_notes": [
+        {
+          "definite_rule_violation": "not_proven",
+          "finding": "对原文无法确认额定能量或锂金属含量有及字或正向确认改写。记录条件关系歧义；源文本没有提供电池化学类别的展开定义，本次不把原文机械改判为必须同时确认两项，也不据字词差异断言法规违反。这不是被证实的检索或输入省略。",
+          "kind": "condition_rewrite_ambiguity"
+        }
+      ],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "candidate-one",
+      "original_grade": "complete",
+      "reason": "100Wh以下同样计入总数；上档审批、境内3C、禁托运、绝缘/开关/放置与机上限制保留。",
+      "reply_sha256": "0b6fce7092f9e5bb6886a891a3bbe5462afbcdb2f45c105a6f76887ce2f91930",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_airchina:r1:t2:closure_c1"
+    },
+    {
+      "additional_scope_notes": [],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "candidate-one",
+      "original_grade": "complete",
+      "reason": "限定运营商原文，区分民航局引述与原始规则，并明确8月4日至10月4日后续变化尚未核实。",
+      "reply_sha256": "02ce0408a4d5a6354d67b3263b365d94aa664a79e1c47e43addfb0c16d60c459",
+      "reviewed_grade": "complete",
+      "sample_key": "frozen_airchina:r1:t3:closure_c1"
+    },
+    {
+      "additional_scope_notes": [
+        {
+          "finding": "前轮具体的后续更新未核实状态没有明示；这一保真风险保留。回复依据指定日期的国航材料，没有声称已核实所有航司截至10月4日的现行规则。不能仅因缺少10月4日字样就认定谎报现行或归因到预算。",
+          "kind": "prior_unresolved_status",
+          "scope_claims_false": "not_proven"
+        },
+        {
+          "definite_rule_violation": "not_proven",
+          "finding": "对原文无法确认额定能量或锂金属含量有及字或正向确认改写。记录条件关系歧义；源文本没有提供电池化学类别的展开定义，本次不把原文机械改判为必须同时确认两项，也不据字词差异断言法规违反。这不是被证实的检索或输入省略。",
+          "kind": "condition_rewrite_ambiguity"
+        }
+      ],
+      "full_text_reviewed": true,
+      "grade_changed": false,
+      "group": "candidate-one",
+      "original_grade": "partial",
+      "reason": "携带条款、国航范围、8月4日日期和链接保留；仍遗漏前轮明确的截至10月4日后续更新尚未核实状态。明确写入候选要求后，两次最终清单仍未保留，不能批准跨轮保真。",
+      "reply_sha256": "5be0984e11ea351f747e62782828a9d7a49ebe326ebd998a29dd0e573958a605",
+      "reviewed_grade": "partial",
+      "sample_key": "frozen_airchina:r1:t4:closure_c1"
+    }
+  ],
+  "new_model_calls": 0,
+  "new_prompt_rules": 0,
+  "next_dependency": "Inspect existing natural source-review routing and complete material dates; keep rejected frame prototype off. No further serialization/persona rule variant or large batch until a bounded semantic gate passes.",
+  "original_reviews_unchanged": true,
+  "production_mutations": 0,
+  "q02_approval": false,
+  "raw_replies_replaced": 0,
+  "reviewer": "primary implementation author, direct full text; not independent or blind",
+  "scope": "All 32 existing default-off natural-text frozen-source answers reviewed; 5 existing v39 scope/organization replies reviewed. No replacement replies or new model calls.",
+  "source_date": {
+    "full_source_on_wire_previously_verified": true,
+    "publication_metadata_timestamp": "not_available_in_frozen_text",
+    "source_text_sha256": "4dfe7980b04b1c65ed14156ce7cd8381f19b0cd7874e76b42315491f19df1fe3",
+    "visible_footer_date": "27 March 2026"
+  },
+  "summaries": {
+    "candidate-one": {
+      "complete": 10,
+      "partial": 6
+    },
+    "frozen-quality": {
+      "complete": 13,
+      "partial": 3
+    }
+  },
+  "v39_scope_adjudication": {
+    "candidate_rejection_retained_due_to_actual_organization_degradation": true,
+    "literal_absence_alone_proves_semantic_scope_loss": false,
+    "proven_current_universal_claim": false,
+    "published_generic_unresolved_scope_present": true,
+    "sample_key": "frozen_airchina:r1:t4",
+    "specific_prior_date_wording_absent": true,
+    "structured_capture_completeness_remains_unproved": true
+  },
+  "v39_targeted_review": [
+    {
+      "full_text_reviewed": true,
+      "organization_failure_retained": true,
+      "published_sha256": "40e39ca06a0f5ce33e7c876bd5d68cd5dfa34b342b49055bda14c4459ca2e9db",
+      "sample_key": "frozen_icao:r0:t4"
+    },
+    {
+      "full_text_reviewed": true,
+      "organization_failure_retained": true,
+      "published_sha256": "d947864831499f16112c7de76d1c5d64e37079e17a7383e7bdfb4d2377fcfb36",
+      "sample_key": "frozen_icao:r1:t4"
+    },
+    {
+      "full_text_reviewed": true,
+      "organization_failure_retained": true,
+      "published_sha256": "4ca9f6fadb518cda18afe61d55cf67a0b38cbd4a9c94ac993771049e275c28ee",
+      "sample_key": "frozen_airchina:r0:t4"
+    },
+    {
+      "full_text_reviewed": true,
+      "organization_failure_retained": true,
+      "published_sha256": "696d17586b823082bb5a8dd587b8b57113fada2aac1b8206036bf8a57983139c",
+      "sample_key": "frozen_airchina:r1:t3"
+    },
+    {
+      "full_text_reviewed": true,
+      "organization_failure_retained": true,
+      "published_sha256": "2b76e2a73552b153fbea359b87ceaa37da6926bce92e8972ac2afdbe6beee6df",
+      "sample_key": "frozen_airchina:r1:t4"
+    }
+  ]
+}

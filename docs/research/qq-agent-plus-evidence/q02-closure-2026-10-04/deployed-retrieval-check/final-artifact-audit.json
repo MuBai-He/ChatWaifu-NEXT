@@ -1,0 +1,16 @@
+{
+  "corrected_tls_health": true,
+  "current_checkout_check_optional": true,
+  "deployed_pdf_dependency_failure": true,
+  "existing_final_turn_drafts_reviewed": 4,
+  "new_answer_candidates": 0,
+  "new_model_calls": 0,
+  "production_mutations": 0,
+  "quality_approval": false,
+  "raw_replies_replaced": 0,
+  "reader_code_snapshots": 3,
+  "reader_http_attempts": "not_collected",
+  "reader_operations": 1,
+  "search_operations": 3,
+  "v39_manifest_entries_unchanged": 93
+}

@@ -1,0 +1,36 @@
+"""Read-only discovery control; SearXNG + Crawl4AI, no model calls/actions."""
+import asyncio,json,sys,time
+from pathlib import Path
+ROOT=Path('/tmp/cw2-q02-source-companion-v35-eval')
+sys.path[:0]=[str(ROOT/'services/runtime/src'),str(ROOT/'packages/protocol-python/src'),'/tmp/cw2-q02-eval-deps',str(ROOT)]
+from pydantic import SecretStr
+from chatwaifu_runtime.config.settings import PublicWebConfig
+from chatwaifu_runtime.runtime_skills.public_web import PublicWebReader
+from chatwaifu_runtime.runtime_skills.public_web_search import PublicWebSearch
+from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
+OUT=Path('/tmp/cw2-q02-closure-discovery-20261004');OUT.mkdir(mode=0o700,exist_ok=True)
+assert not (OUT/'target-read.json').exists()
+settings={}
+for line in Path('/home/mubai/.local/share/chatwaifu-server/config/public-web.env').read_text().splitlines():
+ if line.startswith('CHATWAIFU_PUBLIC_WEB__') and '=' in line:
+  name,value=line.split('=',1);settings[name]=value.strip().strip(chr(34)).strip(chr(39))
+token=settings.get('CHATWAIFU_PUBLIC_WEB__CRAWL4AI_API_TOKEN')
+config=PublicWebConfig(search_provider='searxng',reader_provider='crawl4ai',searxng_endpoint='http://127.0.0.1:18081',crawl4ai_endpoint='http://127.0.0.1:11236',crawl4ai_api_token=SecretStr(token) if token else None,timeout_seconds=30)
+reader=PublicWebReader(provider_config=config);search=PublicWebSearch(reader,provider_config=config)
+
+async def main():
+ index=json.loads((OUT/'index-read.json').read_text())
+ import re
+ matches=re.findall(r'\[关于加强充电宝、锂电池机上安全风险管控的提示\]\((https://[^)]+)\)',index['result']['text'])
+ assert len(matches)==1
+ url=matches[0]
+ args={'url':url,'focus':'充电宝','max_characters':6000,'max_links':20,'dns_resolver':'cloudflare','fresh':True}
+ before=time.monotonic();row={'arguments':args,'scope':'read of target actually linked by discovered airline index; no model, no Runtime receipt'}
+ try:row.update(ok=True,result=await reader.read(args))
+ except SkillExecutionError as e:row.update(ok=False,error_code=e.structured.code,retryable=e.structured.retryable)
+ row['latency_ms']=round((time.monotonic()-before)*1000)
+ text=json.dumps(row,ensure_ascii=False,indent=2)
+ assert not token or token not in text
+ (OUT/'target-read.json').write_text(text+'\n')
+ print(text)
+asyncio.run(main())

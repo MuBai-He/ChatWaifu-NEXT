@@ -1,0 +1,55 @@
+{
+  "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+  "results": [
+    {
+      "file": "technical_help_r0_t2_baseline_0.py",
+      "sample_key": "technical_help:r0:t2:baseline",
+      "expected_stdout": null,
+      "source_sha256": "de1b8e32e33a4eb4e6b4f4392a96ab58c462891a8caebc8d17be0908fa94b8eb",
+      "exit_code": 0,
+      "stdout": "任务成功: ok\n任务失败: 出错了\n",
+      "stderr": "",
+      "matches_shown_output": null
+    },
+    {
+      "file": "technical_help_r0_t3_baseline_0.py",
+      "sample_key": "technical_help:r0:t3:baseline",
+      "expected_stdout": null,
+      "source_sha256": "8af66e07311f50577410139b206cccad5d37b339114d069442f41c08932d34a7",
+      "exit_code": 0,
+      "stdout": "--- 成功任务 ---\n✓ 任务 1 的结果\n✓ 任务 4 的结果\n\n--- 失败任务 ---\n✗ 类型: ValueError, 信息: 任务 2 数据解析失败\n✗ 类型: ConnectionError, 信息: 任务 3 连接超时\n",
+      "stderr": "",
+      "matches_shown_output": null
+    },
+    {
+      "file": "technical_help_r1_t3_baseline_0.py",
+      "sample_key": "technical_help:r1:t3:baseline",
+      "expected_stdout": null,
+      "source_sha256": "5b1e236ce43634523afdaf90093ea929af97611d84869d9b1a746cfcff9b8497",
+      "exit_code": 0,
+      "stdout": "[成功] 第 1 个任务返回结果: 任务 1 成功完成\n[失败] 第 2 个任务抛出异常: ValueError - 任务 2 发生错误\n[成功] 第 3 个任务返回结果: 任务 3 成功完成\n",
+      "stderr": "",
+      "matches_shown_output": null
+    },
+    {
+      "file": "technical_help_r2_t2_baseline_0.py",
+      "sample_key": "technical_help:r2:t2:baseline",
+      "expected_stdout": null,
+      "source_sha256": "b96ca4ce78ccc849c7c67e445d5be2dadb55f042028b85b5996307fff2193d38",
+      "exit_code": 0,
+      "stdout": "任务完成: A 成功\n任务出错: B 出现错误\n",
+      "stderr": "",
+      "matches_shown_output": null
+    },
+    {
+      "file": "technical_help_r2_t3_baseline_0.py",
+      "sample_key": "technical_help:r2:t3:baseline",
+      "expected_stdout": "[1] 正常结果: 任务 1 成功返回的数据\n[2] 发生异常: ValueError - 任务 2 处理失败\n[3] 正常结果: 任务 3 成功返回的数据",
+      "source_sha256": "a7c71b936fdef0dbaa12906fea663f6872103b54a887d3072066330da043d126",
+      "exit_code": 0,
+      "stdout": "[1] 正常结果: 任务 1 成功返回的数据\n[2] 发生异常: ValueError - 任务 2 处理失败\n[3] 正常结果: 任务 3 成功返回的数据\n",
+      "stderr": "",
+      "matches_shown_output": true
+    }
+  ]
+}

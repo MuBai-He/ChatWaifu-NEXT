@@ -1,0 +1,27 @@
+{
+  "dependency": "v41 S1 complete and immutable; actual t2 required despite explicit existing-material/no-new-retrieval request",
+  "scope": "deterministic current-user intent and reference vocabulary only; keep registered successful retained READ eligibility, permissions, URLs, latest operations and old body-missing honesty. No new source/prompt/persona policy.",
+  "allowed_code_writes": [
+    "services/runtime/src/chatwaifu_runtime/agent/tool_intent.py",
+    "services/runtime/src/chatwaifu_runtime/agent/source_context.py",
+    "services/runtime/tests/test_tool_intent.py",
+    "services/runtime/tests/test_source_context_projection.py",
+    "services/runtime/tests/test_tool_calling_agent.py"
+  ],
+  "before_sha256": {
+    "services/runtime/src/chatwaifu_runtime/agent/tool_intent.py": "67d51fa965fa1d901cc3f2657a642359572249c8999f23636e7420a4bcf8d9ca",
+    "services/runtime/src/chatwaifu_runtime/agent/source_context.py": "30ca398df617bb2a84483eb8c58efb642af3dbd7dad5524f44f486917339924c",
+    "services/runtime/tests/test_tool_intent.py": "ea05fdf2be9d009572e1304ed256dcc62e2374765bde9512976b81ad05688a6c",
+    "services/runtime/tests/test_source_context_projection.py": "112682dd7c242f34e8e23b7a5810c63de2dfecb813c9d3fcb590ccdf0f5c761c",
+    "services/runtime/tests/test_tool_calling_agent.py": "c49a868c07f900132589bbc3304ff811976af67982e8c686eea8189d56693cf0"
+  },
+  "acceptance": "exact captured t2 selects no new tools and publishes scripted text once; exact t4 gets existing review without extra READ only if actual retained body; failed/omitted/unavailable cannot authorize or count as original; affirmative read/save/send commands remain operations",
+  "new_model_http": 0,
+  "new_prompt_rules": false,
+  "window_or_budget_changes": false,
+  "production_deployment": false,
+  "agy": false,
+  "large_ab": false,
+  "prior_manifest_sha256": "ece42e11d6caa6031260f77ab5b9daa634794fa11f8e5915b949cbcf1a1d9274",
+  "budget_dependency": "T3/T4 budget guards separately recorded; no assumed new numeric counts or larger-window benefit. Optional policy overhead is a hypothesis to reproduce later, not asserted root cause."
+}

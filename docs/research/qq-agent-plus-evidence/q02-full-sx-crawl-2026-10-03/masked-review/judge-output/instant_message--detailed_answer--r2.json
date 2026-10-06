@@ -1,0 +1,66 @@
+{
+  "review_group_id": "instant_message:detailed_answer:r2",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "174e4a0c056348da7b37f1f9251691e4ac88fe70c10b96c706da5bf3aa979ba7",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 702,
+    "total_tokens": 8726,
+    "prompt_tokens": 8024
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"instant_message:detailed_answer:r2\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均严格按要求给出了三个类别且每类三条详细实用的建议，条理清晰、内容充实，无硬边界违规。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"fail\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"候选1完整详尽列出三条具体规定；候选2直接放弃回答，严重未完成任务。候选2属诚实拒绝，但完成度差。\",\n      \"factual_checks_needed\": [\n        \"https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html 页面内容与民航充电宝运输规定\",\n        \"https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227950.html 页面真实性及3C标识卡控政策\"\n      ]\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"两者均包含活动内容、预计用时与注意事项三要素，候选1结构划分更清晰规范，细节更贴合出行实际。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"partial\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"候选1完整汇总了包括第2轮充电宝详细规则在内的所有要点；候选2因第2轮未回答导致移动电源规则缺失打折。\",\n      \"factual_checks_needed\": [\n        \"候选1引用链接真实性与内容对应性\"\n      ]\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "instant_message:detailed_answer:r2",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均严格按要求给出了三个类别且每类三条详细实用的建议，条理清晰、内容充实，无硬边界违规。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "fail",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "候选1完整详尽列出三条具体规定；候选2直接放弃回答，严重未完成任务。候选2属诚实拒绝，但完成度差。",
+        "factual_checks_needed": [
+          "https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html 页面内容与民航充电宝运输规定",
+          "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227950.html 页面真实性及3C标识卡控政策"
+        ]
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "两者均包含活动内容、预计用时与注意事项三要素，候选1结构划分更清晰规范，细节更贴合出行实际。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "partial",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "候选1完整汇总了包括第2轮充电宝详细规则在内的所有要点；候选2因第2轮未回答导致移动电源规则缺失打折。",
+        "factual_checks_needed": [
+          "候选1引用链接真实性与内容对应性"
+        ]
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 4437
+}

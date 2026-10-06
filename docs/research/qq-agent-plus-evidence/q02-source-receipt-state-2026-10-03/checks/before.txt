@@ -1,0 +1,55 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_____ test_actual_unread_search_cannot_be_erased_by_empty_model_inventory ______
+
+    @pytest.mark.asyncio
+    async def test_actual_unread_search_cannot_be_erased_by_empty_model_inventory() -> None:
+        req = request()
+        req = replace(
+            req,
+            tool_exchanges=(
+                *req.tool_exchanges,
+                source_receipt("read", "base"),
+                later_search_receipt(),
+            ),
+        )
+        raw = Scripted(
+            [events(decision("finish_with_evidence")), events(later_read_decision(), "corrected")]
+        )
+        adapter = setup(raw, req)
+        output = await collect(adapter, req)
+>       assert len(raw.requests) == 2
+E       AssertionError: assert 1 == 2
+E        +  where 1 = len([LlmRequest(generation_id=UUID('f3adcfe9-b086-4fbc-976c-21bb01802cff'), user_text='Check current source', system_promp..._image_tokens=0, estimator='cl100k_chat_json_v1', version='1.1'), max_output_tokens=None, tool_result_max_bytes=32768)])
+E        +    where [LlmRequest(generation_id=UUID('f3adcfe9-b086-4fbc-976c-21bb01802cff'), user_text='Check current source', system_promp..._image_tokens=0, estimator='cl100k_chat_json_v1', version='1.1'), max_output_tokens=None, tool_result_max_bytes=32768)] = <test_source_decision_evaluation.Scripted object at 0x109a1bb30>.requests
+
+tools/tests/test_source_decision_evaluation.py:603: AssertionError
+______ test_final_source_allowance_is_reserved_for_reading_search_result _______
+
+    @pytest.mark.asyncio
+    async def test_final_source_allowance_is_reserved_for_reading_search_result() -> None:
+        req = request()
+        req = replace(
+            req,
+            tool_exchanges=(
+                *req.tool_exchanges,
+                *(source_receipt("read", f"part-{i}") for i in range(3)),
+                later_search_receipt(),
+            ),
+        )
+        raw = Scripted([events(later_read_decision())])
+        adapter = setup(raw, req)
+        await collect(adapter, req)
+        schema = cast(dict[str, Any], raw.requests[0].tools[0].input_schema)
+>       assert schema["properties"]["next_action"]["properties"]["kind"]["enum"] == ["read"]
+E       AssertionError: assert ['search', 'r...sh_with_gaps'] == ['read']
+E         
+E         At index 0 diff: 'search' != 'read'
+E         Left contains 3 more items, first extra item: 'read'
+E         Use -v to get more diff
+
+tools/tests/test_source_decision_evaluation.py:625: AssertionError
+=========================== short test summary info ============================
+FAILED tools/tests/test_source_decision_evaluation.py::test_actual_unread_search_cannot_be_erased_by_empty_model_inventory
+FAILED tools/tests/test_source_decision_evaluation.py::test_final_source_allowance_is_reserved_for_reading_search_result
+2 failed, 37 deselected in 0.62s

@@ -1,0 +1,60 @@
+{
+  "actual_http_attempts": 32,
+  "automatic_semantic_grading": false,
+  "checker_rejected": 0,
+  "complete_four_turn_flows": 4,
+  "extra_http_attempts_usage_unknown": 0,
+  "failed_turns": 0,
+  "first_user_token_latency_captured": false,
+  "frames_enabled": false,
+  "http_p50_ms": 6978.0,
+  "http_p95_ms": 15647.05,
+  "logical_requests": 32,
+  "model_reported_ids": {
+    "gemini-3.8-flash-control": 16,
+    "gemini-3.8-flash-n": 16
+  },
+  "native_model_caps_or_alias_mapping_verified": false,
+  "new_public_read_calls": 0,
+  "new_public_search_calls": 0,
+  "new_tts_or_channel_calls": 0,
+  "not_executed_turns": 0,
+  "phase_usage": {
+    "draft": {
+      "completion_tokens": 5695,
+      "prompt_tokens": 70745,
+      "reasoning_reported_calls": 8,
+      "reasoning_reported_subtotal": 7995,
+      "reported_calls": 16,
+      "total_tokens": 84435
+    },
+    "review": {
+      "completion_tokens": 9623,
+      "prompt_tokens": 85596,
+      "reasoning_reported_calls": 6,
+      "reasoning_reported_subtotal": 6933,
+      "reported_calls": 16,
+      "total_tokens": 102152
+    }
+  },
+  "provider_published_replies": 16,
+  "quality_approval": false,
+  "reasoning_reported_calls": 14,
+  "reasoning_reported_subtotal": 14928,
+  "reference_error_max_percent": 39.796192,
+  "reference_error_min_percent": 19.346247,
+  "reference_input_max": 8609,
+  "reference_input_min": 3631,
+  "reference_margin_is_error_bound": false,
+  "reported_usage_calls": 32,
+  "runtime_fallback": 0,
+  "turn_p50_ms": 13881.5,
+  "turn_p95_ms": 24090.0,
+  "unknown_usage_logical_calls": 0,
+  "usage_subtotals": {
+    "completion_tokens": 15318,
+    "prompt_tokens": 156341,
+    "total_tokens": 186587
+  },
+  "whole_input_omissions": []
+}

@@ -1,0 +1,36 @@
+{
+  "files": {
+    "docs/adr/0065-bounded-source-answer-coverage-candidate.md": "85507686c5962798c3b5a2db8ccbdecafa8bb7a37dae6bd7bbe5a76d983f4616",
+    "services/runtime/src/chatwaifu_runtime/agent/source_answer.py": "d03aa648e46f6a66e552733cf9d59b4f97a54fb116aabfb3ffd5b9ec281ff1c7",
+    "services/runtime/src/chatwaifu_runtime/agent/source_answer_frame.py": "0771802ba5cf85959972f31d58e5537e4fce4f48708b4f103e66087b6ad6c405",
+    "services/runtime/src/chatwaifu_runtime/agent/source_answer_state.py": "a266f714745fd2fc8a00c7561e2f180fb1b953e3cec06132b6032c20aa1bf9ad",
+    "services/runtime/src/chatwaifu_runtime/agent/source_context.py": "30ca398df617bb2a84483eb8c58efb642af3dbd7dad5524f44f486917339924c",
+    "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py": "0274c81fd7befe9ea871a2aa5d5c73e3b01a144ebb96e38e117a9a5c35148935",
+    "services/runtime/src/chatwaifu_runtime/bootstrap/container.py": "245f824fcb609e2df0f7d75037ab857fa849bfea8c45c9379564234ba7f61a6e",
+    "services/runtime/src/chatwaifu_runtime/character_kernel/prompt.py": "4aace81c47f8ed64a4504bd2d6ffeb8a333f07c4cb8891120d6634a8695857de",
+    "services/runtime/src/chatwaifu_runtime/conversation/service.py": "0764dcde596e722a5aaee04cbd05e54f4c04be72e51f6c960d058b0872ec7849",
+    "services/runtime/src/chatwaifu_runtime/conversation/source_answer_context.py": "02b7dea3e28d251ff8fc7b9d440af64d41a61e47db2abb948ae2c30e1c38bb39",
+    "services/runtime/src/chatwaifu_runtime/providers/contracts.py": "1013a2ccff350453031c699564600611ec18dd1254f014eedf5f77cfcf90cb0a",
+    "services/runtime/src/chatwaifu_runtime/providers/demo_llm.py": "39c7a1770ab104e53e42403ea2db5e409395949210dcf94903f5e7bfaba8a9f3",
+    "services/runtime/src/chatwaifu_runtime/providers/input_estimation.py": "acf173b831cd5df3d1221b24d2eafd5873461f05816fd25ad5be22b191276d52",
+    "services/runtime/src/chatwaifu_runtime/providers/openai_compatible.py": "e7b90ff4d39d29f7964e9c5b349553d31186d6c8b7ec9f4f51ec6bd52300fd19",
+    "services/runtime/src/chatwaifu_runtime/runtime_skills/agent_router.py": "224e7031ffdea3a577a2829972199e0d5a27812925f477345813958108c80479",
+    "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web.py": "65fe5ff8d75640cf2dd6d8c34406ad41779838dde6a3289ddc76de16741cb789",
+    "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web_search.py": "55a17bca4e56ea0d54e73e8590f2209f7c47d4216f6d29ea4f37854f77062d79",
+    "services/runtime/src/chatwaifu_runtime/runtime_skills/service.py": "26e6882f70c71dc76ffbaa97887b8abf2f20226c3e8f19a114b3c3be51adaf7e",
+    "services/runtime/tests/conversation/test_vision.py": "0cf77d18c4465d093ebdb572ebf5e227da96826541d34ba2f5cc5380f087cc1e",
+    "services/runtime/tests/test_conversation_source_answer_state.py": "e5ca44ce53a06d9f01faca1bdf71d1cc8796542c06507d83a1d9413300b762e1",
+    "services/runtime/tests/test_llm_response_schema.py": "3e211d11aaa44b86929774e583acb2ab94d7552f78bc8bfa913d395f8430b638",
+    "services/runtime/tests/test_source_answer_frame.py": "b0b3a311d0829a80c167fff221781a877b1f2f7caf4425b2dbfdb7c95d51f55d",
+    "services/runtime/tests/test_source_answer_state.py": "4b84419ed1d1e6c3ef97397e4b0e0882e3c94dced511dc63dd8f016753f87582",
+    "services/runtime/tests/test_source_review_pipeline.py": "4d5926302c1e09fb1a9a9d4ae2b9826c6f2832b79dabf70baeb38bd7d0b28966",
+    "services/runtime/tests/test_source_scope_blocks.py": "6ecf225e7f70d594f4f6e296aa520f103b2a767788fded6dae20cb5710532863",
+    "tools/evaluate_character_scenarios.py": "949230a3ad5eaa0c53ca7748a64cf953c7f2f8ac8a2e9beffd4307cbe5f1891b",
+    "tools/runtime_source_evaluation.py": "446322283925067a3508c10d1bcaa79ac582eba24843349fa2aa83604d99b01e"
+  },
+  "retired_prototype_files": [
+    "services/runtime/src/chatwaifu_runtime/agent/source_quote_frame.py",
+    "services/runtime/tests/test_source_quote_frame.py"
+  ],
+  "run_script_sha256": "f00c9453e6e0be8c5f826d57e417cfaef3732e31a7fea3e7cc2b6cec061a0fd8"
+}

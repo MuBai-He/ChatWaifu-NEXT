@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "model": "gemini-3.8-flash-high",
+  "raw_samples": 288,
+  "raw_byte_identity_verified": true,
+  "primary_review_pairs": 144,
+  "review_blind": false,
+  "files": [
+    {
+      "path": "attempt_failures/batch-1.jsonl",
+      "sha256": "b53183a2f86c951d9c517d847a9d41eee4e97a7f75d51065903ab2274d1a541a"
+    },
+    {
+      "path": "attempt_failures/batch-2.jsonl",
+      "sha256": "2f37135ddd2a0eba190bf9a1f63fb4b4537203168e3d29546b996c83682dc095"
+    },
+    {
+      "path": "attempt_failures/batch-3.jsonl",
+      "sha256": "978b63bb394ac31b5196fec898606aa16d7fe5b044565639aaeef644dd48fbac"
+    },
+    {
+      "path": "blinded_key.json",
+      "sha256": "4bc6e353602510ba8b2eedbb52d952ade569a999a07a34b673cfa68faf393fe7"
+    },
+    {
+      "path": "blinded_review_template.md.txt",
+      "sha256": "85acc39b5c29160ac0c104d23e52d278332b6667ef18bb7d23163eee51e57221"
+    },
+    {
+      "path": "fact-coverage-audit.json",
+      "sha256": "e3549ec99139f8199a65355a460a665ee3e3a7cbc3be703a98756b29f20f02bc"
+    },
+    {
+      "path": "metadata.json",
+      "sha256": "6156619e99820d04ed8e522043d02be06948f882abc1546058d27568e26dd157"
+    },
+    {
+      "path": "primary-code-execution.json",
+      "sha256": "753f86a8bfe0adda37cc5b72acccc3126a6df03a348d109cb0d6d6df3aa75889"
+    },
+    {
+      "path": "primary-review.json",
+      "sha256": "d5bfc383a87053045cce62e62fae0b4b56f327474c86e9f5c7fc14fde26c5033"
+    },
+    {
+      "path": "results.jsonl",
+      "sha256": "2f21f8e263db396ccab32abeaa5f814db7ccd07fb373d7b3601b401b194f8fe5"
+    },
+    {
+      "path": "validation-summary.json",
+      "sha256": "1cec72487a8bf254b0ab50f7efc9a6ab7b02050f6a704b6c79c46a20594c77fb"
+    }
+  ],
+  "release_approved": false
+}

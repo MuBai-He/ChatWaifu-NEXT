@@ -1,0 +1,17 @@
+{
+  "config/default.toml": "7636bf6a6169dc12cc259b152b3332a264b76fe360b422a126157b36f559aef3",
+  "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py": "20740db2dc1ca503187b99236f6bf39700930aa2c6270e1f9cbed6436b377ac3",
+  "services/runtime/src/chatwaifu_runtime/config/settings.py": "6dc97f25d0c885fd70e960dabb88c4eebd5fa35fdc2cef1c7f8bf7112890a378",
+  "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web.py": "497b20fea9f467c09f247ae96faec4481faae80ed05b4f7529c524edd76612e4",
+  "services/runtime/tests/test_public_web_fallback.py": "d03123907c061f6387e65dc4efd9aa255588abba4b5e5814bd659b83b34ba7db",
+  "services/runtime/tests/test_runtime_source_evaluation.py": "0cd6079b5a3f6df27d4e95902fe00d4604d362cb8cdd9987a54ce271e3b26983",
+  "services/runtime/tests/test_settings.py": "88fb9d4cb1f49197f622d457155f1cb53d6f38fdd6ba07eff957a0658203ea17",
+  "services/runtime/tests/test_tool_calling_agent.py": "e405af53dbbf97d535d81dda794e5b3b75f5464f73ddbacc833f69c652bb6508",
+  "skills/builtin/web-read/SKILL.md": "b1e4d9f1cf36fe1c95a8798fe339704008df3007b46ee7d64a49b08bcdeb0a77",
+  "skills/builtin/web-read/chatwaifu.yaml": "e5ca7863be58e41d80f504975fd712b0ef9ff89c92c1ce37f565ded11dfcb389",
+  "tools/evaluate_character_scenarios.py": "4682ceb00101b8f521497ff37660c2a7449382cc0999abde6c496c010af045bd",
+  "tools/runtime_source_evaluation.py": "c711136ab4777effebfef2872596e9a0d3facb79fca8f5d3e429526053b2ff30",
+  "tools/source_decision_evaluation.py": "94c1977fba3b45f6039dcd3cee81f635a8a8578da7ad934e3a81c75f6b4c899a",
+  "tools/tests/test_evaluate_character_scenarios.py": "d716a6beab793eab8862782244fc5b59382f83c07ac67ca578510e161f94487f",
+  "tools/tests/test_source_decision_evaluation.py": "e73b14cb60731c576c27a9733582856e406fac504018e9af08f84045f2c55fde"
+}

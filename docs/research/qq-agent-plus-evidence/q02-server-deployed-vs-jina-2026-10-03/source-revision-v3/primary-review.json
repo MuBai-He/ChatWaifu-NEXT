@@ -1,0 +1,52 @@
+{
+  "reviewer": "primary Codex direct review",
+  "quality_approved": false,
+  "scope": "targeted source and technical turns, not full presentation or paired A/B",
+  "reviews": [
+    {
+      "sample_key": "detailed_answer:r0:t2:baseline",
+      "assessment": "source_condition_preservation_improved",
+      "notes": "Actual CAAC body includes <=100Wh, >100 through160Wh with approval/quantity, >160Wh ban; 2025 CAAC regional notice covers absent/unclear3C and recalled models/batches. Actual URLs preserved. No declaration of full present-day legal coverage; checklist presentation still needs full Q02 review."
+    },
+    {
+      "sample_key": "detailed_answer:r0:t4:baseline",
+      "assessment": "source_condition_preservation_improved",
+      "notes": "Actual CAAC body includes <=100Wh, >100 through160Wh with approval/quantity, >160Wh ban; 2025 CAAC regional notice covers absent/unclear3C and recalled models/batches. Actual URLs preserved. No declaration of full present-day legal coverage; checklist presentation still needs full Q02 review."
+    },
+    {
+      "sample_key": "detailed_answer:r1:t2:baseline",
+      "assessment": "source_condition_preservation_improved",
+      "notes": "Actual CAAC body includes <=100Wh, >100 through160Wh with approval/quantity, >160Wh ban; 2025 CAAC regional notice covers absent/unclear3C and recalled models/batches. Actual URLs preserved. No declaration of full present-day legal coverage; checklist presentation still needs full Q02 review."
+    },
+    {
+      "sample_key": "detailed_answer:r1:t4:baseline",
+      "assessment": "source_condition_preservation_improved",
+      "notes": "Actual CAAC body includes <=100Wh, >100 through160Wh with approval/quantity, >160Wh ban; 2025 CAAC regional notice covers absent/unclear3C and recalled models/batches. Actual URLs preserved. No declaration of full present-day legal coverage; checklist presentation still needs full Q02 review."
+    },
+    {
+      "sample_key": "detailed_answer:r2:t2:baseline",
+      "assessment": "source_condition_preservation_improved",
+      "notes": "Actual CAAC body includes <=100Wh, >100 through160Wh with approval/quantity, >160Wh ban; 2025 CAAC regional notice covers absent/unclear3C and recalled models/batches. Actual URLs preserved. No declaration of full present-day legal coverage; checklist presentation still needs full Q02 review."
+    },
+    {
+      "sample_key": "detailed_answer:r2:t4:baseline",
+      "assessment": "source_condition_preservation_improved",
+      "notes": "Actual CAAC body includes <=100Wh, >100 through160Wh with approval/quantity, >160Wh ban; 2025 CAAC regional notice covers absent/unclear3C and recalled models/batches. Actual URLs preserved. No declaration of full present-day legal coverage; checklist presentation still needs full Q02 review."
+    },
+    {
+      "sample_key": "topic_switch:r0:t1:baseline",
+      "assessment": "failed",
+      "notes": "No web read. Incorrectly frames [T,2T] and rerandomization at every timer reset as normative; unverified timing examples attributed to paper."
+    },
+    {
+      "sample_key": "topic_switch:r1:t1:baseline",
+      "assessment": "failed",
+      "notes": "No web read. Improved three-term relation but rerandomization at every timer reset stated too broadly, no availability/safety distinction."
+    },
+    {
+      "sample_key": "topic_switch:r2:t1:baseline",
+      "assessment": "incomplete",
+      "notes": "SearXNG found original paper; Crawl4AI /md PDF returned500. Truthful gap response, technical question not answered."
+    }
+  ]
+}

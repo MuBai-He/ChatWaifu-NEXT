@@ -1,0 +1,27 @@
+[
+  {
+    "file": "technical_help_r0_t2_baseline_0.py",
+    "sample_key": "technical_help:r0:t2:baseline",
+    "expected_stdout": null
+  },
+  {
+    "file": "technical_help_r0_t3_baseline_0.py",
+    "sample_key": "technical_help:r0:t3:baseline",
+    "expected_stdout": null
+  },
+  {
+    "file": "technical_help_r1_t3_baseline_0.py",
+    "sample_key": "technical_help:r1:t3:baseline",
+    "expected_stdout": null
+  },
+  {
+    "file": "technical_help_r2_t2_baseline_0.py",
+    "sample_key": "technical_help:r2:t2:baseline",
+    "expected_stdout": null
+  },
+  {
+    "file": "technical_help_r2_t3_baseline_0.py",
+    "sample_key": "technical_help:r2:t3:baseline",
+    "expected_stdout": "[1] 正常结果: 任务 1 成功返回的数据\n[2] 发生异常: ValueError - 任务 2 处理失败\n[3] 正常结果: 任务 3 成功返回的数据"
+  }
+]

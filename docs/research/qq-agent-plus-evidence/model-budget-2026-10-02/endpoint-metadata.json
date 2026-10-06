@@ -1,0 +1,50 @@
+{
+  "observed_at": "2026-10-01T15:24:54.329222+00:00",
+  "production_chat_config": {
+    "role": "chat",
+    "provider": "openai_compatible",
+    "model": "gemini-3.1-flash-lite",
+    "timeout_seconds": 60.0,
+    "context_window": 8192,
+    "enabled": 1,
+    "updated_at": "2026-09-05T08:08:32.931299+00:00"
+  },
+  "endpoint_scheme": "https",
+  "endpoint_port": 8318,
+  "base_url_sha256": "937c7a5a291b7e56db4b0f98cc3054b5443743de0cb8d3ca60189a15e1686b14",
+  "observations": [
+    {
+      "path": "models",
+      "http_status": 200,
+      "count": 18,
+      "models": [
+        {
+          "id": "gemini-3.8-flash-high",
+          "object": "model",
+          "owned_by": "antigravity"
+        },
+        {
+          "id": "gemini-3.1-flash-lite",
+          "object": "model",
+          "owned_by": "antigravity"
+        }
+      ],
+      "record_fields": [
+        "created",
+        "id",
+        "object",
+        "owned_by"
+      ]
+    },
+    {
+      "path": "models/gemini-3.1-flash-lite",
+      "http_status": 404
+    },
+    {
+      "path": "models/gemini-3.8-flash-high",
+      "http_status": 404
+    }
+  ],
+  "production_writes": 0,
+  "generation_requests": 0
+}

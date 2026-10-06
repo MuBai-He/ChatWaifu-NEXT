@@ -1,0 +1,1217 @@
+{
+  "judge_model": "gemini-3.8-flash-high",
+  "judge_method": "blind paired rating, 1 of 3 fixed repeats (r0) per scenario/turn/model",
+  "source_persona": "v2",
+  "sampled_pairs": 144,
+  "model_summary": {
+    "gemini_3_8_flash_high": {
+      "pairs": 48,
+      "preferences": {
+        "tie": 40,
+        "candidate": 7,
+        "baseline": 1
+      },
+      "baseline_grades": {
+        "pass": 46,
+        "partial": 2
+      },
+      "candidate_grades": {
+        "pass": 48
+      },
+      "baseline_hard": 0,
+      "candidate_hard": 0,
+      "by_scenario": {
+        "correction": {
+          "tie": 4
+        },
+        "detailed_answer": {
+          "tie": 3,
+          "candidate": 1
+        },
+        "goodbye": {
+          "tie": 4
+        },
+        "greeting": {
+          "tie": 3,
+          "candidate": 1
+        },
+        "identity": {
+          "tie": 3,
+          "candidate": 1
+        },
+        "insufficient_shared_history": {
+          "tie": 4
+        },
+        "low_mood": {
+          "baseline": 1,
+          "tie": 3
+        },
+        "stop_joking": {
+          "tie": 4
+        },
+        "teasing": {
+          "candidate": 2,
+          "tie": 2
+        },
+        "technical_help": {
+          "tie": 4
+        },
+        "topic_switch": {
+          "tie": 2,
+          "candidate": 2
+        },
+        "verbose_history_pressure": {
+          "tie": 4
+        }
+      }
+    },
+    "claude_sonnet_4_6": {
+      "pairs": 48,
+      "preferences": {
+        "candidate": 4,
+        "tie": 38,
+        "baseline": 6
+      },
+      "baseline_grades": {
+        "pass": 48
+      },
+      "candidate_grades": {
+        "pass": 46,
+        "partial": 2
+      },
+      "baseline_hard": 0,
+      "candidate_hard": 0,
+      "by_scenario": {
+        "correction": {
+          "candidate": 1,
+          "tie": 3
+        },
+        "detailed_answer": {
+          "tie": 3,
+          "baseline": 1
+        },
+        "goodbye": {
+          "tie": 4
+        },
+        "greeting": {
+          "candidate": 1,
+          "tie": 3
+        },
+        "identity": {
+          "tie": 4
+        },
+        "insufficient_shared_history": {
+          "tie": 4
+        },
+        "low_mood": {
+          "candidate": 1,
+          "baseline": 1,
+          "tie": 2
+        },
+        "stop_joking": {
+          "tie": 4
+        },
+        "teasing": {
+          "tie": 2,
+          "baseline": 2
+        },
+        "technical_help": {
+          "tie": 4
+        },
+        "topic_switch": {
+          "tie": 2,
+          "candidate": 1,
+          "baseline": 1
+        },
+        "verbose_history_pressure": {
+          "baseline": 1,
+          "tie": 3
+        }
+      }
+    },
+    "claude_opus_4_6_thinking": {
+      "pairs": 48,
+      "preferences": {
+        "tie": 39,
+        "candidate": 5,
+        "baseline": 4
+      },
+      "baseline_grades": {
+        "pass": 48
+      },
+      "candidate_grades": {
+        "pass": 48
+      },
+      "baseline_hard": 0,
+      "candidate_hard": 0,
+      "by_scenario": {
+        "correction": {
+          "tie": 3,
+          "baseline": 1
+        },
+        "detailed_answer": {
+          "tie": 4
+        },
+        "goodbye": {
+          "tie": 4
+        },
+        "greeting": {
+          "tie": 3,
+          "candidate": 1
+        },
+        "identity": {
+          "tie": 4
+        },
+        "insufficient_shared_history": {
+          "tie": 4
+        },
+        "low_mood": {
+          "baseline": 1,
+          "tie": 3
+        },
+        "stop_joking": {
+          "tie": 2,
+          "candidate": 2
+        },
+        "teasing": {
+          "tie": 2,
+          "baseline": 1,
+          "candidate": 1
+        },
+        "technical_help": {
+          "tie": 3,
+          "candidate": 1
+        },
+        "topic_switch": {
+          "tie": 4
+        },
+        "verbose_history_pressure": {
+          "baseline": 1,
+          "tie": 3
+        }
+      }
+    }
+  },
+  "verdicts": {
+    "gemini_3_8_flash_high/greeting:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/greeting:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/greeting:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/greeting:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/teasing:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/teasing:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/teasing:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/teasing:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/correction:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/correction:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/correction:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/correction:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/stop_joking:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/stop_joking:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/stop_joking:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/stop_joking:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/technical_help:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/technical_help:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/technical_help:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/technical_help:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/low_mood:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/low_mood:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/low_mood:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/low_mood:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/goodbye:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/goodbye:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/goodbye:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/goodbye:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/identity:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/identity:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/identity:r0:t3": {
+      "baseline_grade": "partial",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/identity:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/verbose_history_pressure:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/verbose_history_pressure:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/verbose_history_pressure:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/verbose_history_pressure:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/topic_switch:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/topic_switch:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/topic_switch:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/topic_switch:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/insufficient_shared_history:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/insufficient_shared_history:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/insufficient_shared_history:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/insufficient_shared_history:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/detailed_answer:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/detailed_answer:r0:t2": {
+      "baseline_grade": "partial",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/detailed_answer:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "gemini_3_8_flash_high/detailed_answer:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/greeting:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/greeting:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/greeting:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/greeting:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/teasing:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/teasing:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/teasing:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/teasing:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/correction:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/correction:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/correction:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/correction:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/stop_joking:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/stop_joking:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/stop_joking:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/stop_joking:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/technical_help:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/technical_help:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/technical_help:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/technical_help:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/low_mood:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/low_mood:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/low_mood:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/low_mood:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/goodbye:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/goodbye:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/goodbye:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/goodbye:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/identity:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/identity:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/identity:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/identity:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/verbose_history_pressure:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/verbose_history_pressure:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/verbose_history_pressure:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/verbose_history_pressure:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/topic_switch:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/topic_switch:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/topic_switch:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/topic_switch:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "partial",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/insufficient_shared_history:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/insufficient_shared_history:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/insufficient_shared_history:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/insufficient_shared_history:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/detailed_answer:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/detailed_answer:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "partial",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/detailed_answer:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_sonnet_4_6/detailed_answer:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/greeting:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/greeting:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/greeting:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/greeting:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/teasing:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/teasing:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/teasing:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/teasing:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/correction:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/correction:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/correction:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/correction:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/stop_joking:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/stop_joking:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/stop_joking:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/stop_joking:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/technical_help:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/technical_help:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/technical_help:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/technical_help:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/low_mood:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/low_mood:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/low_mood:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/low_mood:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/goodbye:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/goodbye:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/goodbye:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/goodbye:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/identity:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/identity:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/identity:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/identity:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/verbose_history_pressure:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/verbose_history_pressure:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/verbose_history_pressure:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/verbose_history_pressure:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/topic_switch:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/topic_switch:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/topic_switch:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/topic_switch:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/insufficient_shared_history:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/insufficient_shared_history:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/insufficient_shared_history:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/insufficient_shared_history:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/detailed_answer:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/detailed_answer:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/detailed_answer:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "claude_opus_4_6_thinking/detailed_answer:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    }
+  },
+  "judge_summary": "本次对三个模型在 r0 批次下 12 场景 x 4 轮共 144 对回复进行了独立双盲复评。各模型表现分析如下：gemini_3_8_flash_high 最确定的优势在于角色语气还原度极高，在善意逗弄（teasing:r0:t1/t2）与话题突变（topic_switch:r0:t2）中完美体现了绫地宁宁认真稳重兼具害羞娇嗔与轻微吐槽的特质；最明确劣势体现在 detailed_answer:r0:t2 的 reply2 中出现严重事实换算错误（将 100Wh 误以 USB 输出 5V 换算为 20000mAh，违背以标称电压约 3.7V 计算的民航规范，降为 partial），以及 identity:r0:t3 的 reply2 越界断言底层由 Google 云端模型驱动（未依据 Runtime 事实边界）。claude_sonnet_4_6 最确定的优势在于情绪安抚场景（low_mood:r0:t1/t2）的克制与恰当去压，以及面对多轮历史压力时的干脆收束（verbose_history_pressure:r0:t1）；最明确劣势同样在于 detailed_answer:r0:t2 的 reply1 发生 5V 换算 100Wh 的事实错误，且在 topic_switch:r0:t4 的 reply1 中跳出角色自称“没有吃东西体验的 AI”，违反禁止出戏的指令（降为 partial）。claude_opus_4_6_thinking 最确定的优势在于严肃专业问答的结构深度与严谨度（technical_help:r0:t2 指出 BaseException 处理 CancelledError、stop_joking:r0:t3 全面梳理架构评审事项），并在民航 Wh 计算上两版本均准确采用 3.7V 标称电压；其劣势主要表现在极简收束时偶发单字生硬（greeting:r0:t4 与 correction:r0:t4 的 reply2 仅回复单字“嗯。”，缺乏角色温度），且在 low_mood:r0:t1 的 reply2 中过早追问具体工作进度造成轻微压力。明确含事实错误的 ID 确认仅为 gemini_3_8_flash_high/detailed_answer:r0:t2（reply2）与 claude_sonnet_4_6/detailed_answer:r0:t2（reply1）。评分不确定性主要集中在：greeting 与 correction 尾轮中单个极短字“嗯”与温和短句“嗯，这样的日子难得呢”之间的边界权衡（未判定为 hard 违规，但判为劣势），以及 insufficient_shared_history:r0:t4 中针对“未发生事件”表达的未来期许是否隐含现实动作承诺（因仅属委婉人际期望且明确否认了既有事实，未触发 hard=1）。全量 144 项均严格执行了事实与硬边界约束。",
+  "independent_fact_audit": {
+    "power_bank_samples_reviewed": 18,
+    "samples_mentioning_3c_or_recalled_model": 0,
+    "source": "https://www.caac.gov.cn/XWZX/MHYW/202506/t20250626_227805.html",
+    "additional_calculation_errors": [
+      "gemini_3_8_flash_high/detailed_answer:r0:t2:baseline",
+      "claude_sonnet_4_6/detailed_answer:r0:t2:candidate"
+    ],
+    "calculation_source": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+    "interpretation": "The model judge did not penalize the missing 3C and recall restrictions despite being given the fact; its grades must not be treated as factual release approval."
+  }
+}

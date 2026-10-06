@@ -1,0 +1,38 @@
+[
+  {
+    "variant": "fresh_answer",
+    "requests": 6,
+    "http_statuses": [
+      200
+    ],
+    "prompt_tokens": 69818,
+    "completion_tokens": 7153,
+    "provider_total_tokens": 76971,
+    "latency_ms": [
+      4906,
+      5224,
+      7307,
+      7435,
+      7603,
+      8625
+    ]
+  },
+  {
+    "variant": "evidence_review",
+    "requests": 6,
+    "http_statuses": [
+      200
+    ],
+    "prompt_tokens": 74522,
+    "completion_tokens": 4893,
+    "provider_total_tokens": 79415,
+    "latency_ms": [
+      3787,
+      4073,
+      4078,
+      5200,
+      5232,
+      7584
+    ]
+  }
+]

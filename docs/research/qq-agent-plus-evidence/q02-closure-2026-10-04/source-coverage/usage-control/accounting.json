@@ -1,0 +1,49 @@
+{
+  "http_attempts": 2,
+  "intrinsic_model_alias_mapping_verified": false,
+  "max_model_context_or_output_limit_proven": false,
+  "original_batch_usage_backfilled": false,
+  "reasoning_reported_calls": 1,
+  "reasoning_unknown_calls": 1,
+  "reported_reasoning_tokens_subtotal": 1751,
+  "reported_usage_calls": 2,
+  "rows": [
+    {
+      "done_received": true,
+      "elapsed_ms": 6992,
+      "error_type": null,
+      "quality_result_replaced": false,
+      "reference_error_percent": 28.521469,
+      "reference_input_tokens": 6615,
+      "sample_key": "frozen_icao:r1:t4",
+      "status": 200,
+      "usage": {
+        "completion_tokens": 293,
+        "prompt_tokens": 5147,
+        "reasoning_tokens": 1751,
+        "total_tokens": 7191
+      }
+    },
+    {
+      "done_received": true,
+      "elapsed_ms": 4878,
+      "error_type": null,
+      "quality_result_replaced": false,
+      "reference_error_percent": 45.447743,
+      "reference_input_tokens": 5831,
+      "sample_key": "frozen_airchina:r1:t4",
+      "status": 200,
+      "usage": {
+        "completion_tokens": 356,
+        "prompt_tokens": 4009,
+        "reasoning_tokens": null,
+        "total_tokens": 4365
+      }
+    }
+  ],
+  "supplier_completion_tokens": 649,
+  "supplier_prompt_tokens": 9156,
+  "supplier_total_tokens": 11556,
+  "token_estimator_native_or_upper_bound": false,
+  "unknown_usage_calls": 0
+}

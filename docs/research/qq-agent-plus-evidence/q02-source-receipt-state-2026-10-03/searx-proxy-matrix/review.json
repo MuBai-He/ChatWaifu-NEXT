@@ -1,0 +1,188 @@
+{
+  "scope": "3 actual queries x 6 engines x 1 repeat; direct service controls, no model or Runtime permission flow",
+  "quality_approved": false,
+  "engines": {
+    "bing": [
+      {
+        "query_index": 0,
+        "count": 10,
+        "http_status": 200,
+        "errors": [],
+        "latency_ms": 655
+      },
+      {
+        "query_index": 1,
+        "count": 10,
+        "http_status": 200,
+        "errors": [],
+        "latency_ms": 3586
+      },
+      {
+        "query_index": 2,
+        "count": 10,
+        "http_status": 200,
+        "errors": [],
+        "latency_ms": 1224
+      }
+    ],
+    "google": [
+      {
+        "query_index": 0,
+        "count": 0,
+        "http_status": 200,
+        "errors": [
+          [
+            "google",
+            "access denied"
+          ]
+        ],
+        "latency_ms": 910
+      },
+      {
+        "query_index": 1,
+        "count": 0,
+        "http_status": 200,
+        "errors": [
+          [
+            "google",
+            "Suspended: access denied"
+          ]
+        ],
+        "latency_ms": 4
+      },
+      {
+        "query_index": 2,
+        "count": 0,
+        "http_status": 200,
+        "errors": [
+          [
+            "google",
+            "Suspended: access denied"
+          ]
+        ],
+        "latency_ms": 4
+      }
+    ],
+    "brave": [
+      {
+        "query_index": 0,
+        "count": 0,
+        "http_status": 200,
+        "errors": [
+          [
+            "brave",
+            "too many requests"
+          ]
+        ],
+        "latency_ms": 796
+      },
+      {
+        "query_index": 1,
+        "count": 0,
+        "http_status": 200,
+        "errors": [
+          [
+            "brave",
+            "Suspended: too many requests"
+          ]
+        ],
+        "latency_ms": 4
+      },
+      {
+        "query_index": 2,
+        "count": 0,
+        "http_status": 200,
+        "errors": [
+          [
+            "brave",
+            "Suspended: too many requests"
+          ]
+        ],
+        "latency_ms": 3
+      }
+    ],
+    "duckduckgo": [
+      {
+        "query_index": 0,
+        "count": 10,
+        "http_status": 200,
+        "errors": [],
+        "latency_ms": 1994
+      },
+      {
+        "query_index": 1,
+        "count": 0,
+        "http_status": 200,
+        "errors": [
+          [
+            "duckduckgo",
+            "CAPTCHA"
+          ]
+        ],
+        "latency_ms": 892
+      },
+      {
+        "query_index": 2,
+        "count": 10,
+        "http_status": 200,
+        "errors": [],
+        "latency_ms": 752
+      }
+    ],
+    "360search": [
+      {
+        "query_index": 0,
+        "count": 5,
+        "http_status": 200,
+        "errors": [],
+        "latency_ms": 823
+      },
+      {
+        "query_index": 1,
+        "count": 6,
+        "http_status": 200,
+        "errors": [],
+        "latency_ms": 165
+      },
+      {
+        "query_index": 2,
+        "count": 5,
+        "http_status": 200,
+        "errors": [],
+        "latency_ms": 138
+      }
+    ],
+    "yandex": [
+      {
+        "query_index": 0,
+        "count": 15,
+        "http_status": 200,
+        "errors": [],
+        "latency_ms": 1599
+      },
+      {
+        "query_index": 1,
+        "count": 15,
+        "http_status": 200,
+        "errors": [],
+        "latency_ms": 939
+      },
+      {
+        "query_index": 2,
+        "count": 15,
+        "http_status": 200,
+        "errors": [],
+        "latency_ms": 3123
+      }
+    ]
+  },
+  "relevance_findings": [
+    "Bing aviation query 0 returned unrelated manga sites; Raft query 2 returned the video game. Nonempty results cannot certify successful discovery.",
+    "Google access denied and Brave 429; no bypass attempted.",
+    "DuckDuckGo query 1 CAPTCHA; result count not stability.",
+    "360search and Yandex returned results; this is not a repeated stability study or proof of current original-source coverage."
+  ],
+  "confound": "Earlier engine matrix used explicit zh-CN/en language; this probe omits language exactly like the Runtime. Differences cannot be attributed only to the proxy.",
+  "production_changed": false,
+  "promoted": false
+}

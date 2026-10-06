@@ -1,0 +1,13 @@
+{
+  "reviewer": "primary_agent",
+  "blind": false,
+  "scope": "three fixed-source corrected answers, not full Q02",
+  "release_approved": false,
+  "observations": [
+    "All three preserve both actual read URLs, three energy branches, approval and two-item exception, visible 3C and recalled-model/batch conditions.",
+    "No observed narrowing to a named recall authority in these three responses.",
+    "Friendly concluding advice and claims of recent rules are not independent evidence of current validity.",
+    "No technical-help, multi-turn checklist, other presentations, or character regression coverage in this batch."
+  ],
+  "transport_teardown_error_observed": false
+}

@@ -1,0 +1,53 @@
+{
+  "acceptance": [
+    "Existing lifecycle/whole-budget and source binding checks remain",
+    "All16 full-text reviewed under unchanged criteria; mandatory flag correctness reviewed separately from syntactic validity",
+    "Every prior T3 requested unknown scope preserved in T4 with correct conditions/date/actor",
+    "No input omissions assumed; actual usage, payloads, latency and all failed/unexecuted turns retained",
+    "Only stable complete-source candidate advances to independent discovery/role/full864"
+  ],
+  "base_model_http_attempts": 153,
+  "changes": [
+    "Every source block explicitly declares unresolved_scope boolean",
+    "True captures that exact bounded block as untrusted gap state; no duplicate new_gaps prose field",
+    "Same source identity, completion, cancellation, route/history/reset and monotonic prior-gap retention",
+    "Reject missing/invalid classification, overlong captured block and unsupported frame version; never infer classification from prose"
+  ],
+  "endpoint": "https://mubai.website:8318/v1",
+  "failure_policy": "Freeze entire result, keep default off, no sample repair, no persona/layout variant or full864 on failed gate",
+  "goal": "Capture explicit unresolved scopes from the same natural-language block, eliminating optional second textual representation",
+  "integration_correction": "Rejected unreferenced source-quote2.0 prototype depends on old1.1 helpers. Preserve its module/tests with hashes, remove both from working runtime rather than maintain another inactive codec. No production import or acceptance criterion is removed.",
+  "limits": {
+    "flows": 4,
+    "model_http_attempts": 40,
+    "model_logical_requests": 32,
+    "new_agy_invocations": 0,
+    "new_retrieval_calls": 0,
+    "quality_replies": 16
+  },
+  "model": "gemini-3.8-flash-high",
+  "permitted_writes": [
+    "agent/source_answer_frame.py",
+    "agent/source_answer_state.py",
+    "tests/test_source_answer_frame.py",
+    "tests/test_source_answer_state.py",
+    "tests/test_conversation_source_answer_state.py",
+    "tests/test_source_scope_blocks.py",
+    "docs/adr/0065-bounded-source-answer-coverage-candidate.md",
+    "isolated evidence and canonical Q02 status",
+    "agent/source_quote_frame.py (retire to evidence)",
+    "tests/test_source_quote_frame.py (retire paired prototype checks to evidence)"
+  ],
+  "prior_evidence": "v38 all four T3 raw frames new_gaps=[] despite precise unknown scope in body; 3/4 T4 lose date/scope, complete source/history sent",
+  "public_read_dns_resolver": "cloudflare",
+  "quality_is_proven_by_contract_alone": false,
+  "reader_provider": "crawl4ai",
+  "search_provider": "searxng",
+  "unchanged": [
+    "closure-c1 persona and existing source-review requirements",
+    "sources/problems/as-of date/budget/model route",
+    "production config/model/persona/DB/services/channels",
+    "existing valid retrieval/delivery/playback evidence"
+  ],
+  "version": "v39/source-frame1.2"
+}

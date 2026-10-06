@@ -1,0 +1,8 @@
+{
+  "image_id": "sha256:76646f4e6d20c9514828b15e68487aafbb0fd15b52d2666a76891ee7d4b40c17",
+  "repo_digests": [
+    "unclecode/crawl4ai@sha256:84751dab794259db05d5bd4e5c766a8041a65f0554326e4516e620abdf2fa18b"
+  ],
+  "architecture": "amd64",
+  "os": "linux"
+}

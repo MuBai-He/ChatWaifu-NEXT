@@ -1,0 +1,10 @@
+{
+  "scope": "Bounded final-answer correction candidate after citation omission; original persona/history/source JSON/budget unchanged; tools disabled; no deployment",
+  "source_urls": [
+    "https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html",
+    "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227950.html"
+  ],
+  "repeats": 3,
+  "model": "gemini-3.1-pro-low",
+  "release_approved": false
+}

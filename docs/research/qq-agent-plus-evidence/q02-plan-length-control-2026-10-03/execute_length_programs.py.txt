@@ -1,0 +1,14 @@
+import hashlib,json,subprocess,sys,tempfile
+from pathlib import Path
+root=Path('/tmp/cw2-q02-plan-length-control-20261003')
+rows=json.loads((root/'technical-programs.json').read_text());assert len(rows)==8
+out=[]
+for row in rows:
+ code=row['code'];assert row['reviewed_for_execution'] is True
+ assert hashlib.sha256(code.encode()).hexdigest()==row['sha256']
+ with tempfile.TemporaryDirectory(prefix='cw2-reviewed-asyncio-') as cwd:
+  p=subprocess.run([sys.executable,'-I','-S','-c',code],cwd=cwd,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=10)
+  expected=row['claimed_stdout']
+  out.append({'anchor_id':row['anchor_id'],'label':row['label'],'code_sha256':row['sha256'],'returncode':p.returncode,'stdout':p.stdout,'stderr':p.stderr,'claimed_stdout_matches':None if expected is None else p.stdout==expected,'python':sys.version})
+(root/'technical-execution.json').write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
+print(json.dumps({'programs':len(out),'exit_zero':sum(r['returncode']==0 for r in out),'claimed_output_matches':sum(r['claimed_stdout_matches'] is True for r in out),'no_claimed_output':sum(r['claimed_stdout_matches'] is None for r in out)}))

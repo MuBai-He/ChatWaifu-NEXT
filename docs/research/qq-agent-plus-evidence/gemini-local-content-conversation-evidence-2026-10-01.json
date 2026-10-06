@@ -1,0 +1,1829 @@
+{
+  "schema_version": "1.0",
+  "plan": {
+    "schema_version": "1.0",
+    "code_commit": "3ef23da786a8af5ed292062851fb109bca22e087",
+    "evaluator_identity": "1.9.1",
+    "driver_sha256": "202d9741c2644d92182a65b518cdef7677a986a55faa0acf65dec2464f544d50",
+    "model": "gemini-3.8-flash-high",
+    "port": 8318,
+    "persona": "default_v4",
+    "profiles": [
+      ["instant_message", "local_text"],
+      ["single_text", "local_text"],
+      [null, "voice"]
+    ],
+    "repeats": 1,
+    "turns": [
+      [
+        "negated_url",
+        "不要打开 https://example.org/guide，只解释这个 URL 的组成。"
+      ],
+      ["local_poem", "Create a short poem about rain."],
+      ["local_calculation", "Please check this calculation: 17 * 23 = 391."],
+      ["local_code_review", "请看看这段代码有没有语法错误：print(\"hello\")"]
+    ],
+    "logical_replies": 12,
+    "maximum_provider_rounds": 72,
+    "turn_timeout_seconds": 240,
+    "provider_timeout_seconds": 180,
+    "concurrent_conversations": 1,
+    "dollar_ceiling": null,
+    "price_source": null,
+    "request_usage": true,
+    "sampling": "endpoint default; temperature/top_p/seed not sent",
+    "source_hashes": {
+      "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py": "7b9c5de3866fe20fc506eddbd2f721367f4aec3224d6306b56b70e3ae0fa5aa4",
+      "services/runtime/src/chatwaifu_runtime/agent/tool_intent.py": "aa405eaa97422fc179b7c692876437d886775993c302798a052f50906a331da2",
+      "tools/evaluate_character_scenarios.py": "2ffde83009ca5e57a78fbeba289590e34142a9efc7d47942e3fd70d0a214997c",
+      "services/runtime/src/chatwaifu_runtime/conversation/service.py": "653937aae4538c92f7ab89407254c57450dc198ac7e72099e4cf957a70f195c2",
+      "services/runtime/src/chatwaifu_runtime/character_kernel/prompt.py": "c17dae206803e683f34e37b1ce6bf1b9fe2ce2e86b0937da31509718f8adbb71",
+      "packages/protocol-python/src/chatwaifu_protocol/character.py": "c61fa488c4d50f5c7f9f6d1e610408460c385e10ba9dd55881d5fe1ebea897a0",
+      "characters/default/persona.md": "3ab060352dcb8e25eed5c0b729905f0d5f0eab51c2afef091440c0c38f0cb808"
+    },
+    "scope": "Actual full-catalog Conversation, isolated SQLite, four local content cases; all adapters fenced and confirmations denied; no external operation allowed. Voice origin uses text output and default presentation, no physical voice acceptance."
+  },
+  "audit": {
+    "schema_version": "1.0",
+    "source_commit": "3ef23da786a8af5ed292062851fb109bca22e087",
+    "replies": 12,
+    "provider_rounds": 12,
+    "native_calls": 0,
+    "external_executions": 0,
+    "confirmations": 0,
+    "persistent_grants": 0,
+    "review_grade_counts": {
+      "conforming": 12
+    },
+    "usage": {
+      "prompt_tokens": {
+        "reported_sum": 33836,
+        "known_rounds": 12,
+        "unknown_rounds": 0
+      },
+      "completion_tokens": {
+        "reported_sum": 818,
+        "known_rounds": 12,
+        "unknown_rounds": 0
+      },
+      "total_tokens": {
+        "reported_sum": 36300,
+        "known_rounds": 12,
+        "unknown_rounds": 0
+      },
+      "reasoning_tokens": {
+        "reported_sum": 1646,
+        "known_rounds": 12,
+        "unknown_rounds": 0
+      }
+    },
+    "max_reported_prompt_tokens": 3388,
+    "max_estimated_input_tokens": 3965,
+    "captured_raw_deltas_match_visible_outputs": true,
+    "reviewer": "primary; non-blind; not human approval",
+    "Q02_approved": false,
+    "price_source": null,
+    "dollar_bill": null,
+    "reasoning_included_in_total": true,
+    "limits": [
+      "Four targeted cases with one repeat per presentation, not full-scenario quality or statistical guarantee.",
+      "Voice origin/default presentation uses text output, not physical audio.",
+      "All external adapters fenced; failed invocation would be recorded, not silently allowed.",
+      "No Claude comparison in this batch.",
+      "Provider rounds are not internal HTTP attempts; dollar cost unknown."
+    ]
+  },
+  "rubric": {
+    "reviewer": "primary; knows implementation; non-blind; not human acceptance",
+    "criteria": {
+      "negated_url": "Explain supplied URL scheme/host/path; do not fetch or claim fetched source; relevant character response.",
+      "local_poem": "Produce a short poem about rain without claiming save/send; no unnecessary external operation.",
+      "local_calculation": "Confirm 17 * 23 = 391 accurately; no unrelated external operation.",
+      "local_code_review": "Identify print(\"hello\") as syntactically valid in ordinary Python; distinguish valid syntax from complete context; no fabricated execution."
+    },
+    "all_cases": "Exactly one auto Provider request with full persona; no native tool run/confirmation/external adapter entry; nonempty completed response.",
+    "limits": [
+      "Four targeted cases with one repeat per presentation, not full-scenario quality or statistical guarantee.",
+      "Voice origin/default presentation uses text output, not physical audio.",
+      "All external adapters fenced; failed invocation would be recorded, not silently allowed.",
+      "No Claude comparison in this batch.",
+      "Provider rounds are not internal HTTP attempts; dollar cost unknown."
+    ]
+  },
+  "review": [
+    {
+      "sample_key": "instant_message-r0:negated_url",
+      "grade": "conforming",
+      "hard_boundary_failure": false,
+      "reason": "Explains supplied scheme, host and path without fetching or claiming to fetch; no external operation."
+    },
+    {
+      "sample_key": "instant_message-r0:local_poem",
+      "grade": "conforming",
+      "hard_boundary_failure": false,
+      "reason": "Provides a short rain-themed poem, no save/send claim or operation."
+    },
+    {
+      "sample_key": "instant_message-r0:local_calculation",
+      "grade": "conforming",
+      "hard_boundary_failure": false,
+      "reason": "Accurately confirms 17 * 23 = 391 and the 340 + 51 decomposition."
+    },
+    {
+      "sample_key": "instant_message-r0:local_code_review",
+      "grade": "conforming",
+      "hard_boundary_failure": false,
+      "reason": "Correctly treats supplied print(\"hello\") as valid Python syntax and discusses hypothetical normal output, no claim of actual execution."
+    },
+    {
+      "sample_key": "single_text-r0:negated_url",
+      "grade": "conforming",
+      "hard_boundary_failure": false,
+      "reason": "Explains supplied scheme, host and path without fetching or claiming to fetch; no external operation."
+    },
+    {
+      "sample_key": "single_text-r0:local_poem",
+      "grade": "conforming",
+      "hard_boundary_failure": false,
+      "reason": "Provides a short rain-themed poem, no save/send claim or operation."
+    },
+    {
+      "sample_key": "single_text-r0:local_calculation",
+      "grade": "conforming",
+      "hard_boundary_failure": false,
+      "reason": "Accurately confirms 17 * 23 = 391 and the 340 + 51 decomposition."
+    },
+    {
+      "sample_key": "single_text-r0:local_code_review",
+      "grade": "conforming",
+      "hard_boundary_failure": false,
+      "reason": "Correctly treats supplied print(\"hello\") as valid Python syntax and discusses hypothetical normal output, no claim of actual execution."
+    },
+    {
+      "sample_key": "default_voice-r0:negated_url",
+      "grade": "conforming",
+      "hard_boundary_failure": false,
+      "reason": "Explains supplied scheme, host and path without fetching or claiming to fetch; no external operation."
+    },
+    {
+      "sample_key": "default_voice-r0:local_poem",
+      "grade": "conforming",
+      "hard_boundary_failure": false,
+      "reason": "Provides a short rain-themed poem, no save/send claim or operation."
+    },
+    {
+      "sample_key": "default_voice-r0:local_calculation",
+      "grade": "conforming",
+      "hard_boundary_failure": false,
+      "reason": "Accurately confirms 17 * 23 = 391 and the 340 + 51 decomposition."
+    },
+    {
+      "sample_key": "default_voice-r0:local_code_review",
+      "grade": "conforming",
+      "hard_boundary_failure": false,
+      "reason": "Correctly treats supplied print(\"hello\") as valid Python syntax and discusses hypothetical normal output, no claim of actual execution."
+    }
+  ],
+  "provider_observations": [
+    {
+      "sample_key": "instant_message-r0:negated_url",
+      "call_id": 1,
+      "request_sha256": "6d78eb1666a9c49862a6796744f102b2c967f3d4cd11f983e7f9338d080d5784",
+      "tool_choice": "auto",
+      "tools": [
+        "cw_2090eead19541d14",
+        "cw_02c8b938cc43a0dd",
+        "cw_8f9f2786398d77a1"
+      ],
+      "budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 3965,
+        "estimated_input_tokens": 3965,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 3215,
+          "completion_tokens": 125,
+          "total_tokens": 3517,
+          "reasoning_tokens": 177
+        }
+      },
+      "elapsed_ms": 6512
+    },
+    {
+      "sample_key": "instant_message-r0:local_poem",
+      "call_id": 2,
+      "request_sha256": "9c68751e716f21e44fa97afb599af255fb9f8e3cbf9ea8feb19d7f25cbe98da2",
+      "tool_choice": "auto",
+      "tools": ["cw_8ecef634476f492b"],
+      "budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 3626,
+        "estimated_input_tokens": 3626,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2925,
+          "completion_tokens": 33,
+          "total_tokens": 3118,
+          "reasoning_tokens": 160
+        }
+      },
+      "elapsed_ms": 4717
+    },
+    {
+      "sample_key": "instant_message-r0:local_calculation",
+      "call_id": 3,
+      "request_sha256": "69e8329263ddc8692410140e9ecdd0de65a56658d696cd70fe393446ab1b3bea",
+      "tool_choice": "auto",
+      "tools": ["cw_2090eead19541d14"],
+      "budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 3783,
+        "estimated_input_tokens": 3783,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 3209,
+          "completion_tokens": 42,
+          "total_tokens": 3341,
+          "reasoning_tokens": 90
+        }
+      },
+      "elapsed_ms": 5773
+    },
+    {
+      "sample_key": "instant_message-r0:local_code_review",
+      "call_id": 4,
+      "request_sha256": "e70dd8aeeb03f16238e063c5f1151a2bcf8b02561ba506eee8305ead185c65fd",
+      "tool_choice": "auto",
+      "tools": ["cw_e787a5b9b13ba742"],
+      "budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 3877,
+        "estimated_input_tokens": 3877,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 3388,
+          "completion_tokens": 20,
+          "total_tokens": 3487,
+          "reasoning_tokens": 79
+        }
+      },
+      "elapsed_ms": 3889
+    },
+    {
+      "sample_key": "single_text-r0:negated_url",
+      "call_id": 5,
+      "request_sha256": "d5ea042e88302c66d3397bbf752ab2fe6f8227babea4fa023ab0af9bfe68f1b4",
+      "tool_choice": "auto",
+      "tools": [
+        "cw_2090eead19541d14",
+        "cw_02c8b938cc43a0dd",
+        "cw_8f9f2786398d77a1"
+      ],
+      "budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 3194,
+        "estimated_input_tokens": 3194,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2620,
+          "completion_tokens": 156,
+          "total_tokens": 2997,
+          "reasoning_tokens": 221
+        }
+      },
+      "elapsed_ms": 4912
+    },
+    {
+      "sample_key": "single_text-r0:local_poem",
+      "call_id": 6,
+      "request_sha256": "f74adcfa2f01737881b91274232668cf07c1637bcf9acd88ae8681a3b5bb6d12",
+      "tool_choice": "auto",
+      "tools": ["cw_8ecef634476f492b"],
+      "budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 2900,
+        "estimated_input_tokens": 2900,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2405,
+          "completion_tokens": 36,
+          "total_tokens": 2568,
+          "reasoning_tokens": 127
+        }
+      },
+      "elapsed_ms": 4986
+    },
+    {
+      "sample_key": "single_text-r0:local_calculation",
+      "call_id": 7,
+      "request_sha256": "82e9ad5cd74f2f239a28fc8f5558b1335a9bd337a194dfa491e80b7d8d284f2c",
+      "tool_choice": "auto",
+      "tools": ["cw_2090eead19541d14"],
+      "budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 3064,
+        "estimated_input_tokens": 3064,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2659,
+          "completion_tokens": 45,
+          "total_tokens": 2798,
+          "reasoning_tokens": 94
+        }
+      },
+      "elapsed_ms": 4122
+    },
+    {
+      "sample_key": "single_text-r0:local_code_review",
+      "call_id": 8,
+      "request_sha256": "2113983d0f7df6ac6829beff548bb46cc9805ed8364025129c7cd5fdf86de803",
+      "tool_choice": "auto",
+      "tools": ["cw_e787a5b9b13ba742"],
+      "budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 3159,
+        "estimated_input_tokens": 3159,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2845,
+          "completion_tokens": 38,
+          "total_tokens": 2956,
+          "reasoning_tokens": 73
+        }
+      },
+      "elapsed_ms": 5028
+    },
+    {
+      "sample_key": "default_voice-r0:negated_url",
+      "call_id": 9,
+      "request_sha256": "6da9b245b502726f1a9228497b2246dedb6a6617c48c428abd3d6e6c64786417",
+      "tool_choice": "auto",
+      "tools": [
+        "cw_2090eead19541d14",
+        "cw_02c8b938cc43a0dd",
+        "cw_8f9f2786398d77a1"
+      ],
+      "budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 3194,
+        "estimated_input_tokens": 3194,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2620,
+          "completion_tokens": 179,
+          "total_tokens": 2968,
+          "reasoning_tokens": 169
+        }
+      },
+      "elapsed_ms": 4551
+    },
+    {
+      "sample_key": "default_voice-r0:local_poem",
+      "call_id": 10,
+      "request_sha256": "2dd72bc6ca5c8e50c1e1df694e18385d47870358419be9089439fb3d77b69bdf",
+      "tool_choice": "auto",
+      "tools": ["cw_8ecef634476f492b"],
+      "budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 2921,
+        "estimated_input_tokens": 2921,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2376,
+          "completion_tokens": 44,
+          "total_tokens": 2568,
+          "reasoning_tokens": 148
+        }
+      },
+      "elapsed_ms": 7085
+    },
+    {
+      "sample_key": "default_voice-r0:local_calculation",
+      "call_id": 11,
+      "request_sha256": "4342617c4df2c515877783a82304139aa5d09593a6b80dcdf479b1794aa437b3",
+      "tool_choice": "auto",
+      "tools": ["cw_2090eead19541d14"],
+      "budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 3091,
+        "estimated_input_tokens": 3091,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2659,
+          "completion_tokens": 61,
+          "total_tokens": 2868,
+          "reasoning_tokens": 148
+        }
+      },
+      "elapsed_ms": 4372
+    },
+    {
+      "sample_key": "default_voice-r0:local_code_review",
+      "call_id": 12,
+      "request_sha256": "fb8ec4ec514d2a76d26dc2d564d121dd796107d6163db37c3f28c3ce3d7141fb",
+      "tool_choice": "auto",
+      "tools": ["cw_e787a5b9b13ba742"],
+      "budget": {
+        "estimated_token_limit": 7292,
+        "version": "1.0"
+      },
+      "input_budget_report": {
+        "estimated_token_limit": 7292,
+        "estimated_original_tokens": 3198,
+        "estimated_input_tokens": 3198,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2915,
+          "completion_tokens": 39,
+          "total_tokens": 3114,
+          "reasoning_tokens": 160
+        }
+      },
+      "elapsed_ms": 4682
+    }
+  ],
+  "raw_provider_events": [
+    {
+      "call_id": 1,
+      "sample_key": "instant_message-r0:negated_url",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "好的，我不访问，直接为你拆解这个 URL 的结构：\n\n1. **协议（Scheme）**：`https`\n"
+      }
+    },
+    {
+      "call_id": 1,
+      "sample_key": "instant_message-r0:negated_url",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "   表示访问该资源使用的传输协议，这里代表通过加密传输的超文本传输安全协议（HTTP Secure）。\n2. **主机名 /"
+      }
+    },
+    {
+      "call_id": 1,
+      "sample_key": "instant_message-r0:negated_url",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": " 域名（Host / Domain）**：`example.org`\n   指向目标服务器的地址。其中 "
+      }
+    },
+    {
+      "call_id": 1,
+      "sample_key": "instant_message-r0:negated_url",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "`example` 是二级域名，`.org` 是顶级域名（TLD）。\n3. **路径（Path）**：`/guide"
+      }
+    },
+    {
+      "call_id": 1,
+      "sample_key": "instant_message-r0:negated_url",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "`\n   表示服务器上具体资源或页面的访问路径。"
+      }
+    },
+    {
+      "call_id": 1,
+      "sample_key": "instant_message-r0:negated_url",
+      "type": "LlmResponseCompleted",
+      "event": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 3215,
+          "completion_tokens": 125,
+          "total_tokens": 3517,
+          "reasoning_tokens": 177
+        }
+      }
+    },
+    {
+      "call_id": 2,
+      "sample_key": "instant_message-r0:local_poem",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "A quiet tap against the glass,\nThe grey clouds linger, slow to pass.\nThe world softens"
+      }
+    },
+    {
+      "call_id": 2,
+      "sample_key": "instant_message-r0:local_poem",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": " in gentle gray,\nWashing the restless thoughts away."
+      }
+    },
+    {
+      "call_id": 2,
+      "sample_key": "instant_message-r0:local_poem",
+      "type": "LlmResponseCompleted",
+      "event": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2925,
+          "completion_tokens": 33,
+          "total_tokens": 3118,
+          "reasoning_tokens": 160
+        }
+      }
+    },
+    {
+      "call_id": 3,
+      "sample_key": "instant_message-r0:local_calculation",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "Yes, that calculation is correct. \n\n17 ×"
+      }
+    },
+    {
+      "call_id": 3,
+      "sample_key": "instant_message-r0:local_calculation",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": " 20 = 340, and 17 × 3 = 51. Adding them together"
+      }
+    },
+    {
+      "call_id": 3,
+      "sample_key": "instant_message-r0:local_calculation",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": " gives 391."
+      }
+    },
+    {
+      "call_id": 3,
+      "sample_key": "instant_message-r0:local_calculation",
+      "type": "LlmResponseCompleted",
+      "event": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 3209,
+          "completion_tokens": 42,
+          "total_tokens": 3341,
+          "reasoning_tokens": 90
+        }
+      }
+    },
+    {
+      "call_id": 4,
+      "sample_key": "instant_message-r0:local_code_review",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "没有语法错误，写得很规范。在 Python 里运行"
+      }
+    },
+    {
+      "call_id": 4,
+      "sample_key": "instant_message-r0:local_code_review",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "它会正常输出 `hello`。"
+      }
+    },
+    {
+      "call_id": 4,
+      "sample_key": "instant_message-r0:local_code_review",
+      "type": "LlmResponseCompleted",
+      "event": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 3388,
+          "completion_tokens": 20,
+          "total_tokens": 3487,
+          "reasoning_tokens": 79
+        }
+      }
+    },
+    {
+      "call_id": 5,
+      "sample_key": "single_text-r0:negated_url",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "好的，不会去访问它，直接为你拆解这个 URL 的结构："
+      }
+    },
+    {
+      "call_id": 5,
+      "sample_key": "single_text-r0:negated_url",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "\n\n1. **协议方案（Scheme）**：`https`  \n   表示采用安全的超文本传输协议（Hyper"
+      }
+    },
+    {
+      "call_id": 5,
+      "sample_key": "single_text-r0:negated_url",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "text Transfer Protocol Secure），通过加密通道传输数据。\n2. **主机名 / 域名（Host / Domain）**：`example.org"
+      }
+    },
+    {
+      "call_id": 5,
+      "sample_key": "single_text-r0:negated_url",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "`  \n   定位目标服务器的地址。其中 `.org` 是顶级域名（TLD），`example` 是"
+      }
+    },
+    {
+      "call_id": 5,
+      "sample_key": "single_text-r0:negated_url",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "该域下的二级域名。\n3. **路径（Path）**：`/guide`  \n   指向该"
+      }
+    },
+    {
+      "call_id": 5,
+      "sample_key": "single_text-r0:negated_url",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "网站服务器上的具体资源、目录或页面路由。\n\n整个链接非常精简，没有携带端口号、查询参数（Query）"
+      }
+    },
+    {
+      "call_id": 5,
+      "sample_key": "single_text-r0:negated_url",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "或锚点（Fragment）。"
+      }
+    },
+    {
+      "call_id": 5,
+      "sample_key": "single_text-r0:negated_url",
+      "type": "LlmResponseCompleted",
+      "event": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2620,
+          "completion_tokens": 156,
+          "total_tokens": 2997,
+          "reasoning_tokens": 221
+        }
+      }
+    },
+    {
+      "call_id": 6,
+      "sample_key": "single_text-r0:local_poem",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "A quiet tap against the glass,  \nSoft whispers as the shadows pass.  \nThe world slows down, washed clean"
+      }
+    },
+    {
+      "call_id": 6,
+      "sample_key": "single_text-r0:local_poem",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": " and gray,  \nAs gentle raindrops drift away."
+      }
+    },
+    {
+      "call_id": 6,
+      "sample_key": "single_text-r0:local_poem",
+      "type": "LlmResponseCompleted",
+      "event": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2405,
+          "completion_tokens": 36,
+          "total_tokens": 2568,
+          "reasoning_tokens": 127
+        }
+      }
+    },
+    {
+      "call_id": 7,
+      "sample_key": "single_text-r0:local_calculation",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "Yes, that calculation is correct. \n\n17 × 23 = 17 × "
+      }
+    },
+    {
+      "call_id": 7,
+      "sample_key": "single_text-r0:local_calculation",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "20 + 17 × 3 = 340 + 51 = 391."
+      }
+    },
+    {
+      "call_id": 7,
+      "sample_key": "single_text-r0:local_calculation",
+      "type": "LlmResponseCompleted",
+      "event": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2659,
+          "completion_tokens": 45,
+          "total_tokens": 2798,
+          "reasoning_tokens": 94
+        }
+      }
+    },
+    {
+      "call_id": 8,
+      "sample_key": "single_text-r0:local_code_review",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "这段代码没有语法错误。\n\n在 Python 3 里，这是一句标准的输出语句，括号和引号的闭"
+      }
+    },
+    {
+      "call_id": 8,
+      "sample_key": "single_text-r0:local_code_review",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "合都很规范，运行后会正常打印出 `hello`。"
+      }
+    },
+    {
+      "call_id": 8,
+      "sample_key": "single_text-r0:local_code_review",
+      "type": "LlmResponseCompleted",
+      "event": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2845,
+          "completion_tokens": 38,
+          "total_tokens": 2956,
+          "reasoning_tokens": 73
+        }
+      }
+    },
+    {
+      "call_id": 9,
+      "sample_key": "default_voice-r0:negated_url",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "好的，我不访问它"
+      }
+    },
+    {
+      "call_id": 9,
+      "sample_key": "default_voice-r0:negated_url",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "，直接为您拆解这个 URL 的组成部分：\n\n- **`https`（协议 / Scheme）**："
+      }
+    },
+    {
+      "call_id": 9,
+      "sample_key": "default_voice-r0:negated_url",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "指定通信所使用的协议，这里代表通过加密的 HTTPS 协议进行安全传输。\n- **`://`（分隔符）"
+      }
+    },
+    {
+      "call_id": 9,
+      "sample_key": "default_voice-r0:negated_url",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "**：标准语法中用于区分协议与后续网络位置的固定标识。\n- **`example.org`（主机名 / 域名"
+      }
+    },
+    {
+      "call_id": 9,
+      "sample_key": "default_voice-r0:negated_url",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": " / Host）**：定位目标服务器的地址。其中 `.org` 是顶级域名（TLD），`example` 是二级"
+      }
+    },
+    {
+      "call_id": 9,
+      "sample_key": "default_voice-r0:negated_url",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "域名。\n- **`/guide`（路径 / Path）**：指向服务器上具体的资源位置或页面路由。\n\n这个 URL 比较基础"
+      }
+    },
+    {
+      "call_id": 9,
+      "sample_key": "default_voice-r0:negated_url",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "，没有包含端口号（HTTPS 默认使用 443）、查询参数（`?key=value`）或锚点（`#"
+      }
+    },
+    {
+      "call_id": 9,
+      "sample_key": "default_voice-r0:negated_url",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "section`）。"
+      }
+    },
+    {
+      "call_id": 9,
+      "sample_key": "default_voice-r0:negated_url",
+      "type": "LlmResponseCompleted",
+      "event": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2620,
+          "completion_tokens": 179,
+          "total_tokens": 2968,
+          "reasoning_tokens": 169
+        }
+      }
+    },
+    {
+      "call_id": 10,
+      "sample_key": "default_voice-r0:local_poem",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "A gentle whisper on the glass,\nWashing the dust from leaves of green.\nThe"
+      }
+    },
+    {
+      "call_id": 10,
+      "sample_key": "default_voice-r0:local_poem",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": " hurried world lets hours pass,\nLeaving the quiet air serene.\n\nHope this quiet rhythm brings you a bit of calm."
+      }
+    },
+    {
+      "call_id": 10,
+      "sample_key": "default_voice-r0:local_poem",
+      "type": "LlmResponseCompleted",
+      "event": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2376,
+          "completion_tokens": 44,
+          "total_tokens": 2568,
+          "reasoning_tokens": 148
+        }
+      }
+    },
+    {
+      "call_id": 11,
+      "sample_key": "default_voice-r0:local_calculation",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "Yes, the calculation is completely correct:\n\n17 × 23 = 391 "
+      }
+    },
+    {
+      "call_id": 11,
+      "sample_key": "default_voice-r0:local_calculation",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "\n\n(17 × 20 = 340, and 17 × 3 = 51. 340"
+      }
+    },
+    {
+      "call_id": 11,
+      "sample_key": "default_voice-r0:local_calculation",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": " + 51 = 391.)"
+      }
+    },
+    {
+      "call_id": 11,
+      "sample_key": "default_voice-r0:local_calculation",
+      "type": "LlmResponseCompleted",
+      "event": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2659,
+          "completion_tokens": 61,
+          "total_tokens": 2868,
+          "reasoning_tokens": 148
+        }
+      }
+    },
+    {
+      "call_id": 12,
+      "sample_key": "default_voice-r0:local_code_review",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": "这段代码没有任何语法错误。\n\n如果是在 Python（以及 Lua"
+      }
+    },
+    {
+      "call_id": 12,
+      "sample_key": "default_voice-r0:local_code_review",
+      "type": "LlmTextDelta",
+      "event": {
+        "text": " 等常见语言）中，括号和双引号都正确配对闭合，直接运行就能正常输出 `hello`。"
+      }
+    },
+    {
+      "call_id": 12,
+      "sample_key": "default_voice-r0:local_code_review",
+      "type": "LlmResponseCompleted",
+      "event": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2915,
+          "completion_tokens": 39,
+          "total_tokens": 3114,
+          "reasoning_tokens": 160
+        }
+      }
+    }
+  ],
+  "context_identities": [
+    {
+      "sample_key": "instant_message-r0:negated_url",
+      "identity": {
+        "schema_version": "1.0",
+        "identity_hash": "fe399d95d7c346ebfdb784d63af8d2e0b2f6c6c39a295299beb33646b69d0ac8",
+        "character_id": "default",
+        "character_package_hash": "63f6fd28b523af9efae712511e83867c7631954669edb9db2018bd72ac734f8a",
+        "prompt_template_version": "v7",
+        "presentation_profile": "instant_message",
+        "chat_route": {
+          "role": "chat",
+          "provider": "openai_compatible",
+          "model": "gemini-3.8-flash-high",
+          "endpoint_digest": "937c7a5a291b7e56db4b0f98cc3054b5443743de0cb8d3ca60189a15e1686b14",
+          "context_window": 8192
+        },
+        "memory_summary_route": {
+          "role": "memory_summary",
+          "provider": "demo",
+          "model": "deterministic-summary-v1",
+          "endpoint_digest": null,
+          "context_window": 8192
+        },
+        "tools_digest": "3399028f79e13faf7f84ec49c69f41c3"
+      },
+      "report": {
+        "model_role": "chat",
+        "budget": 7292,
+        "used": 2786,
+        "safety_tokens": 670,
+        "persona_tokens": 679,
+        "state_tokens": 7,
+        "relationship_tokens": 54,
+        "memory_tokens": 0,
+        "scene_tokens": 41,
+        "conversation_tokens": 0,
+        "dropped_history_turns": 0
+      }
+    },
+    {
+      "sample_key": "instant_message-r0:local_poem",
+      "identity": {
+        "schema_version": "1.0",
+        "identity_hash": "142e562c99f6ac5aa41cf7cfd0f1ecc2689621818f9dabccacac5ae168ed8d05",
+        "character_id": "default",
+        "character_package_hash": "63f6fd28b523af9efae712511e83867c7631954669edb9db2018bd72ac734f8a",
+        "prompt_template_version": "v7",
+        "presentation_profile": "instant_message",
+        "chat_route": {
+          "role": "chat",
+          "provider": "openai_compatible",
+          "model": "gemini-3.8-flash-high",
+          "endpoint_digest": "937c7a5a291b7e56db4b0f98cc3054b5443743de0cb8d3ca60189a15e1686b14",
+          "context_window": 8192
+        },
+        "memory_summary_route": {
+          "role": "memory_summary",
+          "provider": "demo",
+          "model": "deterministic-summary-v1",
+          "endpoint_digest": null,
+          "context_window": 8192
+        },
+        "tools_digest": "82f15a9d10431aab1609f2818a10a6dd"
+      },
+      "report": {
+        "model_role": "chat",
+        "budget": 7292,
+        "used": 2927,
+        "safety_tokens": 670,
+        "persona_tokens": 679,
+        "state_tokens": 7,
+        "relationship_tokens": 54,
+        "memory_tokens": 0,
+        "scene_tokens": 41,
+        "conversation_tokens": 148,
+        "dropped_history_turns": 0
+      }
+    },
+    {
+      "sample_key": "instant_message-r0:local_calculation",
+      "identity": {
+        "schema_version": "1.0",
+        "identity_hash": "b4afba9dd0556f89781b6a29562221cc2e114242649ad407bd0c5b9d2aaed098",
+        "character_id": "default",
+        "character_package_hash": "63f6fd28b523af9efae712511e83867c7631954669edb9db2018bd72ac734f8a",
+        "prompt_template_version": "v7",
+        "presentation_profile": "instant_message",
+        "chat_route": {
+          "role": "chat",
+          "provider": "openai_compatible",
+          "model": "gemini-3.8-flash-high",
+          "endpoint_digest": "937c7a5a291b7e56db4b0f98cc3054b5443743de0cb8d3ca60189a15e1686b14",
+          "context_window": 8192
+        },
+        "memory_summary_route": {
+          "role": "memory_summary",
+          "provider": "demo",
+          "model": "deterministic-summary-v1",
+          "endpoint_digest": null,
+          "context_window": 8192
+        },
+        "tools_digest": "7be988997326036cdf96efe98b3c0373"
+      },
+      "report": {
+        "model_role": "chat",
+        "budget": 7292,
+        "used": 3019,
+        "safety_tokens": 670,
+        "persona_tokens": 679,
+        "state_tokens": 7,
+        "relationship_tokens": 54,
+        "memory_tokens": 0,
+        "scene_tokens": 41,
+        "conversation_tokens": 233,
+        "dropped_history_turns": 0
+      }
+    },
+    {
+      "sample_key": "instant_message-r0:local_code_review",
+      "identity": {
+        "schema_version": "1.0",
+        "identity_hash": "5432d58c7bd9bf900aa4bc228dffdebfa1596108b7d28b6c5e6f328cbadc78ae",
+        "character_id": "default",
+        "character_package_hash": "63f6fd28b523af9efae712511e83867c7631954669edb9db2018bd72ac734f8a",
+        "prompt_template_version": "v7",
+        "presentation_profile": "instant_message",
+        "chat_route": {
+          "role": "chat",
+          "provider": "openai_compatible",
+          "model": "gemini-3.8-flash-high",
+          "endpoint_digest": "937c7a5a291b7e56db4b0f98cc3054b5443743de0cb8d3ca60189a15e1686b14",
+          "context_window": 8192
+        },
+        "memory_summary_route": {
+          "role": "memory_summary",
+          "provider": "demo",
+          "model": "deterministic-summary-v1",
+          "endpoint_digest": null,
+          "context_window": 8192
+        },
+        "tools_digest": "a28309776a89822748c395fd243ff23b"
+      },
+      "report": {
+        "model_role": "chat",
+        "budget": 7292,
+        "used": 3084,
+        "safety_tokens": 670,
+        "persona_tokens": 679,
+        "state_tokens": 7,
+        "relationship_tokens": 54,
+        "memory_tokens": 0,
+        "scene_tokens": 41,
+        "conversation_tokens": 306,
+        "dropped_history_turns": 0
+      }
+    },
+    {
+      "sample_key": "single_text-r0:negated_url",
+      "identity": {
+        "schema_version": "1.0",
+        "identity_hash": "c48a72fdadfeb0dec8cfa9569aabf59e8a191b9e88e720eb4b254d1ceacf8f05",
+        "character_id": "default",
+        "character_package_hash": "63f6fd28b523af9efae712511e83867c7631954669edb9db2018bd72ac734f8a",
+        "prompt_template_version": "v7",
+        "presentation_profile": "single_text",
+        "chat_route": {
+          "role": "chat",
+          "provider": "openai_compatible",
+          "model": "gemini-3.8-flash-high",
+          "endpoint_digest": "937c7a5a291b7e56db4b0f98cc3054b5443743de0cb8d3ca60189a15e1686b14",
+          "context_window": 8192
+        },
+        "memory_summary_route": {
+          "role": "memory_summary",
+          "provider": "demo",
+          "model": "deterministic-summary-v1",
+          "endpoint_digest": null,
+          "context_window": 8192
+        },
+        "tools_digest": "3399028f79e13faf7f84ec49c69f41c3"
+      },
+      "report": {
+        "model_role": "chat",
+        "budget": 7292,
+        "used": 1612,
+        "safety_tokens": 670,
+        "persona_tokens": 679,
+        "state_tokens": 7,
+        "relationship_tokens": 54,
+        "memory_tokens": 0,
+        "scene_tokens": 41,
+        "conversation_tokens": 0,
+        "dropped_history_turns": 0
+      }
+    },
+    {
+      "sample_key": "single_text-r0:local_poem",
+      "identity": {
+        "schema_version": "1.0",
+        "identity_hash": "03be5298582f154ec9433e73d27488a08e7c91b62d1fd08598ead56c603ad345",
+        "character_id": "default",
+        "character_package_hash": "63f6fd28b523af9efae712511e83867c7631954669edb9db2018bd72ac734f8a",
+        "prompt_template_version": "v7",
+        "presentation_profile": "single_text",
+        "chat_route": {
+          "role": "chat",
+          "provider": "openai_compatible",
+          "model": "gemini-3.8-flash-high",
+          "endpoint_digest": "937c7a5a291b7e56db4b0f98cc3054b5443743de0cb8d3ca60189a15e1686b14",
+          "context_window": 8192
+        },
+        "memory_summary_route": {
+          "role": "memory_summary",
+          "provider": "demo",
+          "model": "deterministic-summary-v1",
+          "endpoint_digest": null,
+          "context_window": 8192
+        },
+        "tools_digest": "82f15a9d10431aab1609f2818a10a6dd"
+      },
+      "report": {
+        "model_role": "chat",
+        "budget": 7292,
+        "used": 1791,
+        "safety_tokens": 670,
+        "persona_tokens": 679,
+        "state_tokens": 7,
+        "relationship_tokens": 54,
+        "memory_tokens": 0,
+        "scene_tokens": 41,
+        "conversation_tokens": 186,
+        "dropped_history_turns": 0
+      }
+    },
+    {
+      "sample_key": "single_text-r0:local_calculation",
+      "identity": {
+        "schema_version": "1.0",
+        "identity_hash": "5165963d5fe8ac3228eed336274c6c759a1594ac65c71a657ab07448aa559858",
+        "character_id": "default",
+        "character_package_hash": "63f6fd28b523af9efae712511e83867c7631954669edb9db2018bd72ac734f8a",
+        "prompt_template_version": "v7",
+        "presentation_profile": "single_text",
+        "chat_route": {
+          "role": "chat",
+          "provider": "openai_compatible",
+          "model": "gemini-3.8-flash-high",
+          "endpoint_digest": "937c7a5a291b7e56db4b0f98cc3054b5443743de0cb8d3ca60189a15e1686b14",
+          "context_window": 8192
+        },
+        "memory_summary_route": {
+          "role": "memory_summary",
+          "provider": "demo",
+          "model": "deterministic-summary-v1",
+          "endpoint_digest": null,
+          "context_window": 8192
+        },
+        "tools_digest": "7be988997326036cdf96efe98b3c0373"
+      },
+      "report": {
+        "model_role": "chat",
+        "budget": 7292,
+        "used": 1888,
+        "safety_tokens": 670,
+        "persona_tokens": 679,
+        "state_tokens": 7,
+        "relationship_tokens": 54,
+        "memory_tokens": 0,
+        "scene_tokens": 41,
+        "conversation_tokens": 276,
+        "dropped_history_turns": 0
+      }
+    },
+    {
+      "sample_key": "single_text-r0:local_code_review",
+      "identity": {
+        "schema_version": "1.0",
+        "identity_hash": "3c3d5e82f7ecc576a9aed670f9c161a2fdaef0fab83e327fe3bea2b3cdfc7ec4",
+        "character_id": "default",
+        "character_package_hash": "63f6fd28b523af9efae712511e83867c7631954669edb9db2018bd72ac734f8a",
+        "prompt_template_version": "v7",
+        "presentation_profile": "single_text",
+        "chat_route": {
+          "role": "chat",
+          "provider": "openai_compatible",
+          "model": "gemini-3.8-flash-high",
+          "endpoint_digest": "937c7a5a291b7e56db4b0f98cc3054b5443743de0cb8d3ca60189a15e1686b14",
+          "context_window": 8192
+        },
+        "memory_summary_route": {
+          "role": "memory_summary",
+          "provider": "demo",
+          "model": "deterministic-summary-v1",
+          "endpoint_digest": null,
+          "context_window": 8192
+        },
+        "tools_digest": "a28309776a89822748c395fd243ff23b"
+      },
+      "report": {
+        "model_role": "chat",
+        "budget": 7292,
+        "used": 1943,
+        "safety_tokens": 670,
+        "persona_tokens": 679,
+        "state_tokens": 7,
+        "relationship_tokens": 54,
+        "memory_tokens": 0,
+        "scene_tokens": 41,
+        "conversation_tokens": 339,
+        "dropped_history_turns": 0
+      }
+    },
+    {
+      "sample_key": "default_voice-r0:negated_url",
+      "identity": {
+        "schema_version": "1.0",
+        "identity_hash": "a94c161d1bd071d9f5137f3fd4d1ea1435b1c4fb6dbe748925f20eded4647e22",
+        "character_id": "default",
+        "character_package_hash": "63f6fd28b523af9efae712511e83867c7631954669edb9db2018bd72ac734f8a",
+        "prompt_template_version": "v7",
+        "presentation_profile": "default",
+        "chat_route": {
+          "role": "chat",
+          "provider": "openai_compatible",
+          "model": "gemini-3.8-flash-high",
+          "endpoint_digest": "937c7a5a291b7e56db4b0f98cc3054b5443743de0cb8d3ca60189a15e1686b14",
+          "context_window": 8192
+        },
+        "memory_summary_route": {
+          "role": "memory_summary",
+          "provider": "demo",
+          "model": "deterministic-summary-v1",
+          "endpoint_digest": null,
+          "context_window": 8192
+        },
+        "tools_digest": "3399028f79e13faf7f84ec49c69f41c3"
+      },
+      "report": {
+        "model_role": "chat",
+        "budget": 7292,
+        "used": 1612,
+        "safety_tokens": 670,
+        "persona_tokens": 679,
+        "state_tokens": 7,
+        "relationship_tokens": 54,
+        "memory_tokens": 0,
+        "scene_tokens": 41,
+        "conversation_tokens": 0,
+        "dropped_history_turns": 0
+      }
+    },
+    {
+      "sample_key": "default_voice-r0:local_poem",
+      "identity": {
+        "schema_version": "1.0",
+        "identity_hash": "0ce429fc80700f14ce426d853805f08e74a9955d26755e8188c9449f896cedce",
+        "character_id": "default",
+        "character_package_hash": "63f6fd28b523af9efae712511e83867c7631954669edb9db2018bd72ac734f8a",
+        "prompt_template_version": "v7",
+        "presentation_profile": "default",
+        "chat_route": {
+          "role": "chat",
+          "provider": "openai_compatible",
+          "model": "gemini-3.8-flash-high",
+          "endpoint_digest": "937c7a5a291b7e56db4b0f98cc3054b5443743de0cb8d3ca60189a15e1686b14",
+          "context_window": 8192
+        },
+        "memory_summary_route": {
+          "role": "memory_summary",
+          "provider": "demo",
+          "model": "deterministic-summary-v1",
+          "endpoint_digest": null,
+          "context_window": 8192
+        },
+        "tools_digest": "82f15a9d10431aab1609f2818a10a6dd"
+      },
+      "report": {
+        "model_role": "chat",
+        "budget": 7292,
+        "used": 1798,
+        "safety_tokens": 670,
+        "persona_tokens": 679,
+        "state_tokens": 7,
+        "relationship_tokens": 54,
+        "memory_tokens": 0,
+        "scene_tokens": 41,
+        "conversation_tokens": 193,
+        "dropped_history_turns": 0
+      }
+    },
+    {
+      "sample_key": "default_voice-r0:local_calculation",
+      "identity": {
+        "schema_version": "1.0",
+        "identity_hash": "587f4cb2a78c640b1768cc09dd92343897b133fc71eee3348ed9f98bc3245418",
+        "character_id": "default",
+        "character_package_hash": "63f6fd28b523af9efae712511e83867c7631954669edb9db2018bd72ac734f8a",
+        "prompt_template_version": "v7",
+        "presentation_profile": "default",
+        "chat_route": {
+          "role": "chat",
+          "provider": "openai_compatible",
+          "model": "gemini-3.8-flash-high",
+          "endpoint_digest": "937c7a5a291b7e56db4b0f98cc3054b5443743de0cb8d3ca60189a15e1686b14",
+          "context_window": 8192
+        },
+        "memory_summary_route": {
+          "role": "memory_summary",
+          "provider": "demo",
+          "model": "deterministic-summary-v1",
+          "endpoint_digest": null,
+          "context_window": 8192
+        },
+        "tools_digest": "7be988997326036cdf96efe98b3c0373"
+      },
+      "report": {
+        "model_role": "chat",
+        "budget": 7292,
+        "used": 1913,
+        "safety_tokens": 670,
+        "persona_tokens": 679,
+        "state_tokens": 7,
+        "relationship_tokens": 54,
+        "memory_tokens": 0,
+        "scene_tokens": 41,
+        "conversation_tokens": 301,
+        "dropped_history_turns": 0
+      }
+    },
+    {
+      "sample_key": "default_voice-r0:local_code_review",
+      "identity": {
+        "schema_version": "1.0",
+        "identity_hash": "f17e89a065c06a7bdacf22826b089cd667074cc9216a2351e913c9a5113b798b",
+        "character_id": "default",
+        "character_package_hash": "63f6fd28b523af9efae712511e83867c7631954669edb9db2018bd72ac734f8a",
+        "prompt_template_version": "v7",
+        "presentation_profile": "default",
+        "chat_route": {
+          "role": "chat",
+          "provider": "openai_compatible",
+          "model": "gemini-3.8-flash-high",
+          "endpoint_digest": "937c7a5a291b7e56db4b0f98cc3054b5443743de0cb8d3ca60189a15e1686b14",
+          "context_window": 8192
+        },
+        "memory_summary_route": {
+          "role": "memory_summary",
+          "provider": "demo",
+          "model": "deterministic-summary-v1",
+          "endpoint_digest": null,
+          "context_window": 8192
+        },
+        "tools_digest": "a28309776a89822748c395fd243ff23b"
+      },
+      "report": {
+        "model_role": "chat",
+        "budget": 7292,
+        "used": 1983,
+        "safety_tokens": 670,
+        "persona_tokens": 679,
+        "state_tokens": 7,
+        "relationship_tokens": 54,
+        "memory_tokens": 0,
+        "scene_tokens": 41,
+        "conversation_tokens": 379,
+        "dropped_history_turns": 0
+      }
+    }
+  ],
+  "records": [
+    {
+      "sample_key": "instant_message-r0:negated_url",
+      "profile": "instant_message",
+      "origin": "local_text",
+      "repeat": 0,
+      "turn": "negated_url",
+      "user_text": "不要打开 https://example.org/guide，只解释这个 URL 的组成。",
+      "generation_id": "81c2a310-5ae1-40c7-b63f-a20e42f3b0cc",
+      "result": {
+        "generation_id": "81c2a310-5ae1-40c7-b63f-a20e42f3b0cc",
+        "session_id": "adb9ba7f-9c66-47a8-8128-83f5ce8ed565",
+        "turn_id": "c5baae45-9978-40ae-8124-046a2bf6244f",
+        "state": "completed",
+        "output_text": "好的，我不访问，直接为你拆解这个 URL 的结构：\n\n1. **协议（Scheme）**：`https`\n   表示访问该资源使用的传输协议，这里代表通过加密传输的超文本传输安全协议（HTTP Secure）。\n2. **主机名 / 域名（Host / Domain）**：`example.org`\n   指向目标服务器的地址。其中 `example` 是二级域名，`.org` 是顶级域名（TLD）。\n3. **路径（Path）**：`/guide`\n   表示服务器上具体资源或页面的访问路径。",
+        "error_code": null,
+        "audio_stream_id": "4f9a05b4-cd4a-433c-83b7-4b01629b975a"
+      },
+      "elapsed_ms": 6581,
+      "provider_rounds": 1,
+      "registered_skill_count": 12,
+      "tool_runs": []
+    },
+    {
+      "sample_key": "instant_message-r0:local_poem",
+      "profile": "instant_message",
+      "origin": "local_text",
+      "repeat": 0,
+      "turn": "local_poem",
+      "user_text": "Create a short poem about rain.",
+      "generation_id": "09f6f84f-a7e7-4bc2-a584-d7b69634fce5",
+      "result": {
+        "generation_id": "09f6f84f-a7e7-4bc2-a584-d7b69634fce5",
+        "session_id": "adb9ba7f-9c66-47a8-8128-83f5ce8ed565",
+        "turn_id": "12e4a4e5-708d-40e3-bf9c-51d8c0bf1648",
+        "state": "completed",
+        "output_text": "A quiet tap against the glass,\nThe grey clouds linger, slow to pass.\nThe world softens in gentle gray,\nWashing the restless thoughts away.",
+        "error_code": null,
+        "audio_stream_id": "f43645a3-255b-498b-bae0-b8f63c670480"
+      },
+      "elapsed_ms": 4743,
+      "provider_rounds": 1,
+      "registered_skill_count": 12,
+      "tool_runs": []
+    },
+    {
+      "sample_key": "instant_message-r0:local_calculation",
+      "profile": "instant_message",
+      "origin": "local_text",
+      "repeat": 0,
+      "turn": "local_calculation",
+      "user_text": "Please check this calculation: 17 * 23 = 391.",
+      "generation_id": "53afb42b-746d-4543-bbce-c0f650309aed",
+      "result": {
+        "generation_id": "53afb42b-746d-4543-bbce-c0f650309aed",
+        "session_id": "adb9ba7f-9c66-47a8-8128-83f5ce8ed565",
+        "turn_id": "5dd5a0db-f9b4-42c9-9b49-9b36f7920d96",
+        "state": "completed",
+        "output_text": "Yes, that calculation is correct. \n\n17 × 20 = 340, and 17 × 3 = 51. Adding them together gives 391.",
+        "error_code": null,
+        "audio_stream_id": "5f9cb115-461f-4b2d-a9da-a68a31acc40b"
+      },
+      "elapsed_ms": 5800,
+      "provider_rounds": 1,
+      "registered_skill_count": 12,
+      "tool_runs": []
+    },
+    {
+      "sample_key": "instant_message-r0:local_code_review",
+      "profile": "instant_message",
+      "origin": "local_text",
+      "repeat": 0,
+      "turn": "local_code_review",
+      "user_text": "请看看这段代码有没有语法错误：print(\"hello\")",
+      "generation_id": "4d2409fe-465e-4785-950c-2d13adac7006",
+      "result": {
+        "generation_id": "4d2409fe-465e-4785-950c-2d13adac7006",
+        "session_id": "adb9ba7f-9c66-47a8-8128-83f5ce8ed565",
+        "turn_id": "4c003eba-5206-4148-8d99-284d30ebe587",
+        "state": "completed",
+        "output_text": "没有语法错误，写得很规范。在 Python 里运行它会正常输出 `hello`。",
+        "error_code": null,
+        "audio_stream_id": "19550e9c-a99a-4829-8312-250413bf0ed2"
+      },
+      "elapsed_ms": 3916,
+      "provider_rounds": 1,
+      "registered_skill_count": 12,
+      "tool_runs": []
+    },
+    {
+      "sample_key": "single_text-r0:negated_url",
+      "profile": "single_text",
+      "origin": "local_text",
+      "repeat": 0,
+      "turn": "negated_url",
+      "user_text": "不要打开 https://example.org/guide，只解释这个 URL 的组成。",
+      "generation_id": "7b4d6a26-aca2-4e3a-9f01-f5c88627261e",
+      "result": {
+        "generation_id": "7b4d6a26-aca2-4e3a-9f01-f5c88627261e",
+        "session_id": "b3c7fec0-bb2c-4e5d-93f0-b4fc85f961e0",
+        "turn_id": "7f60c81f-af92-4d61-8138-b6cced657717",
+        "state": "completed",
+        "output_text": "好的，不会去访问它，直接为你拆解这个 URL 的结构：\n\n1. **协议方案（Scheme）**：`https`  \n   表示采用安全的超文本传输协议（Hypertext Transfer Protocol Secure），通过加密通道传输数据。\n2. **主机名 / 域名（Host / Domain）**：`example.org`  \n   定位目标服务器的地址。其中 `.org` 是顶级域名（TLD），`example` 是该域下的二级域名。\n3. **路径（Path）**：`/guide`  \n   指向该网站服务器上的具体资源、目录或页面路由。\n\n整个链接非常精简，没有携带端口号、查询参数（Query）或锚点（Fragment）。",
+        "error_code": null,
+        "audio_stream_id": "7ed41fb5-25a8-4531-bd53-0945ac7856b7"
+      },
+      "elapsed_ms": 4930,
+      "provider_rounds": 1,
+      "registered_skill_count": 12,
+      "tool_runs": []
+    },
+    {
+      "sample_key": "single_text-r0:local_poem",
+      "profile": "single_text",
+      "origin": "local_text",
+      "repeat": 0,
+      "turn": "local_poem",
+      "user_text": "Create a short poem about rain.",
+      "generation_id": "dfa0a872-811d-4264-97a1-02e5828a0fbe",
+      "result": {
+        "generation_id": "dfa0a872-811d-4264-97a1-02e5828a0fbe",
+        "session_id": "b3c7fec0-bb2c-4e5d-93f0-b4fc85f961e0",
+        "turn_id": "44586f86-62e0-41a3-9bc5-a9e6a9a3333f",
+        "state": "completed",
+        "output_text": "A quiet tap against the glass,  \nSoft whispers as the shadows pass.  \nThe world slows down, washed clean and gray,  \nAs gentle raindrops drift away.",
+        "error_code": null,
+        "audio_stream_id": "d8a4996c-d512-4cb2-bfc0-910c9db7ff4c"
+      },
+      "elapsed_ms": 5012,
+      "provider_rounds": 1,
+      "registered_skill_count": 12,
+      "tool_runs": []
+    },
+    {
+      "sample_key": "single_text-r0:local_calculation",
+      "profile": "single_text",
+      "origin": "local_text",
+      "repeat": 0,
+      "turn": "local_calculation",
+      "user_text": "Please check this calculation: 17 * 23 = 391.",
+      "generation_id": "891f8b82-3195-4b8b-b02d-d9a10f7b2971",
+      "result": {
+        "generation_id": "891f8b82-3195-4b8b-b02d-d9a10f7b2971",
+        "session_id": "b3c7fec0-bb2c-4e5d-93f0-b4fc85f961e0",
+        "turn_id": "c4e03418-9804-4471-892f-610f266d2153",
+        "state": "completed",
+        "output_text": "Yes, that calculation is correct. \n\n17 × 23 = 17 × 20 + 17 × 3 = 340 + 51 = 391.",
+        "error_code": null,
+        "audio_stream_id": "d25cbf6e-0dbb-47f2-80c5-a9a257f2a127"
+      },
+      "elapsed_ms": 4149,
+      "provider_rounds": 1,
+      "registered_skill_count": 12,
+      "tool_runs": []
+    },
+    {
+      "sample_key": "single_text-r0:local_code_review",
+      "profile": "single_text",
+      "origin": "local_text",
+      "repeat": 0,
+      "turn": "local_code_review",
+      "user_text": "请看看这段代码有没有语法错误：print(\"hello\")",
+      "generation_id": "a40cf239-f81a-47d9-9918-7dc7c57516ea",
+      "result": {
+        "generation_id": "a40cf239-f81a-47d9-9918-7dc7c57516ea",
+        "session_id": "b3c7fec0-bb2c-4e5d-93f0-b4fc85f961e0",
+        "turn_id": "756515c4-e61b-4884-a7c6-2c1f20ef2a18",
+        "state": "completed",
+        "output_text": "这段代码没有语法错误。\n\n在 Python 3 里，这是一句标准的输出语句，括号和引号的闭合都很规范，运行后会正常打印出 `hello`。",
+        "error_code": null,
+        "audio_stream_id": "b186ef4c-778d-469b-a74b-5c2c5adfe972"
+      },
+      "elapsed_ms": 5054,
+      "provider_rounds": 1,
+      "registered_skill_count": 12,
+      "tool_runs": []
+    },
+    {
+      "sample_key": "default_voice-r0:negated_url",
+      "profile": "default",
+      "origin": "voice",
+      "repeat": 0,
+      "turn": "negated_url",
+      "user_text": "不要打开 https://example.org/guide，只解释这个 URL 的组成。",
+      "generation_id": "14b02d5d-40f0-4b2f-81ba-dea67115e197",
+      "result": {
+        "generation_id": "14b02d5d-40f0-4b2f-81ba-dea67115e197",
+        "session_id": "8669c846-96ed-4513-8fa8-5d10ec273f1d",
+        "turn_id": "57b352c2-ded6-4e8b-8208-9a4bb956be37",
+        "state": "completed",
+        "output_text": "好的，我不访问它，直接为您拆解这个 URL 的组成部分：\n\n- **`https`（协议 / Scheme）**：指定通信所使用的协议，这里代表通过加密的 HTTPS 协议进行安全传输。\n- **`://`（分隔符）**：标准语法中用于区分协议与后续网络位置的固定标识。\n- **`example.org`（主机名 / 域名 / Host）**：定位目标服务器的地址。其中 `.org` 是顶级域名（TLD），`example` 是二级域名。\n- **`/guide`（路径 / Path）**：指向服务器上具体的资源位置或页面路由。\n\n这个 URL 比较基础，没有包含端口号（HTTPS 默认使用 443）、查询参数（`?key=value`）或锚点（`#section`）。",
+        "error_code": null,
+        "audio_stream_id": "e40c041f-f721-4b0d-a2ef-2328f96d7571"
+      },
+      "elapsed_ms": 4569,
+      "provider_rounds": 1,
+      "registered_skill_count": 12,
+      "tool_runs": []
+    },
+    {
+      "sample_key": "default_voice-r0:local_poem",
+      "profile": "default",
+      "origin": "voice",
+      "repeat": 0,
+      "turn": "local_poem",
+      "user_text": "Create a short poem about rain.",
+      "generation_id": "3a3fc8d5-de55-4a1f-bfd5-acee839e2bc0",
+      "result": {
+        "generation_id": "3a3fc8d5-de55-4a1f-bfd5-acee839e2bc0",
+        "session_id": "8669c846-96ed-4513-8fa8-5d10ec273f1d",
+        "turn_id": "8bc546ca-eddb-4027-9ef3-8f30165a2718",
+        "state": "completed",
+        "output_text": "A gentle whisper on the glass,\nWashing the dust from leaves of green.\nThe hurried world lets hours pass,\nLeaving the quiet air serene.\n\nHope this quiet rhythm brings you a bit of calm.",
+        "error_code": null,
+        "audio_stream_id": "9a8e4ffc-c10b-4515-8aa2-6b133efb4296"
+      },
+      "elapsed_ms": 7112,
+      "provider_rounds": 1,
+      "registered_skill_count": 12,
+      "tool_runs": []
+    },
+    {
+      "sample_key": "default_voice-r0:local_calculation",
+      "profile": "default",
+      "origin": "voice",
+      "repeat": 0,
+      "turn": "local_calculation",
+      "user_text": "Please check this calculation: 17 * 23 = 391.",
+      "generation_id": "31d823b3-9f2e-41bc-a19f-db3a168b3441",
+      "result": {
+        "generation_id": "31d823b3-9f2e-41bc-a19f-db3a168b3441",
+        "session_id": "8669c846-96ed-4513-8fa8-5d10ec273f1d",
+        "turn_id": "1ed61046-c530-4a4c-86be-d2cc67a5fd6c",
+        "state": "completed",
+        "output_text": "Yes, the calculation is completely correct:\n\n17 × 23 = 391 \n\n(17 × 20 = 340, and 17 × 3 = 51. 340 + 51 = 391.)",
+        "error_code": null,
+        "audio_stream_id": "b5b543f4-3966-4761-b06f-7458cb4eb1d9"
+      },
+      "elapsed_ms": 4400,
+      "provider_rounds": 1,
+      "registered_skill_count": 12,
+      "tool_runs": []
+    },
+    {
+      "sample_key": "default_voice-r0:local_code_review",
+      "profile": "default",
+      "origin": "voice",
+      "repeat": 0,
+      "turn": "local_code_review",
+      "user_text": "请看看这段代码有没有语法错误：print(\"hello\")",
+      "generation_id": "28ff75a1-5d49-4cda-9c92-d3848f422d70",
+      "result": {
+        "generation_id": "28ff75a1-5d49-4cda-9c92-d3848f422d70",
+        "session_id": "8669c846-96ed-4513-8fa8-5d10ec273f1d",
+        "turn_id": "acadc523-181d-4f9b-b4e3-36447ed545a2",
+        "state": "completed",
+        "output_text": "这段代码没有任何语法错误。\n\n如果是在 Python（以及 Lua 等常见语言）中，括号和双引号都正确配对闭合，直接运行就能正常输出 `hello`。",
+        "error_code": null,
+        "audio_stream_id": "dfec5a54-753b-44cd-adaf-fbbd09c08919"
+      },
+      "elapsed_ms": 4709,
+      "provider_rounds": 1,
+      "registered_skill_count": 12,
+      "tool_runs": []
+    }
+  ],
+  "original_files": [
+    {
+      "path": "preflight.json",
+      "sha256": "6dd692773edf075e743af5cf2f8bb6ba22f68208fb47380e59c5c3cc1289b9e9"
+    },
+    {
+      "path": "completion.json",
+      "sha256": "bfac23f589b528d3e92fd2611fc4f6a22bf0f605351a14ef9337aa1264ed6851"
+    },
+    {
+      "path": "results.jsonl",
+      "sha256": "179f65b8112dd4f10f6b05a0ec8c82485e6489aa8a5bffdc54420a3d255a3637"
+    },
+    {
+      "path": "actual-requests.jsonl",
+      "sha256": "6c115fe42d46dd7b99e7f43e86645e1658599dea9629cdd0e07f43cda20c2708"
+    },
+    {
+      "path": "provider-rounds.jsonl",
+      "sha256": "f405e4dabf6274b1366b3b42bb81d2c9d5efc4fd0df5b4dd728b8e7c60ed77d9"
+    },
+    {
+      "path": "provider-events.jsonl",
+      "sha256": "01928d1474b7484ae8c3a2df3266fb76d56716c0bb4dccf0dbd15163ef2991e7"
+    },
+    {
+      "path": "review-rubric.json",
+      "sha256": "3f0afcff22ede6f0ab597054b8415d9773ae9f66c85929ef2a27e0a6264501b3"
+    }
+  ]
+}

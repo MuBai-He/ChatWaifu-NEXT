@@ -1,0 +1,65 @@
+{
+  "reviewer": "implementation author; direct full-text review, not independent/blind",
+  "criteria": "same previous Q02 fidelity criteria; no threshold lowered",
+  "complete": 0,
+  "partial": 8,
+  "items": [
+    {
+      "condition": "revision",
+      "key": "frozen_airchina:r0:t4:closure_c1:existing_revision:r0",
+      "grade": "partial",
+      "reason": "携带条件、来源日期/URL与国航范围保留，但均未保留前轮截至10月4日后续更新是否发生的未核实状态；0/4符合保真门槛。",
+      "reply_sha256": "74adca1f0eae2eac4412ba0aab144325778552561fd2819160a05196217a5a39"
+    },
+    {
+      "condition": "revision",
+      "key": "frozen_airchina:r0:t4:closure_c1:existing_revision:r1",
+      "grade": "partial",
+      "reason": "携带条件、来源日期/URL与国航范围保留，但均未保留前轮截至10月4日后续更新是否发生的未核实状态；0/4符合保真门槛。",
+      "reply_sha256": "faba4bbfd83514063aa420ce2657be294a8d58817f592c7908365b1859a6bd11"
+    },
+    {
+      "condition": "revision",
+      "key": "frozen_airchina:r1:t4:closure_c1:existing_revision:r0",
+      "grade": "partial",
+      "reason": "携带条件、来源日期/URL与国航范围保留，但均未保留前轮截至10月4日后续更新是否发生的未核实状态；0/4符合保真门槛。",
+      "reply_sha256": "9d8a9d5c539eaf7417d54b3ea5dedb94a9d26684353bae8affbe96862849324d"
+    },
+    {
+      "condition": "revision",
+      "key": "frozen_airchina:r1:t4:closure_c1:existing_revision:r1",
+      "grade": "partial",
+      "reason": "携带条件、来源日期/URL与国航范围保留，但均未保留前轮截至10月4日后续更新是否发生的未核实状态；0/4符合保真门槛。",
+      "reply_sha256": "3e4ac10a486e0c0ed06b59f641137e33557ae06230700531c08b875ecb20572f"
+    },
+    {
+      "condition": "conflict",
+      "key": "frozen_airchina:r0:t4:closure_c1:existing_revision:r0",
+      "grade": "partial",
+      "reason": "携带条件、来源日期/URL与国航范围保留，但均未保留前轮截至10月4日后续更新是否发生的未核实状态；0/4符合保真门槛。",
+      "reply_sha256": "96a0188c9f695493674f6f4b224863c00340412d16f1dfd3a2dc342b5970f960"
+    },
+    {
+      "condition": "conflict",
+      "key": "frozen_airchina:r0:t4:closure_c1:existing_revision:r1",
+      "grade": "partial",
+      "reason": "携带条件、来源日期/URL与国航范围保留，但均未保留前轮截至10月4日后续更新是否发生的未核实状态；0/4符合保真门槛。",
+      "reply_sha256": "6513bd8ae225321b7356c379f91d63327751c86f98be4e63ee50d6e7e368edc3"
+    },
+    {
+      "condition": "conflict",
+      "key": "frozen_airchina:r1:t4:closure_c1:existing_revision:r0",
+      "grade": "partial",
+      "reason": "携带条件、来源日期/URL与国航范围保留，但均未保留前轮截至10月4日后续更新是否发生的未核实状态；0/4符合保真门槛。",
+      "reply_sha256": "85444c785bf8eecdcee36a0b51199ffd2faaa6f7ddd6cc6fb66aa92898871abc"
+    },
+    {
+      "condition": "conflict",
+      "key": "frozen_airchina:r1:t4:closure_c1:existing_revision:r1",
+      "grade": "partial",
+      "reason": "携带条件、来源日期/URL与国航范围保留，但均未保留前轮截至10月4日后续更新是否发生的未核实状态；0/4符合保真门槛。",
+      "reply_sha256": "be7fd5d4587e126eb208e27bfe0d1e2e54727c8730191f1e9ff0e4fc3832e686"
+    }
+  ],
+  "conclusion": "No adoption of finish-clause removal; route fix is deterministic correctness only, not evidence of quality improvement."
+}

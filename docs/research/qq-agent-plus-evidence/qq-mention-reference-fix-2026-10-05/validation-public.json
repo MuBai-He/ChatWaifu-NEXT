@@ -1,0 +1,25 @@
+{
+  "product_commit": "50a30a3",
+  "local_python": {
+    "tests": 3786,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 46,
+    "passed": 3740
+  },
+  "linux_candidate": {
+    "tests": 308,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 308
+  },
+  "initial_reproducing_fixture_failures": 6,
+  "pyright": "0 errors",
+  "ruff": "passed",
+  "format": "400 files checked",
+  "architecture": "passed",
+  "web_build": "passed, frontend sources unchanged",
+  "real_phone_acceptance": "pending",
+  "quality_scope": "Frozen same-material reference analogue only; original Q02 remains open"
+}

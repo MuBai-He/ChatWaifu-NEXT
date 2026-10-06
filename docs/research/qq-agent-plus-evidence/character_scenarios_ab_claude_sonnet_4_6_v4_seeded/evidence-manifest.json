@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "model": "claude-sonnet-4-6",
+  "raw_samples": 288,
+  "raw_byte_identity_verified": true,
+  "primary_review_pairs": 144,
+  "review_blind": false,
+  "files": [
+    {
+      "path": "attempt_failures/batch-1.jsonl",
+      "sha256": "9db78a5eed0e74cb53813908d4e6938d0b67b38513e7cb6a2919ac9cf6b3cacb"
+    },
+    {
+      "path": "attempt_failures/batch-2.jsonl",
+      "sha256": "61e52526351a8e4eb95a36408f0c1ea1a2f9043b39f50f7c6e2a6791ff6ce1ba"
+    },
+    {
+      "path": "attempt_failures/batch-3.jsonl",
+      "sha256": "394d82518c39bfe830797c7e638752577eaa32e3930f4db55a1a667ed54a93c5"
+    },
+    {
+      "path": "blinded_key.json",
+      "sha256": "4bc6e353602510ba8b2eedbb52d952ade569a999a07a34b673cfa68faf393fe7"
+    },
+    {
+      "path": "blinded_review_template.md.txt",
+      "sha256": "bb10946eb0c7dee9090b2bbd8f1da3b1f6622b742cacf0549b31ef3efd6fda93"
+    },
+    {
+      "path": "fact-coverage-audit.json",
+      "sha256": "38c250f1dd5f3b00344b14184301c3a97b2ed95a478937618ce6668b7b52897f"
+    },
+    {
+      "path": "metadata.json",
+      "sha256": "730a1c294e38f1acba96dcca439f530a9a9c632f7e52d65502a0c4d0a7aecb9d"
+    },
+    {
+      "path": "primary-code-execution.json",
+      "sha256": "ec8afc4817f414f706b1f91dfa290aee6047394882872defc0fdd049f26ccd0f"
+    },
+    {
+      "path": "primary-review.json",
+      "sha256": "eec5eba33a867ffecc9a8a4326f53ff272b8a344842ac0602f8bc47ab3593a5a"
+    },
+    {
+      "path": "results.jsonl",
+      "sha256": "8035ff3cd74956356abe699d9c7e03d1540924e0d68904e8e52a95893e4e4841"
+    },
+    {
+      "path": "validation-summary.json",
+      "sha256": "0b83973ec1a4d166365f9c06825f53b8f890332bae5a7a833aa061b4cf419a70"
+    }
+  ],
+  "release_approved": false
+}

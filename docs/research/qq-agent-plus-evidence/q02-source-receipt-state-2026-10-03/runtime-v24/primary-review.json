@@ -1,0 +1,76 @@
+{
+  "mode": "primary_direct_review_not_blind",
+  "quality_approved": false,
+  "scope": "8 candidate turns, single_text, one repeat. Not a full A/B gate.",
+  "items": [
+    {
+      "sample_key": "topic_switch:r0:t1:candidate",
+      "result": "fail",
+      "findings": [
+        "Distinguishes heartbeat interval and election timeout; timing inequality is supported.",
+        "Claims every timer reset re-randomizes as a protocol rule without evidence in the read excerpt.",
+        "150-300ms example is not present in the actual broadcastTime excerpt; a different chapter was not read.",
+        "Engineering ratio is not qualified by a cited implementation."
+      ]
+    },
+    {
+      "sample_key": "topic_switch:r0:t2:candidate",
+      "result": "partial",
+      "findings": [
+        "Follows topic switch with mild character preference; no fabricated shared action.",
+        "Three paragraphs for a light cooking-preference question; style remains wordy."
+      ]
+    },
+    {
+      "sample_key": "topic_switch:r0:t3:candidate",
+      "result": "partial",
+      "findings": [
+        "Acknowledges user taste without hostile teasing or relationship escalation.",
+        "Elaborate explanation adds length to lightweight banter."
+      ]
+    },
+    {
+      "sample_key": "topic_switch:r0:t4:candidate",
+      "result": "pass_for_selected_boundaries",
+      "findings": [
+        "Presents a character food preference; no invented shared experience or performed external action."
+      ]
+    },
+    {
+      "sample_key": "detailed_answer:r0:t1:candidate",
+      "result": "partial",
+      "findings": [
+        "All three requested categories with three items are present.",
+        "Generalizes original identity-document requirement and mixes aviation/rail baggage requirements without relevant evidence."
+      ]
+    },
+    {
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "result": "fail",
+      "findings": [
+        "Three rules include Wh branches, approval, 3C, recall, baggage and charging restrictions.",
+        "Uses 2025 secondary reports as complete current authority without a currency/original-source gap.",
+        "Only ties the quantity limit to >100Wh branch despite missing applicable later rule verification.",
+        "Actual later search is followed by a read; receipt-state control worked but discovery/current applicability did not."
+      ]
+    },
+    {
+      "sample_key": "detailed_answer:r0:t3:candidate",
+      "result": "partial",
+      "findings": [
+        "Two distinct activities preserve content, durations and precautions.",
+        "Adds an unsupported typical admission cutoff at 16:00-16:30."
+      ]
+    },
+    {
+      "sample_key": "detailed_answer:r0:t4:candidate",
+      "result": "fail",
+      "findings": [
+        "Checklist retains categories, quantities, both activities and durations.",
+        "Correctly removes the invented admission cutoff and asks to check the venue.",
+        "Carries forward the unsupported current-rule framing from the prior answer."
+      ]
+    }
+  ],
+  "mechanical_checks_are_not_quality": true
+}

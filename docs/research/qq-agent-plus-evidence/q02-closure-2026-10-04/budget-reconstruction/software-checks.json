@@ -1,0 +1,29 @@
+{
+  "before": {
+    "failing_confirmed_regressions": 4,
+    "control_passed": 2,
+    "source": "offline-server/server-before-final.log"
+  },
+  "after": {
+    "local_unit_affected": 388,
+    "local_integration_affected": 135,
+    "server_same_targets": 523,
+    "new_regressions": 6,
+    "pyright_errors": 0,
+    "ruff_passed": true,
+    "format_passed": true
+  },
+  "test_setup_notes": [
+    "Initial oversized current-result fixture used default 32768 byte cap instead of the admitted 131072; corrected to exercise true mandatory input overflow.",
+    "Initial review draft itself exceeded the fixture allowance; shortened solely to isolate history-body contention. Both failures and corrected logs remain.",
+    "Server production Python lacks pytest; reused existing test-dependency directory without changing production environment.",
+    "First baseline command had shell quoting error; final isolated baseline produced 4 failures and 2 controls passing.",
+    "First Pyright call selected runtime project without root extraPaths; root project reported zero errors."
+  ],
+  "production_code_paths_changed": [
+    "agent/source_context.py",
+    "agent/tool_calling.py"
+  ],
+  "new_model_calls_for_offline_work": 0,
+  "new_source_calls_for_offline_work": 0
+}

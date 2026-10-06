@@ -1,0 +1,15 @@
+{
+  "requests_max": 6,
+  "repeats": 3,
+  "limits": [
+    5,
+    20
+  ],
+  "controlled_source": "same real SearXNG response from search-cap probe index 1",
+  "source_body_sha256": "be41b7413b686819819355b2bdc9d886320ad42b44c6d483b3c34ba8091ef02b",
+  "source_query": "民航局 充电宝 乘机规定 最新规定",
+  "candidate_count": 18,
+  "tool_execution": false,
+  "synthetic_receipt_projection": true,
+  "purpose": "Only next-action selection under result-cap variation; not an actual Runtime skill execution or answer-quality pass"
+}

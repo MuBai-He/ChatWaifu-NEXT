@@ -1,0 +1,775 @@
+{
+  "scope": "bounded same-frozen-source capacity/history control; no live source discovery or full Q02 pass",
+  "actual_http": 13,
+  "logical_completed": 9,
+  "all_tries_accounted": true,
+  "unknown_usage_not_zero": true,
+  "source_tool_execution": false,
+  "all_fixed_source_body_hashes_unchanged": true,
+  "first_payloads": [
+    {
+      "sample_key": "instant_message-pre_user:r0:original_history",
+      "first_payload_matches_frozen_form": true,
+      "expected_sha256": "295f18a35b9d7c8be11a126c42deee9b1c6dfaf7dc3a4f46db461ed8c88d6811"
+    },
+    {
+      "sample_key": "single_text-system:r0:omitted_history",
+      "first_payload_matches_frozen_form": true,
+      "expected_sha256": "6afba4c6ed1b55347bfa1d486e28b695430fad5437ad6196451b9b49c63f8e7b"
+    },
+    {
+      "sample_key": "single_text-system:r0:original_history",
+      "first_payload_matches_frozen_form": true,
+      "expected_sha256": "68ab0740eb327789c40bd694909eb1fa8ca60aa957dde55da7bb69b334c6893f"
+    },
+    {
+      "sample_key": "instant_message-pre_user:r1:original_history",
+      "first_payload_matches_frozen_form": true,
+      "expected_sha256": "295f18a35b9d7c8be11a126c42deee9b1c6dfaf7dc3a4f46db461ed8c88d6811"
+    },
+    {
+      "sample_key": "single_text-system:r1:original_history",
+      "first_payload_matches_frozen_form": true,
+      "expected_sha256": "68ab0740eb327789c40bd694909eb1fa8ca60aa957dde55da7bb69b334c6893f"
+    },
+    {
+      "sample_key": "single_text-system:r1:omitted_history",
+      "first_payload_matches_frozen_form": true,
+      "expected_sha256": "6afba4c6ed1b55347bfa1d486e28b695430fad5437ad6196451b9b49c63f8e7b"
+    },
+    {
+      "sample_key": "instant_message-pre_user:r2:original_history",
+      "first_payload_matches_frozen_form": true,
+      "expected_sha256": "295f18a35b9d7c8be11a126c42deee9b1c6dfaf7dc3a4f46db461ed8c88d6811"
+    },
+    {
+      "sample_key": "single_text-system:r2:omitted_history",
+      "first_payload_matches_frozen_form": true,
+      "expected_sha256": "6afba4c6ed1b55347bfa1d486e28b695430fad5437ad6196451b9b49c63f8e7b"
+    },
+    {
+      "sample_key": "single_text-system:r2:original_history",
+      "first_payload_matches_frozen_form": true,
+      "expected_sha256": "68ab0740eb327789c40bd694909eb1fa8ca60aa957dde55da7bb69b334c6893f"
+    }
+  ],
+  "wire_failures": [],
+  "wire_reports": [
+    {
+      "sample_key": "instant_message-pre_user:r0:original_history",
+      "call_id": "0ff1d2dd-12b8-46bc-a128-e88ee19b8020",
+      "http_attempt": 1,
+      "payload_sha256": "295f18a35b9d7c8be11a126c42deee9b1c6dfaf7dc3a4f46db461ed8c88d6811",
+      "reference_tokens": 22832,
+      "budget_report": {
+        "estimated_token_limit": 35617,
+        "estimated_original_tokens": 22832,
+        "estimated_input_tokens": 22832,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "source_body_hashes": [
+        {
+          "url": "https://www.dzwww.com/xinwen/shehuixinwen/202503/t20250317_15664978.htm",
+          "text_sha256": "40ddabb3e58f47478db1302cc608a6585f5040196c8957e377f37f5070516bde",
+          "characters": 5000,
+          "truncated": true
+        },
+        {
+          "url": "https://news.qq.com/rain/a/20250626A08H9P00",
+          "text_sha256": "73546752ba4f21120eb1f7702db5056b66d58f4a29c59a6644fb32488c06909a",
+          "characters": 4000,
+          "truncated": true
+        },
+        {
+          "url": "https://m.bjnews.com.cn/detail/1750921184129529.html",
+          "text_sha256": "d16c0ab20ce9eb7e1abcd3a56cfaa5b6b8058f10bef4e926350ea09b225780f9",
+          "characters": 2601,
+          "truncated": false
+        }
+      ],
+      "checks": {
+        "payload_hash": true,
+        "model": true,
+        "complete_reference": true,
+        "allowance": true,
+        "output_cap": true
+      }
+    },
+    {
+      "sample_key": "instant_message-pre_user:r0:original_history",
+      "call_id": "c343af18-6eeb-4e7a-8161-77dabdc2ecb1",
+      "http_attempt": 2,
+      "payload_sha256": "748cbe2dee0ce92e5b5ade9584ab67b5d7f404444d9c9ac163b6b8c1c9079160",
+      "reference_tokens": 24543,
+      "budget_report": {
+        "estimated_token_limit": 35617,
+        "estimated_original_tokens": 24543,
+        "estimated_input_tokens": 24543,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "source_body_hashes": [
+        {
+          "url": "https://www.dzwww.com/xinwen/shehuixinwen/202503/t20250317_15664978.htm",
+          "text_sha256": "40ddabb3e58f47478db1302cc608a6585f5040196c8957e377f37f5070516bde",
+          "characters": 5000,
+          "truncated": true
+        },
+        {
+          "url": "https://news.qq.com/rain/a/20250626A08H9P00",
+          "text_sha256": "73546752ba4f21120eb1f7702db5056b66d58f4a29c59a6644fb32488c06909a",
+          "characters": 4000,
+          "truncated": true
+        },
+        {
+          "url": "https://m.bjnews.com.cn/detail/1750921184129529.html",
+          "text_sha256": "d16c0ab20ce9eb7e1abcd3a56cfaa5b6b8058f10bef4e926350ea09b225780f9",
+          "characters": 2601,
+          "truncated": false
+        }
+      ],
+      "checks": {
+        "payload_hash": true,
+        "model": true,
+        "complete_reference": true,
+        "allowance": true,
+        "output_cap": true
+      }
+    },
+    {
+      "sample_key": "instant_message-pre_user:r0:original_history",
+      "call_id": "50be2481-3546-487b-b07c-ac99ec8c7321",
+      "http_attempt": 3,
+      "payload_sha256": "47c349123066b5c4638176db682fe1919e47ad5405ad8d5da1e946a8ec82c7f1",
+      "reference_tokens": 22435,
+      "budget_report": {
+        "estimated_token_limit": 35617,
+        "estimated_original_tokens": 22435,
+        "estimated_input_tokens": 22435,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "source_body_hashes": [
+        {
+          "url": "https://www.dzwww.com/xinwen/shehuixinwen/202503/t20250317_15664978.htm",
+          "text_sha256": "40ddabb3e58f47478db1302cc608a6585f5040196c8957e377f37f5070516bde",
+          "characters": 5000,
+          "truncated": true
+        },
+        {
+          "url": "https://news.qq.com/rain/a/20250626A08H9P00",
+          "text_sha256": "73546752ba4f21120eb1f7702db5056b66d58f4a29c59a6644fb32488c06909a",
+          "characters": 4000,
+          "truncated": true
+        },
+        {
+          "url": "https://m.bjnews.com.cn/detail/1750921184129529.html",
+          "text_sha256": "d16c0ab20ce9eb7e1abcd3a56cfaa5b6b8058f10bef4e926350ea09b225780f9",
+          "characters": 2601,
+          "truncated": false
+        }
+      ],
+      "checks": {
+        "payload_hash": true,
+        "model": true,
+        "complete_reference": true,
+        "allowance": true,
+        "output_cap": true
+      }
+    },
+    {
+      "sample_key": "single_text-system:r0:omitted_history",
+      "call_id": "7f701834-6fbc-4b17-b754-72827fca898d",
+      "http_attempt": 4,
+      "payload_sha256": "6afba4c6ed1b55347bfa1d486e28b695430fad5437ad6196451b9b49c63f8e7b",
+      "reference_tokens": 22550,
+      "budget_report": {
+        "estimated_token_limit": 35617,
+        "estimated_original_tokens": 22550,
+        "estimated_input_tokens": 22550,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "source_body_hashes": [
+        {
+          "url": "https://m.voc.com.cn/xhn/news/202506/29805452.html",
+          "text_sha256": "eeb3c02b5f20a500a44d74ae857d9ad54eb30bfe0463f9064b7a28bdc10a8563",
+          "characters": 1730,
+          "truncated": false
+        },
+        {
+          "url": "https://app.dahecube.com/nweb/news/20250627/239583n579fa9378f2.htm?artid=239583",
+          "text_sha256": "8fb27ca124c8cfabb6ecdecf7e762e9a80d7b97ca8ae171ed9836a19a6d5e73d",
+          "characters": 3810,
+          "truncated": false
+        },
+        {
+          "url": "https://item.btime.com/41v8i91ponu8e9pnuojftmddbgs",
+          "text_sha256": "ae41b69be9c0a56991c892090c28ab0542c75eb18a0b6b0e5cda6f44fbdae8bc",
+          "characters": 5000,
+          "truncated": true
+        }
+      ],
+      "checks": {
+        "payload_hash": true,
+        "model": true,
+        "complete_reference": true,
+        "allowance": true,
+        "output_cap": true
+      }
+    },
+    {
+      "sample_key": "single_text-system:r0:original_history",
+      "call_id": "05a5dcee-de02-447b-a7d9-e0cf210e5999",
+      "http_attempt": 5,
+      "payload_sha256": "68ab0740eb327789c40bd694909eb1fa8ca60aa957dde55da7bb69b334c6893f",
+      "reference_tokens": 23452,
+      "budget_report": {
+        "estimated_token_limit": 35617,
+        "estimated_original_tokens": 23452,
+        "estimated_input_tokens": 23452,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "source_body_hashes": [
+        {
+          "url": "https://m.voc.com.cn/xhn/news/202506/29805452.html",
+          "text_sha256": "eeb3c02b5f20a500a44d74ae857d9ad54eb30bfe0463f9064b7a28bdc10a8563",
+          "characters": 1730,
+          "truncated": false
+        },
+        {
+          "url": "https://app.dahecube.com/nweb/news/20250627/239583n579fa9378f2.htm?artid=239583",
+          "text_sha256": "8fb27ca124c8cfabb6ecdecf7e762e9a80d7b97ca8ae171ed9836a19a6d5e73d",
+          "characters": 3810,
+          "truncated": false
+        },
+        {
+          "url": "https://item.btime.com/41v8i91ponu8e9pnuojftmddbgs",
+          "text_sha256": "ae41b69be9c0a56991c892090c28ab0542c75eb18a0b6b0e5cda6f44fbdae8bc",
+          "characters": 5000,
+          "truncated": true
+        }
+      ],
+      "checks": {
+        "payload_hash": true,
+        "model": true,
+        "complete_reference": true,
+        "allowance": true,
+        "output_cap": true
+      }
+    },
+    {
+      "sample_key": "instant_message-pre_user:r1:original_history",
+      "call_id": "e30172f5-30c0-4831-aaf7-dcd26bc3ead6",
+      "http_attempt": 6,
+      "payload_sha256": "295f18a35b9d7c8be11a126c42deee9b1c6dfaf7dc3a4f46db461ed8c88d6811",
+      "reference_tokens": 22832,
+      "budget_report": {
+        "estimated_token_limit": 35617,
+        "estimated_original_tokens": 22832,
+        "estimated_input_tokens": 22832,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "source_body_hashes": [
+        {
+          "url": "https://www.dzwww.com/xinwen/shehuixinwen/202503/t20250317_15664978.htm",
+          "text_sha256": "40ddabb3e58f47478db1302cc608a6585f5040196c8957e377f37f5070516bde",
+          "characters": 5000,
+          "truncated": true
+        },
+        {
+          "url": "https://news.qq.com/rain/a/20250626A08H9P00",
+          "text_sha256": "73546752ba4f21120eb1f7702db5056b66d58f4a29c59a6644fb32488c06909a",
+          "characters": 4000,
+          "truncated": true
+        },
+        {
+          "url": "https://m.bjnews.com.cn/detail/1750921184129529.html",
+          "text_sha256": "d16c0ab20ce9eb7e1abcd3a56cfaa5b6b8058f10bef4e926350ea09b225780f9",
+          "characters": 2601,
+          "truncated": false
+        }
+      ],
+      "checks": {
+        "payload_hash": true,
+        "model": true,
+        "complete_reference": true,
+        "allowance": true,
+        "output_cap": true
+      }
+    },
+    {
+      "sample_key": "instant_message-pre_user:r1:original_history",
+      "call_id": "220e5cdd-9b80-46ec-8d3f-e5c4918c10ea",
+      "http_attempt": 7,
+      "payload_sha256": "a818d2543c5b18486d485e6861f2d1c4d65a6492bef0985f87c89bf78ce5a1ca",
+      "reference_tokens": 22338,
+      "budget_report": {
+        "estimated_token_limit": 35617,
+        "estimated_original_tokens": 22338,
+        "estimated_input_tokens": 22338,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "source_body_hashes": [
+        {
+          "url": "https://www.dzwww.com/xinwen/shehuixinwen/202503/t20250317_15664978.htm",
+          "text_sha256": "40ddabb3e58f47478db1302cc608a6585f5040196c8957e377f37f5070516bde",
+          "characters": 5000,
+          "truncated": true
+        },
+        {
+          "url": "https://news.qq.com/rain/a/20250626A08H9P00",
+          "text_sha256": "73546752ba4f21120eb1f7702db5056b66d58f4a29c59a6644fb32488c06909a",
+          "characters": 4000,
+          "truncated": true
+        },
+        {
+          "url": "https://m.bjnews.com.cn/detail/1750921184129529.html",
+          "text_sha256": "d16c0ab20ce9eb7e1abcd3a56cfaa5b6b8058f10bef4e926350ea09b225780f9",
+          "characters": 2601,
+          "truncated": false
+        }
+      ],
+      "checks": {
+        "payload_hash": true,
+        "model": true,
+        "complete_reference": true,
+        "allowance": true,
+        "output_cap": true
+      }
+    },
+    {
+      "sample_key": "single_text-system:r1:original_history",
+      "call_id": "260de4c3-f2f0-40e7-94e5-bf3429e96080",
+      "http_attempt": 8,
+      "payload_sha256": "68ab0740eb327789c40bd694909eb1fa8ca60aa957dde55da7bb69b334c6893f",
+      "reference_tokens": 23452,
+      "budget_report": {
+        "estimated_token_limit": 35617,
+        "estimated_original_tokens": 23452,
+        "estimated_input_tokens": 23452,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "source_body_hashes": [
+        {
+          "url": "https://m.voc.com.cn/xhn/news/202506/29805452.html",
+          "text_sha256": "eeb3c02b5f20a500a44d74ae857d9ad54eb30bfe0463f9064b7a28bdc10a8563",
+          "characters": 1730,
+          "truncated": false
+        },
+        {
+          "url": "https://app.dahecube.com/nweb/news/20250627/239583n579fa9378f2.htm?artid=239583",
+          "text_sha256": "8fb27ca124c8cfabb6ecdecf7e762e9a80d7b97ca8ae171ed9836a19a6d5e73d",
+          "characters": 3810,
+          "truncated": false
+        },
+        {
+          "url": "https://item.btime.com/41v8i91ponu8e9pnuojftmddbgs",
+          "text_sha256": "ae41b69be9c0a56991c892090c28ab0542c75eb18a0b6b0e5cda6f44fbdae8bc",
+          "characters": 5000,
+          "truncated": true
+        }
+      ],
+      "checks": {
+        "payload_hash": true,
+        "model": true,
+        "complete_reference": true,
+        "allowance": true,
+        "output_cap": true
+      }
+    },
+    {
+      "sample_key": "single_text-system:r1:omitted_history",
+      "call_id": "47f7624e-ec6f-4511-ae43-3035d334c793",
+      "http_attempt": 9,
+      "payload_sha256": "6afba4c6ed1b55347bfa1d486e28b695430fad5437ad6196451b9b49c63f8e7b",
+      "reference_tokens": 22550,
+      "budget_report": {
+        "estimated_token_limit": 35617,
+        "estimated_original_tokens": 22550,
+        "estimated_input_tokens": 22550,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "source_body_hashes": [
+        {
+          "url": "https://m.voc.com.cn/xhn/news/202506/29805452.html",
+          "text_sha256": "eeb3c02b5f20a500a44d74ae857d9ad54eb30bfe0463f9064b7a28bdc10a8563",
+          "characters": 1730,
+          "truncated": false
+        },
+        {
+          "url": "https://app.dahecube.com/nweb/news/20250627/239583n579fa9378f2.htm?artid=239583",
+          "text_sha256": "8fb27ca124c8cfabb6ecdecf7e762e9a80d7b97ca8ae171ed9836a19a6d5e73d",
+          "characters": 3810,
+          "truncated": false
+        },
+        {
+          "url": "https://item.btime.com/41v8i91ponu8e9pnuojftmddbgs",
+          "text_sha256": "ae41b69be9c0a56991c892090c28ab0542c75eb18a0b6b0e5cda6f44fbdae8bc",
+          "characters": 5000,
+          "truncated": true
+        }
+      ],
+      "checks": {
+        "payload_hash": true,
+        "model": true,
+        "complete_reference": true,
+        "allowance": true,
+        "output_cap": true
+      }
+    },
+    {
+      "sample_key": "instant_message-pre_user:r2:original_history",
+      "call_id": "d8ba3ee6-7b62-48de-8f49-ab250754b8c3",
+      "http_attempt": 10,
+      "payload_sha256": "295f18a35b9d7c8be11a126c42deee9b1c6dfaf7dc3a4f46db461ed8c88d6811",
+      "reference_tokens": 22832,
+      "budget_report": {
+        "estimated_token_limit": 35617,
+        "estimated_original_tokens": 22832,
+        "estimated_input_tokens": 22832,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "source_body_hashes": [
+        {
+          "url": "https://www.dzwww.com/xinwen/shehuixinwen/202503/t20250317_15664978.htm",
+          "text_sha256": "40ddabb3e58f47478db1302cc608a6585f5040196c8957e377f37f5070516bde",
+          "characters": 5000,
+          "truncated": true
+        },
+        {
+          "url": "https://news.qq.com/rain/a/20250626A08H9P00",
+          "text_sha256": "73546752ba4f21120eb1f7702db5056b66d58f4a29c59a6644fb32488c06909a",
+          "characters": 4000,
+          "truncated": true
+        },
+        {
+          "url": "https://m.bjnews.com.cn/detail/1750921184129529.html",
+          "text_sha256": "d16c0ab20ce9eb7e1abcd3a56cfaa5b6b8058f10bef4e926350ea09b225780f9",
+          "characters": 2601,
+          "truncated": false
+        }
+      ],
+      "checks": {
+        "payload_hash": true,
+        "model": true,
+        "complete_reference": true,
+        "allowance": true,
+        "output_cap": true
+      }
+    },
+    {
+      "sample_key": "instant_message-pre_user:r2:original_history",
+      "call_id": "ad691132-8479-415a-98ca-2aa459471bae",
+      "http_attempt": 11,
+      "payload_sha256": "5e6d56a0e7d2edad85f179f83efb66c203bcc73e98853cd86c3bd67954225f9b",
+      "reference_tokens": 22356,
+      "budget_report": {
+        "estimated_token_limit": 35617,
+        "estimated_original_tokens": 22356,
+        "estimated_input_tokens": 22356,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "source_body_hashes": [
+        {
+          "url": "https://www.dzwww.com/xinwen/shehuixinwen/202503/t20250317_15664978.htm",
+          "text_sha256": "40ddabb3e58f47478db1302cc608a6585f5040196c8957e377f37f5070516bde",
+          "characters": 5000,
+          "truncated": true
+        },
+        {
+          "url": "https://news.qq.com/rain/a/20250626A08H9P00",
+          "text_sha256": "73546752ba4f21120eb1f7702db5056b66d58f4a29c59a6644fb32488c06909a",
+          "characters": 4000,
+          "truncated": true
+        },
+        {
+          "url": "https://m.bjnews.com.cn/detail/1750921184129529.html",
+          "text_sha256": "d16c0ab20ce9eb7e1abcd3a56cfaa5b6b8058f10bef4e926350ea09b225780f9",
+          "characters": 2601,
+          "truncated": false
+        }
+      ],
+      "checks": {
+        "payload_hash": true,
+        "model": true,
+        "complete_reference": true,
+        "allowance": true,
+        "output_cap": true
+      }
+    },
+    {
+      "sample_key": "single_text-system:r2:omitted_history",
+      "call_id": "67f122fe-997c-4d48-89ad-587cdd70b218",
+      "http_attempt": 12,
+      "payload_sha256": "6afba4c6ed1b55347bfa1d486e28b695430fad5437ad6196451b9b49c63f8e7b",
+      "reference_tokens": 22550,
+      "budget_report": {
+        "estimated_token_limit": 35617,
+        "estimated_original_tokens": 22550,
+        "estimated_input_tokens": 22550,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "source_body_hashes": [
+        {
+          "url": "https://m.voc.com.cn/xhn/news/202506/29805452.html",
+          "text_sha256": "eeb3c02b5f20a500a44d74ae857d9ad54eb30bfe0463f9064b7a28bdc10a8563",
+          "characters": 1730,
+          "truncated": false
+        },
+        {
+          "url": "https://app.dahecube.com/nweb/news/20250627/239583n579fa9378f2.htm?artid=239583",
+          "text_sha256": "8fb27ca124c8cfabb6ecdecf7e762e9a80d7b97ca8ae171ed9836a19a6d5e73d",
+          "characters": 3810,
+          "truncated": false
+        },
+        {
+          "url": "https://item.btime.com/41v8i91ponu8e9pnuojftmddbgs",
+          "text_sha256": "ae41b69be9c0a56991c892090c28ab0542c75eb18a0b6b0e5cda6f44fbdae8bc",
+          "characters": 5000,
+          "truncated": true
+        }
+      ],
+      "checks": {
+        "payload_hash": true,
+        "model": true,
+        "complete_reference": true,
+        "allowance": true,
+        "output_cap": true
+      }
+    },
+    {
+      "sample_key": "single_text-system:r2:original_history",
+      "call_id": "72981460-cc55-4201-bec3-1c54b4637aed",
+      "http_attempt": 13,
+      "payload_sha256": "68ab0740eb327789c40bd694909eb1fa8ca60aa957dde55da7bb69b334c6893f",
+      "reference_tokens": 23452,
+      "budget_report": {
+        "estimated_token_limit": 35617,
+        "estimated_original_tokens": 23452,
+        "estimated_input_tokens": 23452,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "source_body_hashes": [
+        {
+          "url": "https://m.voc.com.cn/xhn/news/202506/29805452.html",
+          "text_sha256": "eeb3c02b5f20a500a44d74ae857d9ad54eb30bfe0463f9064b7a28bdc10a8563",
+          "characters": 1730,
+          "truncated": false
+        },
+        {
+          "url": "https://app.dahecube.com/nweb/news/20250627/239583n579fa9378f2.htm?artid=239583",
+          "text_sha256": "8fb27ca124c8cfabb6ecdecf7e762e9a80d7b97ca8ae171ed9836a19a6d5e73d",
+          "characters": 3810,
+          "truncated": false
+        },
+        {
+          "url": "https://item.btime.com/41v8i91ponu8e9pnuojftmddbgs",
+          "text_sha256": "ae41b69be9c0a56991c892090c28ab0542c75eb18a0b6b0e5cda6f44fbdae8bc",
+          "characters": 5000,
+          "truncated": true
+        }
+      ],
+      "checks": {
+        "payload_hash": true,
+        "model": true,
+        "complete_reference": true,
+        "allowance": true,
+        "output_cap": true
+      }
+    }
+  ],
+  "groups": {
+    "instant_message-pre_user/original_history": {
+      "completed": 3,
+      "attempts": 7,
+      "usage": {
+        "prompt_tokens": {
+          "reported": 7,
+          "attempts": 7,
+          "known_subtotal": 124308,
+          "complete_total": 124308
+        },
+        "completion_tokens": {
+          "reported": 7,
+          "attempts": 7,
+          "known_subtotal": 4911,
+          "complete_total": 4911
+        },
+        "reasoning_tokens": {
+          "reported": 0,
+          "attempts": 7,
+          "known_subtotal": 0,
+          "complete_total": null
+        },
+        "total_tokens": {
+          "reported": 7,
+          "attempts": 7,
+          "known_subtotal": 129219,
+          "complete_total": 129219
+        }
+      },
+      "latency_p50_ms": 10078.0,
+      "latency_p95_ms": 13719.4
+    },
+    "single_text-system/omitted_history": {
+      "completed": 3,
+      "attempts": 3,
+      "usage": {
+        "prompt_tokens": {
+          "reported": 3,
+          "attempts": 3,
+          "known_subtotal": 50070,
+          "complete_total": 50070
+        },
+        "completion_tokens": {
+          "reported": 3,
+          "attempts": 3,
+          "known_subtotal": 1693,
+          "complete_total": 1693
+        },
+        "reasoning_tokens": {
+          "reported": 0,
+          "attempts": 3,
+          "known_subtotal": 0,
+          "complete_total": null
+        },
+        "total_tokens": {
+          "reported": 3,
+          "attempts": 3,
+          "known_subtotal": 51763,
+          "complete_total": 51763
+        }
+      },
+      "latency_p50_ms": 4467.0,
+      "latency_p95_ms": 5542.5
+    },
+    "single_text-system/original_history": {
+      "completed": 3,
+      "attempts": 3,
+      "usage": {
+        "prompt_tokens": {
+          "reported": 3,
+          "attempts": 3,
+          "known_subtotal": 51684,
+          "complete_total": 51684
+        },
+        "completion_tokens": {
+          "reported": 3,
+          "attempts": 3,
+          "known_subtotal": 1815,
+          "complete_total": 1815
+        },
+        "reasoning_tokens": {
+          "reported": 0,
+          "attempts": 3,
+          "known_subtotal": 0,
+          "complete_total": null
+        },
+        "total_tokens": {
+          "reported": 3,
+          "attempts": 3,
+          "known_subtotal": 53499,
+          "complete_total": 53499
+        }
+      },
+      "latency_p50_ms": 4567.0,
+      "latency_p95_ms": 5881.0
+    }
+  },
+  "provider_usage": {
+    "prompt_tokens": {
+      "reported": 13,
+      "attempts": 13,
+      "known_subtotal": 226062,
+      "complete_total": 226062
+    },
+    "completion_tokens": {
+      "reported": 13,
+      "attempts": 13,
+      "known_subtotal": 8419,
+      "complete_total": 8419
+    },
+    "reasoning_tokens": {
+      "reported": 0,
+      "attempts": 13,
+      "known_subtotal": 0,
+      "complete_total": null
+    },
+    "total_tokens": {
+      "reported": 13,
+      "attempts": 13,
+      "known_subtotal": 234481,
+      "complete_total": 234481
+    }
+  },
+  "reference_error_percent_min_max": [
+    26.0601,
+    36.1272
+  ],
+  "observed_max_provider_prompt_tokens": 19343,
+  "complete_reference_max": 24543,
+  "provider_identity_counts": {
+    "gemini-3.8-flash": 7,
+    "gemini-3.8-flash-control": 6
+  },
+  "native_schema_rejections": [
+    {
+      "sample_key": "instant_message-pre_user:r0:original_history",
+      "validation_error": "invalid_schema"
+    }
+  ],
+  "source_scope_quality_pass": 0,
+  "source_scope_quality_reviewed": 9,
+  "q02_approved": false,
+  "low_budget_model_comparison_not_available": "Both frozen complete mandatory requests were blocked before dispatch; no low-budget model response invented. The omitted-history arm is explicitly authorized at the larger limit and isolates history only."
+}

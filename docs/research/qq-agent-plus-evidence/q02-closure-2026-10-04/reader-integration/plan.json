@@ -1,0 +1,50 @@
+{
+  "allowed_production_writes": [
+    "source/services/runtime/src/chatwaifu_runtime/runtime_skills/public_web_providers.py PDF branch only; two formatter-only existing import/request lines (AST unchanged)",
+    "public-web/.env CRAWL4AI_IMAGE assignment only",
+    "private server-local backup directory"
+  ],
+  "authorized_scope": "Direct Q02 repairs and server validation requested by user; no AGY",
+  "excluded_writes": [
+    "model route/config/keys",
+    "persona/prompt/coverage prototype",
+    "budget",
+    "databases",
+    "channel config"
+  ],
+  "gates": [
+    "Failing PDF regression against exact deployed source, existing HTML/token controls pass",
+    "All same regressions pass against targeted backport; lint/types; actual diff review",
+    "Server-local private backups and exact baseline hashes before mutation",
+    "Actual HTML and PDF text via patched deployed adapter/11235, Cloudflare, no implicit fallback",
+    "TLS runtime readiness and same image/source after restart; model/persona/config hashes unchanged"
+  ],
+  "immutable_image_preflight": {
+    "crawl4ai": "0.9.3",
+    "exit_code": 0,
+    "pypdf": "6.16.2"
+  },
+  "lifecycle_actions": [
+    "Recreate crawl4ai service only, no SearXNG restart",
+    "Restart Runtime after isolated backport regressions pass"
+  ],
+  "model_calls": 0,
+  "new_companion_image_id": "sha256:76646f4e6d20c9514828b15e68487aafbb0fd15b52d2666a76891ee7d4b40c17",
+  "new_companion_reference": "unclecode/crawl4ai@sha256:84751dab794259db05d5bd4e5c766a8041a65f0554326e4516e620abdf2fa18b",
+  "new_prompts_or_personas": false,
+  "no_q02_approval_from_component_checks": true,
+  "old_companion": "0.9.2 lacks pypdf; deployed adapter always uses /md",
+  "public_read_dns_resolver": "cloudflare",
+  "quality_standard_unchanged": true,
+  "retained_model": "gemini-3.8-flash-high",
+  "retained_model_endpoint": "https://mubai.website:8318/v1",
+  "retained_reader_endpoint": "http://127.0.0.1:11235",
+  "retained_search_endpoint": "http://127.0.0.1:18080",
+  "rollback": [
+    "Stop failed rollout, restore original module and private .env backup",
+    "Recreate original cached 0.9.2 reader and restart Runtime",
+    "Keep all failed attempts, no hidden replay"
+  ],
+  "scope": "S1 complete PDF reader adapter plus existing independent companion deployment",
+  "setup_failure": "Initial remote test command lacked the existing temporary pytest path; both commands executed zero tests. Preserved, then correct PYTHONPATH without installing production packages."
+}

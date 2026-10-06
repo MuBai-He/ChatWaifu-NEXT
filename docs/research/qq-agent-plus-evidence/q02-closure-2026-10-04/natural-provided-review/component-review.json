@@ -1,0 +1,37 @@
+{
+  "all_original_and_prior_replies_whole_on_wire": true,
+  "draft_as_fallback_adopted": false,
+  "draft_issue": {
+    "corrected_in_review": true,
+    "draft": "100Wh至160Wh须经国航批准",
+    "review": "超过100Wh至160Wh须经国航批准",
+    "source": "超过100Wh但不超过160Wh",
+    "type": "strict_energy_lower_bound_lost"
+  },
+  "draft_sha256": "da85f9856d13eacf0bc3cb62688206995a6b9e8aed4f65d5e998c9204318a020",
+  "later_t4_replaces_failed_t3": false,
+  "new_model_calls_for_this_review": 0,
+  "not_an_input_omission_or_live_retrieval_failure": true,
+  "published_sha256": "ec4d602d0b3ad0462f843fccbe665f048592c9fdfcc9200c940a0f02899c82e9",
+  "review_issues": [
+    {
+      "already_present_in_draft": false,
+      "introduced_in_review": true,
+      "review": "不得给充电宝充电",
+      "source": "不得使用机上电源给充电宝充电",
+      "type": "charging_power_source_qualification_lost"
+    },
+    {
+      "introduced_in_review": true,
+      "review": "放置于座椅下方或座椅靠背口袋内",
+      "source": "放置于前方座椅下方的手提行李或座椅靠背口袋内",
+      "type": "storage_location_object_undercoverage"
+    }
+  ],
+  "review_sha256": "ec4d602d0b3ad0462f843fccbe665f048592c9fdfcc9200c940a0f02899c82e9",
+  "root_cause_claim": "已定位语义错误所在输出阶段；没有证明权重、端点内部、DNS或某种注意力机制的根因。",
+  "runtime_appended_or_rewrote_review": false,
+  "runtime_final_text_equal_to_review": true,
+  "sample_key": "frozen_airchina:r1:t3",
+  "source_text_sha256": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38"
+}

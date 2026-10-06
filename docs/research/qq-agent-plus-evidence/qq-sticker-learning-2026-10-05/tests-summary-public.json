@@ -1,0 +1,40 @@
+{
+  "product_commit": "24872e0",
+  "local_full_python": {
+    "passed": 3686,
+    "skipped": 46,
+    "warnings": 1,
+    "elapsed_seconds": 227.09
+  },
+  "local_typing": "strict_pyright_passed",
+  "local_lint_and_format": "ruff_passed",
+  "linux_runtime_checks": {
+    "tests": 169,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "elapsed_seconds": 116.15,
+    "source_origin_verified": true,
+    "dependency_environment": "production runtime packages plus existing isolated pytest layer; no dependency install",
+    "keyring_backend": "null",
+    "real_model_and_qq_sends": false
+  },
+  "web_checks_retained": {
+    "passed": 412,
+    "typescript": "passed",
+    "eslint": "passed",
+    "web_and_desktop_ui_builds": "passed",
+    "source_unchanged_by_followup_fix": true
+  },
+  "runner_errors_before_correct_environment": [
+    {
+      "error": "No module named pytest",
+      "product_tests_executed": 0
+    },
+    {
+      "error": "No module named regex in earlier test environment",
+      "product_tests_executed": 0
+    }
+  ],
+  "phone_acceptance": "pending"
+}

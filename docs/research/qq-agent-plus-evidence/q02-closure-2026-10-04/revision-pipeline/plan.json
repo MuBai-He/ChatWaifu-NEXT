@@ -1,0 +1,36 @@
+{
+  "acceptance": [
+    "No production changes/default source feature off",
+    "Existing read-source rules/prompt unchanged",
+    "No draft publication or completed-gap adoption",
+    "Complete frozen source and own-history in both phases; reported usage and omissions retained",
+    "Same full natural-language quality criteria; all16 reviewed, no sample repair/selection",
+    "No new autonomous discovery/role/full864 until prerequisite stable"
+  ],
+  "agy_invocations": 0,
+  "changes": [
+    "Share pre-existing revision requirements while preserving read-source prompt byte identity",
+    "Origin-specific provided policy header; never claim READ performed",
+    "Withhold bounded draft, one final existing-format pass; record both requests",
+    "Early unsupported-format rejection, per-phase whole input guard and cancellation/terminal checks"
+  ],
+  "endpoint": "https://mubai.website:8318/v1",
+  "evidence": [
+    "v37 raw frames contain both ambiguities before rendering",
+    "v37 provided/no-tools direct branch bypasses existing revision path",
+    "Existing revision for provided inputs does not apply existing source-review policy",
+    "Earlier revision control 1/2 complete, not proof of semantic cure"
+  ],
+  "failure_policy": "Freeze entire resulting version. Do not append prompt/format variants or repair sample prose",
+  "frozen_scenarios": 2,
+  "future_quality_http_limit": 40,
+  "future_quality_logical_limit": 32,
+  "model": "gemini-3.8-flash-high",
+  "production_changes": false,
+  "quality_replies": 16,
+  "repeats": 2,
+  "retrieval_calls": 0,
+  "scope": "Restore existing single source-review responsibility for explicitly provided originals; same closure-c1, schema1.1, model/route/source/budget. No new persona/domain rules or quote format",
+  "turns_per_flow": 4,
+  "version": "v38"
+}

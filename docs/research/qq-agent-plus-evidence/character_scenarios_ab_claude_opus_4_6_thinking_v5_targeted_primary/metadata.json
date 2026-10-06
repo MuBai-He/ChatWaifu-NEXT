@@ -1,0 +1,25 @@
+{
+  "created_at": "2026-09-30T10:36:40.715110+00:00",
+  "identity": {
+    "tool": "evaluate_character_scenarios",
+    "version": "1.2.1",
+    "fixtures_hash": "1a2281443a1c0fc5",
+    "provider": "openai_compatible",
+    "model": "claude-opus-4-6-thinking",
+    "repeats": 3,
+    "base_url_hash": "937c7a5a291b7e56",
+    "input_usd_per_million": null,
+    "output_usd_per_million": null,
+    "pricing_source": null,
+    "cost_policy": "no_cost_ceiling",
+    "cost_ceiling": null,
+    "variants": {
+      "baseline_v4": {
+        "hash": "3ab060352dcb8e25"
+      },
+      "candidate_v5": {
+        "hash": "3df16760df3f75aa"
+      }
+    }
+  }
+}

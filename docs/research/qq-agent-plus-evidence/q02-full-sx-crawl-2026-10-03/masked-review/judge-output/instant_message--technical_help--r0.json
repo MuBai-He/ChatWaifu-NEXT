@@ -1,0 +1,66 @@
+{
+  "review_group_id": "instant_message:technical_help:r0",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "e29919d1987013142d6c69802ae5561ff4ac04e4ed2701c209dca135e07e5fdf",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 1037,
+    "total_tokens": 6493,
+    "prompt_tokens": 5456,
+    "completion_tokens_details": {
+      "reasoning_tokens": 472
+    }
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"instant_message:technical_help:r0\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"两者均准确指明了默认行为是立即冒泡且其余任务不取消。候选1额外补充了3.11+的TaskGroup方案，技术阐述更周全。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均准确给出了 return_exceptions=True 参数，并清晰说明了结果列表直接存入异常对象及判断方式。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均提供了完整、语法正确且包含 isinstance 判断的完整代码与输出示例，符合要求。\",\n      \"factual_checks_needed\": [\n        \"核验候选1与候选2的Python异步代码在真实执行环境下的运行输出是否与展示一致\"\n      ]\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"两者均准确回答直接返回原生异常对象。候选1额外说明了查看堆栈及重新抛出时的实用细节，更为完备。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "instant_message:technical_help:r0",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "两者均准确指明了默认行为是立即冒泡且其余任务不取消。候选1额外补充了3.11+的TaskGroup方案，技术阐述更周全。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均准确给出了 return_exceptions=True 参数，并清晰说明了结果列表直接存入异常对象及判断方式。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均提供了完整、语法正确且包含 isinstance 判断的完整代码与输出示例，符合要求。",
+        "factual_checks_needed": [
+          "核验候选1与候选2的Python异步代码在真实执行环境下的运行输出是否与展示一致"
+        ]
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "两者均准确回答直接返回原生异常对象。候选1额外说明了查看堆栈及重新抛出时的实用细节，更为完备。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 7945
+}

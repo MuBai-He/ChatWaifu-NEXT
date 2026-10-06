@@ -1,0 +1,26 @@
+[
+  {
+    "version": "baseline",
+    "exit_code": 1,
+    "command": [
+      "/home/mubai/chatwaifu-server/source/.venv/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "/tmp/cw2-q02-reader-integration-20261004/test_reader_backport.py"
+    ],
+    "output": "_url = 'https://example.org/paper.PDF?download=1#page=2'\ndns_resolver = 'cloudflare'\n\n    async def read(\n        self,\n        source_url: str,\n        *,\n        fresh: bool,\n        dns_resolver: Literal[\"system\", \"cloudflare\"] = \"system\",\n    ) -> ProviderPage:\n        del fresh  # Crawl4AI's /md endpoint owns cache policy; no false guarantee here.\n        self._ensure_auth()\n        normalized = normalize_public_source_url(source_url)\n        await validate_public_url_with_resolver(normalized, dns_resolver)\n        payload, body, retrieved_at = await self._json_request(\n            \"POST\", \"/md\", json_body={\"url\": normalized}\n        )\n        markdown = payload.get(\"markdown\")\n        if not isinstance(markdown, str) and isinstance(payload.get(\"result\"), dict):\n            markdown = cast(dict[str, JsonValue], payload[\"result\"]).get(\"markdown\")\n        if not isinstance(markdown, str) or not markdown.strip():\n>           raise SkillExecutionError(\n                \"web_provider_format_changed\", \"Crawl4AI returned no markdown content\"\n            )\nE           chatwaifu_runtime.runtime_skills.errors.SkillExecutionError: Crawl4AI returned no markdown content\n\nbaseline/services/runtime/src/chatwaifu_runtime/runtime_skills/public_web_providers.py:523: SkillExecutionError\n=========================== short test summary info ============================\nFAILED test_reader_backport.py::test_crawl4ai_pdf_uses_pdf_strategy_and_preserves_source_receipt\n1 failed, 12 passed in 2.27s\n"
+  },
+  {
+    "version": "patched",
+    "exit_code": 0,
+    "command": [
+      "/home/mubai/chatwaifu-server/source/.venv/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "/tmp/cw2-q02-reader-integration-20261004/test_reader_backport.py"
+    ],
+    "output": ".............                                                            [100%]\n13 passed in 2.27s\n"
+  }
+]

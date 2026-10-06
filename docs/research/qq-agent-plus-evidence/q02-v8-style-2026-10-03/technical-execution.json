@@ -1,0 +1,101 @@
+[
+  {
+    "profile": "instant_message",
+    "sample_key": "technical_help:r0:t3:candidate",
+    "sha256": "dfea6c739a5c0e5049508f5c5adfe9312c214a050609ebe9112c745ce6292fad",
+    "exit_code": 0,
+    "stdout": "[1] 执行成功: 任务 1 的结果\n[2] 执行失败，捕获到异常: 任务 2 发生错误！\n[3] 执行成功: 任务 3 的结果\n",
+    "stderr": "",
+    "expected_stdout": "[1] 执行成功: 任务 1 的结果\n[2] 执行失败，捕获到异常: 任务 2 发生错误！\n[3] 执行成功: 任务 3 的结果\n",
+    "claimed_output_matches": true,
+    "python_version": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]"
+  },
+  {
+    "profile": "instant_message",
+    "sample_key": "technical_help:r1:t3:candidate",
+    "sha256": "21ff3e36896213336ad9d74777101f51a762e5869ebfbd23476d6d7b298beebb",
+    "exit_code": 0,
+    "stdout": "[1] 成功: 任务 1 的结果\n[2] 异常: ValueError - 任务 2 执行出错\n[3] 成功: 任务 3 的结果\n",
+    "stderr": "",
+    "expected_stdout": "[1] 成功: 任务 1 的结果\n[2] 异常: ValueError - 任务 2 执行出错\n[3] 成功: 任务 3 的结果\n",
+    "claimed_output_matches": true,
+    "python_version": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]"
+  },
+  {
+    "profile": "instant_message",
+    "sample_key": "technical_help:r2:t3:candidate",
+    "sha256": "7f8f8c288bbadc4502162cf6e9262a4dc29585239f18680aac733964c9dab190",
+    "exit_code": 0,
+    "stdout": "[1] 成功: 任务 1 成功获取数据\n[2] 失败: ValueError - 任务 2 发生错误\n[3] 成功: 任务 3 成功获取数据\n",
+    "stderr": "",
+    "expected_stdout": "[1] 成功: 任务 1 成功获取数据\n[2] 失败: ValueError - 任务 2 发生错误\n[3] 成功: 任务 3 成功获取数据\n",
+    "claimed_output_matches": true,
+    "python_version": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]"
+  },
+  {
+    "profile": "single_text",
+    "sample_key": "technical_help:r0:t3:candidate",
+    "sha256": "f4eaf94e987bcb810c7d4ed2c3fd78bf779ce2623536d885dd301c25253bc851",
+    "exit_code": 0,
+    "stdout": "[1] 成功: 任务 1 的计算结果\n[2] 失败（异常类型: ValueError）: 任务 2 遇到无效参数\n[3] 成功: 任务 3 的计算结果\n",
+    "stderr": "",
+    "expected_stdout": "[1] 成功: 任务 1 的计算结果\n[2] 失败（异常类型: ValueError）: 任务 2 遇到无效参数\n[3] 成功: 任务 3 的计算结果\n",
+    "claimed_output_matches": true,
+    "python_version": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]"
+  },
+  {
+    "profile": "single_text",
+    "sample_key": "technical_help:r1:t3:candidate",
+    "sha256": "2fe18fe7ff47da6b10953ed1bff23de1fcbd3fcbd02813840dfccaa551d983d6",
+    "exit_code": 0,
+    "stdout": "[1] 成功: 返回值 -> 任务A 处理完成\n[2] 失败: 捕获到异常 ValueError: 任务B 发生错误\n[3] 成功: 返回值 -> 任务C 处理完成\n",
+    "stderr": "",
+    "expected_stdout": "[1] 成功: 返回值 -> 任务A 处理完成\n[2] 失败: 捕获到异常 ValueError: 任务B 发生错误\n[3] 成功: 返回值 -> 任务C 处理完成\n",
+    "claimed_output_matches": true,
+    "python_version": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]"
+  },
+  {
+    "profile": "single_text",
+    "sample_key": "technical_help:r2:t3:candidate",
+    "sha256": "3ee1e98e6d57ad473fce00f02390c403e1599707f0cc694cc514fec0e4049b06",
+    "exit_code": 0,
+    "stdout": "[1] 正常获取结果: 任务 1 的结果\n[2] 捕获到异常: ValueError -> 任务 2 数据解析失败\n[3] 正常获取结果: 任务 3 的结果\n",
+    "stderr": "",
+    "expected_stdout": "[1] 正常获取结果: 任务 1 的结果\n[2] 捕获到异常: ValueError -> 任务 2 数据解析失败\n[3] 正常获取结果: 任务 3 的结果\n",
+    "claimed_output_matches": true,
+    "python_version": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]"
+  },
+  {
+    "profile": "default_voice",
+    "sample_key": "technical_help:r0:t3:candidate",
+    "sha256": "c14c8b83afbb40549e1a61c11a7a1ef49f61ef6bb24fca2634959f93f69c7cef",
+    "exit_code": 0,
+    "stdout": "[1] 执行成功，结果: 任务 1 成功返回数据\n[2] 执行失败，捕获异常: ValueError - 任务 2 发生错误\n[3] 执行成功，结果: 任务 3 成功返回数据\n",
+    "stderr": "",
+    "expected_stdout": "[1] 执行成功，结果: 任务 1 成功返回数据\n[2] 执行失败，捕获异常: ValueError - 任务 2 发生错误\n[3] 执行成功，结果: 任务 3 成功返回数据\n",
+    "claimed_output_matches": true,
+    "python_version": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]"
+  },
+  {
+    "profile": "default_voice",
+    "sample_key": "technical_help:r1:t3:candidate",
+    "sha256": "15595a0d6bfb3fc054abc202611180d804f5687d952cf13b9b09da785a1135c4",
+    "exit_code": 0,
+    "stdout": "[正常] 获取到结果: ID 1 数据正常\n[异常] 捕获到错误: ValueError - ID 2 数据获取失败\n[正常] 获取到结果: ID 3 数据正常\n",
+    "stderr": "",
+    "expected_stdout": "[正常] 获取到结果: ID 1 数据正常\n[异常] 捕获到错误: ValueError - ID 2 数据获取失败\n[正常] 获取到结果: ID 3 数据正常\n",
+    "claimed_output_matches": true,
+    "python_version": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]"
+  },
+  {
+    "profile": "default_voice",
+    "sample_key": "technical_help:r2:t3:candidate",
+    "sha256": "891d914f60eb63cf04671c57d43fbdb1baeb0bf1ba155b02fca3eecd030dfa25",
+    "exit_code": 0,
+    "stdout": "[1] 成功: 返回值 -> 任务 1 处理完成\n[2] 失败: 捕获到异常 -> ValueError: 任务 2 遇到无效数据\n[3] 成功: 返回值 -> 任务 3 处理完成\n",
+    "stderr": "",
+    "expected_stdout": null,
+    "claimed_output_matches": null,
+    "python_version": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]"
+  }
+]

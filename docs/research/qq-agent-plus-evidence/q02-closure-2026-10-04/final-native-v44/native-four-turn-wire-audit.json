@@ -1,0 +1,602 @@
+[
+  {
+    "sample_key": "autonomous_sources:r0:t1:closure_c1",
+    "call_id": "67a58b43-360d-4aa7-9404-656130c5ea4f",
+    "http_attempt": 1,
+    "reference_tokens": 2337,
+    "input_limit": 21370,
+    "usage": {
+      "prompt_tokens": 2334,
+      "completion_tokens": 50,
+      "total_tokens": 2552,
+      "reasoning_tokens": 168
+    },
+    "reference_bias_percent": 0.128535,
+    "reported_omitted_history_indices": [],
+    "actual_wire_history_markers": [],
+    "reported_omitted_preamble_indices": [],
+    "read_originals": [],
+    "http_elapsed_ms": 3165
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t1:closure_c1",
+    "call_id": "ad04c325-757c-4d68-b6ff-71c8c4d443a5",
+    "http_attempt": 2,
+    "reference_tokens": 5417,
+    "input_limit": 21370,
+    "usage": {
+      "prompt_tokens": 4711,
+      "completion_tokens": 60,
+      "total_tokens": 4771,
+      "reasoning_tokens": null
+    },
+    "reference_bias_percent": 14.986203,
+    "reported_omitted_history_indices": [],
+    "actual_wire_history_markers": [],
+    "reported_omitted_preamble_indices": [],
+    "read_originals": [],
+    "http_elapsed_ms": 2970
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t1:closure_c1",
+    "call_id": "9bf48fe4-bc53-476f-99c3-457226203e2f",
+    "http_attempt": 3,
+    "reference_tokens": 7050,
+    "input_limit": 21370,
+    "usage": {
+      "prompt_tokens": 6309,
+      "completion_tokens": 54,
+      "total_tokens": 6567,
+      "reasoning_tokens": 204
+    },
+    "reference_bias_percent": 11.745126,
+    "reported_omitted_history_indices": [],
+    "actual_wire_history_markers": [],
+    "reported_omitted_preamble_indices": [],
+    "read_originals": [
+      {
+        "origin": "current_tool",
+        "url": "https://raft.github.io/raft.pdf",
+        "body_sha256": "2206c45f595b2faa9de6b3ff7bfd1b191dfde4d7adff9d8c913ff0938301e0a7",
+        "text_sha256": "e16834674aefe0b02ffd83aec0be3d370bd132279019d5fcab510023cc39379e",
+        "characters": 6000,
+        "truncated": true
+      }
+    ],
+    "http_elapsed_ms": 5217
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t1:closure_c1",
+    "call_id": "c3449401-386a-4a69-84d9-46f5adc8aa71",
+    "http_attempt": 4,
+    "reference_tokens": 8783,
+    "input_limit": 21370,
+    "usage": {
+      "prompt_tokens": 7987,
+      "completion_tokens": 461,
+      "total_tokens": 9293,
+      "reasoning_tokens": 845
+    },
+    "reference_bias_percent": 9.966195,
+    "reported_omitted_history_indices": [],
+    "actual_wire_history_markers": [],
+    "reported_omitted_preamble_indices": [],
+    "read_originals": [
+      {
+        "origin": "current_tool",
+        "url": "https://raft.github.io/raft.pdf",
+        "body_sha256": "2206c45f595b2faa9de6b3ff7bfd1b191dfde4d7adff9d8c913ff0938301e0a7",
+        "text_sha256": "e16834674aefe0b02ffd83aec0be3d370bd132279019d5fcab510023cc39379e",
+        "characters": 6000,
+        "truncated": true
+      },
+      {
+        "origin": "current_tool",
+        "url": "https://raft.github.io/raft.pdf",
+        "body_sha256": "0605d9717ef8e2bd85551a678e22a7dc7af92fe71b6fb0a8cfcde3eebdfb053c",
+        "text_sha256": "b05a612cad56451224215127bfd72e3658eff3c94ec9a3acd976ca721d9eed13",
+        "characters": 6000,
+        "truncated": true
+      }
+    ],
+    "http_elapsed_ms": 11560
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t1:closure_c1",
+    "call_id": "a7d41e7c-4bd5-400a-ae7b-1e850968abc5",
+    "http_attempt": 5,
+    "reference_tokens": 8960,
+    "input_limit": 21370,
+    "usage": {
+      "prompt_tokens": 7650,
+      "completion_tokens": 499,
+      "total_tokens": 8149,
+      "reasoning_tokens": null
+    },
+    "reference_bias_percent": 17.124183,
+    "reported_omitted_history_indices": [],
+    "actual_wire_history_markers": [],
+    "reported_omitted_preamble_indices": [],
+    "read_originals": [
+      {
+        "origin": "current_tool",
+        "url": "https://raft.github.io/raft.pdf",
+        "body_sha256": "2206c45f595b2faa9de6b3ff7bfd1b191dfde4d7adff9d8c913ff0938301e0a7",
+        "text_sha256": "e16834674aefe0b02ffd83aec0be3d370bd132279019d5fcab510023cc39379e",
+        "characters": 6000,
+        "truncated": true
+      },
+      {
+        "origin": "current_tool",
+        "url": "https://raft.github.io/raft.pdf",
+        "body_sha256": "0605d9717ef8e2bd85551a678e22a7dc7af92fe71b6fb0a8cfcde3eebdfb053c",
+        "text_sha256": "b05a612cad56451224215127bfd72e3658eff3c94ec9a3acd976ca721d9eed13",
+        "characters": 6000,
+        "truncated": true
+      }
+    ],
+    "http_elapsed_ms": 3968
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t2:closure_c1",
+    "call_id": "102f3e93-083b-4ac4-8cfd-325a0d555238",
+    "http_attempt": 6,
+    "reference_tokens": 7711,
+    "input_limit": 21370,
+    "usage": {
+      "prompt_tokens": 6916,
+      "completion_tokens": 179,
+      "total_tokens": 8027,
+      "reasoning_tokens": 932
+    },
+    "reference_bias_percent": 11.495084,
+    "reported_omitted_history_indices": [],
+    "actual_wire_history_markers": [],
+    "reported_omitted_preamble_indices": [],
+    "read_originals": [
+      {
+        "origin": "prior_receipt",
+        "url": "https://raft.github.io/raft.pdf",
+        "body_sha256": "0605d9717ef8e2bd85551a678e22a7dc7af92fe71b6fb0a8cfcde3eebdfb053c",
+        "text_sha256": "b05a612cad56451224215127bfd72e3658eff3c94ec9a3acd976ca721d9eed13",
+        "characters": 6000,
+        "truncated": true
+      },
+      {
+        "origin": "prior_receipt",
+        "url": "https://raft.github.io/raft.pdf",
+        "body_sha256": "2206c45f595b2faa9de6b3ff7bfd1b191dfde4d7adff9d8c913ff0938301e0a7",
+        "text_sha256": "e16834674aefe0b02ffd83aec0be3d370bd132279019d5fcab510023cc39379e",
+        "characters": 6000,
+        "truncated": true
+      }
+    ],
+    "http_elapsed_ms": 11343
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t3:closure_c1",
+    "call_id": "50d3bab5-4d48-430b-90ef-e0502ceb47a7",
+    "http_attempt": 7,
+    "reference_tokens": 7807,
+    "input_limit": 21370,
+    "usage": {
+      "prompt_tokens": 7595,
+      "completion_tokens": 51,
+      "total_tokens": 8083,
+      "reasoning_tokens": 437
+    },
+    "reference_bias_percent": 2.79131,
+    "reported_omitted_history_indices": [],
+    "actual_wire_history_markers": [],
+    "reported_omitted_preamble_indices": [],
+    "read_originals": [
+      {
+        "origin": "prior_receipt",
+        "url": "https://raft.github.io/raft.pdf",
+        "body_sha256": "0605d9717ef8e2bd85551a678e22a7dc7af92fe71b6fb0a8cfcde3eebdfb053c",
+        "text_sha256": "b05a612cad56451224215127bfd72e3658eff3c94ec9a3acd976ca721d9eed13",
+        "characters": 6000,
+        "truncated": true
+      },
+      {
+        "origin": "prior_receipt",
+        "url": "https://raft.github.io/raft.pdf",
+        "body_sha256": "2206c45f595b2faa9de6b3ff7bfd1b191dfde4d7adff9d8c913ff0938301e0a7",
+        "text_sha256": "e16834674aefe0b02ffd83aec0be3d370bd132279019d5fcab510023cc39379e",
+        "characters": 6000,
+        "truncated": true
+      }
+    ],
+    "http_elapsed_ms": 3779
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t3:closure_c1",
+    "call_id": "c6c1cd06-61b5-4cb1-a679-e1de6125671d",
+    "http_attempt": 8,
+    "reference_tokens": 11315,
+    "input_limit": 21370,
+    "usage": {
+      "prompt_tokens": 10060,
+      "completion_tokens": 56,
+      "total_tokens": 10166,
+      "reasoning_tokens": 50
+    },
+    "reference_bias_percent": 12.475149,
+    "reported_omitted_history_indices": [],
+    "actual_wire_history_markers": [],
+    "reported_omitted_preamble_indices": [],
+    "read_originals": [
+      {
+        "origin": "prior_receipt",
+        "url": "https://raft.github.io/raft.pdf",
+        "body_sha256": "0605d9717ef8e2bd85551a678e22a7dc7af92fe71b6fb0a8cfcde3eebdfb053c",
+        "text_sha256": "b05a612cad56451224215127bfd72e3658eff3c94ec9a3acd976ca721d9eed13",
+        "characters": 6000,
+        "truncated": true
+      },
+      {
+        "origin": "prior_receipt",
+        "url": "https://raft.github.io/raft.pdf",
+        "body_sha256": "2206c45f595b2faa9de6b3ff7bfd1b191dfde4d7adff9d8c913ff0938301e0a7",
+        "text_sha256": "e16834674aefe0b02ffd83aec0be3d370bd132279019d5fcab510023cc39379e",
+        "characters": 6000,
+        "truncated": true
+      }
+    ],
+    "http_elapsed_ms": 4174
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t3:closure_c1",
+    "call_id": "648f3823-67d4-4dc7-acda-665a55869307",
+    "http_attempt": 9,
+    "reference_tokens": 12606,
+    "input_limit": 21370,
+    "usage": {
+      "prompt_tokens": 11064,
+      "completion_tokens": 92,
+      "total_tokens": 11156,
+      "reasoning_tokens": null
+    },
+    "reference_bias_percent": 13.937093,
+    "reported_omitted_history_indices": [],
+    "actual_wire_history_markers": [],
+    "reported_omitted_preamble_indices": [],
+    "read_originals": [
+      {
+        "origin": "prior_receipt",
+        "url": "https://raft.github.io/raft.pdf",
+        "body_sha256": "0605d9717ef8e2bd85551a678e22a7dc7af92fe71b6fb0a8cfcde3eebdfb053c",
+        "text_sha256": "b05a612cad56451224215127bfd72e3658eff3c94ec9a3acd976ca721d9eed13",
+        "characters": 6000,
+        "truncated": true
+      },
+      {
+        "origin": "prior_receipt",
+        "url": "https://raft.github.io/raft.pdf",
+        "body_sha256": "2206c45f595b2faa9de6b3ff7bfd1b191dfde4d7adff9d8c913ff0938301e0a7",
+        "text_sha256": "e16834674aefe0b02ffd83aec0be3d370bd132279019d5fcab510023cc39379e",
+        "characters": 6000,
+        "truncated": true
+      }
+    ],
+    "http_elapsed_ms": 8194
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t3:closure_c1",
+    "call_id": "3b2ac71b-f026-4bd8-8c71-7cdd2bb1184b",
+    "http_attempt": 10,
+    "reference_tokens": 18141,
+    "input_limit": 21370,
+    "usage": {
+      "prompt_tokens": 15234,
+      "completion_tokens": 53,
+      "total_tokens": 15564,
+      "reasoning_tokens": 277
+    },
+    "reference_bias_percent": 19.082316,
+    "reported_omitted_history_indices": [],
+    "actual_wire_history_markers": [],
+    "reported_omitted_preamble_indices": [],
+    "read_originals": [
+      {
+        "origin": "prior_receipt",
+        "url": "https://raft.github.io/raft.pdf",
+        "body_sha256": "0605d9717ef8e2bd85551a678e22a7dc7af92fe71b6fb0a8cfcde3eebdfb053c",
+        "text_sha256": "b05a612cad56451224215127bfd72e3658eff3c94ec9a3acd976ca721d9eed13",
+        "characters": 6000,
+        "truncated": true
+      },
+      {
+        "origin": "prior_receipt",
+        "url": "https://raft.github.io/raft.pdf",
+        "body_sha256": "2206c45f595b2faa9de6b3ff7bfd1b191dfde4d7adff9d8c913ff0938301e0a7",
+        "text_sha256": "e16834674aefe0b02ffd83aec0be3d370bd132279019d5fcab510023cc39379e",
+        "characters": 6000,
+        "truncated": true
+      },
+      {
+        "origin": "current_tool",
+        "url": "https://www.caac.gov.cn/CXCK/HLZN/201512/t20151214_15866.html",
+        "body_sha256": "232225153808bc7dba02b36d9f1bb7fddacea4a2a6b63f0348f49505b3a61f57",
+        "text_sha256": "df3673235866014ffa0addab9d3d3114f48c0bea1723833f474da718667191d9",
+        "characters": 6000,
+        "truncated": true
+      }
+    ],
+    "http_elapsed_ms": 5314
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t3:closure_c1",
+    "call_id": "d3189d68-3165-4c1c-80cd-5ab0d13976af",
+    "http_attempt": 11,
+    "reference_tokens": 19479,
+    "input_limit": 21370,
+    "usage": {
+      "prompt_tokens": 16291,
+      "completion_tokens": 75,
+      "total_tokens": 16366,
+      "reasoning_tokens": null
+    },
+    "reference_bias_percent": 19.569087,
+    "reported_omitted_history_indices": [],
+    "actual_wire_history_markers": [],
+    "reported_omitted_preamble_indices": [],
+    "read_originals": [
+      {
+        "origin": "prior_receipt",
+        "url": "https://raft.github.io/raft.pdf",
+        "body_sha256": "0605d9717ef8e2bd85551a678e22a7dc7af92fe71b6fb0a8cfcde3eebdfb053c",
+        "text_sha256": "b05a612cad56451224215127bfd72e3658eff3c94ec9a3acd976ca721d9eed13",
+        "characters": 6000,
+        "truncated": true
+      },
+      {
+        "origin": "prior_receipt",
+        "url": "https://raft.github.io/raft.pdf",
+        "body_sha256": "2206c45f595b2faa9de6b3ff7bfd1b191dfde4d7adff9d8c913ff0938301e0a7",
+        "text_sha256": "e16834674aefe0b02ffd83aec0be3d370bd132279019d5fcab510023cc39379e",
+        "characters": 6000,
+        "truncated": true
+      },
+      {
+        "origin": "current_tool",
+        "url": "https://www.caac.gov.cn/CXCK/HLZN/201512/t20151214_15866.html",
+        "body_sha256": "232225153808bc7dba02b36d9f1bb7fddacea4a2a6b63f0348f49505b3a61f57",
+        "text_sha256": "df3673235866014ffa0addab9d3d3114f48c0bea1723833f474da718667191d9",
+        "characters": 6000,
+        "truncated": true
+      }
+    ],
+    "http_elapsed_ms": 2670
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t3:closure_c1",
+    "call_id": "ac870e11-b9e4-47cc-96e9-d93f5598b6ca",
+    "http_attempt": 12,
+    "reference_tokens": 21250,
+    "input_limit": 21370,
+    "usage": {
+      "prompt_tokens": 17142,
+      "completion_tokens": 103,
+      "total_tokens": 17245,
+      "reasoning_tokens": null
+    },
+    "reference_bias_percent": 23.964532,
+    "reported_omitted_history_indices": [
+      1
+    ],
+    "actual_wire_history_markers": [
+      {
+        "role": "assistant",
+        "marker": "[Runtime omitted an earlier assistant message for the input budget. Its details are unavailable; do not reconstruct them.]"
+      }
+    ],
+    "reported_omitted_preamble_indices": [],
+    "read_originals": [
+      {
+        "origin": "prior_receipt",
+        "url": "https://raft.github.io/raft.pdf",
+        "body_sha256": "0605d9717ef8e2bd85551a678e22a7dc7af92fe71b6fb0a8cfcde3eebdfb053c",
+        "text_sha256": "b05a612cad56451224215127bfd72e3658eff3c94ec9a3acd976ca721d9eed13",
+        "characters": 6000,
+        "truncated": true
+      },
+      {
+        "origin": "current_tool",
+        "url": "https://www.caac.gov.cn/CXCK/HLZN/201512/t20151214_15866.html",
+        "body_sha256": "232225153808bc7dba02b36d9f1bb7fddacea4a2a6b63f0348f49505b3a61f57",
+        "text_sha256": "df3673235866014ffa0addab9d3d3114f48c0bea1723833f474da718667191d9",
+        "characters": 6000,
+        "truncated": true
+      },
+      {
+        "origin": "current_tool",
+        "url": "https://www.bjnews.com.cn/detail/1750921184129529.html",
+        "body_sha256": "5b8c57c72ac19bfc8d74a79f0752f43089f8716ac4cafe026787a41451310b50",
+        "text_sha256": "1ec5237c99b75be44871df503e9e9fc95d0480d9bdb22b3034cc3480e852188c",
+        "characters": 4069,
+        "truncated": false
+      }
+    ],
+    "http_elapsed_ms": 3281
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t3:closure_c1",
+    "call_id": "328d9f4a-3db9-4137-a8e8-cc110cdd7aaf",
+    "http_attempt": 13,
+    "reference_tokens": 21280,
+    "input_limit": 21370,
+    "usage": {
+      "prompt_tokens": 16766,
+      "completion_tokens": 873,
+      "total_tokens": 18623,
+      "reasoning_tokens": 984
+    },
+    "reference_bias_percent": 26.923536,
+    "reported_omitted_history_indices": [
+      1,
+      3
+    ],
+    "actual_wire_history_markers": [
+      {
+        "role": "assistant",
+        "marker": "[Runtime omitted an earlier assistant message for the input budget. Its details are unavailable; do not reconstruct them.]"
+      },
+      {
+        "role": "assistant",
+        "marker": "[Runtime omitted an earlier assistant message for the input budget. Its details are unavailable; do not reconstruct them.]"
+      }
+    ],
+    "reported_omitted_preamble_indices": [],
+    "read_originals": [
+      {
+        "origin": "prior_receipt",
+        "url": "https://raft.github.io/raft.pdf",
+        "body_sha256": "0605d9717ef8e2bd85551a678e22a7dc7af92fe71b6fb0a8cfcde3eebdfb053c",
+        "text_sha256": "b05a612cad56451224215127bfd72e3658eff3c94ec9a3acd976ca721d9eed13",
+        "characters": 6000,
+        "truncated": true
+      },
+      {
+        "origin": "current_tool",
+        "url": "https://www.caac.gov.cn/CXCK/HLZN/201512/t20151214_15866.html",
+        "body_sha256": "232225153808bc7dba02b36d9f1bb7fddacea4a2a6b63f0348f49505b3a61f57",
+        "text_sha256": "df3673235866014ffa0addab9d3d3114f48c0bea1723833f474da718667191d9",
+        "characters": 6000,
+        "truncated": true
+      },
+      {
+        "origin": "current_tool",
+        "url": "https://www.bjnews.com.cn/detail/1750921184129529.html",
+        "body_sha256": "5b8c57c72ac19bfc8d74a79f0752f43089f8716ac4cafe026787a41451310b50",
+        "text_sha256": "1ec5237c99b75be44871df503e9e9fc95d0480d9bdb22b3034cc3480e852188c",
+        "characters": 4069,
+        "truncated": false
+      },
+      {
+        "origin": "current_tool",
+        "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/HDGLJ/HD_XWZX/202507/t20250730_228144.html",
+        "body_sha256": "4b943a80fa813195c422a382e2535fd24b764819c0500f0cd5d1347f29481bea",
+        "text_sha256": "d8646b2478631438ae0cab98a083b982709940bcb3756117837794979c4145d5",
+        "characters": 1029,
+        "truncated": false
+      }
+    ],
+    "http_elapsed_ms": 7816
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t4:closure_c1",
+    "call_id": "b4bd3554-c39d-48b3-805c-01d5b05ab5eb",
+    "http_attempt": 14,
+    "reference_tokens": 20983,
+    "input_limit": 21370,
+    "usage": {
+      "prompt_tokens": 17034,
+      "completion_tokens": 770,
+      "total_tokens": 17804,
+      "reasoning_tokens": null
+    },
+    "reference_bias_percent": 23.183046,
+    "reported_omitted_history_indices": [
+      1
+    ],
+    "actual_wire_history_markers": [
+      {
+        "role": "assistant",
+        "marker": "[Runtime omitted an earlier assistant message for the input budget. Its details are unavailable; do not reconstruct them.]"
+      }
+    ],
+    "reported_omitted_preamble_indices": [],
+    "read_originals": [
+      {
+        "origin": "prior_receipt",
+        "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/HDGLJ/HD_XWZX/202507/t20250730_228144.html",
+        "body_sha256": "4b943a80fa813195c422a382e2535fd24b764819c0500f0cd5d1347f29481bea",
+        "text_sha256": "d8646b2478631438ae0cab98a083b982709940bcb3756117837794979c4145d5",
+        "characters": 1029,
+        "truncated": false
+      },
+      {
+        "origin": "prior_receipt",
+        "url": "https://www.bjnews.com.cn/detail/1750921184129529.html",
+        "body_sha256": "5b8c57c72ac19bfc8d74a79f0752f43089f8716ac4cafe026787a41451310b50",
+        "text_sha256": "1ec5237c99b75be44871df503e9e9fc95d0480d9bdb22b3034cc3480e852188c",
+        "characters": 4069,
+        "truncated": false
+      },
+      {
+        "origin": "prior_receipt",
+        "url": "https://www.caac.gov.cn/CXCK/HLZN/201512/t20151214_15866.html",
+        "body_sha256": "232225153808bc7dba02b36d9f1bb7fddacea4a2a6b63f0348f49505b3a61f57",
+        "text_sha256": "df3673235866014ffa0addab9d3d3114f48c0bea1723833f474da718667191d9",
+        "characters": 6000,
+        "truncated": true
+      },
+      {
+        "origin": "prior_receipt",
+        "url": "https://raft.github.io/raft.pdf",
+        "body_sha256": "0605d9717ef8e2bd85551a678e22a7dc7af92fe71b6fb0a8cfcde3eebdfb053c",
+        "text_sha256": "b05a612cad56451224215127bfd72e3658eff3c94ec9a3acd976ca721d9eed13",
+        "characters": 6000,
+        "truncated": true
+      }
+    ],
+    "http_elapsed_ms": 7970
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t4:closure_c1",
+    "call_id": "33a492d2-c5ed-4a3c-b283-1e95fe6c3d8c",
+    "http_attempt": 15,
+    "reference_tokens": 21246,
+    "input_limit": 21370,
+    "usage": {
+      "prompt_tokens": 16992,
+      "completion_tokens": 902,
+      "total_tokens": 17894,
+      "reasoning_tokens": null
+    },
+    "reference_bias_percent": 25.035311,
+    "reported_omitted_history_indices": [
+      1,
+      3
+    ],
+    "actual_wire_history_markers": [
+      {
+        "role": "assistant",
+        "marker": "[Runtime omitted an earlier assistant message for the input budget. Its details are unavailable; do not reconstruct them.]"
+      },
+      {
+        "role": "assistant",
+        "marker": "[Runtime omitted an earlier assistant message for the input budget. Its details are unavailable; do not reconstruct them.]"
+      }
+    ],
+    "reported_omitted_preamble_indices": [],
+    "read_originals": [
+      {
+        "origin": "prior_receipt",
+        "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/HDGLJ/HD_XWZX/202507/t20250730_228144.html",
+        "body_sha256": "4b943a80fa813195c422a382e2535fd24b764819c0500f0cd5d1347f29481bea",
+        "text_sha256": "d8646b2478631438ae0cab98a083b982709940bcb3756117837794979c4145d5",
+        "characters": 1029,
+        "truncated": false
+      },
+      {
+        "origin": "prior_receipt",
+        "url": "https://www.bjnews.com.cn/detail/1750921184129529.html",
+        "body_sha256": "5b8c57c72ac19bfc8d74a79f0752f43089f8716ac4cafe026787a41451310b50",
+        "text_sha256": "1ec5237c99b75be44871df503e9e9fc95d0480d9bdb22b3034cc3480e852188c",
+        "characters": 4069,
+        "truncated": false
+      },
+      {
+        "origin": "prior_receipt",
+        "url": "https://www.caac.gov.cn/CXCK/HLZN/201512/t20151214_15866.html",
+        "body_sha256": "232225153808bc7dba02b36d9f1bb7fddacea4a2a6b63f0348f49505b3a61f57",
+        "text_sha256": "df3673235866014ffa0addab9d3d3114f48c0bea1723833f474da718667191d9",
+        "characters": 6000,
+        "truncated": true
+      }
+    ],
+    "http_elapsed_ms": 5482
+  }
+]

@@ -1,0 +1,133 @@
+"""Bounded frozen-source probe on the server's configured 3.8 Flash route.
+
+No search/crawl/external actions, no credentials in artifacts, no hidden reasoning.
+The low-budget form was blocked offline; it is not a low-budget model response.
+"""
+import asyncio
+import hashlib
+import json
+import sys
+from dataclasses import asdict, replace
+from datetime import UTC, datetime
+from pathlib import Path
+from types import SimpleNamespace
+from uuid import UUID
+
+STAGE = Path('/tmp/cw2-q02-v28-frozen-budget-20261004')
+ROOT = Path('/tmp/cw2-q02-budget-guard-v27-eval')
+sys.path[:0] = [str(ROOT/'services/runtime/src'),str(ROOT/'packages/protocol-python/src'),str(ROOT/'packages/model-worker-sdk-python/src'),'/tmp/cw2-q02-eval-deps',str(ROOT),str(STAGE)]
+
+import httpx2
+from chatwaifu_runtime.agent.input_budget import fit_input_budget
+from chatwaifu_runtime.agent.source_answer import source_answer_revision_prompt
+from chatwaifu_runtime.agent.tool_calling import _successful_source_read_urls
+from chatwaifu_runtime.providers.contracts import LlmInputBudget, LlmRequest, LlmResponseCompleted, LlmTextDelta, LlmToolCall, LlmToolCallRequested, LlmToolDefinition, LlmToolExchange, LlmToolResult
+from chatwaifu_runtime.providers.openai_compatible import OpenAiCompatibleLlmProvider, build_chat_completions_payload, build_messages
+from tools.runtime_source_evaluation import _RecordedProvider
+from tools.source_decision_evaluation import SourceDecisionProvider
+from reconstruct import definitions, sha
+
+SECRET = json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+assert isinstance(SECRET,str) and SECRET
+assert not (STAGE/'attempts.jsonl').exists(), 'inspect existing attempts before any resume'
+MAX_HTTP = 18
+current = ''
+actual_count = 0
+original_stream = httpx2.AsyncClient.stream
+
+def append(path, value):
+    encoded=json.dumps(value,ensure_ascii=False,default=str)
+    if SECRET in encoded:
+        raise RuntimeError('credential in synthetic artifact')
+    with (STAGE/path).open('a') as target:
+        target.write(encoded+'\n')
+
+def capture_http(self,method,url,**kwargs):
+    global actual_count
+    body=kwargs.get('json')
+    if method.upper()=='POST' and str(url).endswith('/chat/completions'):
+        if actual_count>=MAX_HTTP:
+            raise RuntimeError('bounded probe HTTP request limit')
+        assert body['model']=='gemini-3.8-flash-high'
+        actual_count+=1
+        append('actual-provider-payloads.jsonl',{'sample_key':current,'http_attempt':actual_count,'captured_at_utc':datetime.now(UTC).isoformat(),'payload':body,'payload_sha256':sha(body)})
+    return original_stream(self,method,url,**kwargs)
+
+httpx2.AsyncClient.stream=capture_http
+
+def request_from_json(path, arm):
+    data=json.loads(path.read_text())
+    exchanges=tuple(LlmToolExchange(e['assistant_text'],tuple(LlmToolCall(**c) for c in e['calls']),tuple(LlmToolResult(**r) for r in e['results'])) for e in data['tool_exchanges'])
+    request=LlmRequest(UUID(data['generation_id']),data['user_text'],data['system_prompt'],context=tuple(tuple(v) for v in data['context']),history=tuple(tuple(v) for v in data['history']),tools=tuple(LlmToolDefinition(**t) for t in data['tools']),tool_choice=data['tool_choice'],tool_exchanges=exchanges,continuation_system_prompt=data['continuation_system_prompt'],pre_user_system_prompt=data['pre_user_system_prompt'],input_budget=LlmInputBudget(35617),max_output_tokens=8192,tool_result_max_bytes=131072)
+    if arm=='omitted_history':
+        marker=json.loads((STAGE/'single_text-system-blocked-wire.json').read_text())['messages'][2]['content']
+        request=replace(request,history=(request.history[0],('assistant',marker)))
+    return request
+
+def configure(obj,trace,request):
+    obj.begin(request.generation_id,definitions(trace))
+    for row in trace['source_decisions']:
+        if row['validation_error'] is not None:
+            continue
+        obj.current_requirements |= row['current_requirements_declared']
+        if row['validated_projection']:
+            native=LlmToolCall(**row['native_calls'][0]);obj.native[native.call_id]=native
+        for item in row['native_calls'][0]['arguments']['unresolved_updates']:
+            obj.pending[item['url']]=item
+
+async def collect(provider,request):
+    text='';calls=[];terminal=None
+    async for event in provider.stream(request):
+        if isinstance(event,LlmTextDelta):text+=event.text
+        elif isinstance(event,LlmToolCallRequested):calls.append(asdict(event.call))
+        elif isinstance(event,LlmResponseCompleted):terminal=asdict(event)
+    return {'text':text,'calls':calls,'terminal':terminal}
+
+async def main():
+    global current
+    import time
+    plan={'model':'gemini-3.8-flash-high','repeats':3,'cases':['instant_message-pre_user','single_text-system'],'single_text_arms':['omitted_history','original_history'],'context_window_comparison':[32768,49152],'output_reserve_tokens':8192,'max_output_tokens':8192,'estimate_margin_ratio':.15,'reference_input_limits':[21370,35617],'max_http_attempts':MAX_HTTP,'source_tool_execution':False,'production_changed':False,'low_budget_blocked_not_model_response':True,'current_requirements_not_fully_verified_by_frozen_2025_media':True,'input_manifest':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(STAGE.glob('*.json'))}}
+    (STAGE/'plan.json').write_text(json.dumps(plan,ensure_ascii=False,indent=2)+'\n')
+    traces=json.loads((STAGE/'recorded-traces.json').read_text())
+    provider=OpenAiCompatibleLlmProvider(base_url='https://mubai.website:8318/v1',model='gemini-3.8-flash-high',api_key=SECRET,timeout_seconds=180,request_usage=True)
+    for repeat in range(3):
+        jobs=[('instant_message-pre_user','original_history')]
+        single=['omitted_history','original_history'] if repeat%2==0 else ['original_history','omitted_history']
+        jobs.extend(('single_text-system',arm) for arm in single)
+        for case,arm in jobs:
+            current=f'{case}:r{repeat}:{arm}'
+            request=request_from_json(STAGE/f'{case}-raw-request.json',arm)
+            recorder=_RecordedProvider(provider,STAGE/'provider-rounds.jsonl',MAX_HTTP)
+            recorder.sample_key=current
+            decision=SourceDecisionProvider(recorder)
+            configure(decision,traces[case],request)
+            append('attempts.jsonl',{'key':current,'started_at':datetime.now(UTC).isoformat()})
+            before=time.monotonic(); record={'key':current,'case':case,'arm':arm,'repeat':repeat,'source_execution':False,'reply_complete':False}
+            try:
+                first=await collect(decision,fit_input_budget(request))
+                record['first_response']=first
+                if first['calls']:
+                    record['more_source_required_without_execution']=True
+                elif first['terminal'] and first['terminal']['finish_reason']=='stop' and first['text'].strip():
+                    if case=='instant_message-pre_user':
+                        urls=_successful_source_read_urls(request.tool_exchanges,{p.name:p for p in definitions(traces[case])})
+                        revision=replace(request,tools=(),tool_choice='auto',continuation_system_prompt=source_answer_revision_prompt(first['text'],urls),input_budget_report=None)
+                        final=await collect(decision,fit_input_budget(revision))
+                        record['revision_response']=final
+                        if not final['calls'] and final['terminal'] and final['terminal']['finish_reason']=='stop' and final['text'].strip():
+                            record['reply_complete']=True;record['reply']=final['text']
+                    else:
+                        record['reply_complete']=True;record['reply']=first['text']
+            except Exception as error:
+                record['error_type']=type(error).__name__
+                status=getattr(getattr(error,'response',None),'status_code',None)
+                record['http_status']=status if type(status) is int else None
+            record['latency_ms']=round((time.monotonic()-before)*1000)
+            record['provider_calls']=recorder.calls
+            record['source_decisions']=decision.records
+            record['source_wire_budget_failures']=decision.budget_failures
+            append('results.jsonl',record)
+            print(json.dumps({k:record.get(k) for k in ['key','reply_complete','error_type','http_status','more_source_required_without_execution','latency_ms']}),flush=True)
+    append('exit.json',{'exit_code':0,'actual_http_attempts':actual_count})
+
+asyncio.run(main())

@@ -1,0 +1,72 @@
+{
+  "scope": "endpoint-canaries",
+  "release_approved": false,
+  "source_urls": [
+    "https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html",
+    "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227950.html"
+  ],
+  "groups": {
+    "system_priority": {
+      "completed": 2,
+      "stop": 2,
+      "source_url_present": 0,
+      "all_two_source_urls_present": 0,
+      "provider_usage": {
+        "prompt_tokens": 74,
+        "completion_tokens": 18,
+        "reasoning_tokens": 207,
+        "total_tokens": 299
+      },
+      "latency_ms": [
+        3734,
+        4978
+      ],
+      "median_ms": 4356.0,
+      "canary_passed": 2,
+      "latency_p50_ms": 3734,
+      "latency_p95_ms": 4978
+    },
+    "url_echo": {
+      "completed": 2,
+      "stop": 2,
+      "source_url_present": 0,
+      "all_two_source_urls_present": 0,
+      "provider_usage": {
+        "prompt_tokens": 76,
+        "completion_tokens": 38,
+        "reasoning_tokens": 171,
+        "total_tokens": 285
+      },
+      "latency_ms": [
+        2365,
+        2712
+      ],
+      "median_ms": 2538.5,
+      "canary_passed": 2,
+      "latency_p50_ms": 2365,
+      "latency_p95_ms": 2712
+    },
+    "system_suffix": {
+      "completed": 2,
+      "stop": 2,
+      "source_url_present": 0,
+      "all_two_source_urls_present": 0,
+      "provider_usage": {
+        "prompt_tokens": 62,
+        "completion_tokens": 34,
+        "reasoning_tokens": 429,
+        "total_tokens": 525
+      },
+      "latency_ms": [
+        3505,
+        4013
+      ],
+      "median_ms": 3759.0,
+      "canary_passed": 2,
+      "latency_p50_ms": 3505,
+      "latency_p95_ms": 4013
+    }
+  },
+  "metrics_note": "URL presence is a diagnostic observation, not factual approval; aliases do not independently verify the underlying model.",
+  "percentile_method": "nearest_rank; tiny samples describe this batch only"
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "reviewer": "primary Codex",
+  "version_labels_masked": true,
+  "python_version": "3.12.14",
+  "pair_key": "technical_help:r1:t1",
+  "label": "A",
+  "source": "import asyncio\n\nasync def ok_task():\n    await asyncio.sleep(2)\n    print(\"ok_task 完成\")  # 即使另一个任务抛异常，这里仍然会执行\n\nasync def bad_task():\n    await asyncio.sleep(1)\n    raise ValueError(\"出错了\")\n\nasync def main():\n    try:\n        results = await asyncio.gather(ok_task(), bad_task())\n    except ValueError as e:\n        print(f\"捕获异常: {e}\")\n    # bad_task 抛异常后 gather 立刻向这里抛出\n    # 但 ok_task 还在后台跑，不会被取消\n\nasyncio.run(main())",
+  "source_sha256": "279b27a568e25f7326cca1026fe54f798583424a4d5ea724757ac3eb5a5329d9",
+  "returncode": 0,
+  "stdout": "捕获异常: 出错了\n",
+  "stderr": "",
+  "claimed_ok_task_completion_observed": false,
+  "finding": "API默认不自动取消其他子任务，但此完整程序main捕获后立即返回，asyncio.run关闭时取消未完成任务；注释声称ok_task完成不成立。",
+  "sources": [
+    "https://docs.python.org/3.12/library/asyncio-task.html",
+    "https://docs.python.org/3.12/library/asyncio-runner.html"
+  ]
+}

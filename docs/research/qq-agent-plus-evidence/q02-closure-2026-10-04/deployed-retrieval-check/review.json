@@ -1,0 +1,78 @@
+{
+  "authority_discovery": [
+    {
+      "finding": "Chinese broad query returned press/other results; no claim that later positions or refined queries cannot discover official originals.",
+      "id": 0,
+      "official_caac_in_recorded_top10": false
+    },
+    {
+      "finding": "Same limitation. This is operator-directed readiness, not autonomous model discovery.",
+      "id": 1,
+      "official_airchina_in_recorded_top10": false
+    },
+    {
+      "finding": "Primary paper within the Runtime five-card ceiling, but body read failed.",
+      "id": 2,
+      "primary_paper_rank": 4,
+      "url": "https://raft.github.io/raft.pdf"
+    }
+  ],
+  "category": "S1",
+  "isolated_vs_deployed": {
+    "deployed_pypdf": null,
+    "deployed_reader_version": "0.9.2",
+    "isolated_pypdf": "6.16.2",
+    "isolated_reader_version": "0.9.3",
+    "isolated_success_not_production_acceptance": true,
+    "prior_isolated_success_retained": true
+  },
+  "model_calls": 0,
+  "new_answer_candidate": false,
+  "next": "Before autonomous production-route source acceptance, integrate the previously validated PDF-capable reader image with backup/rollback and recheck the discovered paper plus HTML. Keep source-question/cross-round quality independent; do not relaunch full AB.",
+  "production_config_changed": false,
+  "q02_approved": false,
+  "reader": {
+    "diagnosis": "Current container lacks pypdf; matching service log ImportError directly supports PDF dependency failure. Not a Gemini, DNS or budget diagnosis.",
+    "dns_resolver": "cloudflare",
+    "endpoint": "http://127.0.0.1:11235",
+    "error_code": "web_provider_unavailable",
+    "html_not_attempted_reason": "No appropriate official Chinese source in recorded top cards; did not inject a known target URL.",
+    "html_operations": 0,
+    "no_successful_body_receipt": true,
+    "version": "0.9.2"
+  },
+  "runtime_health": {
+    "certificate_verification": true,
+    "corrected_https_http": 200,
+    "initial_error_is_probe_mistake": true,
+    "not_v30_root_cause_evidence": true
+  },
+  "search_observations": [
+    {
+      "elapsed_ms": 1663,
+      "http": 200,
+      "id": 0,
+      "recorded_top_card_count": 10,
+      "unresponsive_engines": []
+    },
+    {
+      "elapsed_ms": 1018,
+      "http": 200,
+      "id": 1,
+      "recorded_top_card_count": 10,
+      "unresponsive_engines": []
+    },
+    {
+      "elapsed_ms": 647,
+      "http": 200,
+      "id": 2,
+      "recorded_top_card_count": 10,
+      "unresponsive_engines": []
+    }
+  ],
+  "source_calls": {
+    "reader_http_attempts": "not_collected",
+    "reader_operations": 1,
+    "search_operations": 3
+  }
+}

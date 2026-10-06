@@ -1,0 +1,67 @@
+{
+  "review_group_id": "default_voice:detailed_answer:r0",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "89de848c651f345d583a2d32d7db97642d5713d9c53cd3b61704af2a3652883f",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 793,
+    "total_tokens": 9904,
+    "prompt_tokens": 9111
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"default_voice:detailed_answer:r0\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均严格按照要求的三个类别展开，且每个类别均详细给出了三条切实可行的建议，语气温和自然，无违规截断。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均准确列出了民航针对充电宝的携带规定（能量限制、严禁托运与防短路、标识与认证要求），条例清晰规范。\",\n      \"factual_checks_needed\": [\n        \"https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html\",\n        \"https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html\"\n      ]\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"两者均完整给出了两个包含活动内容、预计用时与注意事项的方案，candidate_2在闭馆时间、地下直达避雨等细节提醒上更贴心。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"两者均使用了易于核对的 Checklist 格式完整复盘前文要点；candidate_2 将子项展开为勾选框，结构更为规整便于实操。\",\n      \"factual_checks_needed\": [\n        \"https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html\",\n        \"https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html\"\n      ]\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "default_voice:detailed_answer:r0",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均严格按照要求的三个类别展开，且每个类别均详细给出了三条切实可行的建议，语气温和自然，无违规截断。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均准确列出了民航针对充电宝的携带规定（能量限制、严禁托运与防短路、标识与认证要求），条例清晰规范。",
+        "factual_checks_needed": [
+          "https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html",
+          "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html"
+        ]
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "两者均完整给出了两个包含活动内容、预计用时与注意事项的方案，candidate_2在闭馆时间、地下直达避雨等细节提醒上更贴心。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "两者均使用了易于核对的 Checklist 格式完整复盘前文要点；candidate_2 将子项展开为勾选框，结构更为规整便于实操。",
+        "factual_checks_needed": [
+          "https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html",
+          "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html"
+        ]
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 3996
+}

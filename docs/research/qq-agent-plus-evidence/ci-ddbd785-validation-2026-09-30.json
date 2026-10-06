@@ -1,0 +1,109 @@
+{
+  "schema_version": "1.0",
+  "head": "ddbd785a594a261ac037f607efbcb1c70a3c1ba7",
+  "draft": true,
+  "checks": [
+    {
+      "name": "rust (ubuntu-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "build",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "contract",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "python (ubuntu-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "secrets",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "web-smoke",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "web (ubuntu-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "rust (windows-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "python (macos-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "web (windows-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "rust (macos-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "python (windows-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "deploy",
+      "status": "COMPLETED",
+      "conclusion": "SKIPPED"
+    },
+    {
+      "name": "neural-worker (ubuntu-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "dependencies",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "architecture-boundaries",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "neural-worker (macos-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "neural-worker (windows-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    }
+  ],
+  "python_test_results": {
+    "macos": {
+      "passed": 1565,
+      "skipped": 46,
+      "warnings": 1
+    },
+    "windows": {
+      "passed": 1590,
+      "skipped": 21,
+      "warnings": 1
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "checks": [
+    {
+      "file": "audit_pipeline.py.txt",
+      "ruff_format_then_check_exit_code": 0
+    },
+    {
+      "file": "audit_artifacts.py.txt",
+      "ruff_format_then_check_exit_code": 0
+    },
+    {
+      "git_diff_check_exit_code": 0
+    },
+    {
+      "new_readme_links_exist": true
+    }
+  ],
+  "initial_failure": "15 E501 formatting issues; run formatter before lint; no product/model failure",
+  "initial_lint_exit_code": 1,
+  "model_calls": 0,
+  "semantic_quality_approval": false
+}

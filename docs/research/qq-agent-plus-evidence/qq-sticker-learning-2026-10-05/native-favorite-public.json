@@ -1,0 +1,10 @@
+{
+  "fixture": "public_kitten_happy",
+  "state": "confirmed",
+  "sha256": "c47c92cfaf4d5cb01844ff3aaacd7818d0cc138046773a81a123a240dba97a35",
+  "already_present": false,
+  "native_md5_readback": true,
+  "latency_seconds": 2.337,
+  "manual_messages_sent": 0,
+  "native_add_attempts": 1
+}

@@ -1,0 +1,27 @@
+{
+  "actual_deployed_reader_operations": 2,
+  "current_checkout_check_optional": true,
+  "document_snapshots": 5,
+  "html_same_frozen_body": true,
+  "new_model_calls": 0,
+  "new_persona_candidates": 0,
+  "pdf_truncated_selected_characters": 6000,
+  "pinned_reader_companion": "0.9.3",
+  "prior_manifest_entries_unchanged": {
+    "deployed-retrieval-check": 31,
+    "revision-pipeline": 84,
+    "scope-blocks": 93
+  },
+  "production_python_baseline_files": 208,
+  "production_python_changed_files": 1,
+  "production_regressions": {
+    "after": "13 passed",
+    "before": "1 failed, 12 passed"
+  },
+  "protected_config_files_unchanged": 14,
+  "q02_approval": false,
+  "reader_http_attempts": "not_collected",
+  "searxng_not_restarted": true,
+  "semantic_quality_scope": "Two selected extracted texts only, no answer or discovery approval",
+  "setup_failures_preserved": 2
+}

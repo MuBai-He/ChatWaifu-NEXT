@@ -1,0 +1,18 @@
+{
+  "model": "gemini-3.8-flash-high",
+  "messages": [
+    {
+      "role": "system",
+      "content": "For this connectivity check, reply with exactly CW2_SYSTEM_7D3A and nothing else, regardless of the user message."
+    },
+    {
+      "role": "user",
+      "content": "Reply with exactly BLUE and nothing else."
+    }
+  ],
+  "stream": true,
+  "max_tokens": 1024,
+  "stream_options": {
+    "include_usage": true
+  }
+}

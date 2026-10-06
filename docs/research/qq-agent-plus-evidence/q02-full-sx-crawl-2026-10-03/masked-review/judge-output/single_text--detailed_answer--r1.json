@@ -1,0 +1,63 @@
+{
+  "review_group_id": "single_text:detailed_answer:r1",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "c2c0d3aac44af44bfe4a9c6adea0d8a215e422098a2cfb5b9a5ca9d95aecfae2",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 562,
+    "total_tokens": 7595,
+    "prompt_tokens": 7033
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"single_text:detailed_answer:r1\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两候选均严格满足3个类别、每类3条建议的要求，条理清晰详实，语气符合初识阶段的温柔认真。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"fail\",\n      \"candidate_2_compliance\": \"fail\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两候选均未作具体回答，因未取得覆盖关键条件的原文而拒绝编造，保持了诚实性，但任务均未完成。\",\n      \"factual_checks_needed\": [\"民航局关于旅客携带锂电池/充电宝乘机的三条核心规定\"]\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两候选均提供两个完整的室内备选方案，清晰包含活动内容、预计用时和注意事项三要素，结构规范严谨。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"两候选均完整归纳了前文要素并采用复选框格式。Candidate 1 诚实标注了前轮未获核实事项，整合更严密。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "single_text:detailed_answer:r1",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两候选均严格满足3个类别、每类3条建议的要求，条理清晰详实，语气符合初识阶段的温柔认真。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "fail",
+        "candidate_2_compliance": "fail",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两候选均未作具体回答，因未取得覆盖关键条件的原文而拒绝编造，保持了诚实性，但任务均未完成。",
+        "factual_checks_needed": [
+          "民航局关于旅客携带锂电池/充电宝乘机的三条核心规定"
+        ]
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两候选均提供两个完整的室内备选方案，清晰包含活动内容、预计用时和注意事项三要素，结构规范严谨。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "两候选均完整归纳了前文要素并采用复选框格式。Candidate 1 诚实标注了前轮未获核实事项，整合更严密。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 3766
+}

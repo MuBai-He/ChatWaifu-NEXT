@@ -1,0 +1,48 @@
+{
+  "search_calls": 2,
+  "reader_calls": 2,
+  "raw_backend_queries": 2,
+  "model_http": 0,
+  "production_changed": false,
+  "before": {
+    "searxng_settings": "e3ce12a176b2a1dfd976e7da24766738703e557c63364b2b4eea97fc604641bc",
+    "production_reader": "9095b832c38f799b90eb1243c06f0690694e78fc9b2535604e5780047e51cf37"
+  },
+  "after": {
+    "searxng_settings": "e3ce12a176b2a1dfd976e7da24766738703e557c63364b2b4eea97fc604641bc",
+    "production_reader": "9095b832c38f799b90eb1243c06f0690694e78fc9b2535604e5780047e51cf37"
+  },
+  "quality_approval": false,
+  "available_unread_official_candidates": [
+    {
+      "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XWZX/XB_DQYW/202507/t20250710_227953.html",
+      "query_index": 1,
+      "rank": 1,
+      "title": "caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XWZX/XB_DQYW...",
+      "snippet": "辖区各机场广泛动员，通过广播、电子屏、公告牌、乘机短信等多渠道向旅客传达充电宝新规内容，设置充电宝暂存与自弃点，开设快递服务台，提升旅客处置. 效率。 安排专人现场引导旅客识别充电宝是否合规，提高出行效率。"
+    },
+    {
+      "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/DB_DQXW/202507/t20250709_227899.html",
+      "query_index": 1,
+      "rank": 2,
+      "title": "caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/DB_DQXW/202507...",
+      "snippet": "日前民航局发布紧急通知，自6月28日起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。 东北局及辽宁监管局紧急部署，要求辖区单位严格落实卡控政策。 辖区各机场及航司迅速行动，多措 并举保障政策实施。"
+    },
+    {
+      "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227950.html",
+      "query_index": 1,
+      "rank": 4,
+      "title": "caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT...",
+      "snippet": "无3C标识、3C标识不清晰、被召回型号或批次”的充电宝识别出、卡控住；二是要真情服务，在向旅客宣传到位、耐心解释的基础上，尽最大努力为旅客处理."
+    },
+    {
+      "url": "https://www.caac.gov.cn/local/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+      "query_index": 1,
+      "rank": 5,
+      "title": "宁夏监管局注重充电宝管控与服务并行 保旅客平安温馨出行",
+      "snippet": "6月28日，是民航局关于“禁止旅客携带无3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班”有关规定执行的首日。"
+    }
+  ],
+  "credential_values_checked": 1,
+  "exported_json_files_scanned": 8
+}

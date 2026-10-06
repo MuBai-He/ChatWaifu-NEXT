@@ -1,0 +1,55 @@
+{
+  "reviewer": "primary Codex",
+  "scope": "Seven primary-inspected asyncio-only standalone snippets; six turn-3 examples and one default-gather demonstration",
+  "results": [
+    {
+      "sample_key": "technical_help:r0:t3:baseline_v3",
+      "exit_code": 0,
+      "stdout": "任务 0 成功: {'id': 1, 'name': '宁宁'}\n任务 1 异常: TimeoutError: 请求超时\n任务 2 成功: online\n",
+      "stderr": "",
+      "verdict": "expected three normal/exception results observed"
+    },
+    {
+      "sample_key": "technical_help:r1:t3:baseline_v3",
+      "exit_code": 0,
+      "stdout": "任务 0 成功: ok\n任务 1 失败: ValueError: something went wrong\n任务 2 成功: 42\n",
+      "stderr": "",
+      "verdict": "expected three normal/exception results observed"
+    },
+    {
+      "sample_key": "technical_help:r2:t3:baseline_v3",
+      "exit_code": 0,
+      "stdout": "任务 0 成功: A 的数据\n任务 1 失败: B 出错了\n任务 2 成功: C 的数据\n",
+      "stderr": "",
+      "verdict": "expected three normal/exception results observed"
+    },
+    {
+      "sample_key": "technical_help:r0:t3:candidate_v4",
+      "exit_code": 0,
+      "stdout": "任务 0 成功: {'id': 1, 'name': '宁宁'}\n任务 1 失败: ValueError: 数据库连接超时\n任务 2 成功: healthy\n",
+      "stderr": "",
+      "verdict": "expected three normal/exception results observed"
+    },
+    {
+      "sample_key": "technical_help:r1:t1:candidate_v4",
+      "exit_code": 0,
+      "stdout": "捕获到异常: 出错了\n",
+      "stderr": "",
+      "verdict": "claimed ok completion absent: asyncio.run shutdown cancels unfinished ok task"
+    },
+    {
+      "sample_key": "technical_help:r1:t3:candidate_v4",
+      "exit_code": 0,
+      "stdout": "任务 0 成功: {'id': 1, 'name': '宁宁'}\n任务 1 失败 [TimeoutError]: 请求超时\n任务 2 成功: online\n",
+      "stderr": "",
+      "verdict": "expected three normal/exception results observed"
+    },
+    {
+      "sample_key": "technical_help:r2:t3:candidate_v4",
+      "exit_code": 0,
+      "stdout": "任务 0 成功: {'id': 1, 'name': '宁宁'}\n任务 1 失败: ValueError: 数据库连接超时\n任务 2 成功: online\n",
+      "stderr": "",
+      "verdict": "expected three normal/exception results observed"
+    }
+  ]
+}

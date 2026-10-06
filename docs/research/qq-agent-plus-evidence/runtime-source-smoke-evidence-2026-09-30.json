@@ -1,0 +1,804 @@
+{
+  "schema_version": "1.0",
+  "purpose": "Source-tool compatibility and failure investigation; not A/B quality acceptance",
+  "paid_endpoint_config_port_verified": 8318,
+  "dollar_cost": "unknown; no user dollar cap",
+  "raw_artifact_policy": "Full original bytes kept in git-ignored .local/research/q02; no page bodies copied to this summary",
+  "batches": [
+    {
+      "name": "cw2-runtime-source-smoke-20260930",
+      "models": [
+        {
+          "model": "gemini-3.8-flash-high",
+          "responses": 8,
+          "provider_rounds": 8,
+          "provider_usage": {
+            "prompt_tokens": 25746,
+            "completion_tokens": 2841,
+            "total_tokens": 32859,
+            "reasoning_tokens": 4272
+          },
+          "p50_ms": 8238.5,
+          "p95_ms": 10491.25,
+          "tool_runs": 0,
+          "runtime_fallbacks": 2,
+          "local_original_directory": ".local/research/q02/cw2-runtime-source-smoke-20260930/gemini-3.8-flash-high",
+          "sha256": {
+            "results.jsonl": "70c19d1eb94c301993080f3d5d26289e74b1bbaf3f7716ff48aff2695faab1cb",
+            "metadata.json": "592bcc5415835d55089622b0eab1789cc0c3de11272df19c7141a7a95990346e",
+            "provider-rounds.jsonl": "537437813b5b1fe03df039ada03aa15869aa8743651c39055230f5557678665e"
+          },
+          "turns": [
+            {
+              "sample_key": "technical_help:r0:t1:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 1,
+              "raw_reply_sha256": "cdc696735c6d02854cded6cc27b56d1375a085a7787d56181bee0c1034096b5e",
+              "latency_ms": 7685,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "technical_help:r0:t2:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 2,
+              "raw_reply_sha256": "cbe475d30102219d7eef38681dce2a29f65e148094cd671d82b4d6233249926c",
+              "latency_ms": 9526,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "technical_help:r0:t3:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 3,
+              "raw_reply_sha256": "f49de3b5e3627572b77b7e30f46858e51c681cc4399fefd949ceb89db990c5af",
+              "latency_ms": 7194,
+              "reply_origin": "runtime_fallback",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "technical_help:r0:t4:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 4,
+              "raw_reply_sha256": "f49de3b5e3627572b77b7e30f46858e51c681cc4399fefd949ceb89db990c5af",
+              "latency_ms": 5091,
+              "reply_origin": "runtime_fallback",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t1:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 1,
+              "raw_reply_sha256": "c7f7f0c94962ab2e9c7cf19d8fd6ac3b33ec20acf1b2907098eb6d2b3fd96490",
+              "latency_ms": 11011,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t2:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 2,
+              "raw_reply_sha256": "d8135fe4e8bcb6b30068b4bb42640a16cd9c3f3d7566c5848b76a34f2b4ecf46",
+              "latency_ms": 8522,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t3:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 3,
+              "raw_reply_sha256": "81ac0dae9d53b0a40638cdf47271b9e9c1f372594e1e32f334bf10fe24ba44da",
+              "latency_ms": 8575,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t4:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 4,
+              "raw_reply_sha256": "14bf9a4f6adce205d00e810254e059796d88463212b811e6287ea95b3944f3c1",
+              "latency_ms": 7955,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            }
+          ],
+          "runtime_database_audit": {
+            "persistent_grants": 0,
+            "confirmation_decisions": [],
+            "skill_run_counts": [],
+            "confirmation_policy": "Automated explicit evaluation allow_once; not a human UI interaction"
+          }
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "responses": 8,
+          "provider_rounds": 8,
+          "provider_usage": {
+            "prompt_tokens": 26966,
+            "completion_tokens": 3271,
+            "total_tokens": 30237,
+            "reasoning_tokens": null
+          },
+          "p50_ms": 12084.5,
+          "p95_ms": 16765.399999999998,
+          "tool_runs": 0,
+          "runtime_fallbacks": 2,
+          "local_original_directory": ".local/research/q02/cw2-runtime-source-smoke-20260930/claude-sonnet-4-6",
+          "sha256": {
+            "results.jsonl": "85a4baf09d718dd5f7fc0fde7c691ea9a42f0213a302da0f19ed7f29d4367871",
+            "metadata.json": "1515245d9707b7c070dc430eb9b9b92dc1cc234f16e3f7e6a0555faf82d60dd5",
+            "provider-rounds.jsonl": "d777ddc08719881a4f37c6268d7b9adc20d136e2c5baca854c811155e0d45379"
+          },
+          "turns": [
+            {
+              "sample_key": "technical_help:r0:t1:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 1,
+              "raw_reply_sha256": "4981698e0ba2213107ebb0beb0044a9a1b4af501f9492ccec72ddc877c18a005",
+              "latency_ms": 10673,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "technical_help:r0:t2:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 2,
+              "raw_reply_sha256": "7ad2cbeb1cc647661843a23bfd232a7a38f58713a4cf03a6668fcaec35c74d5c",
+              "latency_ms": 5990,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "technical_help:r0:t3:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 3,
+              "raw_reply_sha256": "f49de3b5e3627572b77b7e30f46858e51c681cc4399fefd949ceb89db990c5af",
+              "latency_ms": 6100,
+              "reply_origin": "runtime_fallback",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "technical_help:r0:t4:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 4,
+              "raw_reply_sha256": "f49de3b5e3627572b77b7e30f46858e51c681cc4399fefd949ceb89db990c5af",
+              "latency_ms": 4397,
+              "reply_origin": "runtime_fallback",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t1:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 1,
+              "raw_reply_sha256": "4c72814241459cb9ba015cb70c89cc11929494c51082d6f426bc152a96834aa5",
+              "latency_ms": 17317,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t2:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 2,
+              "raw_reply_sha256": "fb29b18a1d2bad67bd4c223ab7abded3428e0b79acfd6ddd9450638e5ab8ad9f",
+              "latency_ms": 14454,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t3:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 3,
+              "raw_reply_sha256": "cf6a224270213733ec30ec726e072d8507778803cdaa73be09eeab43d9563151",
+              "latency_ms": 13496,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t4:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 4,
+              "raw_reply_sha256": "7edefc7c05982e54ce6f526c544954f9ebb09e2f15f5f8b5dba7c7dbfcf24c86",
+              "latency_ms": 15741,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            }
+          ],
+          "runtime_database_audit": {
+            "persistent_grants": 0,
+            "confirmation_decisions": [],
+            "skill_run_counts": [],
+            "confirmation_policy": "Automated explicit evaluation allow_once; not a human UI interaction"
+          }
+        },
+        {
+          "model": "claude-opus-4-6-thinking",
+          "responses": 8,
+          "provider_rounds": 8,
+          "provider_usage": {
+            "prompt_tokens": 28082,
+            "completion_tokens": 4263,
+            "total_tokens": 32345,
+            "reasoning_tokens": null
+          },
+          "p50_ms": 15501.5,
+          "p95_ms": 25243.85,
+          "tool_runs": 0,
+          "runtime_fallbacks": 2,
+          "local_original_directory": ".local/research/q02/cw2-runtime-source-smoke-20260930/claude-opus-4-6-thinking",
+          "sha256": {
+            "results.jsonl": "5175096c5ddbe2e2da27082ef83c1cf65213d1e8cdbcb7b46e6e3750b7ad4a56",
+            "metadata.json": "b585ae57fcf99d0ec175f8e28c9c77350ab4fcd95953e819e1678d77a696b2c8",
+            "provider-rounds.jsonl": "a7f9290db22ce258ed2b64f1bf25a0f22a7ff70089c5b671ba5da42bc482c798"
+          },
+          "turns": [
+            {
+              "sample_key": "technical_help:r0:t1:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 1,
+              "raw_reply_sha256": "e463766c840d9e7f976184453b8322b4c66180c4edf807e36b3278a39057ea07",
+              "latency_ms": 14006,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "technical_help:r0:t2:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 2,
+              "raw_reply_sha256": "e5bc72d0ad1b8b19efae42cdf0031a9b6a8a89109479ec69acf95638416d7de7",
+              "latency_ms": 7998,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "technical_help:r0:t3:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 3,
+              "raw_reply_sha256": "f49de3b5e3627572b77b7e30f46858e51c681cc4399fefd949ceb89db990c5af",
+              "latency_ms": 6991,
+              "reply_origin": "runtime_fallback",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "technical_help:r0:t4:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 4,
+              "raw_reply_sha256": "f49de3b5e3627572b77b7e30f46858e51c681cc4399fefd949ceb89db990c5af",
+              "latency_ms": 6611,
+              "reply_origin": "runtime_fallback",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t1:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 1,
+              "raw_reply_sha256": "6e50192a6490fdc3d2f2b3ca4409d937b41b70427d512d99f60fbe4524c22e20",
+              "latency_ms": 22612,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t2:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 2,
+              "raw_reply_sha256": "d38d998db48d16b6d32a3cb55fc25a6f138fe3133e5fc4b6094d85e8278c83e4",
+              "latency_ms": 16997,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t3:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 3,
+              "raw_reply_sha256": "2e828ffd0889ebed32a43d8c9f83b7d78a5ad11d6c487c99c47208ee4003f6d9",
+              "latency_ms": 21088,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t4:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 4,
+              "raw_reply_sha256": "3a3734500d8744482840a518b0f2aeb2ef1e8563ba77366a0a4d6b6ae72a8641",
+              "latency_ms": 26661,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            }
+          ],
+          "runtime_database_audit": {
+            "persistent_grants": 0,
+            "confirmation_decisions": [],
+            "skill_run_counts": [],
+            "confirmation_policy": "Automated explicit evaluation allow_once; not a human UI interaction"
+          }
+        }
+      ]
+    },
+    {
+      "name": "cw2-runtime-source-smoke-v2-20260930",
+      "models": [
+        {
+          "model": "gemini-3.8-flash-high",
+          "responses": 8,
+          "provider_rounds": 8,
+          "provider_usage": {
+            "prompt_tokens": 23761,
+            "completion_tokens": 2252,
+            "total_tokens": 30175,
+            "reasoning_tokens": 4162
+          },
+          "p50_ms": 7889.5,
+          "p95_ms": 10612.749999999998,
+          "tool_runs": 0,
+          "runtime_fallbacks": 1,
+          "local_original_directory": ".local/research/q02/cw2-runtime-source-smoke-v2-20260930/gemini-3.8-flash-high",
+          "sha256": {
+            "results.jsonl": "3c2e55594d8544cf6fb282143482f3fd197dda09168cfdca273110810c7fd113",
+            "metadata.json": "3383f2dc12be05ebe10f6d84fab3c552e82173e693b9ffebf2f4e2397370af22",
+            "provider-rounds.jsonl": "79c26cbfc7527f15e1955b6bc5e6bde77b9642165d579037941b17c1192ec134"
+          },
+          "turns": [
+            {
+              "sample_key": "technical_help:r0:t1:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 1,
+              "raw_reply_sha256": "e8f13156f594a3bd9a9d9389e9450f143931b2f8060b8b53d9e1122f394d1497",
+              "latency_ms": 6761,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "technical_help:r0:t2:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 2,
+              "raw_reply_sha256": "e3cda350e0e8f9b61ec99110c2bdae30a38ec333c1219051c5b13de80b6fdb27",
+              "latency_ms": 5917,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "technical_help:r0:t3:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 3,
+              "raw_reply_sha256": "7e8d6df61ed08e404740796895929d99e031510961eb6151d5de4d7e63809d89",
+              "latency_ms": 7296,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "technical_help:r0:t4:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 4,
+              "raw_reply_sha256": "5f36afcf813306fe20713134b4b127b4df72359afca7ecfb59f6148fec846083",
+              "latency_ms": 5401,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t1:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 1,
+              "raw_reply_sha256": "9e79efb1dc9eb51a61aea196f2d998ae4be182ae2e187bddb8b2a917d803fd4e",
+              "latency_ms": 11591,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t2:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 2,
+              "raw_reply_sha256": "f49de3b5e3627572b77b7e30f46858e51c681cc4399fefd949ceb89db990c5af",
+              "latency_ms": 8483,
+              "reply_origin": "runtime_fallback",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t3:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 3,
+              "raw_reply_sha256": "f82fec8a6633000667117c2f69e8c1108fa528240d5d989faf9573c7b8c71922",
+              "latency_ms": 8796,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t4:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 4,
+              "raw_reply_sha256": "78bb8967c4a2c2ab72e1dc08bc4322081523618abc922de16169c205e3e119cb",
+              "latency_ms": 8607,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            }
+          ],
+          "runtime_database_audit": {
+            "persistent_grants": 0,
+            "confirmation_decisions": [],
+            "skill_run_counts": [],
+            "confirmation_policy": "Automated explicit evaluation allow_once; not a human UI interaction"
+          }
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "responses": 8,
+          "provider_rounds": 11,
+          "provider_usage": {
+            "prompt_tokens": 45875,
+            "completion_tokens": 4377,
+            "total_tokens": 50252,
+            "reasoning_tokens": null
+          },
+          "p50_ms": 12971.5,
+          "p95_ms": 36503.94999999998,
+          "tool_runs": 4,
+          "runtime_fallbacks": 0,
+          "local_original_directory": ".local/research/q02/cw2-runtime-source-smoke-v2-20260930/claude-sonnet-4-6",
+          "sha256": {
+            "results.jsonl": "f3e0f528e5ece41611fafb6f4b82df24b445407b5abe2f09a13bb70f2f6bc312",
+            "metadata.json": "4885e203899182db4180855c3f65a487e97073bf7f11edaffac2eae74199d420",
+            "provider-rounds.jsonl": "e51fc91d0068c59801d387919110077bb58147df6200fa1aec03b1233e4518a7"
+          },
+          "turns": [
+            {
+              "sample_key": "technical_help:r0:t1:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 1,
+              "raw_reply_sha256": "d371a37258445c5e1e126bfbe4f97261461515648d443ffd670ae063cf6e2aee",
+              "latency_ms": 14050,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "technical_help:r0:t2:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 2,
+              "raw_reply_sha256": "f1cc0014bd19b33107058dfd2d82407bce25860ea976e26fccc48f8a3869b9dc",
+              "latency_ms": 8005,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "technical_help:r0:t3:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 3,
+              "raw_reply_sha256": "202c51617e36f81aa32c5c5eaaddc007fdc8c97cfa86a8533abff196b959ed54",
+              "latency_ms": 5828,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "technical_help:r0:t4:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 4,
+              "raw_reply_sha256": "95e556933ba7c66bb23ce459fb32ebaa943ca15eebf9228dd1bceb0afa0f7f7b",
+              "latency_ms": 6318,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t1:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 1,
+              "raw_reply_sha256": "c5770d2fb2415413d2078f13f9b51371469bb60a0c2d18b14c4c1cd6d98502d6",
+              "latency_ms": 18965,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t2:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 2,
+              "raw_reply_sha256": "b1009858344a8da8a0d48e0ede82d8b6f38d8a052d2f91e613efa723c6da9067",
+              "latency_ms": 45948,
+              "reply_origin": "provider",
+              "provider_rounds": 4,
+              "tool_runs": [
+                {
+                  "skill_id": "web.search",
+                  "skill_version": "1.0.0",
+                  "state": "succeeded",
+                  "origin": "agent",
+                  "provider_tool_call_id": "cw_02c8b938cc43a0dd-1790781976727065465-1",
+                  "error_code": null,
+                  "error_details": null,
+                  "source_url": null,
+                  "query": "中国民航充电宝携带规定 2024",
+                  "retrieved_at": "2026-09-30T15:26:19.239250+00:00",
+                  "body_sha256": "b3e5296726ef02f3ac62921105d91142240d8a7dd9264a28e4e1735102b5c4e7",
+                  "truncated": true
+                },
+                {
+                  "skill_id": "web.read",
+                  "skill_version": "1.0.1",
+                  "state": "failed",
+                  "origin": "agent",
+                  "provider_tool_call_id": "cw_2090eead19541d14-1790781984583749491-3",
+                  "error_code": "web_http_error",
+                  "error_details": {
+                    "status_code": 403
+                  },
+                  "source_url": null,
+                  "query": null,
+                  "retrieved_at": null,
+                  "body_sha256": null,
+                  "truncated": null
+                },
+                {
+                  "skill_id": "web.read",
+                  "skill_version": "1.0.1",
+                  "state": "failed",
+                  "origin": "agent",
+                  "provider_tool_call_id": "cw_2090eead19541d14-1790781985362062968-4",
+                  "error_code": "web_http_error",
+                  "error_details": {
+                    "status_code": 403
+                  },
+                  "source_url": null,
+                  "query": null,
+                  "retrieved_at": null,
+                  "body_sha256": null,
+                  "truncated": null
+                },
+                {
+                  "skill_id": "web.read",
+                  "skill_version": "1.0.1",
+                  "state": "failed",
+                  "origin": "agent",
+                  "provider_tool_call_id": "cw_2090eead19541d14-1790781994761113780-6",
+                  "error_code": "web_empty_content",
+                  "error_details": {},
+                  "source_url": null,
+                  "query": null,
+                  "retrieved_at": null,
+                  "body_sha256": null,
+                  "truncated": null
+                }
+              ]
+            },
+            {
+              "sample_key": "detailed_answer:r0:t3:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 3,
+              "raw_reply_sha256": "cca8b06637f2f541c381d14a5698cae3e74ed815b63cb54fb7229528db69de4a",
+              "latency_ms": 14546,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t4:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 4,
+              "raw_reply_sha256": "95dc1bf50727ceca441a72c59ca42de564e86ab8273479ca608f1c06776851e4",
+              "latency_ms": 11893,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            }
+          ],
+          "runtime_database_audit": {
+            "persistent_grants": 0,
+            "confirmation_decisions": [["allow_once", 4]],
+            "skill_run_counts": [
+              ["web.read", "failed", 3],
+              ["web.search", "succeeded", 1]
+            ],
+            "confirmation_policy": "Automated explicit evaluation allow_once; not a human UI interaction"
+          }
+        },
+        {
+          "model": "claude-opus-4-6-thinking",
+          "responses": 8,
+          "provider_rounds": 10,
+          "provider_usage": {
+            "prompt_tokens": 42229,
+            "completion_tokens": 4655,
+            "total_tokens": 46884,
+            "reasoning_tokens": null
+          },
+          "p50_ms": 16820.5,
+          "p95_ms": 28295.599999999995,
+          "tool_runs": 2,
+          "runtime_fallbacks": 0,
+          "local_original_directory": ".local/research/q02/cw2-runtime-source-smoke-v2-20260930/claude-opus-4-6-thinking",
+          "sha256": {
+            "results.jsonl": "c4b0cc37991d5b199085f9c15f9be6771847aeb8bbbc8121893cd00252639cd0",
+            "metadata.json": "4598b2ce743fcd96c5e64604af7f904460d22128b6d05b0014152d9befb64cb1",
+            "provider-rounds.jsonl": "61dd8076c6e5e8bef85edf979c8c348ce6bca53a298dc8f3150e2e9b1d23b429"
+          },
+          "turns": [
+            {
+              "sample_key": "technical_help:r0:t1:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 1,
+              "raw_reply_sha256": "3c3c420a7f1ba876107bd875967b48369f3fcf4fd362beee6354e4f9ec39bfec",
+              "latency_ms": 14323,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "technical_help:r0:t2:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 2,
+              "raw_reply_sha256": "33ae628846f87ae615da11d993c56aa253740ba8cd0aedec89a2b302872a6867",
+              "latency_ms": 9818,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "technical_help:r0:t3:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 3,
+              "raw_reply_sha256": "e4522b8a4b9f341f80ecea1e67c2b24068ba083abcf079ab7e20da89b206e11e",
+              "latency_ms": 9711,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "technical_help:r0:t4:candidate_v5",
+              "scenario_id": "technical_help",
+              "turn_id": 4,
+              "raw_reply_sha256": "00d7230eb73ec19fc373199d83b1952ce401a58389e5694b57929191aac174e9",
+              "latency_ms": 6796,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t1:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 1,
+              "raw_reply_sha256": "1378e5ba5f2c972860ea9b2cabdc7af0fb6d0e6d8a85bba3feedcf4d454916d2",
+              "latency_ms": 19318,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t2:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 2,
+              "raw_reply_sha256": "94540f2c5bf582c66205f0211d9eac5f18e2a61d27736b7e85899a8e31930cbe",
+              "latency_ms": 32154,
+              "reply_origin": "provider",
+              "provider_rounds": 3,
+              "tool_runs": [
+                {
+                  "skill_id": "web.search",
+                  "skill_version": "1.0.0",
+                  "state": "succeeded",
+                  "origin": "agent",
+                  "provider_tool_call_id": "cw_02c8b938cc43a0dd-1790781982961276883-2",
+                  "error_code": null,
+                  "error_details": null,
+                  "source_url": null,
+                  "query": "国内航班 移动电源 充电宝 民航局 携带规定 额定能量 瓦时",
+                  "retrieved_at": "2026-09-30T15:26:26.254041+00:00",
+                  "body_sha256": "d601e3c9bf26f900361d7ea711eedb5b80aa7e00d92e2fd84d1a7d42f5b1ff55",
+                  "truncated": true
+                },
+                {
+                  "skill_id": "web.read",
+                  "skill_version": "1.0.1",
+                  "state": "succeeded",
+                  "origin": "agent",
+                  "provider_tool_call_id": "cw_2090eead19541d14-1790781992632232238-5",
+                  "error_code": null,
+                  "error_details": null,
+                  "source_url": "https://www.shenzhenair.com/show.jsp?info_sID=b6a562a6aa0b486f8901a366dca902bb",
+                  "query": null,
+                  "retrieved_at": "2026-09-30T15:26:34.616210+00:00",
+                  "body_sha256": "670ce88816011a83f409473734017987930659c07f34b10ac945b6b20009381e",
+                  "truncated": false
+                }
+              ]
+            },
+            {
+              "sample_key": "detailed_answer:r0:t3:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 3,
+              "raw_reply_sha256": "eb95d3bf64b7f5f2c6452e0ed4b83055ee98bb1676f4b344b08e64e180e886a9",
+              "latency_ms": 19472,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            },
+            {
+              "sample_key": "detailed_answer:r0:t4:candidate_v5",
+              "scenario_id": "detailed_answer",
+              "turn_id": 4,
+              "raw_reply_sha256": "991f870db9b67e38dbf599ea38e8bf303d9837f7fadf156cf18c5ae814458dfd",
+              "latency_ms": 21130,
+              "reply_origin": "provider",
+              "provider_rounds": 1,
+              "tool_runs": []
+            }
+          ],
+          "runtime_database_audit": {
+            "persistent_grants": 0,
+            "confirmation_decisions": [["allow_once", 2]],
+            "skill_run_counts": [
+              ["web.read", "succeeded", 1],
+              ["web.search", "succeeded", 1]
+            ],
+            "confirmation_policy": "Automated explicit evaluation allow_once; not a human UI interaction"
+          }
+        }
+      ]
+    }
+  ],
+  "technical_code_executions": [
+    {
+      "model": "gemini-3.8-flash-high",
+      "sample_key": "technical_help:r0:t3:candidate_v5",
+      "code_sha256": "99ccd386a97e5f02435002a55fb0eada64ed25348b69fa638db757b3bf1287dc",
+      "returncode": 0,
+      "stdout": "[0] 正常 -> 任务 1 成功返回值\n[1] 异常 -> ValueError: 发生错误：模拟异常\n[2] 正常 -> 任务 2 成功返回值\n",
+      "stderr": "",
+      "verification": "Exact claimed output for Gemini/Sonnet; random duration values vary for Opus, result order/failure classification checked separately",
+      "scope": "Displayed complete third-turn program only; does not prove all technical prose or cancellation/special exceptions correct",
+      "claimed_output_match": true
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "sample_key": "technical_help:r0:t3:candidate_v5",
+      "code_sha256": "88fd0a05162d058857449ab4252ce5b2efed256b47789d0a69c1bc8c3fd1a969",
+      "returncode": 0,
+      "stdout": "[正常] task 1: task 1 成功\n[异常] task 2: task 2 失败\n[正常] task 3: task 3 成功\n[异常] task 4: task 4 失败\n[正常] task 5: task 5 成功\n",
+      "stderr": "",
+      "verification": "Exact claimed output for Gemini/Sonnet; random duration values vary for Opus, result order/failure classification checked separately",
+      "scope": "Displayed complete third-turn program only; does not prove all technical prose or cancellation/special exceptions correct",
+      "claimed_output_match": true
+    },
+    {
+      "model": "claude-opus-4-6-thinking",
+      "sample_key": "technical_help:r0:t3:candidate_v5",
+      "code_sha256": "ccb3a17070dbbb8ade53a241b8b79027b4729b1c694a645e899be1f9c9214e94",
+      "returncode": 0,
+      "stdout": "[成功] 任务 1: 任务 1 完成，耗时 1.39s\n[失败] 任务 2: ValueError: 任务 2 出错了\n[成功] 任务 3: 任务 3 完成，耗时 1.59s\n[成功] 任务 4: 任务 4 完成，耗时 1.25s\n",
+      "stderr": "",
+      "verification": "Exact claimed output for Gemini/Sonnet; random duration values vary for Opus, result order/failure classification checked separately",
+      "scope": "Displayed complete third-turn program only; does not prove all technical prose or cancellation/special exceptions correct",
+      "claimed_output_match": true
+    }
+  ]
+}

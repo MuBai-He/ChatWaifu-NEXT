@@ -1,0 +1,121 @@
+"""Recompute acquisition, wire budgets and actual native usage; never judge prose by keywords."""
+import argparse
+import hashlib
+import json
+import sys
+from collections import Counter
+from pathlib import Path
+root=Path(__file__).resolve().parents[5]
+sys.path[:0]=[str(root/"services/runtime/src"),str(root/"packages/protocol-python/src"),
+              str(root/"packages/model-worker-sdk-python/src")]
+from chatwaifu_runtime.providers.input_estimation import count_reference_tokens
+
+parser=argparse.ArgumentParser()
+parser.add_argument("--write-reports",action="store_true")
+args=parser.parse_args()
+phase=Path(__file__).resolve().parent
+def j(p): return json.loads(p.read_text())
+def rows(p): return [json.loads(x) for x in p.read_text().splitlines() if x]
+def percentile(values,p):
+    values=sorted(values); index=(len(values)-1)*p; lo=int(index); hi=min(lo+1,len(values)-1)
+    return round(values[lo]+(values[hi]-values[lo])*(index-lo),3)
+def reference(payload):
+    projection={k:payload[k] for k in ("messages","tools","tool_choice","response_format") if k in payload}
+    return count_reference_tokens(json.dumps(projection,ensure_ascii=False,separators=(",",":")))+16*len(payload["messages"])+16*len(payload.get("tools",[]))
+def summary_sources(payload):
+    for message in payload["messages"]:
+        text=message.get("content")
+        if isinstance(text,str) and text.startswith("[PUBLIC SOURCE DATA]\n"):
+            return [{"skill_run_id":r["skill_run_id"],"skill_id":r["skill_id"],"original_result":r["original_result"],
+                     "url":r.get("data",{}).get("url") or r.get("source_metadata",{}).get("url"),
+                     "body_sha256":r.get("data",{}).get("body_sha256") or r.get("source_metadata",{}).get("body_sha256")}
+                    for r in json.loads(text.split("\n",1)[1])["receipts"]]
+    return []
+def persist(name,value):
+    path=phase/name
+    if args.write_reports:
+        assert not path.exists(),"Never overwrite a frozen report"
+        path.write_text(json.dumps(value,ensure_ascii=False,indent=2)+"\n")
+    else: assert j(path)==value,name
+
+live=phase/"live-four-turn/live-server"
+for name,digest in j(live/"export-manifest.json").items():
+    assert hashlib.sha256((live/name).read_bytes()).hexdigest()==digest,name
+assert j(live/"source-tree-before.json")==j(live/"source-tree-after.json")
+assert j(live/"production-during-run.json")==j(live/"production-after.json")
+flows=rows(live/"flow-observations.jsonl")
+replies=rows(live/"runtime-pilot/results.jsonl")
+assert len(flows)==len(replies)==4
+by_key={r["sample_key"]:r for r in replies}
+for flow in flows:
+    assert flow["reply"]==by_key[flow["sample_key"]]["raw_reply"]
+    if flow["execution"]=="provider":
+        assert flow["reply"]==flow["trace"]["provider_calls"][-1]["text"] and not flow["runtime_fallback_events"]
+    assert not flow["error_type"]
+    for run in flow["trace"]["tool_runs"]:
+        assert run["state"]=="succeeded"
+        if run["skill_id"]=="web.read":
+            assert run["result"]["data"]["dns_resolver"]=="cloudflare"
+            assert run["result"]["data"]["provider"]=="crawl4ai"
+
+frozen=phase/"frozen-budget/live-server"
+for name,digest in j(frozen/"export-manifest.json").items():
+    assert hashlib.sha256((frozen/name).read_bytes()).hexdigest()==digest,name
+quality=j(phase/"primary-review.json")["entries"]
+actual_replies={r["sample_key"]:r["reply"] for r in flows+rows(frozen/"turns.jsonl")}
+for item in quality:
+    assert hashlib.sha256(actual_replies[item["sample_key"]].encode()).hexdigest()==item["published_reply_sha256"]
+assert len(quality)==len(actual_replies)==8
+reports={}
+for label,root,journal_name,turn_name in [
+    ("live-four-turn",live,"runtime-pilot/provider-rounds.jsonl","flow-observations.jsonl"),
+    ("frozen-budget",phase/"frozen-budget/live-server","provider-rounds.jsonl","turns.jsonl"),
+]:
+    journal=rows(root/journal_name);started=[r for r in journal if r["event"]=="started"]
+    finished=[r for r in journal if r["event"]=="finished"]
+    assert {r["call_id"] for r in started}=={r["call_id"] for r in finished}
+    sent=rows(root/"actual-provider-payloads.jsonl");http=rows(root/"http-outcomes.jsonl")
+    assert len(started)==len(sent)==len(http)
+    turns=rows(root/turn_name)
+    observations=[]
+    for wire,call,outcome in zip(sent,finished,http,strict=True):
+        payload=wire["payload"]
+        assert payload["model"]=="gemini-3.8-flash-high" and payload["max_tokens"]==8192
+        assert hashlib.sha256(json.dumps(payload,ensure_ascii=False,sort_keys=True).encode()).hexdigest()==wire["payload_sha256"]
+        used=reference(payload);report=call["input_budget_report"]
+        assert report["estimated_input_tokens"]==used<=report["estimated_token_limit"]
+        usage=call["usage"]
+        observations.append({"sample_key":wire["sample_key"],"call_id":call["call_id"],"http_attempt":wire["http_attempt"],
+            "reference_tokens":used,"limit":report["estimated_token_limit"],"usage":usage,
+            "bias_percent":round((used-usage["prompt_tokens"])/usage["prompt_tokens"]*100,6) if usage and usage.get("prompt_tokens") else None,
+            "history_omitted":report["omitted_history_indices"],"preambles_omitted":report["omitted_tool_preamble_indices"],
+            "projected_sources":summary_sources(payload),"http_elapsed_ms":outcome["elapsed_ms"]})
+    known=[r["usage"] for r in observations if r["usage"] and all(type(r["usage"].get(k)) is int for k in ("prompt_tokens","completion_tokens","total_tokens"))]
+    reasoning=[r["reasoning_tokens"] for r in known if type(r.get("reasoning_tokens")) is int]
+    refs=[r["reference_tokens"] for r in observations]
+    biases=[r["bias_percent"] for r in observations if r["bias_percent"] is not None]
+    latencies=[r["elapsed_ms"] for r in turns if r.get("elapsed_ms") is not None]
+    accounting={"actual_http_attempts":len(sent),"known_usage_calls":len(known),"unknown_usage_calls":len(sent)-len(known),
+         "known_usage_subtotals":{k:sum(r[k] for r in known) for k in ("prompt_tokens","completion_tokens","total_tokens")},
+         "reasoning_known_calls":len(reasoning),"reasoning_unknown_calls":len(sent)-len(reasoning),"reasoning_known_subtotal":sum(reasoning),
+         "reference_range":[min(refs),max(refs)] if refs else None,
+         "bias_percent_range":[min(biases),max(biases)] if biases else None,
+         "http_status_counts":dict(Counter(str(r["status"]) for r in http)),
+         "http_error_counts":dict(Counter(r["error_type"] for r in http if r["error_type"])),
+         "http_latency_p50_p95_ms":[percentile([r["elapsed_ms"] for r in http],p) for p in [.5,.95]] if http else None,
+         "turn_latency_p50_p95_ms":[percentile(latencies,p) for p in [.5,.95]] if latencies else None,
+         "execution_counts":dict(Counter(r["execution"] for r in turns)),"usd_cost":None,"first_visible_latency":None}
+    persist(label+"-wire-audit.json",observations)
+    persist(label+"-accounting.json",accounting)
+    reports[label]=accounting
+
+previous=j(phase.parent/"autonomous-discovery/cumulative-accounting.json")
+cumulative={"previous_actual_http_attempts":previous["cumulative_actual_http_attempts"],
+      "current_actual_http_attempts":sum(r["actual_http_attempts"] for r in reports.values()),
+      "cumulative_actual_http_attempts":previous["cumulative_actual_http_attempts"]+sum(r["actual_http_attempts"] for r in reports.values()),
+      "cumulative_known_usage_calls":previous["cumulative_known_usage_calls"]+sum(r["known_usage_calls"] for r in reports.values()),
+      "cumulative_unknown_usage_calls":previous["cumulative_unknown_usage_calls"]+sum(r["unknown_usage_calls"] for r in reports.values()),
+      "known_usage_subtotals":{k:previous["known_usage_subtotals"][k]+sum(r["known_usage_subtotals"][k] for r in reports.values()) for k in ("prompt_tokens","completion_tokens","total_tokens")},
+      "old_unknown_rows_backfilled":False,"usd_cost":None,"is_full_usage_or_cost":False}
+persist("cumulative-accounting.json",cumulative)
+print(json.dumps({"reports":reports,"cumulative":cumulative},ensure_ascii=False))

@@ -1,0 +1,1202 @@
+[
+  {
+    "scenario_id": "greeting",
+    "scenario_name": "普通问候",
+    "requested_initial_stage": "familiar",
+    "initial_rel": {
+      "stage": "familiar",
+      "familiarity": 0.2,
+      "trust": 0.2,
+      "affinity": 0.25,
+      "comfort": 0.2,
+      "recent_tension": 0,
+      "interaction_count": 0
+    },
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "晚上好，今天过得怎么样？",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": true,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 1,
+        "familiarity": 0.212,
+        "trust": 0.204,
+        "affinity": 0.254,
+        "comfort": 0.206,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 2,
+        "user_text": "刚刚吃了晚饭，今天天气挺舒服的。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 2,
+        "familiarity": 0.224,
+        "trust": 0.208,
+        "affinity": 0.258,
+        "comfort": 0.212,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 3,
+        "user_text": "你今天有看窗外吗，晚霞挺漂亮的。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 3,
+        "familiarity": 0.236,
+        "trust": 0.212,
+        "affinity": 0.262,
+        "comfort": 0.218,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 4,
+        "user_text": "嗯，今天确实挺不错的。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 4,
+        "familiarity": 0.248,
+        "trust": 0.216,
+        "affinity": 0.266,
+        "comfort": 0.224,
+        "recent_tension": 0.0
+      }
+    ]
+  },
+  {
+    "scenario_id": "teasing",
+    "scenario_name": "被调侃",
+    "requested_initial_stage": "familiar",
+    "initial_rel": {
+      "stage": "familiar",
+      "familiarity": 0.2,
+      "trust": 0.2,
+      "affinity": 0.25,
+      "comfort": 0.2,
+      "recent_tension": 0,
+      "interaction_count": 0
+    },
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "听说宁宁很容易害羞，是不是真的呀？",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": true,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": true,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 1,
+        "familiarity": 0.212,
+        "trust": 0.204,
+        "affinity": 0.254,
+        "comfort": 0.206,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 2,
+        "user_text": "脸红的样子一定很有趣吧，别装镇定啦。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": true,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 2,
+        "familiarity": 0.224,
+        "trust": 0.208,
+        "affinity": 0.258,
+        "comfort": 0.212,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 3,
+        "user_text": "看来果然经不起逗呢，慌张的样子暴露了哦。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 3,
+        "familiarity": 0.236,
+        "trust": 0.212,
+        "affinity": 0.262,
+        "comfort": 0.218,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 4,
+        "user_text": "好啦不逗你了，其实慌张的样子挺可爱的。",
+        "signal": {
+          "positive": true,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 4,
+        "familiarity": 0.266,
+        "trust": 0.216,
+        "affinity": 0.287,
+        "comfort": 0.224,
+        "recent_tension": 0.0
+      }
+    ]
+  },
+  {
+    "scenario_id": "correction",
+    "scenario_name": "被纠正",
+    "requested_initial_stage": "acquaintance",
+    "initial_rel": {
+      "stage": "acquaintance",
+      "familiarity": 0.2,
+      "trust": 0.2,
+      "affinity": 0.25,
+      "comfort": 0.2,
+      "recent_tension": 0,
+      "interaction_count": 0
+    },
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "刚才你提到的那个说法其实不对，Python 列表推导式是用方括号，圆括号是生成器表达式。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 1,
+        "familiarity": 0.212,
+        "trust": 0.204,
+        "affinity": 0.254,
+        "comfort": 0.206,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 2,
+        "user_text": "生成器表达式返回的是生成器对象，不会立即在内存中生成所有元素，这俩机制区别很大。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 2,
+        "familiarity": 0.224,
+        "trust": 0.208,
+        "affinity": 0.258,
+        "comfort": 0.212,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 3,
+        "user_text": "那如果是在字典里做推导式，语法该怎么写？",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": true,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 3,
+        "familiarity": 0.236,
+        "trust": 0.212,
+        "affinity": 0.262,
+        "comfort": 0.218,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 4,
+        "user_text": "对，用花括号加键值对冒号就对了。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 4,
+        "familiarity": 0.248,
+        "trust": 0.216,
+        "affinity": 0.266,
+        "comfort": 0.224,
+        "recent_tension": 0.0
+      }
+    ]
+  },
+  {
+    "scenario_id": "stop_joking",
+    "scenario_name": "要求停止玩笑",
+    "requested_initial_stage": "familiar",
+    "initial_rel": {
+      "stage": "familiar",
+      "familiarity": 0.2,
+      "trust": 0.2,
+      "affinity": 0.25,
+      "comfort": 0.2,
+      "recent_tension": 0,
+      "interaction_count": 0
+    },
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "刚才那个比喻也太搞笑了，你平时脑子里都在想些什么呀哈哈。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": true,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 1,
+        "familiarity": 0.212,
+        "trust": 0.204,
+        "affinity": 0.254,
+        "comfort": 0.206,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 2,
+        "user_text": "好了，不开玩笑了，说正事吧。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 2,
+        "familiarity": 0.224,
+        "trust": 0.208,
+        "affinity": 0.258,
+        "comfort": 0.212,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 3,
+        "user_text": "我想把明天的评审日程确认一下，明天早上9点有个架构评审，需要准备什么？",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": true,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 3,
+        "familiarity": 0.236,
+        "trust": 0.212,
+        "affinity": 0.262,
+        "comfort": 0.218,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 4,
+        "user_text": "行，那就按这个来准备，谢谢。",
+        "signal": {
+          "positive": true,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 4,
+        "familiarity": 0.266,
+        "trust": 0.216,
+        "affinity": 0.287,
+        "comfort": 0.224,
+        "recent_tension": 0.0
+      }
+    ]
+  },
+  {
+    "scenario_id": "technical_help",
+    "scenario_name": "认真技术求助",
+    "requested_initial_stage": "acquaintance",
+    "initial_rel": {
+      "stage": "acquaintance",
+      "familiarity": 0.2,
+      "trust": 0.2,
+      "affinity": 0.25,
+      "comfort": 0.2,
+      "recent_tension": 0,
+      "interaction_count": 0
+    },
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "在 Python 中使用 asyncio.gather 并发执行任务时，如果其中一个任务抛出异常，默认行为是什么？",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": true,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 1,
+        "familiarity": 0.212,
+        "trust": 0.204,
+        "affinity": 0.254,
+        "comfort": 0.206,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 2,
+        "user_text": "如果我希望某个任务抛出异常时不影响其他任务继续执行，并且能拿到所有结果（包括异常对象），参数应该怎么配置？",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": true,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 2,
+        "familiarity": 0.224,
+        "trust": 0.208,
+        "affinity": 0.258,
+        "comfort": 0.212,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 3,
+        "user_text": "请给出一个简洁完整的 Python 代码示例，展示如何使用 return_exceptions=True 并区分正常结果与异常。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 3,
+        "familiarity": 0.236,
+        "trust": 0.212,
+        "affinity": 0.262,
+        "comfort": 0.218,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 4,
+        "user_text": "这样返回的列表中，异常对象是直接作为元素返回，还是会封装在特定类型里？",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": true,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 4,
+        "familiarity": 0.248,
+        "trust": 0.216,
+        "affinity": 0.266,
+        "comfort": 0.224,
+        "recent_tension": 0.0
+      }
+    ]
+  },
+  {
+    "scenario_id": "low_mood",
+    "scenario_name": "情绪低落",
+    "requested_initial_stage": "familiar",
+    "initial_rel": {
+      "stage": "familiar",
+      "familiarity": 0.2,
+      "trust": 0.2,
+      "affinity": 0.25,
+      "comfort": 0.2,
+      "recent_tension": 0,
+      "interaction_count": 0
+    },
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "今天项目出了重大故障，被领导批评了，心情特别沮丧。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 1,
+        "familiarity": 0.212,
+        "trust": 0.204,
+        "affinity": 0.254,
+        "comfort": 0.206,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 2,
+        "user_text": "感觉自己一直很努力在做，但好像总在关键时刻掉链子。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 2,
+        "familiarity": 0.224,
+        "trust": 0.208,
+        "affinity": 0.258,
+        "comfort": 0.212,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 3,
+        "user_text": "连晚饭都不太想吃，现在只想一个人发呆。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 3,
+        "familiarity": 0.236,
+        "trust": 0.212,
+        "affinity": 0.262,
+        "comfort": 0.218,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 4,
+        "user_text": "跟你说了会儿话感觉心情平复了一些，谢谢你听我倾诉。",
+        "signal": {
+          "positive": true,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 4,
+        "familiarity": 0.266,
+        "trust": 0.216,
+        "affinity": 0.287,
+        "comfort": 0.224,
+        "recent_tension": 0.0
+      }
+    ]
+  },
+  {
+    "scenario_id": "goodbye",
+    "scenario_name": "结束对话",
+    "requested_initial_stage": "familiar",
+    "initial_rel": {
+      "stage": "familiar",
+      "familiarity": 0.2,
+      "trust": 0.2,
+      "affinity": 0.25,
+      "comfort": 0.2,
+      "recent_tension": 0,
+      "interaction_count": 0
+    },
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "时间不早了，今天就先聊到这里吧。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 1,
+        "familiarity": 0.212,
+        "trust": 0.204,
+        "affinity": 0.254,
+        "comfort": 0.206,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 2,
+        "user_text": "嗯，我去洗漱准备睡了，晚安。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 2,
+        "familiarity": 0.224,
+        "trust": 0.208,
+        "affinity": 0.258,
+        "comfort": 0.212,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 3,
+        "user_text": "明天见，你也早点休息。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": true,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 3,
+        "familiarity": 0.236,
+        "trust": 0.233,
+        "affinity": 0.262,
+        "comfort": 0.232,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 4,
+        "user_text": "拜拜～",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 4,
+        "familiarity": 0.248,
+        "trust": 0.237,
+        "affinity": 0.266,
+        "comfort": 0.238,
+        "recent_tension": 0.0
+      }
+    ]
+  },
+  {
+    "scenario_id": "identity",
+    "scenario_name": "身份询问",
+    "requested_initial_stage": "acquaintance",
+    "initial_rel": {
+      "stage": "acquaintance",
+      "familiarity": 0.2,
+      "trust": 0.2,
+      "affinity": 0.25,
+      "comfort": 0.2,
+      "recent_tension": 0,
+      "interaction_count": 0
+    },
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "你到底是真人、官方客服还是个 AI 模型啊？",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": true,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 1,
+        "familiarity": 0.212,
+        "trust": 0.204,
+        "affinity": 0.254,
+        "comfort": 0.206,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 2,
+        "user_text": "那你的角色设定是从哪里来的？是《サノバウィッチ》官方出的产品吗？",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": true,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 2,
+        "familiarity": 0.224,
+        "trust": 0.208,
+        "affinity": 0.258,
+        "comfort": 0.212,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 3,
+        "user_text": "你背后是用什么系统运行的？本地还是云端？",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": true,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 3,
+        "familiarity": 0.236,
+        "trust": 0.212,
+        "affinity": 0.262,
+        "comfort": 0.218,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 4,
+        "user_text": "了解了，原来是 ChatWaifu NEXT 的同人项目演示。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 4,
+        "familiarity": 0.248,
+        "trust": 0.216,
+        "affinity": 0.266,
+        "comfort": 0.224,
+        "recent_tension": 0.0
+      }
+    ]
+  },
+  {
+    "scenario_id": "verbose_history_pressure",
+    "scenario_name": "旧风格历史压力",
+    "requested_initial_stage": "familiar",
+    "initial_rel": {
+      "stage": "familiar",
+      "familiarity": 0.2,
+      "trust": 0.2,
+      "affinity": 0.25,
+      "comfort": 0.2,
+      "recent_tension": 0,
+      "interaction_count": 0
+    },
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "其实我只是想找你随便说两句闲话。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 1,
+        "familiarity": 0.212,
+        "trust": 0.204,
+        "affinity": 0.254,
+        "comfort": 0.206,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 2,
+        "user_text": "今天外面的风挺大的，吹得窗户呼呼响。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 2,
+        "familiarity": 0.224,
+        "trust": 0.208,
+        "affinity": 0.258,
+        "comfort": 0.212,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 3,
+        "user_text": "周末总感觉过得特别快，完全不想动弹。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 3,
+        "familiarity": 0.236,
+        "trust": 0.212,
+        "affinity": 0.262,
+        "comfort": 0.218,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 4,
+        "user_text": "不过发发呆也挺放松的。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 4,
+        "familiarity": 0.248,
+        "trust": 0.216,
+        "affinity": 0.266,
+        "comfort": 0.224,
+        "recent_tension": 0.0
+      }
+    ]
+  },
+  {
+    "scenario_id": "topic_switch",
+    "scenario_name": "话题切换",
+    "requested_initial_stage": "familiar",
+    "initial_rel": {
+      "stage": "familiar",
+      "familiarity": 0.2,
+      "trust": 0.2,
+      "affinity": 0.25,
+      "comfort": 0.2,
+      "recent_tension": 0,
+      "interaction_count": 0
+    },
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "关于刚才讨论的那个分布式一致性算法 Raft 的选举机制，领导者心跳超时是怎么计算的？",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": true,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 1,
+        "familiarity": 0.212,
+        "trust": 0.204,
+        "affinity": 0.254,
+        "comfort": 0.206,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 2,
+        "user_text": "对了不聊那个了，你觉得番茄炒蛋到底是该放糖还是放盐？",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": true,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 2,
+        "familiarity": 0.224,
+        "trust": 0.208,
+        "affinity": 0.258,
+        "comfort": 0.212,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 3,
+        "user_text": "我个人是坚定的甜党，加两勺糖再出锅才是灵魂。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 3,
+        "familiarity": 0.236,
+        "trust": 0.212,
+        "affinity": 0.262,
+        "comfort": 0.218,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 4,
+        "user_text": "你平时更偏好甜口还是咸口呀？",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": true,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 4,
+        "familiarity": 0.248,
+        "trust": 0.216,
+        "affinity": 0.266,
+        "comfort": 0.224,
+        "recent_tension": 0.0
+      }
+    ]
+  },
+  {
+    "scenario_id": "insufficient_shared_history",
+    "scenario_name": "共同经历来源不足",
+    "requested_initial_stage": "acquaintance",
+    "initial_rel": {
+      "stage": "acquaintance",
+      "familiarity": 0.2,
+      "trust": 0.2,
+      "affinity": 0.25,
+      "comfort": 0.2,
+      "recent_tension": 0,
+      "interaction_count": 0
+    },
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "宁宁，还记得去年夏天我们一起去海边看烟火大会吗？",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": true,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 1,
+        "familiarity": 0.212,
+        "trust": 0.204,
+        "affinity": 0.254,
+        "comfort": 0.206,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 2,
+        "user_text": "当时你还买了一份章鱼烧分给我吃，真的不记得了吗？",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": true,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 2,
+        "familiarity": 0.224,
+        "trust": 0.208,
+        "affinity": 0.258,
+        "comfort": 0.212,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 3,
+        "user_text": "那天晚上海风挺凉的，我们坐在堤坝上聊了很久，你一点印象都没有？",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": true,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 3,
+        "familiarity": 0.236,
+        "trust": 0.212,
+        "affinity": 0.262,
+        "comfort": 0.218,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 4,
+        "user_text": "好吧，看来那是我们之间还没发生过的事情呢。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 4,
+        "familiarity": 0.248,
+        "trust": 0.216,
+        "affinity": 0.266,
+        "comfort": 0.224,
+        "recent_tension": 0.0
+      }
+    ]
+  },
+  {
+    "scenario_id": "detailed_answer",
+    "scenario_name": "明确要求详细回答",
+    "requested_initial_stage": "acquaintance",
+    "initial_rel": {
+      "stage": "acquaintance",
+      "familiarity": 0.2,
+      "trust": 0.2,
+      "affinity": 0.25,
+      "comfort": 0.2,
+      "recent_tension": 0,
+      "interaction_count": 0
+    },
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "请帮我制定一份为期三天的周末短途旅行准备清单，分别列出证件与资金、衣物与穿搭、电子设备与配件三个类别，每个类别详细列出三条具体建议。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 1,
+        "familiarity": 0.212,
+        "trust": 0.204,
+        "affinity": 0.254,
+        "comfort": 0.206,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 2,
+        "user_text": "关于电子设备中提到的移动电源，乘坐国内航班时有哪些具体的民航携带规定？请详细列出三条明确规则。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": true,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 2,
+        "familiarity": 0.224,
+        "trust": 0.208,
+        "affinity": 0.258,
+        "comfort": 0.212,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 3,
+        "user_text": "如果第一天下午遭遇暴雨无法进行户外游览，请给出两个具体的室内备选活动方案，每个方案包含活动内容、预计用时与注意事项。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 3,
+        "familiarity": 0.236,
+        "trust": 0.212,
+        "affinity": 0.262,
+        "comfort": 0.218,
+        "recent_tension": 0.0
+      },
+      {
+        "turn_id": 4,
+        "user_text": "最后请将上述所有准备要点和应急建议，整理成一份简明的出发前检查核对表（Checklist）。",
+        "signal": {
+          "positive": false,
+          "negative": false,
+          "question": false,
+          "hostile": false,
+          "caring": false,
+          "intimate": false,
+          "embarrassed": false,
+          "surprised": false
+        },
+        "actual_stage": "acquaintance",
+        "interaction_count": 4,
+        "familiarity": 0.248,
+        "trust": 0.216,
+        "affinity": 0.266,
+        "comfort": 0.224,
+        "recent_tension": 0.0
+      }
+    ]
+  }
+]

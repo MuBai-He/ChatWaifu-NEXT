@@ -1,0 +1,52 @@
+"""Separate real reader recovery, delivered answers, native failures and usage."""
+import hashlib,json,sys
+from collections import Counter
+from pathlib import Path
+sys.path.insert(0,'/tmp/cw2-q02-full-prepare/v28-budget-frozen')
+from audit import reference,rows,sha,percentile
+from chatwaifu_runtime.providers.openai_compatible import _parse_usage
+ROOT=Path('/tmp/cw2-q02-full-prepare')
+report={}
+for label in ['v29-builtin-recovery','v30-scope-receipts']:
+ stage=ROOT/label/'download';pilot=stage/'runtime-pilot'
+ journal=rows(pilot/'provider-rounds.jsonl');wires=rows(stage/'actual-provider-payloads.jsonl')
+ starts=[r for r in journal if r['event']=='started'];ends=[r for r in journal if r['event']=='finished']
+ assert len(starts)==len(ends)==len(wires)
+ assert {r['call_id'] for r in starts}=={r['call_id'] for r in ends}
+ samples=rows(pilot/'results.jsonl');incomplete=rows(pilot/'incomplete.jsonl');wire_checks=[];errors=[]
+ for i,(start,end,wire) in enumerate(zip(starts,ends,wires,strict=True)):
+  p=wire['payload'];estimate=reference(p)
+  assert sha(p)==wire['payload_sha256']
+  assert p['model']=='gemini-3.8-flash-high' and p['max_tokens']==8192
+  assert estimate==start['input_budget_report']['estimated_input_tokens']<=21370
+  assert start['call_id']==end['call_id']
+  wire_checks.append({'http_attempt':i+1,'sample_key':start['sample_key'],'payload_sha256':sha(p),'reference_tokens':estimate,'omitted_history_indices':start['input_budget_report']['omitted_history_indices'],'error_type':end.get('error_type')})
+  if end.get('usage') and isinstance(end['usage'].get('prompt_tokens'),int):errors.append(100*(estimate-end['usage']['prompt_tokens'])/end['usage']['prompt_tokens'])
+ usage={}
+ for name in ['prompt_tokens','completion_tokens','total_tokens','reasoning_tokens']:
+  known=[r['usage'][name] for r in ends if r.get('usage') and isinstance(r['usage'].get(name),int)]
+  usage[name]={'reported':len(known),'attempts':len(ends),'known_subtotal':sum(known),'complete_total':sum(known) if len(known)==len(ends) else None}
+ diagnostics=rows(stage/'reader-diagnostics.jsonl');assert len(diagnostics)==2
+ assert all(r['ok'] and r['result']['provider']=='builtin' and r['result']['provider_fallback']=={'from_provider':'crawl4ai','reason':'web_provider_unavailable','http_status':502} for r in diagnostics)
+ assert 'limited to two' not in diagnostics[0]['result']['text'] and 'limited to two' in diagnostics[1]['result']['text']
+ assert diagnostics[1]['result']['focus_matched'] and diagnostics[1]['result']['truncated']
+ read_runs=[run for s in samples for run in s['runtime_source_trace']['tool_runs'] if run['skill_id']=='web.read' and run['state']=='succeeded']
+ assert len(read_runs)==2 and all(r['result']['data']['provider']=='builtin' and 'provider_fallback' in r['result']['data'] for r in read_runs)
+ data=[r['result']['data'] for r in read_runs]
+ intervals=sorted((r['text_offset'],r['text_offset']+len(r['text'])) for r in data)
+ full_union=intervals[0][0]==0 and intervals[0][1]>=intervals[1][0] and max(v[1] for v in intervals)==data[0]['total_characters'] and len({r['body_sha256'] for r in data})==1
+ summary={'logical_records':len(samples),'provider_answer_records':sum(r['runtime_source_trace']['reply_origin']=='provider' for r in samples),'runtime_fallback_records':sum(r['runtime_source_trace']['reply_origin']=='runtime_fallback' for r in samples),'incomplete_records':[{'sample_key':r['sample_key'],'reason':r['reason']} for r in incomplete],'unexecuted_expected_turns':[4],'actual_http':len(wires),'all_attempts_accounted':True,'provider_usage':usage,'reference_error_percent_min_max':[round(min(errors),4),round(max(errors),4)],'identities':dict(Counter(v for r in ends for v in (r.get('response_identity') or {}).get('reported_model_ids',[]))),'identity_unknown_attempts':sum(r.get('response_identity') is None for r in ends),'logical_record_latency_p50_ms':percentile([r['latency_ms'] for r in samples],.5),'logical_record_latency_p95_ms':percentile([r['latency_ms'] for r in samples],.95),'wire_checks':wire_checks,'reader_recovery_confirmed':True,'two_read_excerpt_union_covers_same_extracted_document':full_union,'no_claim_of_all_site_or_link_target_completeness':True,'q02_approval':False}
+ report[label]=summary
+ print(json.dumps({k:v for k,v in summary.items() if k!='wire_checks'},ensure_ascii=False,indent=2))
+retry_stage=ROOT/'v30-scope-receipts/download/failed-stream-control'
+retry=json.loads((retry_stage/'result.json').read_text())
+retry_wire=rows(retry_stage/'actual-provider-payloads.jsonl')[0]
+last=rows(ROOT/'v30-scope-receipts/download/actual-provider-payloads.jsonl')[-1]
+assert retry_wire==last and not retry['actual_source_tool_execution']
+usage=_parse_usage(retry['usage'])
+report['exact_failed_wire_replay']={'actual_http':1,'same_payload_verified':True,'no_tools_executed':True,'native_wire_validation_error':retry['validation_error'],'parse_error':retry['parse_error'],'usage':None if usage is None else {name:getattr(usage,name) for name in ['prompt_tokens','completion_tokens','total_tokens','reasoning_tokens']},'latency_ms':retry['latency_ms'],'original_failure_cause_unproven':True,'not_recovery_of_original_scenario':True,'q02_approval':False}
+report['combined_http_attempts_including_v28_and_supplement']=16+sum(report[k]['actual_http'] for k in ['v29-builtin-recovery','v30-scope-receipts'])+1
+report['combined_completed_provider_answers']=12+sum(report[k]['provider_answer_records'] for k in ['v29-builtin-recovery','v30-scope-receipts'])
+report['combined_runtime_fallback_records']=sum(report[k]['runtime_fallback_records'] for k in ['v29-builtin-recovery','v30-scope-receipts'])
+report['q02_approval']=False
+(ROOT/'v30-scope-receipts/runtime-accounting-audit.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')

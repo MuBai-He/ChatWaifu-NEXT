@@ -1,0 +1,57 @@
+{
+  "arguments": {
+    "query": "民航局 充电宝 3C 召回",
+    "domains": [],
+    "max_results": 5,
+    "dns_resolver": "cloudflare"
+  },
+  "started_at": "2026-10-04T11:09:12.552913+00:00",
+  "ok": true,
+  "result": {
+    "provider": "searxng",
+    "query": "民航局 充电宝 3C 召回",
+    "effective_query": "民航局 充电宝 3C 召回",
+    "provider_queries": [
+      {
+        "query": "民航局 充电宝 3C 召回",
+        "body_sha256": "3600883d1875b297609a5d8c6cf7220df62fb2fb9dfe9756a2526f7952efb3fd"
+      }
+    ],
+    "search_url": "http://127.0.0.1:18080/search",
+    "retrieved_at": "2026-10-04T11:09:13.948042+00:00",
+    "body_sha256": "3600883d1875b297609a5d8c6cf7220df62fb2fb9dfe9756a2526f7952efb3fd",
+    "dns_resolver": "system",
+    "results": [
+      {
+        "url": "https://m.dzplus.dzng.com/share/general/0/NEWS2537301LBQXBZWVOEGXE",
+        "title": "ESG风险观察｜超120...",
+        "snippet": "民航局发布禁令，无3C认证充电宝禁乘境内航班.没有3C标识也未被召回的充电宝，还能用吗？"
+      },
+      {
+        "url": "https://cj.sina.com.cn/articles/view/6192937794/17120bb4202002ijh6?froms=ggmp",
+        "title": "cj.sina.com.cn/articles/view/6192937794/17120bb4202002ijh6?froms...",
+        "snippet": "近日，民航局发布紧急通知，自6月28日起，禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。 这是一场持续近两个月的召回风波。"
+      },
+      {
+        "url": "https://news.cnr.cn/native/gd/kx/20250628/t20250628_527232887.shtml",
+        "title": "news.cnr.cn/native/gd/kx/20250628/t20250628_527232887.shtml",
+        "snippet": "近日，民航局发布紧急通知，自6月28日起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。 什么是3C标识？ 对于携带充电宝上飞机还有哪些规定？"
+      },
+      {
+        "url": "https://m.bjnews.com.cn/detail/1750927590129625.html",
+        "title": "28日起没有3C标识充电宝过不了安检！ 北上广三地机场安检回应",
+        "snippet": "新京报贝壳财经讯（记者俞金旻）6月26日，民航局发布紧急通知，自6月28日起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝."
+      },
+      {
+        "url": "https://www.fuzhouairport.com.cn/shwzhx/xygg/30968.htm",
+        "title": "民航局：自6月28...",
+        "snippet": "民航局：自6月28日起，禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班！"
+      }
+    ],
+    "total_matched": 15,
+    "filtered_count": 0,
+    "truncated": true,
+    "empty_reason": null
+  },
+  "elapsed_ms": 1397
+}

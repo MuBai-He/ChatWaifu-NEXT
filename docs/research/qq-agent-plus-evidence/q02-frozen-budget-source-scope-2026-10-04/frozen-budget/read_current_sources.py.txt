@@ -1,0 +1,33 @@
+"""Independent, bounded actual CW2 Reader control. No Runtime receipt invented."""
+import asyncio,json,sys,time
+from pathlib import Path
+ROOT=Path('/tmp/cw2-q02-budget-guard-v27-eval')
+sys.path[:0]=[str(ROOT/'services/runtime/src'),str(ROOT/'packages/protocol-python/src'),'/tmp/cw2-q02-eval-deps',str(ROOT)]
+from pydantic import SecretStr
+from chatwaifu_runtime.config.settings import PublicWebConfig
+from chatwaifu_runtime.runtime_skills.public_web import PublicWebReader
+from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
+OUT=Path('/tmp/cw2-q02-v28-frozen-budget-20261004/reader-control');OUT.mkdir(mode=0o700,exist_ok=True)
+assert not (OUT/'attempts.jsonl').exists()
+settings={}
+for line in Path('/home/mubai/.local/share/chatwaifu-server/config/public-web.env').read_text().splitlines():
+ if line.startswith('CHATWAIFU_PUBLIC_WEB__') and '=' in line:
+  name,value=line.split('=',1);settings[name]=value.strip().strip(chr(34)).strip(chr(39))
+token=settings.get('CHATWAIFU_PUBLIC_WEB__CRAWL4AI_API_TOKEN')
+config=PublicWebConfig(reader_provider='crawl4ai',crawl4ai_endpoint='http://127.0.0.1:11236',crawl4ai_api_token=SecretStr(token) if token else None,timeout_seconds=30)
+reader=PublicWebReader(provider_config=config)
+urls=[('airchina','https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml'),('icao','https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation')]
+def append(name,row):
+ text=json.dumps(row,ensure_ascii=False)
+ assert not token or token not in text
+ with (OUT/name).open('a') as target:target.write(text+'\n')
+async def main():
+ for label,url in urls:
+  args={'url':url,'max_characters':6000,'max_links':5,'dns_resolver':'cloudflare','fresh':True}
+  append('attempts.jsonl',{'key':label,'arguments':args});before=time.monotonic();row={'key':label,'arguments':args,'scope':'actual independent PublicWebReader adapter control; supplied URL discovered independently, not model selection or permissioned Runtime skill execution'}
+  try:row.update(ok=True,result=await reader.read(args))
+  except SkillExecutionError as e:row.update(ok=False,error_code=e.structured.code,retryable=e.structured.retryable)
+  row['latency_ms']=round((time.monotonic()-before)*1000);append('results.jsonl',row)
+  print(json.dumps({'key':label,'ok':row['ok'],'error_code':row.get('error_code'),'latency_ms':row['latency_ms'],'chars':len(row.get('result',{}).get('text','')),'truncated':row.get('result',{}).get('truncated'),'focus_matched':row.get('result',{}).get('focus_matched')},ensure_ascii=False),flush=True)
+ (OUT/'exit.json').write_text('{"exit_code":0}\n')
+asyncio.run(main())

@@ -1,0 +1,20 @@
+{
+  "scope": "citation-correction-pro-stream-fix",
+  "release_approved": false,
+  "groups": {
+    "correction": {
+      "latency_p50_ms": 17918,
+      "latency_p95_ms": 20864,
+      "completed": 3,
+      "stop": 3,
+      "both_urls_present": 3,
+      "provider_usage": {
+        "prompt_tokens": 30024,
+        "completion_tokens": 1480,
+        "reasoning_tokens": 5133,
+        "total_tokens": 36637
+      }
+    }
+  },
+  "percentile_method": "nearest_rank; tiny samples describe this batch only"
+}

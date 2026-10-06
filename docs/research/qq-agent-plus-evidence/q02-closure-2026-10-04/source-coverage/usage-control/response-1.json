@@ -1,0 +1,245 @@
+{
+  "done_received": true,
+  "elapsed_ms": 4878,
+  "error_type": null,
+  "raw_events": [
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "{\"version\":\"1.1\",\"",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "dKzBaonmJ-bp2roP8YSZ6AQ",
+      "model": "gemini-3.8-flash-n"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "blocks\":",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "dKzBaonmJ-bp2roP8YSZ6AQ",
+      "model": "gemini-3.8-flash-n"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "[{\"kind\":\"paragraph\",\"text\":\"我根据二〇二六年八月四日中国国际航空股份有限公司发布的提示（https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml），为你整理了适用于乘坐国航航班（",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "dKzBaonmJ-bp2roP8YSZ6AQ",
+      "model": "gemini-3.8-flash-n"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "其中3C标识要求适用于中国境内航班）的出发前三条检查清单：\",\"source_indices\":[0],\"prior_gap",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "dKzBaonmJ-bp2roP8YSZ6AQ",
+      "model": "gemini-3.8-flash-n"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "_ids\":[]},{\"kind\":\"ordered_item\",\"text\":\"外观与合规自查：确认充电宝未",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "dKzBaonmJ-bp2roP8YSZ6AQ",
+      "model": "gemini-3.8-flash-n"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "被生产厂家召回（可在“国家市场监督管理总局缺陷产品召回技术中心”官网“消费品召回”栏",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "dKzBaonmJ-bp2roP8YSZ6AQ",
+      "model": "gemini-3.8-flash-n"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "目查询），无鼓包、变形、开裂，且标识清晰、可确认额定能量或锂金属含量；",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "dKzBaonmJ-bp2roP8YSZ6AQ",
+      "model": "gemini-3.8-flash-n"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "乘坐中国境内航班须具备清晰3C标识。\",\"source_indices\":[0],\"prior_gap_ids\":",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "dKzBaonmJ-bp2roP8YSZ6AQ",
+      "model": "gemini-3.8-flash-n"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "[]},{\"kind\":\"ordered_item\",\"text\":\"数量与能量核验：每人最多携带2块，单个额定能量",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "dKzBaonmJ-bp2roP8YSZ6AQ",
+      "model": "gemini-3.8-flash-n"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "不得超过160Wh；100Wh及以下无需国航批准，超过100Wh但不",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "dKzBaonmJ-bp2roP8YSZ6AQ",
+      "model": "gemini-3.8-flash-n"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "超过160Wh须经国航批准。\",\"source_indices\":[0],\"prior_gap_ids\":",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "dKzBaonmJ-bp2roP8YSZ6AQ",
+      "model": "gemini-3.8-flash-n"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "[]},{\"kind\":\"ordered_item\",\"text\":\"携带与机上使用规范：只能随身携带严禁托运",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "dKzBaonmJ-bp2roP8YSZ6AQ",
+      "model": "gemini-3.8-flash-n"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "；若有电源开关须关闭，做好绝缘防护并放置于前方座椅下方手提行李或靠背",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "dKzBaonmJ-bp2roP8YSZ6AQ",
+      "model": "gemini-3.8-flash-n"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "口袋内，机上全程不得放入行李架、不得给设备供电、不得使用机上电源为其充电。\",\"source_indices",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "dKzBaonmJ-bp2roP8YSZ6AQ",
+      "model": "gemini-3.8-flash-n"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "\":[0],\"prior_gap_ids\":[]}],\"new_gaps\":[]}",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "dKzBaonmJ-bp2roP8YSZ6AQ",
+      "model": "gemini-3.8-flash-n"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "",
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "index": 0
+        }
+      ],
+      "id": "dKzBaonmJ-bp2roP8YSZ6AQ",
+      "model": "gemini-3.8-flash-n",
+      "usage": {
+        "completion_tokens": 356,
+        "prompt_tokens": 4009,
+        "total_tokens": 4365
+      }
+    }
+  ],
+  "reference_input_tokens": 5831,
+  "sample_key": "frozen_airchina:r1:t4",
+  "status": 200,
+  "usage": {
+    "completion_tokens": 356,
+    "prompt_tokens": 4009,
+    "reasoning_tokens": null,
+    "total_tokens": 4365
+  }
+}

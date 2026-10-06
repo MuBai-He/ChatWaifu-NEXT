@@ -1,0 +1,20 @@
+import hashlib,json,random,secrets
+from pathlib import Path
+stage=Path('/tmp/cw2-q02-full-prepare/v26-contract-runtime');root=stage/'download/results/instant_message'
+assert not (stage/'initial-review-key.json').exists()
+variants={p:{r['sample_key']:r for r in [json.loads(l) for l in (root/p/'results.jsonl').read_text().splitlines()]} for p in ['system','pre_user']}
+fixtures={s['id']:s for s in json.loads((stage/'fixtures-instant_message.json').read_text())}
+randomizer=random.Random(secrets.randbits(128));packets=[];key={}
+for sample_key in sorted(set().union(*[set(v) for v in variants.values()])):
+    scenario,repeat,turn,variant=sample_key.split(':');t=int(turn[1:]);conditions=[p for p,rows in variants.items() if sample_key in rows];randomizer.shuffle(conditions)
+    items={}
+    for label,p in zip('AB',conditions):
+        row=variants[p][sample_key];history=[]
+        for i in range(1,t):
+            prior=variants[p].get(f'{scenario}:{repeat}:t{i}:{variant}')
+            if prior:history.extend([['user',fixtures[scenario]['turns'][i-1]['user_text']],['assistant',prior['raw_reply']]])
+        items[label]={'history':history,'reply':row['raw_reply'],'sha256':hashlib.sha256(row['raw_reply'].encode()).hexdigest()}
+        key[sample_key+':'+label]={'position':p,'key':sample_key}
+    packets.append({'key':sample_key,'criteria':fixtures[scenario]['turns'][t-1],'candidates':items})
+(stage/'initial-review-key.json').write_text(json.dumps(key,ensure_ascii=False,indent=2)+'\n');(stage/'initial-review-packets.json').write_text(json.dumps(packets,ensure_ascii=False,indent=2)+'\n')
+print(json.dumps({'packets':len(packets),'replies':sum(len(p['candidates']) for p in packets),'reviewer':'implementation author, identity-masked, not independent'}))

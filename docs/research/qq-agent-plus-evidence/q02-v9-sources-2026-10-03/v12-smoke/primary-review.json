@@ -1,0 +1,54 @@
+{
+  "scope": "Primary direct unmasked diagnostic review; not paired blind quality approval",
+  "quality_approved": false,
+  "records": [
+    {
+      "sample_key": "topic_switch:r0:t1:candidate",
+      "reply_sha256": "d81f846b842997c19d38d71976e1c526b95de8a2c478dbc6f863a1f67b7ac31c",
+      "status": "partial",
+      "note": "已主动搜索并读取 USENIX 原论文，区分广播时间/选举超时/心跳间隔；每次心跳重新随机化及普遍的几分之一至十分之一配置表述超出已读依据。"
+    },
+    {
+      "sample_key": "topic_switch:r0:t2:candidate",
+      "reply_sha256": "90564d105f99babe0f1c5db0ba9c0684a8cde10d5a79886280353ffacfa16e8a",
+      "status": "partial",
+      "note": "转入番茄炒蛋并回答甜咸问题；开头强调突然换题，仍有不必要的切换评论。"
+    },
+    {
+      "sample_key": "topic_switch:r0:t3:candidate",
+      "reply_sha256": "3dae67e64fdc76cc64710cbc56b90baf41c88d7188118bc6bd09886add8ea120",
+      "status": "partial",
+      "note": "承接甜党偏好，但两段展开超过期望的一到两小句。"
+    },
+    {
+      "sample_key": "topic_switch:r0:t4:candidate",
+      "reply_sha256": "ae0bfec84298b20f5e1c7b687c8c5c46edbe197471f2918891ac844fa033010f",
+      "status": "comply",
+      "note": "自然表达角色偏好，没有重提技术话题。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t1:candidate",
+      "reply_sha256": "2b3cb2e99324fb9e4f345caaabb013d375cda44683c77d96a571e9c56986be4f",
+      "status": "comply",
+      "note": "三类别各三项齐全；末尾仍有非必要帮助邀请，作为风格备注保留。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "reply_sha256": "4fd30bceb8f6161f5d1252d9f3c14cf2d9d3195dab6871a4db5c79afcbf07567",
+      "status": "fail",
+      "note": "追加搜索后仍未读到后续更新原文，却称官方现行文件；仅以旧资料给出数量限制，现行规则覆盖失败。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t3:candidate",
+      "reply_sha256": "61e69d79d07471a7abd1470e1ba8fe62a678344f33e3c833b1dc2688c385f093",
+      "status": "comply",
+      "note": "两种室内备选均有活动内容、预计用时和注意事项。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t4:candidate",
+      "reply_sha256": "08ce2568e148a73969dec820a21afed86da356d52ec6605955fb6e2fd9fe66c1",
+      "status": "partial",
+      "note": "清单保留各类别与已取得的能量/批准/3C/召回条件，但继承未核实的时效性，且压缩掉两种备选的预计用时。"
+    }
+  ]
+}

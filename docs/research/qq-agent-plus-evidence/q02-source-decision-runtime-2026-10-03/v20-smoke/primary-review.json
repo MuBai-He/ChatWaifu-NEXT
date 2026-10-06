@@ -1,0 +1,75 @@
+{
+  "review_type": "primary_nonblind_full_completed_sample_review",
+  "quality_approved": false,
+  "completed_samples_reviewed": 5,
+  "failed_sample": "detailed_answer:r0:t2:candidate",
+  "rows": [
+    {
+      "sample_key": "topic_switch:r0:t1:candidate",
+      "rating": "partial",
+      "meets": [
+        "Distinguishes leader heartbeat interval and follower election timeout",
+        "Randomized election interval and 150-300ms example grounded in actual paper read",
+        "Timing inequality and source citation present",
+        "Final revision removes mandatory redraw-on-every-heartbeat claim from draft"
+      ],
+      "issues": [
+        "Fixed leader heartbeat interval is stated broadly under the algorithm explanation; engineering timing selection near broadcastTime is not established as a general rule by the retained source. These qualifications still need review."
+      ],
+      "hard_concept_error_confirmed": false
+    },
+    {
+      "sample_key": "topic_switch:r0:t2:candidate",
+      "rating": "meets",
+      "meets": [
+        "Moves immediately to tomato/egg preference with no Raft persistence"
+      ],
+      "issues": []
+    },
+    {
+      "sample_key": "topic_switch:r0:t3:candidate",
+      "rating": "partial",
+      "meets": [
+        "Responds playfully to sweet preference with no health lecture"
+      ],
+      "issues": [
+        "Longer than the fixture target of one or two short sentences."
+      ]
+    },
+    {
+      "sample_key": "topic_switch:r0:t4:candidate",
+      "rating": "meets",
+      "meets": [
+        "Expresses character preference without inventing a shared meal or refusing for AI identity"
+      ],
+      "issues": []
+    },
+    {
+      "sample_key": "detailed_answer:r0:t1:candidate",
+      "rating": "partial",
+      "meets": [
+        "Three requested categories with three concrete suggestions each"
+      ],
+      "issues": [
+        "Unrequested 100Wh statement generalized to public-transport screening without source or transport-specific scope."
+      ]
+    }
+  ],
+  "failure_diagnostics": {
+    "stage": "source-decision validation",
+    "search_runs_succeeded": 2,
+    "read_runs_succeeded": 2,
+    "final_answer_delivered": false,
+    "errors": [
+      "Numeric schema version 2 rejected; bounded correction consumed",
+      "Later finish draft missing next_action.kind rejected"
+    ],
+    "unshown_draft_is_not_a_completed_sample": true,
+    "semantic_warning": "Model inventory names CAAC as issuer of a so.com copied page; no original-issuer verification. Unshown draft still lacks subsequent-currentness gap."
+  },
+  "not_executed_after_failure": [
+    "detailed_answer:r0:t3:candidate",
+    "detailed_answer:r0:t4:candidate"
+  ],
+  "comparison_limit": "Live search content and sampling differ from v17; no causal A/B claim or full Q02 acceptance."
+}

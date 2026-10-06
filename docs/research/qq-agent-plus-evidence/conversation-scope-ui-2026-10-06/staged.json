@@ -1,0 +1,10 @@
+{
+  "product_commit": "d801d526b0e78babbecd391e71e31d58662a74b9",
+  "base_source": "/home/mubai/chatwaifu-server/releases/channel-settings-20261006-4898cb1/source",
+  "source": "/home/mubai/chatwaifu-server/releases/conversation-scope-20261006-d801d52/source",
+  "web": "/home/mubai/chatwaifu-server/releases/conversation-scope-20261006-d801d52/web",
+  "overlay_files": 24,
+  "unchanged_files": 1301,
+  "web_files": 7,
+  "no_dependency_or_schema_changes": true
+}

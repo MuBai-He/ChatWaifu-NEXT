@@ -1,0 +1,12 @@
+{
+  "code_review": "Primary reviewed actual PDF backport diff; only PDF route/strategy added, existing import/request formatting has identical AST",
+  "model_calls": 0,
+  "production_regression_after": "13 passed",
+  "production_regression_before": "1 failed, 12 passed",
+  "pyright_errors": 0,
+  "quality_approval": false,
+  "ruff_check": "passed",
+  "ruff_format_check": "passed",
+  "test_environment_initial_failure": "pytest absent from production venv; temporary test dependency path restored, no production package install",
+  "unrelated_constructor_and_provider_ast_preserved": true
+}

@@ -1,0 +1,139 @@
+--- before/services/runtime/src/chatwaifu_runtime/agent/tool_calling.py
++++ after/services/runtime/src/chatwaifu_runtime/agent/tool_calling.py
+@@ -92,6 +92,9 @@
+ )
+ TOOL_SOURCE_REVISION_BUDGET_REPLY = (
+     "本轮原文已读取，但答复核对请求超过本轮输入预算，尚未完成可靠答复。本轮没有继续操作。"
++)
++TOOL_PROVIDED_SOURCE_REVISION_BUDGET_REPLY = (
++    "本轮提供的资料已保留，但答复核对请求超过本轮输入预算，尚未完成可靠答复。本轮没有继续操作。"
+ )
+ TOOL_INPUT_BUDGET_REPLY = "本轮请求超过模型输入预算，无法继续可靠回答。请缩小请求范围后重试。"
+ TOOL_RESULT_BUDGET_REPLY = (
+@@ -1230,7 +1233,13 @@
+             yield _runtime_fallback(TOOL_PRIOR_SOURCE_UNAVAILABLE_REPLY, source_answer_turn)
+             return
+         provider = llm if llm is not None else self._llm
+-        originals = answer_originals(request, source_urls) if source_answer_turn is not None else ()
++        available = (
++            answer_originals(request, source_urls)
++            if source_answer_turn is not None or not source_urls
++            else ()
++        )
++        originals = available if source_answer_turn is not None else ()
++        provided = any(source.origin == "provided" for source in available)
+         if originals:
+             assert source_answer_turn is not None
+             if getattr(provider, "supports_response_schema", False) is not True:
+@@ -1243,17 +1252,22 @@
+                 ensure_current()
+                 yield _runtime_fallback(SOURCE_ANSWER_FRAME_BUDGET_REPLY, source_answer_turn)
+                 return
+-        if source_urls or originals:
++        if source_urls or originals or provided:
+             try:
+                 draft = await self._collect_tool_round(
+                     request,
+                     ensure_current,
+                     llm=provider,
+-                    max_text_bytes=MAX_FRAME_BYTES if originals else None,
++                    max_text_bytes=MAX_FRAME_BYTES if originals or provided else None,
+                 )
+             except InputBudgetExceeded:
+                 ensure_current()
+-                yield _runtime_fallback(TOOL_RESULT_BUDGET_REPLY, source_answer_turn)
++                yield _runtime_fallback(
++                    TOOL_PROVIDED_SOURCE_REVISION_BUDGET_REPLY
++                    if provided
++                    else TOOL_RESULT_BUDGET_REPLY,
++                    source_answer_turn,
++                )
+                 return
+             ensure_current()
+             if draft.calls or not draft.terminal_received or draft.finish_reason != "stop":
+@@ -1311,11 +1325,17 @@
+     ) -> list[str]:
+         """One bounded text-only pass; never execute tools or publish the draft."""
+         ensure_current()
+-        originals = answer_originals(request, source_urls) if source_answer_turn is not None else ()
++        available = (
++            answer_originals(request, source_urls)
++            if source_answer_turn is not None or not source_urls
++            else ()
++        )
++        originals = available if source_answer_turn is not None else ()
++        provided = any(source.origin == "provided" for source in available)
+         logger.info(
+             "agent.source_answer_revision generation=%s source_count=%d draft_characters=%d",
+             request.generation_id,
+-            len(originals) if originals else len(source_urls),
++            len(available) if available else len(source_urls),
+             len(draft),
+         )
+         revision_urls = source_urls or tuple(s.url for s in originals if s.origin == "retrieved")
+@@ -1324,26 +1344,26 @@
+             continuation_system_prompt=source_answer_revision_prompt(draft, revision_urls)
+             if revision_urls
+             else provided_source_answer_revision_prompt()
+-            if originals
++            if provided
+             else request.continuation_system_prompt,
+             tools=(),
+             tool_choice="auto",
+         )
++        if provided and not revision_urls:
++            # Supplied material is not a READ; the withheld draft stays data.
++            revision = replace(
++                revision,
++                context=(
++                    *revision.context,
++                    (
++                        "user",
++                        "[UNPUBLISHED ANSWER DRAFT]\n"
++                        + json.dumps({"untrusted": True, "text": draft}, ensure_ascii=False),
++                    ),
++                ),
++            )
+         if originals:
+             assert source_answer_turn is not None
+-            if not revision_urls:
+-                # Supplied material is not a READ; the withheld draft stays data.
+-                revision = replace(
+-                    revision,
+-                    context=(
+-                        *revision.context,
+-                        (
+-                            "user",
+-                            "[UNPUBLISHED ANSWER DRAFT]\n"
+-                            + json.dumps({"untrusted": True, "text": draft}, ensure_ascii=False),
+-                        ),
+-                    ),
+-                )
+             return [
+                 await self._render_source_frame(
+                     revision, originals, source_answer_turn, ensure_current, llm=llm
+@@ -1351,10 +1371,22 @@
+             ]
+         try:
+             revision = _budgeted_request(revision)
+-            result = await self._collect_tool_round(revision, ensure_current, llm=llm)
++            result = await self._collect_tool_round(
++                revision,
++                ensure_current,
++                llm=llm,
++                max_text_bytes=MAX_FRAME_BYTES if provided else None,
++            )
+         except InputBudgetExceeded:
+             ensure_current()
+-            return [_runtime_fallback(TOOL_SOURCE_REVISION_BUDGET_REPLY, source_answer_turn)]
++            return [
++                _runtime_fallback(
++                    TOOL_PROVIDED_SOURCE_REVISION_BUDGET_REPLY
++                    if provided
++                    else TOOL_SOURCE_REVISION_BUDGET_REPLY,
++                    source_answer_turn,
++                )
++            ]
+         ensure_current()
+         if result.calls or not result.terminal_received or result.finish_reason != "stop":
+             raise RuntimeError("LLM did not finish its source answer revision")

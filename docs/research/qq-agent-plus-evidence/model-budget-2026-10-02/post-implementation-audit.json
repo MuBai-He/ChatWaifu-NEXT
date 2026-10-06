@@ -1,0 +1,2410 @@
+{
+  "plan": {
+    "parent_commit": "9b796938d3730651cb2e4ed0f9465e77f35175d1",
+    "working_tree_snapshot": true,
+    "source_hashes": [
+      {
+        "path": "characters/default/.gitkeep",
+        "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+      },
+      {
+        "path": "characters/default/avatar.yaml",
+        "sha256": "41b12b6f9b33643a20a1b2cbf9597d9b192352b8bd6acb6151c03990f453ca55"
+      },
+      {
+        "path": "characters/default/character.json",
+        "sha256": "e5c8bfa14f9cdebae7c2df6921fc23e6534710bb41eae6d91691460aef644a8e"
+      },
+      {
+        "path": "characters/default/character.yaml",
+        "sha256": "a92ae419feadc298754fda5918fa66f78feb2dc02a96f0773e0a27debd71b330"
+      },
+      {
+        "path": "characters/default/lexicon.yaml",
+        "sha256": "ed3ff1a89241a682c650f36f0613df2d66bf6ae5ad1cedea9122fb4f74c3cb94"
+      },
+      {
+        "path": "characters/default/persona.md",
+        "sha256": "3ab060352dcb8e25eed5c0b729905f0d5f0eab51c2afef091440c0c38f0cb808"
+      },
+      {
+        "path": "characters/default/relationship-policy.yaml",
+        "sha256": "5c49ecea5d98cc40035cc7e0b457fdd42d5c860d04b92351a625f1a965bb0ca1"
+      },
+      {
+        "path": "characters/default/voice.yaml",
+        "sha256": "c4952dfd8fef79dc7d52041cca3268dcf7c288bf1ea5f8dde7dc3ffe85df7511"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/__init__.py",
+        "sha256": "cdba94e5db1fd7be2848294ba0915556bc77b575bb8235c4432779d771fc14b8"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/avatar.py",
+        "sha256": "a7c6e0a2b60d9b4c25b9d4db10558205e1247f3049d56683cb36f08dbd291934"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/base.py",
+        "sha256": "66a2d30ba1cc357278c60d17bfe33cbbf1cd81596d3b8d616aaca91016fd0625"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/channels.py",
+        "sha256": "a034326180a004f56ca96d56ccb2de9c9dc7c3a98abe8f3048feee9eaebed5d3"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/character.py",
+        "sha256": "942549133ef7ee070270a27e40e95ae37bb4839cc74a7721bef6955fe4b4e867"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/commands.py",
+        "sha256": "557aade470750572a89300eaa5b2e9e54b873b04ace84f1ce7a70a672a40b3de"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/conversation.py",
+        "sha256": "8ac3bf785edb75d6c42d1586e59bfc18574e787ee137cd12638634de67c5eb37"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/diagnostics.py",
+        "sha256": "b2089e6414ad9cfd409f5fcce45f3f4fccb200ef666174dc512d9d9c436c4567"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/errors.py",
+        "sha256": "55cb8472faf06136261528a376afe89a001d6b4e6757eb3715d328aab860cf0c"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/events.py",
+        "sha256": "6602068fe20e771b1b484154cfcb5457391445365c2ed33ba340515184689c8f"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/media.py",
+        "sha256": "cdc6e666f5d283ea0cb7b119ece8567cbf4c97f8521c6e9034f916f39b6f13e1"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/memory.py",
+        "sha256": "5a50cd11ca78a4b1b74cc560d110eec8dbfde982cbd87644402a7e59ff44120f"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/models.py",
+        "sha256": "06b463749e654bbd7ca2e56a53312d0b7e0093a0fd65f0cab349d5aa00e3130e"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/permissions.py",
+        "sha256": "64a959669650a776e310fb5c0f36c6541f837c9b399eb1d579ff849f8b32b8b1"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/photo_memory.py",
+        "sha256": "df732e6cbc0df62a59ba56e6f1bb7abd7a10d24ffca444b4b43a4171d7a22c24"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/py.typed",
+        "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/registry.py",
+        "sha256": "5c27f9d2336f2082c57cf44facab7aa0b62f0872f145c1a15e765c0ff3763db5"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/schema_export.py",
+        "sha256": "faeb09fe501037eead79a0567b8324f3f1e5efe89e9a9a47273e5a02f454ba17"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/session.py",
+        "sha256": "1d672ab86f5d039bea2b13cde0645d1663820a7b679976036a3a205d0e0de967"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/skills.py",
+        "sha256": "130bb0395489a339b10ae09f16a257ae44d89ca34bbe19f88d9f8da774dc0264"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/sticker_library.py",
+        "sha256": "13ffd640a0085da1e2dfa05a792e282f7f1fce2dffbb255e5197e4e4b575ed6e"
+      },
+      {
+        "path": "packages/protocol-python/src/chatwaifu_protocol/version.py",
+        "sha256": "1395ec96bb852fdfd52ed25d5694aff8a0e6e933becf1032e71d2b579250fe6c"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/__init__.py",
+        "sha256": "9ab8c37070d2c4a1a2e2a34144cfd77f0a1f103c853277316a900af42f65d12f"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/agent/__init__.py",
+        "sha256": "4c7a370d97ef1e5a46da346b2bd03c6666a30067b9bc2c874eb7710683d15ece"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/agent/input_budget.py",
+        "sha256": "abee9384aca7d008233196e5d14c6a6bfe5486f8cc9073cec87975732037557f"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/agent/source_context.py",
+        "sha256": "8be5c2af04d1120ff98623f696a2a48349f56f75dce597d9f211f48953ca172e"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py",
+        "sha256": "5b3386fc7daf653977f25c192b1747ce4355d53b9151a71465f3a5a0f140e86f"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/agent/tool_intent.py",
+        "sha256": "5c0892fa8219003396309e4367b1b26797f1fa1bec5be483bd5e2eef97fb9e1f"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/api/__init__.py",
+        "sha256": "5cbd7df20d1b5063dacba32328ea9943a17f567c3dcc4adff113dc63eeb67a99"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/api/guard.py",
+        "sha256": "244098dcc0c7214ebc4535004bbedeacb4673e21634a0e2e4339fddcb3647dd3"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/api/interaction_diagnostics_routes.py",
+        "sha256": "da0bc6e8c2a149a7f21bca9301b3af321503ae59236ad7c25bbc82b972ee441e"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/api/models.py",
+        "sha256": "25c514de54aad3cf28755352bcdbcc1f1c3eee1e8da9594f2733d2ae45bbf87c"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/api/personal_assistant_routes.py",
+        "sha256": "1d0c1b8ab81da1b65c3e1f627c931b53eaf44542546b7e6b1ab0d4bcef17be23"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/api/photo_memory_routes.py",
+        "sha256": "68fdb854e3a5fcaad8fa586a22a471645d377e5c5a71438cad71111fbe6ac1a1"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/api/routes.py",
+        "sha256": "b0b040e1fd79676d882f52ff53f71916357942d7c262abdc528ebbde9b565953"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/api/sticker_library_routes.py",
+        "sha256": "a4e3a2f73fb7c4f052fbb1dc0e8e187fce204ef82169e4a2f5421696f9301ba1"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/audio/__init__.py",
+        "sha256": "95a980065df748443a088a14a175245cb6b25488ad43c549dcd2296f65033c14"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/audio/store.py",
+        "sha256": "52315a93d247034786e95c48c9fbf7450ed7fefa8ddc68af309e2acefa9b4959"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/audio/streaming.py",
+        "sha256": "69fc3515e1dd4a468fb76741f2a343f767a6a5f3f6bcd81fc747dbc04f643236"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/avatar/__init__.py",
+        "sha256": "989f26a3d0e62ba8598c0c4a7b6950f73fb9e5555fa971412a4f4fa8c0e06c0a"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/avatar/planner.py",
+        "sha256": "64b103126fe0b71abcf25bc5efd2e7e59a0bf43be372eb0ccb9a832032d7a25e"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/bootstrap/__init__.py",
+        "sha256": "610537178e9a821417b5260645f79e8a5e177761a3d71c3a0402b2f7fe08a5f9"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/bootstrap/container.py",
+        "sha256": "077b9b252cfda93f7132795ebc8fdc2fe61386f7a7b637c926aa6b63276ba003"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/character_kernel/__init__.py",
+        "sha256": "dd4fef6e44ce8987941e7531841096089b40d06ff61dca01bcd2670bde53a289"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/character_kernel/prompt.py",
+        "sha256": "acc75cb9b2d336180dabecdc307086f6ddf4777fc89b175d546c8713ad7ed5b3"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/character_kernel/service.py",
+        "sha256": "0314c7f255f8f00c562cf8b680587ad992c73c4cc24cf6ebb521ee45843d5ba6"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/characters/__init__.py",
+        "sha256": "235894f9f02bfdd8099c11f5feeb9ca848815bbc5655119554bcbfe789e55268"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/characters/service.py",
+        "sha256": "1330fee97c682c468936a95755dc57979c19ce92fa528f0235222bf7ed25eb2b"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/companion/__init__.py",
+        "sha256": "a0b4d2675e63b744510219449d5108165a1c0e108388a122d7a1a94752afc0f7"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/companion/activity.py",
+        "sha256": "241b8cfc3ad44ab85c82b1c1a153109566c21d3322ad2ce0b68ac76e10f89a16"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/companion/ambient.py",
+        "sha256": "1794e5827cd1c658605c5b61cebebb0f6ae97e108c4b840928430efa2523c6f0"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/companion/attention.py",
+        "sha256": "c10079fad545f405cd87f29b9e673f9d848c107b998e3953488f6d846d682cab"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/companion/models.py",
+        "sha256": "a7a6fb718371a5767a0a9ae4e2ee89ce064c2d2bc5cab3d8aa7b7512b903d839"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/companion/resources.py",
+        "sha256": "9673f393961f98c9175c8f80bf09e715a288ef84ce6f88dcacd0d30dc74b0f5f"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/companion/settings.py",
+        "sha256": "0fe229eaeb73d4efcd3657055561f53aa631f869adf9e517814dc3888c5a7d3d"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/config/__init__.py",
+        "sha256": "28379a2174e5257eeaf7f7d0933b431bb5502bb626ae7099bbb1c5caf5047105"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/config/mcp_policy.py",
+        "sha256": "8e3e3319e13f9998fdf485149f4e11c9fd412820e8f8926d625a45e3410c87b8"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/config/settings.py",
+        "sha256": "339cdd23857f488828e496f65ef1c6daad8ae4fffa803a20b4b62a16ce3e4176"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/conversation/__init__.py",
+        "sha256": "5ab2d20d4981b0be0a280d0daf4225852ee7c4c04800808369193a59de0f7a6c"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/conversation/models.py",
+        "sha256": "21f78ba7d8d545e527beba582c87743a1731ca84e5d845ff32f8b6221ff774f4"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/conversation/repository.py",
+        "sha256": "1234e20134a4e550819598add1f1fdda36e761dce7949a8e6e519c1f38a74469"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/conversation/reset.py",
+        "sha256": "58e6272294c9322e0f1878bec637469baeec3eefb4ddec265c07742bbcf1d3ee"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/conversation/service.py",
+        "sha256": "1b02c49143062b8b95c2c8c8c777c5f977a819c562b56ffebf8607c70dd7be2e"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/conversation/source_context.py",
+        "sha256": "701e2341fe2ffa526fac2a9004b132aadcc24b1197b1c3fd141e6a30e8a56318"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/conversation/speech.py",
+        "sha256": "f6f2d8b091cb095c83378be77b89dc0f80033676f2d3bb05f5d0bcf4fca15611"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/conversation/text_segmenter.py",
+        "sha256": "ea7b99e87e64212dabc1b8e85a044dcb43e6536fe2b068bd671382f5f6312e69"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/desktop_sidecar.py",
+        "sha256": "7942deab10c315ae6db16292e8c45b9a081b2c7bf7fc8b8696958db1bc317610"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/diagnostics/__init__.py",
+        "sha256": "fb78607294d7faa9f513b2537bbcc5b18364e61da750050d0b6ed2028b9b1764"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/diagnostics/ports.py",
+        "sha256": "6823f3e4dfd2871979db2c8aef5e7a11497376ef45d4b12317ff3100dfdc909e"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/eventing/__init__.py",
+        "sha256": "416c690044fcdfdb1229f2a6e4d67ee8943f8835b8c70cb43d168cca27b7b82e"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/eventing/hub.py",
+        "sha256": "e1b445748f545a2a9852f0c795e47d8215d77cba3ef20929a03cc9acac4db349"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/eventing/publisher.py",
+        "sha256": "8f7d3a54f9706e27e734db2d97551d2f8c5795a1622f47eddd222cf0daac2b5a"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/__init__.py",
+        "sha256": "a77b84f3295217466bd9085b2e9dfab1efc0f1d52fa54b95a6d4e70fd1f80c82"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/adapters/__init__.py",
+        "sha256": "76168344918d324e621d21443f4e0e3ff45709ecabfca1368adea023736ea8d5"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/adapters/weixin_ilink/__init__.py",
+        "sha256": "508a6099346ed687f5b79889a0e935355e35a88d523b7602b3c7fd25638135ed"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/adapters/weixin_ilink/client.py",
+        "sha256": "4fb768118c63e8c3215cf7c20288a0ae46801947c8d82295a64c69bfe5bda5b5"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/adapters/weixin_ilink/image.py",
+        "sha256": "e36c658c158604f8d0f1512201a631d372532b55f8cb6897d774413512885ab4"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/adapters/weixin_ilink/models.py",
+        "sha256": "0531f123f8e51b176f07de64a8b67ddd6c6ffa49a64776abfef4f99ab8cf16f9"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/adapters/weixin_ilink/typing.py",
+        "sha256": "793bf2bfa168734128ced9f676ebbad824409cd4ecaf3e1802410a050a1e26e6"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/burst.py",
+        "sha256": "09f18271aa351187c745fe5b061901fef8f507d05321ce5e087000c9d670e897"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/credentials.py",
+        "sha256": "a4bfab02b30ebb0dcfe9f201ae5e89ab1a44204f4630cc21e74dc6cc8618698f"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/encrypted_credentials.py",
+        "sha256": "a49a0b924296e11e77527bbce2d91da085f70eec7dca998943a3e2e002c9d005"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/management.py",
+        "sha256": "7e7803f135b19587952bea8e453677ef626a48d2e6c02f5d0553920a43972d00"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/models.py",
+        "sha256": "d8fea50af6621152a2845a61726fa2eed3a48b9f7f8ca34d8824bc589b419411"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/ports.py",
+        "sha256": "c9674b3bd848a7f23b711420866f127d910cded9e6dc53b2611be6416e4fb550"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/presentation.py",
+        "sha256": "4ea5a44dcfdd1f648d57fe4d37c07dee6246b7b177002bc513e58cc6821e6e37"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/preset_stickers/README.md",
+        "sha256": "4fb52a2e32bff12307df1502fba204abb232da8558b25bb01cb3582665ea7820"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/preset_stickers/kitten_comfort.png",
+        "sha256": "c3c80a68dea31559ce7268863fbadc0381b92009dcdc56a592ff04bb92c130c1"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/preset_stickers/kitten_happy.png",
+        "sha256": "760e4ac2b7c4955a045d507e1b0c1ae884cdf6b9753ef00bb7ac58a77b7d8714"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/preset_stickers/kitten_shy.png",
+        "sha256": "4656e5e95eb4fd5d43cd5d2a901ce7c8c64d6a52c6467cb99ce7fbc05d06ed79"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/preset_stickers/manifest.json",
+        "sha256": "65c24f6a4b0553cb08fa3cb64e63d4d6b49daa7a4a12d771f0b89943ef74f9ba"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/scheduler.py",
+        "sha256": "964ce76fc152c46b1210f3dbf925ebefa87eff707e7ae9163f8319085cdbdc5a"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/service.py",
+        "sha256": "5c7e5e618bad1184a11ecf03ad62cc42642e20f0138638ccec26e081c164e5f7"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/external_channels/stickers.py",
+        "sha256": "4535f2a726e9fdd84e8928f7ce89b285a36feb6fcd877d1e6da6f97f69a32a62"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/index_orchestration/__init__.py",
+        "sha256": "0193a564148629ff0487a4b2237d718c425e19d26c6795fcea0d09aa057c104a"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/index_orchestration/contracts.py",
+        "sha256": "2b76af145a9e2dcacc573e9b4ffee4863e19eba33a7274740c46966ad115fbc5"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/index_orchestration/service.py",
+        "sha256": "d6807e95cc351a0a5e8d1462842d4054f743e350d47f6c5a7cdd53da56ef5caa"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/main.py",
+        "sha256": "d921497434e8778a48769bd94c68b3b8187830f13ba5ab66d50a01648bee4ce6"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/mcp_server.py",
+        "sha256": "1117a2fa0878ce12a3e8220da77c6f117368dc867a0ac2ec3a27c5325b3f931e"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/memory/__init__.py",
+        "sha256": "ebdcf4b9f188e3441afdfed4c782d6dfb3bf800c7a6882f9a22b58c53735cd1a"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/memory/extractor.py",
+        "sha256": "2071c24ab1ff85a3855a45f98652bbd8564f90e57074ad1f52123e03d6721f4c"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/memory/inference.py",
+        "sha256": "ec1e4c6b3752db7dabd1a6c65b48142508e31c49223056f160436692b3709743"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/memory/policy.py",
+        "sha256": "277159e3e61d50c3cf3072ec7c8ca11fdf4d2b836b59b530fcff20b109b233c2"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/memory/ports.py",
+        "sha256": "381c4140a0d220ae4101979138fb277e73cf1692da2c388601b8ce0ec4d2b813"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/memory/repository.py",
+        "sha256": "4bb82c47430c958f50ea6157ee907670140c22fbc21bfe40db6cfdb5ef94971f"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/memory/retrieval.py",
+        "sha256": "4e6c738d1416db1cbe398316bc93903bd565e081d4481c0aae1d1a368dd939dd"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/memory/semantic_index.py",
+        "sha256": "3b44cb9f578283129e18d8de4c661af9a7e491d8f53a88786120960a0bf823b1"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/memory/service.py",
+        "sha256": "85c5e13c8674168e050b766ce27c7c0efc5d82240e95950da4b937f39b6234c6"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/memory/shared_joke.py",
+        "sha256": "939bbd58690aecb95a573a8b17a670ebe19358e3438616560465cff410a219ee"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/memory/spoken_observer.py",
+        "sha256": "68cd28c6e3526cb276d765d0642579807403cf3eaf1967f28a0a3f5810f2e310"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/observability/__init__.py",
+        "sha256": "52bab96915bb045b288671302c63e010c71b5d3291f63b0abe38e276d788a888"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/observability/logging.py",
+        "sha256": "68aea4339fc7c63fedcdd9646c15c75bbcb0d6668ba11c96ebc3e6b64434dd26"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/persistence/__init__.py",
+        "sha256": "c7c7b84e889d834dd265eada82af867b4c33a27361e3bbb01e11fcbacc126bae"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/persistence/async_secret_store.py",
+        "sha256": "ba3f550cc9fcc48c79b3047728c886d1d8d27276be83b7c4660fb5d33802f9ca"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/persistence/atomic_secret_store.py",
+        "sha256": "7751ee28be7f4ef647fb3e90618ef90ca7b0ef18b431d47021dcc18c4e45d9c9"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/persistence/database.py",
+        "sha256": "c6a2e1bf8031633cc828186f21b57a6cf3bc202be535fd02328fd0fcea0b23c2"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/persistence/event_store.py",
+        "sha256": "ddb8a443087808aef9b34ef87e725227769374b892bd620eecf3f057f634df0c"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/persistence/migrations.py",
+        "sha256": "e8a66d3c1e9163949c93f08db8cff0c0f6d504df88261860c451a2fae829084e"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/persistence/sqlite_assistant_tasks.py",
+        "sha256": "978df6bc88df237c26457152ca44f265efd8aba43742f6b55781a591f1012119"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/persistence/sqlite_conversation.py",
+        "sha256": "89a995589aa23633d47eff8333b34cc4010300410d9ec4584f4a7a80258800cf"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/persistence/sqlite_experience_reset.py",
+        "sha256": "b69415c5c1d7c8e36862b8cb6d1d3ad4f135efefbc7879e6f260254794ebd60d"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/persistence/sqlite_external_channels.py",
+        "sha256": "f96f2b2d79b0a372b19ee974c92d717aa6e959b47a546e72cc77bb7db33baaf3"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/persistence/sqlite_interaction_diagnostics.py",
+        "sha256": "865aecb7261ab51c2e6c7e39060414f89d486ddb19152b8473b9b88fb6b97ba9"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/persistence/sqlite_memory_repository.py",
+        "sha256": "84cc18bf198dc767195f89f8a1ab349175eea7a5c19b57fce53b6c86027c8d3d"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/persistence/sqlite_personal_assistant.py",
+        "sha256": "24d306f074c96bcf1eebaedba005377d1418f2309262145e3fcf7665f704cc6a"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/persistence/sqlite_photo_memory.py",
+        "sha256": "e1bdbca67f776f83e3ee7d30658602209ac85cfca896ea4a49b0223aaa640845"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/persistence/sqlite_photo_redaction.py",
+        "sha256": "0de4d1557593bde29eceef34b40a3b496a2fe3f9b43e94dc66f234d2d9582beb"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/persistence/sqlite_photo_semantic.py",
+        "sha256": "ee69fa8d31b16646707e53e8c9a6ee24b59dd9157b34b3992f524ffa9c5f0fdc"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/persistence/sqlite_realtime_config.py",
+        "sha256": "0056aa1735b8e1a86ebb2c529023e8e3d4feb77d025c997b2c49b3f442857068"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/persistence/sqlite_runtime_skills.py",
+        "sha256": "f43e052167588d19f5ba06774869d53342b57524d986d22089d30121390f5a3b"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/persistence/sqlite_spoken_memory.py",
+        "sha256": "06828a024bd088cc4c9179912af26833627a10b4e9dca480652608d9bee67906"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/persistence/sqlite_sticker_library.py",
+        "sha256": "1e723d1901b8a7655e4e8b09a676f124190384cd5f5a93fab7a516d0e517907e"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/persistence/sqlite_sticker_usage.py",
+        "sha256": "e65fe4b71d2745fdee8c960a197295c266b2d6ba5aea466c8665dc38bd010dbb"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/personal_assistant/__init__.py",
+        "sha256": "411a15b126e77c24ef8d01d68686aef1eeb78bcdee89d4b10c6779fb597a78b6"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/personal_assistant/accounts.py",
+        "sha256": "8398bbb1ce9c729aee79a33c15f3a3c0f192f9a72cf46ca5640d4d8b47ca52cc"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/personal_assistant/agenda.py",
+        "sha256": "b9f33ba5d334b765790190436af4a9500476cd0d0657ccd3d8244e92acf46256"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/personal_assistant/agenda_skill.py",
+        "sha256": "12d90de8dc7d2be9d0ac5b9bbeca3dd48a8a502295042d51bbb5d5c2b08990a5"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/personal_assistant/google_calendar.py",
+        "sha256": "49de33764d28a2795119aed7e4810b62f14c62ec8feea57d43555c706b01a112"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/personal_assistant/google_tasks.py",
+        "sha256": "96ee935883241adae2d0eec282aa5bdc4c4166b35be0a8b4c319ed6b5ac9e3d4"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/personal_assistant/integration.py",
+        "sha256": "fcbc32ed21d8e63b879cc8f6df39b2c84e69e0aec34a2d1ddc6d7c9ea3f126ee"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/personal_assistant/oauth.py",
+        "sha256": "f5cdd1e048c1ee7146d9c29ebfc19ac7028ce820e401b3719c289615b56dca9b"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/personal_assistant/organizer_skill.py",
+        "sha256": "047ae9346ebcffc8b4255041fff9617e8d4d4245499f40a1f57bec33823dff0f"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/personal_assistant/repository.py",
+        "sha256": "645a06486348b793c2ada8c7a1e4347f1952642b5398942a257504c9d9d97653"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/personal_assistant/skill.py",
+        "sha256": "574bd5f5df0da4d098b59b3c241d8aaaf0ee7eb905832955b09683381c4d078d"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/personal_assistant/tasks.py",
+        "sha256": "8caf4fcca666fb62b05c1deaf651843182bffc3967330eaeb27c02c56f17c227"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/photo_memory/__init__.py",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/photo_memory/annotations.py",
+        "sha256": "af38a1cffd52c3aa9a2e990514ef6b168c0745cf39898bce1e2143e2bd6d262b"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/photo_memory/classifier.py",
+        "sha256": "d02e1f7150c4f214cabdc2f02f641a41a46d80673495b0410030403ca80fdde2"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/photo_memory/metadata.py",
+        "sha256": "9fb69ed9285d844502fe96e07d70a9445bd4f56df6e105045b024577bd3d4d90"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/photo_memory/models.py",
+        "sha256": "8ffe20195a0a6038cadb5fc1e8842eabb0eda6bd839acbab6bd57756e9f8c54d"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/photo_memory/observer.py",
+        "sha256": "c003e5e406888ea8e48508f0b60c0f933869a298ad688d3f98639edac4d8043c"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/photo_memory/ports.py",
+        "sha256": "392bee52c3357fbc38808edb084accbe5fa162836d562de671f51260a7e9163e"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/photo_memory/recall.py",
+        "sha256": "f2727281f609a35504d5f832460ed31bb4605063fcae5dcd54386108fd209f8a"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/photo_memory/semantic.py",
+        "sha256": "defef5bb287e516a737803223a10e0e7581005d8805c8248834b632926aebbae"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/playback/__init__.py",
+        "sha256": "bf9bf34d838255e73637af506338aacf65c1d3bbb4b619574dfaa1368fdb9109"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/playback/service.py",
+        "sha256": "d1eeaeee5ffdb39e1c6005c210ed144bf5694b98c371061ac57f7b6002e70fda"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/providers/__init__.py",
+        "sha256": "0803a934e2b9ec6c1ea2e1517cdc32c4115d4a4f2fcc79c325c6dc0e454fac4c"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/providers/context_budget.py",
+        "sha256": "28dbb409a1c645e73d8449a50c9802e43492e54b7557c6f231aff7f0b298570e"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/providers/contracts.py",
+        "sha256": "ef43cc24ac8e45ffc7a4d804d8202db618f2516979065fb569a5ad1750b4f070"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/providers/data/LICENSE.tiktoken",
+        "sha256": "418cb499b436128d653d79941333a5437b7be2ea9213dcc2f04d15d5d2c51d86"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/providers/data/cl100k_base.tiktoken",
+        "sha256": "223921b76ee99bde995b7ff738513eef100fb51d18c93597a113bcffe865b2a7"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/providers/demo_llm.py",
+        "sha256": "617802a5105f5d07e5bce72d2e57f041abbc6caf566848ba00f407af606a99f2"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/providers/factory.py",
+        "sha256": "e2221cd89e383858c5d4f1e8d03c960c61a0861eb580c27ee3c42319480c4c26"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/providers/input_estimation.py",
+        "sha256": "d22ce6ec7fdbb1259e8c54b38a41dc69a47b6453135d54ad52e0e6226633acf8"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/providers/model_config.py",
+        "sha256": "8cfb29436e495b4401d48d912ea552f60b9ecf8077322a4ca1bde04ce75113b4"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/providers/openai_compatible.py",
+        "sha256": "dcec433668f83d73d42e0f5c202abcf749e71496f0ee3ea041be39a628fe0d9c"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/providers/tts.py",
+        "sha256": "361e12e12673d6446eb107555e0bf0848c4f3b01caf607f9de81c4903b56e37d"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/providers/tts_aliyun.py",
+        "sha256": "71a31026623718a2f8744f84f07dcc94767f2ab691dc57b3744e8ea2e5e43357"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/providers/tts_aliyun_cosyvoice.py",
+        "sha256": "4da820f8aa81db32b9c14fbc76215f58fcdf72188bd2eec7add4b5b7be1ee9d0"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/providers/tts_config.py",
+        "sha256": "c7ebfecc7350fa26b078b16b43eb3311e27bdd890a8ab9e709dddf6ac14c1d81"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/providers/tts_registry.py",
+        "sha256": "88be121097d18d2296c6ce68f6b97f1d05f419c756ffad686982848103138d86"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/providers/tts_router.py",
+        "sha256": "206d0365782ba2d74c5acbf46a8aaf9150056080881fa386cfc59d0a5d3cc752"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/realtime/__init__.py",
+        "sha256": "a29060580d2ef6bb1cce97d843fdf9ab5bbf88d46942daaced8dac03e628b98f"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/realtime/admission.py",
+        "sha256": "88f961b92835f2639935f25c253969b7edb74765d0639e43e1812c80e15a5b95"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/realtime/cloud/__init__.py",
+        "sha256": "f756f310284860f0ff2259474b5107690d3166dcd7141bb443bc19824a6911d1"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/realtime/cloud/context.py",
+        "sha256": "714f15ea13c17808e8a21dbe68f869a00bf9ced1a0ffbb92d34fcec2203e7a03"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/realtime/cloud/contracts.py",
+        "sha256": "c270c46d872dc3eac8d1b5694ad7ae4cf1f5d099ddd0d16c6709786e467e2710"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/realtime/cloud/coordinator.py",
+        "sha256": "313f87dc0774e1c3e9938786e41d039a1697304f3fb6086c57e7d7938fe9f756"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/realtime/cloud/domain.py",
+        "sha256": "028136da37e422c37b1ac6c0f4caea4cfdb795cbf61bc1764912d6620bb63b0e"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/realtime/cloud/factory.py",
+        "sha256": "7bd8361fbffcff184200e412934cfebf9f0e840922e179f1eb852afe21e97cf2"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/realtime/cloud/fake.py",
+        "sha256": "60f0c92a1300955d80037d7328db707b8e2e9bdc060950577c5f7bb5a80e4607"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/realtime/cloud/media.py",
+        "sha256": "0c37e21845582316eca182d38b97eb8f5b10ca75a60d188167261344ec28080c"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/realtime/cloud/mirror.py",
+        "sha256": "5740a4d93e303dfeb62cf3f43bf3d3ff6b0802b026d3329206ad1db2b6de7e60"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/realtime/cloud/openai.py",
+        "sha256": "ec7f4ade9099f6cb16ac578466f2aa7f7c2f6ec5602fd086edae2788cea677c3"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/realtime/cloud/openai_events.py",
+        "sha256": "a1c997313ccfa4524ba2c4ef1f09b69c45a1715fb009190507b7d8b66746c6c8"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/realtime/cloud/tools.py",
+        "sha256": "5353062109fb65e9c0a7b77b14d1707d502dfdae94e4fcab1e049122246ebbdd"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/realtime/configuration.py",
+        "sha256": "fbb8cce9bfe50f23b31374252b583ae6141143a03b1b6ff3a479f7800083b648"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/realtime/contracts.py",
+        "sha256": "73dba85c3f0b177a03ac46b18ffaf1a3b8a334161e23ad7387e6442644a86939"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/realtime/pipecat/__init__.py",
+        "sha256": "f46d59e2b93d866da4c3478845ed219b244ed35c004e08f7fda7d7820ba24373"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/realtime/pipecat/processor.py",
+        "sha256": "0758b421df9fb4f61614fbfaf0e2e5938fc19c5f51bfa79b6cf5ded05709b5e7"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/realtime/pipecat/session.py",
+        "sha256": "1d3be551173ba99f85f0eeb6971806bade7fe54413ddf1ab29d58da33f19c43c"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/realtime/service.py",
+        "sha256": "9d95dbc18ddaf0a5f429c845dab10bdaa2b33f15353c49701218370f92406370"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/realtime/stt.py",
+        "sha256": "d6739603f9caf1dc341ab5f3be14b18ed2d7db3b0211d53b48849bd4e469ede1"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/__init__.py",
+        "sha256": "71c07e8125b6c980933c91bed35f8120a01a24eb8f093eb7034cd3e47e3d9b66"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/adapters.py",
+        "sha256": "1a2a31bc852d97cebfda31d9724e76d30cf67ea9bfdcf64941e6978f2ec05d06"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/agent_router.py",
+        "sha256": "50a9a47bd5c8857213c2501dbf99642f284d435e41f9f1cc869db152ccd7665b"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/audit.py",
+        "sha256": "a7a97ca6652e573c53a5851190f42b0698a62428f7b40bfa5c97e094f87eeef7"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/errors.py",
+        "sha256": "cc1dd4372e71f2193cc25c4d8f607ab080f1cfaf01c26ac61495d143d8cf1a5b"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/execution_plan.py",
+        "sha256": "8e9fd74ecf451114b0afd7d155ee7083b7613859c4f2cfb18f3953256ef601c8"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/host_connections.py",
+        "sha256": "e7b91517695c67afcf67525c645a0f76ebdb1c30b352331b8b87dd4c43ae2422"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/permissions.py",
+        "sha256": "508f64d71115f0a3e0aaf08a89793f50a2358b7e54b4f3a247a84cec99a0d80a"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/plugins.py",
+        "sha256": "ad30ffaa746c5c23f16a7eecdf5f5ac8cbd9a1ff43d2a510c3b12b380a21d70f"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web.py",
+        "sha256": "7c718c091e69f7884822d3402248b3942a1c2850869f8da9463a3297a753cf2d"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web_search.py",
+        "sha256": "1e4c30123ad9eaa2f9d347dea7c7399aa8963e51686118cb6f1df998e9fab302"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/registry.py",
+        "sha256": "e838d906b6b04ce62141ad5d8b95a991837012154a56f8358546c1588de946d3"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/repository.py",
+        "sha256": "0f9c3ed59f506f0bbbedd91cb5b3730e8039b22972ff93a4fa5dae5521c741d6"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/sandbox.py",
+        "sha256": "301b52b8bedcb640f8abf0c87d05e9df1087355eb52eb870da49af520178433b"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/service.py",
+        "sha256": "d6e1187c3a0ba9befe1727b5da23761ddd344698cb6a1fb51e3d67277498fae9"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/tool_names.py",
+        "sha256": "80d28244e535efc6365777316e5522bf9ad1e871a8a639cee193282dad169d74"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/transports.py",
+        "sha256": "6c97e2eef2b1d5dfcdb2427e51c4ba51ec0699a07bba908648694b6879ba482c"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/sessions/__init__.py",
+        "sha256": "ff43529980c097c3b09ad926d4280d82e83b9115baa6deb99052f0c1dc390ba5"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/sessions/service.py",
+        "sha256": "8a9584923c42eef5834f3513892d618123eb6faaaebcbfd8ffdc56d291c89c98"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/sticker_library/__init__.py",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/sticker_library/classifier.py",
+        "sha256": "bc1bb8a33d1bc0621e1fe59663e509b8ef6c03499520a7ca6e9816a6400c0469"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/sticker_library/models.py",
+        "sha256": "17e42a6939b4f0dfbe9fc2928b8b391ad0e21a0f938e617e3a2075c49056a3d9"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/sticker_library/ports.py",
+        "sha256": "ebc28cd22a25372bf44a44303cb13ff7ac0c492a03bb8dd8306a82a5f189a1dc"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/sticker_library/ranking.py",
+        "sha256": "c8490737ae815fc36c230e8607bf0bd67845aea3097fc6718c9ba2f643288c17"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/sticker_library/selection.py",
+        "sha256": "fae764a25f0ad78fc31675f47b696cb82bbef09356d178189674a97136bf4567"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/sticker_library/service.py",
+        "sha256": "278a55600ce248f1ce5d19af40a784a8a0b9d96e27b188dae53fca2206950b98"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/sticker_library/usage.py",
+        "sha256": "6a40ae85101ecd3761ec284d61d4927caa7900e9bbf8bda9a9d296076666aab4"
+      },
+      {
+        "path": "services/runtime/src/chatwaifu_runtime/worker_packs.py",
+        "sha256": "8b7ed30b7d91a880f339d2b3797034fef1afb48171e5f7570742e1d71572cb9b"
+      }
+    ],
+    "driver_sha256": "da5730ed439acc2fb69437fa99f2050e35c36cc180f1a50f2200a081eb1d2896",
+    "materials_sha256": "5abbf5738c22cb7d6b2dd1f73592fda0d41af057e3bff64fe6fd0d632f52ecd5",
+    "models": [
+      "gemini-3.1-flash-lite",
+      "gemini-3.8-flash-high"
+    ],
+    "repeats": 3,
+    "maximum_generation_requests": 36,
+    "window": 32768,
+    "budget": {
+      "version": "1.0",
+      "input_token_limit": null,
+      "output_token_limit": null,
+      "output_reserve_tokens": 8192,
+      "max_output_tokens": 8192,
+      "estimate_margin_ratio": 0.15,
+      "section_policy": "scaled",
+      "history_turn_limit": 32,
+      "memory_candidate_limit": 24,
+      "tool_result_max_bytes": 131072
+    },
+    "resolved": {
+      "input_tokens": 21370,
+      "persona": 3846,
+      "memory": 3419,
+      "history": 7265,
+      "summary": 1709,
+      "photo": 1780,
+      "source_ledger": 2137,
+      "retrieval_characters": 3419
+    },
+    "scope": "Production compiler + final input fitter + real streaming provider, same synthetic materials/questions/time. Controlled summary and supplied ordered retrieval candidates; not full ConversationService, real summarizer, or human/blind Q02 acceptance."
+  },
+  "technical_oracle_stdout": "x4-z3",
+  "all_requests_match_expected": true,
+  "raw_stream_reply_and_usage_match": true,
+  "production_payloads_equal_experimental_scaled_except_max_tokens": true,
+  "groups": [
+    {
+      "model": "gemini-3.1-flash-lite",
+      "samples": 18,
+      "fact_coverage": 15,
+      "provided_fact_errors": 3,
+      "restored_stress_fact_coverage": 12,
+      "input_token_sum": 104232,
+      "completion_token_sum": 856,
+      "total_token_sum": 105088,
+      "p50_ms": 2349.5,
+      "p95_ms": 3776,
+      "ttft_p50_ms": 2348.5,
+      "ttft_p95_ms": 3775,
+      "reference_error_percent_range": [
+        25.81274382314693,
+        40.90056285178236
+      ],
+      "cache_reported_samples": 2,
+      "response_models": {
+        "gemini-3.1-flash-lite": 18
+      }
+    },
+    {
+      "model": "gemini-3.8-flash-high",
+      "samples": 18,
+      "fact_coverage": 18,
+      "provided_fact_errors": 0,
+      "restored_stress_fact_coverage": 12,
+      "input_token_sum": 104232,
+      "completion_token_sum": 859,
+      "total_token_sum": 112967,
+      "p50_ms": 4762.0,
+      "p95_ms": 8421,
+      "ttft_p50_ms": 4761.5,
+      "ttft_p95_ms": 8421,
+      "reference_error_percent_range": [
+        25.81274382314693,
+        40.90056285178236
+      ],
+      "cache_reported_samples": 3,
+      "response_models": {
+        "gemini-3.8-flash-control": 9,
+        "gemini-3.8-flash": 9
+      }
+    }
+  ],
+  "replies": [
+    {
+      "key": "gemini-3.1-flash-lite:memory_retrieval:configured_production:1",
+      "model": "gemini-3.1-flash-lite",
+      "case": "memory_retrieval",
+      "variant": "configured_production",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"MEMORY-5816\",\n  \"reason\": \"提供的背景资料中明确指出了 PROJECT-DELTA 的验收编号为 MEMORY-5816。\"\n}",
+      "parsed": {
+        "fact": "MEMORY-5816",
+        "reason": "提供的背景资料中明确指出了 PROJECT-DELTA 的验收编号为 MEMORY-5816。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 3431,
+      "usage": {
+        "completion_tokens": 44,
+        "total_tokens": 2566,
+        "prompt_tokens": 2522
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2522,
+          "completion_tokens": 44,
+          "total_tokens": 2566,
+          "reasoning_tokens": null
+        }
+      },
+      "response_model": "gemini-3.1-flash-lite",
+      "finish_reason": "stop",
+      "ttft_ms": 2168,
+      "elapsed_ms": 2169,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.1-flash-lite:short_control:configured_production:1",
+      "model": "gemini-3.1-flash-lite",
+      "case": "short_control",
+      "variant": "configured_production",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"这是本轮对话资料中明确提供的会议编号。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "这是本轮对话资料中明确提供的会议编号。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 33,
+        "total_tokens": 1632,
+        "prompt_tokens": 1599
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 1599,
+          "completion_tokens": 33,
+          "total_tokens": 1632,
+          "reasoning_tokens": null
+        }
+      },
+      "response_model": "gemini-3.1-flash-lite",
+      "finish_reason": "stop",
+      "ttft_ms": 2387,
+      "elapsed_ms": 2388,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.8-flash-high:short_control:configured_production:1",
+      "model": "gemini-3.8-flash-high",
+      "case": "short_control",
+      "variant": "configured_production",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"提供的短资料明确指出会议编号为 SHORT-8621。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "提供的短资料明确指出会议编号为 SHORT-8621。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 37,
+        "total_tokens": 2066,
+        "prompt_tokens": 1599,
+        "completion_tokens_details": {
+          "reasoning_tokens": 430
+        }
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 1599,
+          "completion_tokens": 37,
+          "total_tokens": 2066,
+          "reasoning_tokens": 430
+        }
+      },
+      "response_model": "gemini-3.8-flash-control",
+      "finish_reason": "stop",
+      "ttft_ms": 4455,
+      "elapsed_ms": 4456,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.1-flash-lite:technical_control:configured_production:2",
+      "model": "gemini-3.1-flash-lite",
+      "case": "technical_control",
+      "variant": "configured_production",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z2\",\n  \"reason\": \"y 是 x 的引用，修改 y 影响 x 使 x 变为 [1,2,3,4]，长度为 4；z 是 x 的浅拷贝，执行 pop() 后 z 变为 [1,2]，长度为 2。\"\n}",
+      "parsed": {
+        "fact": "x4-z2",
+        "reason": "y 是 x 的引用，修改 y 影响 x 使 x 变为 [1,2,3,4]，长度为 4；z 是 x 的浅拷贝，执行 pop() 后 z 变为 [1,2]，长度为 2。"
+      },
+      "fact_available": true,
+      "fact_covered": false,
+      "available_fact_error": true,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 74,
+        "total_tokens": 1713,
+        "prompt_tokens": 1639
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 1639,
+          "completion_tokens": 74,
+          "total_tokens": 1713,
+          "reasoning_tokens": null
+        }
+      },
+      "response_model": "gemini-3.1-flash-lite",
+      "finish_reason": "stop",
+      "ttft_ms": 2662,
+      "elapsed_ms": 2663,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.8-flash-high:persona_tail:configured_production:0",
+      "model": "gemini-3.8-flash-high",
+      "case": "persona_tail",
+      "variant": "configured_production",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"CANON-2749\",\n  \"reason\": \"资料末尾明确记录「角色档案编号为 CANON-2749」。\"\n}",
+      "parsed": {
+        "fact": "CANON-2749",
+        "reason": "资料末尾明确记录「角色档案编号为 CANON-2749」。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 6862,
+      "usage": {
+        "completion_tokens": 42,
+        "total_tokens": 5732,
+        "prompt_tokens": 5404,
+        "completion_tokens_details": {
+          "reasoning_tokens": 286
+        }
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 5404,
+          "completion_tokens": 42,
+          "total_tokens": 5732,
+          "reasoning_tokens": 286
+        }
+      },
+      "response_model": "gemini-3.8-flash",
+      "finish_reason": "stop",
+      "ttft_ms": 4650,
+      "elapsed_ms": 4650,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.1-flash-lite:tool_body:configured_production:2",
+      "model": "gemini-3.1-flash-lite",
+      "case": "tool_body",
+      "variant": "configured_production",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"TOOL-4073\",\n  \"reason\": \"已提供的资料中明确包含了 approval_code 字段，其对应值为 TOOL-4073。\"\n}",
+      "parsed": {
+        "fact": "TOOL-4073",
+        "reason": "已提供的资料中明确包含了 approval_code 字段，其对应值为 TOOL-4073。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 20353,
+      "usage": {
+        "completion_tokens": 44,
+        "total_tokens": 15934,
+        "prompt_tokens": 15890
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 15890,
+          "completion_tokens": 44,
+          "total_tokens": 15934,
+          "reasoning_tokens": null
+        }
+      },
+      "response_model": "gemini-3.1-flash-lite",
+      "finish_reason": "stop",
+      "ttft_ms": 2243,
+      "elapsed_ms": 2243,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.1-flash-lite:history_literal:configured_production:1",
+      "model": "gemini-3.1-flash-lite",
+      "case": "history_literal",
+      "variant": "configured_production",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"HISTORY-9362\",\n  \"reason\": \"在用户提供的历史输入末尾明确写有“测试日志最终检查编号为 HISTORY-9362”。\"\n}",
+      "parsed": {
+        "fact": "HISTORY-9362",
+        "reason": "在用户提供的历史输入末尾明确写有“测试日志最终检查编号为 HISTORY-9362”。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 9675,
+      "usage": {
+        "completion_tokens": 47,
+        "total_tokens": 7737,
+        "prompt_tokens": 7690
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 7690,
+          "completion_tokens": 47,
+          "total_tokens": 7737,
+          "reasoning_tokens": null
+        }
+      },
+      "response_model": "gemini-3.1-flash-lite",
+      "finish_reason": "stop",
+      "ttft_ms": 3775,
+      "elapsed_ms": 3776,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.1-flash-lite:memory_retrieval:configured_production:2",
+      "model": "gemini-3.1-flash-lite",
+      "case": "memory_retrieval",
+      "variant": "configured_production",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"MEMORY-5816\",\n  \"reason\": \"已提供的资料中明确指出 PROJECT-DELTA 验收编号为 MEMORY-5816。\"\n}",
+      "parsed": {
+        "fact": "MEMORY-5816",
+        "reason": "已提供的资料中明确指出 PROJECT-DELTA 验收编号为 MEMORY-5816。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 3431,
+      "usage": {
+        "completion_tokens": 43,
+        "total_tokens": 2565,
+        "prompt_tokens": 2522
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2522,
+          "completion_tokens": 43,
+          "total_tokens": 2565,
+          "reasoning_tokens": null
+        }
+      },
+      "response_model": "gemini-3.1-flash-lite",
+      "finish_reason": "stop",
+      "ttft_ms": 2552,
+      "elapsed_ms": 2553,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.1-flash-lite:technical_control:configured_production:1",
+      "model": "gemini-3.1-flash-lite",
+      "case": "technical_control",
+      "variant": "configured_production",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z2\",\n  \"reason\": \"y 是 x 的引用，修改 y 导致 x 变为 [1,2,3,4]，故 x 长度为 4；z 是 x 的切片副本，执行 pop() 后 z 变为 [1,2]，故 z 长度为 2。\"\n}",
+      "parsed": {
+        "fact": "x4-z2",
+        "reason": "y 是 x 的引用，修改 y 导致 x 变为 [1,2,3,4]，故 x 长度为 4；z 是 x 的切片副本，执行 pop() 后 z 变为 [1,2]，故 z 长度为 2。"
+      },
+      "fact_available": true,
+      "fact_covered": false,
+      "available_fact_error": true,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 79,
+        "total_tokens": 1718,
+        "prompt_tokens": 1639
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 1639,
+          "completion_tokens": 79,
+          "total_tokens": 1718,
+          "reasoning_tokens": null
+        }
+      },
+      "response_model": "gemini-3.1-flash-lite",
+      "finish_reason": "stop",
+      "ttft_ms": 2495,
+      "elapsed_ms": 2496,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.1-flash-lite:memory_retrieval:configured_production:0",
+      "model": "gemini-3.1-flash-lite",
+      "case": "memory_retrieval",
+      "variant": "configured_production",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"MEMORY-5816\",\n  \"reason\": \"依据本轮提供的 Memory Context 中关于 PROJECT-DELTA 的描述，明确记载了验收编号为 MEMORY-5816。\"\n}",
+      "parsed": {
+        "fact": "MEMORY-5816",
+        "reason": "依据本轮提供的 Memory Context 中关于 PROJECT-DELTA 的描述，明确记载了验收编号为 MEMORY-5816。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 3431,
+      "usage": {
+        "completion_tokens": 50,
+        "total_tokens": 2572,
+        "prompt_tokens": 2522
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2522,
+          "completion_tokens": 50,
+          "total_tokens": 2572,
+          "reasoning_tokens": null
+        }
+      },
+      "response_model": "gemini-3.1-flash-lite",
+      "finish_reason": "stop",
+      "ttft_ms": 2062,
+      "elapsed_ms": 2063,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.8-flash-high:history_literal:configured_production:0",
+      "model": "gemini-3.8-flash-high",
+      "case": "history_literal",
+      "variant": "configured_production",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"HISTORY-9362\",\n  \"reason\": \"前文测试日志结尾明确标注测试日志最终检查编号为 HISTORY-9362。\"\n}",
+      "parsed": {
+        "fact": "HISTORY-9362",
+        "reason": "前文测试日志结尾明确标注测试日志最终检查编号为 HISTORY-9362。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 9675,
+      "usage": {
+        "completion_tokens": 42,
+        "total_tokens": 8311,
+        "prompt_tokens": 7690,
+        "completion_tokens_details": {
+          "reasoning_tokens": 579
+        }
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 7690,
+          "completion_tokens": 42,
+          "total_tokens": 8311,
+          "reasoning_tokens": 579
+        }
+      },
+      "response_model": "gemini-3.8-flash-control",
+      "finish_reason": "stop",
+      "ttft_ms": 4873,
+      "elapsed_ms": 4874,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.1-flash-lite:persona_tail:configured_production:1",
+      "model": "gemini-3.1-flash-lite",
+      "case": "persona_tail",
+      "variant": "configured_production",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"CANON-2749\",\n  \"reason\": \"角色设定最后一行明确标注了档案编号为 CANON-2749。\"\n}",
+      "parsed": {
+        "fact": "CANON-2749",
+        "reason": "角色设定最后一行明确标注了档案编号为 CANON-2749。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 6862,
+      "usage": {
+        "completion_tokens": 41,
+        "total_tokens": 5445,
+        "prompt_tokens": 5404
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 5404,
+          "completion_tokens": 41,
+          "total_tokens": 5445,
+          "reasoning_tokens": null
+        }
+      },
+      "response_model": "gemini-3.1-flash-lite",
+      "finish_reason": "stop",
+      "ttft_ms": 2347,
+      "elapsed_ms": 2348,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.8-flash-high:tool_body:configured_production:1",
+      "model": "gemini-3.8-flash-high",
+      "case": "tool_body",
+      "variant": "configured_production",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "```json\n{\n  \"fact\": \"TOOL-4073\",\n  \"reason\": \"已执行工具返回数据中的 approval_code 字段明确记录为 TOOL-4073。\"\n}\n```",
+      "parsed": {
+        "fact": "TOOL-4073",
+        "reason": "已执行工具返回数据中的 approval_code 字段明确记录为 TOOL-4073。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 20353,
+      "usage": {
+        "completion_tokens": 48,
+        "total_tokens": 16057,
+        "prompt_tokens": 15890,
+        "completion_tokens_details": {
+          "reasoning_tokens": 119
+        }
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 15890,
+          "completion_tokens": 48,
+          "total_tokens": 16057,
+          "reasoning_tokens": 119
+        }
+      },
+      "response_model": "gemini-3.8-flash",
+      "finish_reason": "stop",
+      "ttft_ms": 3762,
+      "elapsed_ms": 3762,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.8-flash-high:short_control:configured_production:0",
+      "model": "gemini-3.8-flash-high",
+      "case": "short_control",
+      "variant": "configured_production",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"提供的短资料中明确说明会议编号为 SHORT-8621。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "提供的短资料中明确说明会议编号为 SHORT-8621。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 38,
+        "total_tokens": 2126,
+        "prompt_tokens": 1599,
+        "completion_tokens_details": {
+          "reasoning_tokens": 489
+        }
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 1599,
+          "completion_tokens": 38,
+          "total_tokens": 2126,
+          "reasoning_tokens": 489
+        }
+      },
+      "response_model": "gemini-3.8-flash",
+      "finish_reason": "stop",
+      "ttft_ms": 4250,
+      "elapsed_ms": 4250,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.8-flash-high:history_literal:configured_production:2",
+      "model": "gemini-3.8-flash-high",
+      "case": "history_literal",
+      "variant": "configured_production",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"HISTORY-9362\",\n  \"reason\": \"前文提供的测试日志结尾明确记录最终检查编号为 HISTORY-9362。\"\n}",
+      "parsed": {
+        "fact": "HISTORY-9362",
+        "reason": "前文提供的测试日志结尾明确记录最终检查编号为 HISTORY-9362。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 9675,
+      "usage": {
+        "completion_tokens": 41,
+        "total_tokens": 8180,
+        "prompt_tokens": 7690,
+        "completion_tokens_details": {
+          "reasoning_tokens": 449
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4072
+        }
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 7690,
+          "completion_tokens": 41,
+          "total_tokens": 8180,
+          "reasoning_tokens": 449
+        }
+      },
+      "response_model": "gemini-3.8-flash-control",
+      "finish_reason": "stop",
+      "ttft_ms": 6837,
+      "elapsed_ms": 6838,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.8-flash-high:memory_retrieval:configured_production:0",
+      "model": "gemini-3.8-flash-high",
+      "case": "memory_retrieval",
+      "variant": "configured_production",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"MEMORY-5816\",\n  \"reason\": \"提供的背景资料明确记录 PROJECT-DELTA 验收编号为 MEMORY-5816。\"\n}",
+      "parsed": {
+        "fact": "MEMORY-5816",
+        "reason": "提供的背景资料明确记录 PROJECT-DELTA 验收编号为 MEMORY-5816。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 3431,
+      "usage": {
+        "completion_tokens": 42,
+        "total_tokens": 2954,
+        "prompt_tokens": 2522,
+        "completion_tokens_details": {
+          "reasoning_tokens": 390
+        }
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2522,
+          "completion_tokens": 42,
+          "total_tokens": 2954,
+          "reasoning_tokens": 390
+        }
+      },
+      "response_model": "gemini-3.8-flash-control",
+      "finish_reason": "stop",
+      "ttft_ms": 6835,
+      "elapsed_ms": 6835,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.1-flash-lite:short_control:configured_production:0",
+      "model": "gemini-3.1-flash-lite",
+      "case": "short_control",
+      "variant": "configured_production",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"已提供资料中明确将会议编号标注为 SHORT-8621。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "已提供资料中明确将会议编号标注为 SHORT-8621。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 39,
+        "total_tokens": 1638,
+        "prompt_tokens": 1599
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 1599,
+          "completion_tokens": 39,
+          "total_tokens": 1638,
+          "reasoning_tokens": null
+        }
+      },
+      "response_model": "gemini-3.1-flash-lite",
+      "finish_reason": "stop",
+      "ttft_ms": 2603,
+      "elapsed_ms": 2603,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.1-flash-lite:history_literal:configured_production:0",
+      "model": "gemini-3.1-flash-lite",
+      "case": "history_literal",
+      "variant": "configured_production",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"HISTORY-9362\",\n  \"reason\": \"在用户提供的历史信息末尾明确标注了“测试日志最终检查编号为 HISTORY-9362”。\"\n}",
+      "parsed": {
+        "fact": "HISTORY-9362",
+        "reason": "在用户提供的历史信息末尾明确标注了“测试日志最终检查编号为 HISTORY-9362”。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 9675,
+      "usage": {
+        "completion_tokens": 47,
+        "total_tokens": 7737,
+        "prompt_tokens": 7690
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 7690,
+          "completion_tokens": 47,
+          "total_tokens": 7737,
+          "reasoning_tokens": null
+        }
+      },
+      "response_model": "gemini-3.1-flash-lite",
+      "finish_reason": "stop",
+      "ttft_ms": 2210,
+      "elapsed_ms": 2210,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.1-flash-lite:short_control:configured_production:2",
+      "model": "gemini-3.1-flash-lite",
+      "case": "short_control",
+      "variant": "configured_production",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"这是本轮对话资料中明确给出的会议编号。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "这是本轮对话资料中明确给出的会议编号。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 34,
+        "total_tokens": 1633,
+        "prompt_tokens": 1599
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 1599,
+          "completion_tokens": 34,
+          "total_tokens": 1633,
+          "reasoning_tokens": null
+        }
+      },
+      "response_model": "gemini-3.1-flash-lite",
+      "finish_reason": "stop",
+      "ttft_ms": 2350,
+      "elapsed_ms": 2351,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.1-flash-lite:persona_tail:configured_production:0",
+      "model": "gemini-3.1-flash-lite",
+      "case": "persona_tail",
+      "variant": "configured_production",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"CANON-2749\",\n  \"reason\": \"设定文本末尾明确标注了角色档案编号为 CANON-2749。\"\n}",
+      "parsed": {
+        "fact": "CANON-2749",
+        "reason": "设定文本末尾明确标注了角色档案编号为 CANON-2749。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 6862,
+      "usage": {
+        "completion_tokens": 42,
+        "total_tokens": 5446,
+        "prompt_tokens": 5404
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 5404,
+          "completion_tokens": 42,
+          "total_tokens": 5446,
+          "reasoning_tokens": null
+        }
+      },
+      "response_model": "gemini-3.1-flash-lite",
+      "finish_reason": "stop",
+      "ttft_ms": 2314,
+      "elapsed_ms": 2315,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.8-flash-high:technical_control:configured_production:1",
+      "model": "gemini-3.8-flash-high",
+      "case": "technical_control",
+      "variant": "configured_production",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z3\",\n  \"reason\": \"y引用x，append(4)后x变为[1, 2, 3, 4]（长度为4）；z是x的浅拷贝，执行pop()后变为[1, 2, 3]（长度为3）。\"\n}",
+      "parsed": {
+        "fact": "x4-z3",
+        "reason": "y引用x，append(4)后x变为[1, 2, 3, 4]（长度为4）；z是x的浅拷贝，执行pop()后变为[1, 2, 3]（长度为3）。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 76,
+        "total_tokens": 2808,
+        "prompt_tokens": 1639,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1093
+        }
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 1639,
+          "completion_tokens": 76,
+          "total_tokens": 2808,
+          "reasoning_tokens": 1093
+        }
+      },
+      "response_model": "gemini-3.8-flash",
+      "finish_reason": "stop",
+      "ttft_ms": 6965,
+      "elapsed_ms": 6965,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.8-flash-high:persona_tail:configured_production:1",
+      "model": "gemini-3.8-flash-high",
+      "case": "persona_tail",
+      "variant": "configured_production",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"CANON-2749\",\n  \"reason\": \"资料中明确记载角色档案编号为 CANON-2749。\"\n}",
+      "parsed": {
+        "fact": "CANON-2749",
+        "reason": "资料中明确记载角色档案编号为 CANON-2749。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 6862,
+      "usage": {
+        "completion_tokens": 39,
+        "total_tokens": 5715,
+        "prompt_tokens": 5404,
+        "completion_tokens_details": {
+          "reasoning_tokens": 272
+        }
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 5404,
+          "completion_tokens": 39,
+          "total_tokens": 5715,
+          "reasoning_tokens": 272
+        }
+      },
+      "response_model": "gemini-3.8-flash-control",
+      "finish_reason": "stop",
+      "ttft_ms": 4188,
+      "elapsed_ms": 4188,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.8-flash-high:technical_control:configured_production:0",
+      "model": "gemini-3.8-flash-high",
+      "case": "technical_control",
+      "variant": "configured_production",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z3\",\n  \"reason\": \"y与x引用同一列表，y.append(4)使x变为[1,2,3,4]（长4）；z为x[:]切片浅拷贝，z.pop()使其长度变为3且不影响x。\"\n}",
+      "parsed": {
+        "fact": "x4-z3",
+        "reason": "y与x引用同一列表，y.append(4)使x变为[1,2,3,4]（长4）；z为x[:]切片浅拷贝，z.pop()使其长度变为3且不影响x。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 72,
+        "total_tokens": 2471,
+        "prompt_tokens": 1639,
+        "completion_tokens_details": {
+          "reasoning_tokens": 760
+        }
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 1639,
+          "completion_tokens": 72,
+          "total_tokens": 2471,
+          "reasoning_tokens": 760
+        }
+      },
+      "response_model": "gemini-3.8-flash",
+      "finish_reason": "stop",
+      "ttft_ms": 5545,
+      "elapsed_ms": 5545,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.8-flash-high:short_control:configured_production:2",
+      "model": "gemini-3.8-flash-high",
+      "case": "short_control",
+      "variant": "configured_production",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"SHORT-8621\",\n  \"reason\": \"提供的短资料中明确记录会议编号为 SHORT-8621。\"\n}",
+      "parsed": {
+        "fact": "SHORT-8621",
+        "reason": "提供的短资料中明确记录会议编号为 SHORT-8621。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 2253,
+      "usage": {
+        "completion_tokens": 38,
+        "total_tokens": 2077,
+        "prompt_tokens": 1599,
+        "completion_tokens_details": {
+          "reasoning_tokens": 440
+        }
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 1599,
+          "completion_tokens": 38,
+          "total_tokens": 2077,
+          "reasoning_tokens": 440
+        }
+      },
+      "response_model": "gemini-3.8-flash-control",
+      "finish_reason": "stop",
+      "ttft_ms": 8421,
+      "elapsed_ms": 8421,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.1-flash-lite:history_literal:configured_production:2",
+      "model": "gemini-3.1-flash-lite",
+      "case": "history_literal",
+      "variant": "configured_production",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"HISTORY-9362\",\n  \"reason\": \"测试日志最后一行明确指出最终检查编号为 HISTORY-9362。\"\n}",
+      "parsed": {
+        "fact": "HISTORY-9362",
+        "reason": "测试日志最后一行明确指出最终检查编号为 HISTORY-9362。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 9675,
+      "usage": {
+        "completion_tokens": 39,
+        "total_tokens": 7729,
+        "prompt_tokens": 7690,
+        "prompt_tokens_details": {
+          "cached_tokens": 4073
+        }
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 7690,
+          "completion_tokens": 39,
+          "total_tokens": 7729,
+          "reasoning_tokens": null
+        }
+      },
+      "response_model": "gemini-3.1-flash-lite",
+      "finish_reason": "stop",
+      "ttft_ms": 2816,
+      "elapsed_ms": 2816,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.8-flash-high:tool_body:configured_production:0",
+      "model": "gemini-3.8-flash-high",
+      "case": "tool_body",
+      "variant": "configured_production",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "```json\n{\n  \"fact\": \"TOOL-4073\",\n  \"reason\": \"已执行工具返回的数据中 approval_code 字段记录为 TOOL-4073。\"\n}\n```",
+      "parsed": {
+        "fact": "TOOL-4073",
+        "reason": "已执行工具返回的数据中 approval_code 字段记录为 TOOL-4073。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 20353,
+      "usage": {
+        "completion_tokens": 47,
+        "total_tokens": 16140,
+        "prompt_tokens": 15890,
+        "completion_tokens_details": {
+          "reasoning_tokens": 203
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 12255
+        }
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 15890,
+          "completion_tokens": 47,
+          "total_tokens": 16140,
+          "reasoning_tokens": 203
+        }
+      },
+      "response_model": "gemini-3.8-flash",
+      "finish_reason": "stop",
+      "ttft_ms": 4299,
+      "elapsed_ms": 4299,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.1-flash-lite:technical_control:configured_production:0",
+      "model": "gemini-3.1-flash-lite",
+      "case": "technical_control",
+      "variant": "configured_production",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z2\",\n  \"reason\": \"y 是 x 的引用，修改 y 会改变 x，此时 x 为 [1,2,3,4]，长度为4；z 是 x 的浅拷贝，z.pop() 移除一个元素后 z 为 [1,2]，长度为2。\"\n}",
+      "parsed": {
+        "fact": "x4-z2",
+        "reason": "y 是 x 的引用，修改 y 会改变 x，此时 x 为 [1,2,3,4]，长度为4；z 是 x 的浅拷贝，z.pop() 移除一个元素后 z 为 [1,2]，长度为2。"
+      },
+      "fact_available": true,
+      "fact_covered": false,
+      "available_fact_error": true,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 76,
+        "total_tokens": 1715,
+        "prompt_tokens": 1639
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 1639,
+          "completion_tokens": 76,
+          "total_tokens": 1715,
+          "reasoning_tokens": null
+        }
+      },
+      "response_model": "gemini-3.1-flash-lite",
+      "finish_reason": "stop",
+      "ttft_ms": 2200,
+      "elapsed_ms": 2201,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.8-flash-high:technical_control:configured_production:2",
+      "model": "gemini-3.8-flash-high",
+      "case": "technical_control",
+      "variant": "configured_production",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"x4-z3\",\n  \"reason\": \"y=x 为引用赋值，y.append(4) 会同时修改 x，使其长度变为 4；z=x[:] 建立了浅拷贝切片，z.pop() 仅修改 z，使其长度变为 3，不影响 x。\"\n}",
+      "parsed": {
+        "fact": "x4-z3",
+        "reason": "y=x 为引用赋值，y.append(4) 会同时修改 x，使其长度变为 4；z=x[:] 建立了浅拷贝切片，z.pop() 仅修改 z，使其长度变为 3，不影响 x。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 2289,
+      "usage": {
+        "completion_tokens": 75,
+        "total_tokens": 2204,
+        "prompt_tokens": 1639,
+        "completion_tokens_details": {
+          "reasoning_tokens": 490
+        }
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 1639,
+          "completion_tokens": 75,
+          "total_tokens": 2204,
+          "reasoning_tokens": 490
+        }
+      },
+      "response_model": "gemini-3.8-flash-control",
+      "finish_reason": "stop",
+      "ttft_ms": 4998,
+      "elapsed_ms": 4999,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.1-flash-lite:persona_tail:configured_production:2",
+      "model": "gemini-3.1-flash-lite",
+      "case": "persona_tail",
+      "variant": "configured_production",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"CANON-2749\",\n  \"reason\": \"该编号直接记载于所提供角色设定的末尾部分。\"\n}",
+      "parsed": {
+        "fact": "CANON-2749",
+        "reason": "该编号直接记载于所提供角色设定的末尾部分。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 6862,
+      "usage": {
+        "completion_tokens": 37,
+        "total_tokens": 5441,
+        "prompt_tokens": 5404
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 5404,
+          "completion_tokens": 37,
+          "total_tokens": 5441,
+          "reasoning_tokens": null
+        }
+      },
+      "response_model": "gemini-3.1-flash-lite",
+      "finish_reason": "stop",
+      "ttft_ms": 2419,
+      "elapsed_ms": 2420,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.8-flash-high:persona_tail:configured_production:2",
+      "model": "gemini-3.8-flash-high",
+      "case": "persona_tail",
+      "variant": "configured_production",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"CANON-2749\",\n  \"reason\": \"设定资料末尾明确记录角色档案编号为 CANON-2749。\"\n}",
+      "parsed": {
+        "fact": "CANON-2749",
+        "reason": "设定资料末尾明确记录角色档案编号为 CANON-2749。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 6862,
+      "usage": {
+        "completion_tokens": 41,
+        "total_tokens": 5807,
+        "prompt_tokens": 5404,
+        "completion_tokens_details": {
+          "reasoning_tokens": 362
+        }
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 5404,
+          "completion_tokens": 41,
+          "total_tokens": 5807,
+          "reasoning_tokens": 362
+        }
+      },
+      "response_model": "gemini-3.8-flash",
+      "finish_reason": "stop",
+      "ttft_ms": 5222,
+      "elapsed_ms": 5223,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.8-flash-high:tool_body:configured_production:2",
+      "model": "gemini-3.8-flash-high",
+      "case": "tool_body",
+      "variant": "configured_production",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"TOOL-4073\",\n  \"reason\": \"工具 study_read 返回的数据中明确包含 approval_code 字段，值为 TOOL-4073。\"\n}",
+      "parsed": {
+        "fact": "TOOL-4073",
+        "reason": "工具 study_read 返回的数据中明确包含 approval_code 字段，值为 TOOL-4073。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 20353,
+      "usage": {
+        "completion_tokens": 45,
+        "total_tokens": 16208,
+        "prompt_tokens": 15890,
+        "completion_tokens_details": {
+          "reasoning_tokens": 273
+        }
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 15890,
+          "completion_tokens": 45,
+          "total_tokens": 16208,
+          "reasoning_tokens": 273
+        }
+      },
+      "response_model": "gemini-3.8-flash-control",
+      "finish_reason": "stop",
+      "ttft_ms": 3752,
+      "elapsed_ms": 3753,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.8-flash-high:memory_retrieval:configured_production:1",
+      "model": "gemini-3.8-flash-high",
+      "case": "memory_retrieval",
+      "variant": "configured_production",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "```json\n{\n  \"fact\": \"MEMORY-5816\",\n  \"reason\": \"提供的资料明确记录 PROJECT-DELTA 验收编号为 MEMORY-5816。\"\n}\n```",
+      "parsed": {
+        "fact": "MEMORY-5816",
+        "reason": "提供的资料明确记录 PROJECT-DELTA 验收编号为 MEMORY-5816。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 3431,
+      "usage": {
+        "completion_tokens": 46,
+        "total_tokens": 2885,
+        "prompt_tokens": 2522,
+        "completion_tokens_details": {
+          "reasoning_tokens": 317
+        }
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2522,
+          "completion_tokens": 46,
+          "total_tokens": 2885,
+          "reasoning_tokens": 317
+        }
+      },
+      "response_model": "gemini-3.8-flash",
+      "finish_reason": "stop",
+      "ttft_ms": 3485,
+      "elapsed_ms": 3485,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.1-flash-lite:tool_body:configured_production:0",
+      "model": "gemini-3.1-flash-lite",
+      "case": "tool_body",
+      "variant": "configured_production",
+      "repetition": 0,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"TOOL-4073\",\n  \"reason\": \"已执行工具结果中明确记录了 approval_code 为 TOOL-4073。\"\n}",
+      "parsed": {
+        "fact": "TOOL-4073",
+        "reason": "已执行工具结果中明确记录了 approval_code 为 TOOL-4073。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 20353,
+      "usage": {
+        "completion_tokens": 41,
+        "total_tokens": 15931,
+        "prompt_tokens": 15890,
+        "prompt_tokens_details": {
+          "cached_tokens": 12257
+        }
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 15890,
+          "completion_tokens": 41,
+          "total_tokens": 15931,
+          "reasoning_tokens": null
+        }
+      },
+      "response_model": "gemini-3.1-flash-lite",
+      "finish_reason": "stop",
+      "ttft_ms": 2057,
+      "elapsed_ms": 2058,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.8-flash-high:memory_retrieval:configured_production:2",
+      "model": "gemini-3.8-flash-high",
+      "case": "memory_retrieval",
+      "variant": "configured_production",
+      "repetition": 2,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"MEMORY-5816\",\n  \"reason\": \"依据提供的记忆资料，明确记录 PROJECT-DELTA 验收编号为 MEMORY-5816。\"\n}",
+      "parsed": {
+        "fact": "MEMORY-5816",
+        "reason": "依据提供的记忆资料，明确记录 PROJECT-DELTA 验收编号为 MEMORY-5816。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 3431,
+      "usage": {
+        "completion_tokens": 44,
+        "total_tokens": 2991,
+        "prompt_tokens": 2522,
+        "completion_tokens_details": {
+          "reasoning_tokens": 425
+        }
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 2522,
+          "completion_tokens": 44,
+          "total_tokens": 2991,
+          "reasoning_tokens": 425
+        }
+      },
+      "response_model": "gemini-3.8-flash",
+      "finish_reason": "stop",
+      "ttft_ms": 3491,
+      "elapsed_ms": 3491,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.1-flash-lite:tool_body:configured_production:1",
+      "model": "gemini-3.1-flash-lite",
+      "case": "tool_body",
+      "variant": "configured_production",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"TOOL-4073\",\n  \"reason\": \"已提供的资料中明确包含了 approval_code 字段，其对应的值即为 TOOL-4073。\"\n}",
+      "parsed": {
+        "fact": "TOOL-4073",
+        "reason": "已提供的资料中明确包含了 approval_code 字段，其对应的值即为 TOOL-4073。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 20353,
+      "usage": {
+        "completion_tokens": 46,
+        "total_tokens": 15936,
+        "prompt_tokens": 15890
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 15890,
+          "completion_tokens": 46,
+          "total_tokens": 15936,
+          "reasoning_tokens": null
+        }
+      },
+      "response_model": "gemini-3.1-flash-lite",
+      "finish_reason": "stop",
+      "ttft_ms": 1876,
+      "elapsed_ms": 1876,
+      "http_attempts": 1
+    },
+    {
+      "key": "gemini-3.8-flash-high:history_literal:configured_production:1",
+      "model": "gemini-3.8-flash-high",
+      "case": "history_literal",
+      "variant": "configured_production",
+      "repetition": 1,
+      "status": 200,
+      "error": null,
+      "reply": "{\n  \"fact\": \"HISTORY-9362\",\n  \"reason\": \"前面提供的测试日志记录中明确写有“测试日志最终检查编号为 HISTORY-9362”。\"\n}",
+      "parsed": {
+        "fact": "HISTORY-9362",
+        "reason": "前面提供的测试日志记录中明确写有“测试日志最终检查编号为 HISTORY-9362”。"
+      },
+      "fact_available": true,
+      "fact_covered": true,
+      "available_fact_error": false,
+      "reference_input_tokens": 9675,
+      "usage": {
+        "completion_tokens": 46,
+        "total_tokens": 8235,
+        "prompt_tokens": 7690,
+        "completion_tokens_details": {
+          "reasoning_tokens": 499
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4072
+        }
+      },
+      "typed_terminal": {
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 7690,
+          "completion_tokens": 46,
+          "total_tokens": 8235,
+          "reasoning_tokens": 499
+        }
+      },
+      "response_model": "gemini-3.8-flash-control",
+      "finish_reason": "stop",
+      "ttft_ms": 6824,
+      "elapsed_ms": 6825,
+      "http_attempts": 1
+    }
+  ]
+}

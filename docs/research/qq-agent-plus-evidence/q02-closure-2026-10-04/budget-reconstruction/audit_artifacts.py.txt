@@ -1,0 +1,51 @@
+"""Read-only frozen v43 audit; current-code comparison is optional after later stages."""
+import argparse
+import hashlib
+import json
+from pathlib import Path
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--check-current", action="store_true")
+args = parser.parse_args()
+phase = Path(__file__).resolve().parent
+root = next(p for p in phase.parents if (p / "services/runtime/src").is_dir())
+
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+manifest = json.loads((phase / "manifest.json").read_text())
+actual = {str(p.relative_to(phase)) for p in phase.rglob("*") if p.is_file()
+          and p.name != "manifest.json"
+          and not any(v.startswith(".") or v == "__pycache__" for v in p.relative_to(phase).parts)}
+assert actual == manifest.keys()
+for rel, sha in manifest.items():
+    assert digest(phase / rel) == sha, rel
+code = json.loads((phase / "code-sha256.json").read_text())
+server = json.loads((phase / "live-four-turn/live-server/source-tree-before.json").read_text())
+for rel, sha in code.items():
+    assert digest(phase / "candidate-code" / (rel.replace("/", "__") + ".txt")) == sha
+    assert server[rel] == sha
+    if args.check_current:
+        assert digest(root / rel) == sha, rel
+if args.check_current:
+    for saved in (phase / "documentation-snapshot").glob("*.txt"):
+        rel = saved.name.removesuffix(".txt").replace("__", "/")
+        assert digest(root / rel) == digest(saved), rel
+for name, sha in {
+    "existing-material-routing": "67d55d7ba74cea79781042d1be8512a2e1c4bb7cb6cc4134a8b8b965f11ee675",
+    "autonomous-discovery": "ece42e11d6caa6031260f77ab5b9daa634794fa11f8e5915b949cbcf1a1d9274",
+    "natural-provided-review": "2e735ee47f8ff5e4b33cf21aa8a552e383b9e748ebf3a862e0e99244cc87312d",
+}.items():
+    prior = phase.parent / name
+    assert digest(prior / "manifest.json") == sha, name
+    prior_manifest = json.loads((prior / "manifest.json").read_text())
+    for rel, expected in prior_manifest.get("files", prior_manifest).items():
+        assert digest(prior / rel) == expected, (name, rel)
+checks = json.loads((phase / "software-checks.json").read_text())
+assert checks["after"]["local_unit_affected"] + checks["after"]["local_integration_affected"] == 523
+assert checks["after"]["server_same_targets"] == 523
+assert not json.loads((phase / "decision.json").read_text())["q02_approval"]
+print(json.dumps({"audit": "passed", "entries": len(manifest), "v40_v41_v42": "unchanged",
+                  "check_current": args.check_current, "q02_approval": False}))

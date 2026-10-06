@@ -1,0 +1,6 @@
+  ✓  1 [channels-web] › e2e/channel-settings.spec.ts:9:1 › channel settings persist through real Runtime API and reload in both products (1.6s)
+  ✓  2 [channels-web] › e2e/channel-settings.spec.ts:154:1 › settings controls share sizes, keyboard focus and narrow-screen layout (940ms)
+  ✓  3 [channels-desktop] › e2e/channel-settings.spec.ts:9:1 › channel settings persist through real Runtime API and reload in both products (4.9s)
+  ✓  4 [channels-desktop] › e2e/channel-settings.spec.ts:154:1 › settings controls share sizes, keyboard focus and narrow-screen layout (2.6s)
+  ✓  5 [channels-desktop-webkit] › e2e/channel-settings.spec.ts:154:1 › settings controls share sizes, keyboard focus and narrow-screen layout (3.8s)
+  5 passed (17.5s)

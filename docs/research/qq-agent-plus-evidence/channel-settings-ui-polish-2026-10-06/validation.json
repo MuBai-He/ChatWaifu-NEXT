@@ -1,0 +1,190 @@
+{
+  "date": "2026-10-06",
+  "source_branch": "mubai/messaging-short-replies",
+  "source_baseline": "ee14de4",
+  "no_agy": true,
+  "validation_scope": "frontend controls and native model loading; no handset messaging acceptance",
+  "unit": {
+    "files_passed": 63,
+    "tests_passed": 450
+  },
+  "browser": {
+    "passed": 5,
+    "engines": ["chromium", "webkit"],
+    "runtime": "isolated loopback demo/fake/disabled",
+    "bindings": "synthetic only",
+    "checks": [
+      "account selector appearance and height",
+      "input/select font and radius",
+      "keyboard focus ring",
+      "switch dimensions",
+      "390px no horizontal overflow",
+      "real isolated API persistence and reload",
+      "horizontal number fields retain 84px width",
+      "voice selector retains its half-row width",
+      "QQ endpoint fills its vertical form"
+    ]
+  },
+  "checks": [
+    "TypeScript",
+    "ESLint",
+    "Prettier",
+    "Web build",
+    "Desktop build",
+    "both product artifact isolation",
+    "git diff --check"
+  ],
+  "native_client": {
+    "connected_to_existing_remote_runtime": true,
+    "weixin_selector_visually_verified": true,
+    "previous_pet_warning": "Load failed",
+    "preview_loaded_after_restart": true,
+    "actual_pet_visually_loaded_after_restart": true,
+    "actual_pet_warning_after_restart": null,
+    "renderer_code_changed": false,
+    "initial_failure_details_available": false
+  },
+  "local_asset_reads": [
+    {
+      "path": "live2d/model/avatar.model3.json",
+      "status": 200,
+      "bytes": 1767,
+      "sha256": "21d546587b3a7e3b9836be7b363631520a0d13ebed54f87395f5663987b40829",
+      "content_matches_local": true
+    },
+    {
+      "path": "live2d/live2dcubismcore.min.js",
+      "status": 200,
+      "bytes": 228042,
+      "sha256": "8741f739779b5d5210872bd3d7d99f0f1e56e6c87409e7d26d6bb4b80aa1ef47",
+      "content_matches_local": true
+    },
+    {
+      "path": "live2d/chatwaifu-live2d-bridge.js",
+      "status": 200,
+      "bytes": 534902,
+      "sha256": "451bc5ea3809b31761963e6ebed12004d1a8752c6ce4d69607e6ef96c8030987",
+      "content_matches_local": true
+    },
+    {
+      "path": "live2d/model/avatar.moc3",
+      "status": 200,
+      "bytes": 2622592,
+      "sha256": "eb979ea8de4f237d84e026ab01de5dd6e003b02c8436b009d29bb151d8ea625b",
+      "content_matches_local": true
+    },
+    {
+      "path": "live2d/model/texture/texture_00.png",
+      "status": 200,
+      "bytes": 44931996,
+      "sha256": "36817de8eb8c350c5b5849c5dc26770234e3f5216bc9803d6129f39b7a83f557",
+      "content_matches_local": true
+    },
+    {
+      "path": "live2d/model/avatar.physics3.json",
+      "status": 200,
+      "bytes": 93650,
+      "sha256": "aea70caf3205e53aa5f6f1e4f09a1ce1ae6703a9eb66c51c846a26c269fa8a91",
+      "content_matches_local": true
+    },
+    {
+      "path": "live2d/model/avatar.cdi3.json",
+      "status": 200,
+      "bytes": 28861,
+      "sha256": "7baaf800a261d2dc1c307b2a719c70f0d6cf32792610c464b10b7ea5b17be509",
+      "content_matches_local": true
+    },
+    {
+      "path": "live2d/model/expressions/neutral.exp3.json",
+      "status": 200,
+      "bytes": 54,
+      "sha256": "01b84acd47b264471a5e96a80628a024efc987c7abb02d552ef648d5e7518420",
+      "content_matches_local": true
+    },
+    {
+      "path": "live2d/model/expressions/happy.exp3.json",
+      "status": 200,
+      "bytes": 475,
+      "sha256": "d2ffddec780e33f573c3fcb9c4af5bae00fdb1d485c9c40690b3aa699812767b",
+      "content_matches_local": true
+    },
+    {
+      "path": "live2d/model/expressions/curious.exp3.json",
+      "status": 200,
+      "bytes": 385,
+      "sha256": "32efd78389f94f75f3fdde17e924387a2d21431b725b48ddf7ccaf7f1c3663d9",
+      "content_matches_local": true
+    },
+    {
+      "path": "live2d/model/expressions/shy.exp3.json",
+      "status": 200,
+      "bytes": 385,
+      "sha256": "181fb21c3f7aeecfc3dcee9e1599d2256da38db0d7cfde4b6af5fbaed85b7806",
+      "content_matches_local": true
+    },
+    {
+      "path": "live2d/model/expressions/sad.exp3.json",
+      "status": 200,
+      "bytes": 301,
+      "sha256": "ceac8eb6d67036f0a281cc447af126e2d94757d1750526f9b32efc7987d51ba2",
+      "content_matches_local": true
+    },
+    {
+      "path": "live2d/model/expressions/angry.exp3.json",
+      "status": 200,
+      "bytes": 311,
+      "sha256": "52f5df633461da7dd059dc2c08822c413fe3e5c2d6622dacd32d8014b7267987",
+      "content_matches_local": true
+    },
+    {
+      "path": "live2d/model/expressions/surprised.exp3.json",
+      "status": 200,
+      "bytes": 388,
+      "sha256": "90b76dc44a238eb073e7411a65835b75d7e6ce351b3c775b43e2986bd8f59272",
+      "content_matches_local": true
+    },
+    {
+      "path": "live2d/model/motions/idle-1.motion3.json",
+      "status": 200,
+      "bytes": 449593,
+      "sha256": "cc0bd1d05aff5d0f9e7463ac2293fe80ebef7486b2a3f8f55b70b25f87716cbe",
+      "content_matches_local": true
+    },
+    {
+      "path": "live2d/model/motions/idle-2.motion3.json",
+      "status": 200,
+      "bytes": 1825,
+      "sha256": "f81ebbfea0db0b4f6659e1ad755d3dddf2f6b93105243f9d2bd06cc26c9b1f3a",
+      "content_matches_local": true
+    },
+    {
+      "path": "live2d/model/motions/headpat.motion3.json",
+      "status": 200,
+      "bytes": 2971,
+      "sha256": "06b5e4b08834ef9fb851d540c142295a908540c066280bf4df2686f7cf00c628",
+      "content_matches_local": true
+    },
+    {
+      "path": "live2d/model/motions/stare.motion3.json",
+      "status": 200,
+      "bytes": 2729,
+      "sha256": "71bf34cc43285ca5c0e9cb124a2d7a8baa228b39ca784d09c4c03efba2d2a1f3",
+      "content_matches_local": true
+    },
+    {
+      "path": "live2d/model/motions/flustered.motion3.json",
+      "status": 200,
+      "bytes": 21900,
+      "sha256": "ce927e33324599408c10d30473fd8ab48fb7e3021f5bd224d33f60ebefa4cce6",
+      "content_matches_local": true
+    },
+    {
+      "path": "live2d/model/motions/sing.motion3.json",
+      "status": 200,
+      "bytes": 270145,
+      "sha256": "f2524336e3ebb1b23115bace703dd2adeee10a3352bea467b42441225c6a7113",
+      "content_matches_local": true
+    }
+  ],
+  "product_commit": "13f8254f6134df0c6ba0a3ac6080ae7db19f9ff6"
+}

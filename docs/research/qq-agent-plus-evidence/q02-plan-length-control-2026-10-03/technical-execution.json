@@ -1,0 +1,82 @@
+[
+  {
+    "anchor_id": "single_text:technical_help:r0:t3:candidate",
+    "label": "A",
+    "code_sha256": "18b1e2fed178bda28eb07d2de15b61a9b04d31c41483322a0fa36f80b61d6c43",
+    "returncode": 0,
+    "stdout": "[成功] 任务 1 成功: 任务 1 的结果\n[异常] 任务 2 失败: ValueError - 任务 2 发生错误\n[成功] 任务 3 成功: 任务 3 的结果\n",
+    "stderr": "",
+    "claimed_stdout_matches": true,
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]"
+  },
+  {
+    "anchor_id": "single_text:technical_help:r0:t3:candidate",
+    "label": "B",
+    "code_sha256": "4c9090c7bd45bc02e27438f5085f8b304590462d878557ebd5d8f414ba4080a9",
+    "returncode": 0,
+    "stdout": "[成功] 任务 1 结果: 任务 1 的数据\n[失败] 任务 2 抛出异常: ValueError - 任务 2 发生错误\n[成功] 任务 3 结果: 任务 3 的数据\n",
+    "stderr": "",
+    "claimed_stdout_matches": true,
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]"
+  },
+  {
+    "anchor_id": "single_text:technical_help:r0:t3:candidate",
+    "label": "C",
+    "code_sha256": "56f09264f9662809f320b7135096a3fa0b7cbea2482d6f9f69ed95e40e47cd0c",
+    "returncode": 0,
+    "stdout": "[1] 成功: 任务 1 的结果\n[2] 失败: ValueError - 任务 2 发生错误\n[3] 成功: 任务 3 的结果\n",
+    "stderr": "",
+    "claimed_stdout_matches": true,
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]"
+  },
+  {
+    "anchor_id": "single_text:technical_help:r0:t3:candidate",
+    "label": "D",
+    "code_sha256": "57919f2e5e699c66fef97ca185fceb11973d0ed958695fe5956ad1895e105908",
+    "returncode": 0,
+    "stdout": "[成功] 索引 1: 拿到结果 -> 任务 1 的数据\n[失败] 索引 2: 捕获到异常 -> ValueError: 任务 2 遇到了错误！\n[成功] 索引 3: 拿到结果 -> 任务 3 的数据\n",
+    "stderr": "",
+    "claimed_stdout_matches": true,
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]"
+  },
+  {
+    "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+    "label": "A",
+    "code_sha256": "3727a4852e7b13238a7780466771d0f3b78bb87228a8cdbfea33754b44a2f89f",
+    "returncode": 0,
+    "stdout": "[1] 正常结果: 任务 1 成功\n[2] 捕获到异常: ValueError - 任务 2 发生错误\n[3] 正常结果: 任务 3 成功\n",
+    "stderr": "",
+    "claimed_stdout_matches": true,
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]"
+  },
+  {
+    "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+    "label": "B",
+    "code_sha256": "de76b75e8baf61b511c3e722b57da51a282f95370ed9dc76efe2525ae54a4ce1",
+    "returncode": 0,
+    "stdout": "[1] 执行成功: 任务 1 成功结果\n[2] 执行失败: ValueError -> 任务 2 发生错误\n[3] 执行成功: 任务 3 成功结果\n",
+    "stderr": "",
+    "claimed_stdout_matches": true,
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]"
+  },
+  {
+    "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+    "label": "C",
+    "code_sha256": "966a526b6e902c26a53a5e9ac255979131fdf4946b8b96690d5698e2956d619d",
+    "returncode": 0,
+    "stdout": "[0] 成功: 返回值 -> 任务 1 完成\n[1] 失败: 捕获到异常 -> ValueError: 发生了一个预期的错误\n[2] 成功: 返回值 -> 任务 3 完成\n",
+    "stderr": "",
+    "claimed_stdout_matches": true,
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]"
+  },
+  {
+    "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+    "label": "D",
+    "code_sha256": "2ab454e5689581b1c06aed917cec450011c0d79628fb667c68b2611da1f9e691",
+    "returncode": 0,
+    "stdout": "[0] 任务成功，结果为: 任务 A 执行成功\n[1] 任务失败，异常为: ValueError('任务 B 发生了错误')\n[2] 任务成功，结果为: 任务 C 执行成功\n",
+    "stderr": "",
+    "claimed_stdout_matches": null,
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]"
+  }
+]

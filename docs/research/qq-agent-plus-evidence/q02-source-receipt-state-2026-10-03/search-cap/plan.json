@@ -1,0 +1,12 @@
+{
+  "queries": [
+    "Raft consensus algorithm election timeout heartbeat interval broadcastTime",
+    "民航局 充电宝 乘机规定 最新规定",
+    "民航旅客携带充电宝乘机规定 额定能量 3C标识 托运"
+  ],
+  "source_wire_sha256": "07195b28a06ce05b84e1b7845a50dfb93d5f14b9f203d6a34ef68c337c1f7b15",
+  "endpoint": "http://127.0.0.1:18081/search",
+  "requests_max": 3,
+  "comparison": "Same raw response, first 5 versus first 20; no model runs",
+  "language_parameter_omitted_like_runtime": true
+}

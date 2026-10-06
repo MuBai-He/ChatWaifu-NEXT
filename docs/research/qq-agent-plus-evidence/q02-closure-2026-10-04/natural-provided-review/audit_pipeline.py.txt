@@ -1,0 +1,272 @@
+"""Audit existing wire/accounting without model calls or semantic approval."""
+
+import argparse
+import hashlib
+import json
+import runpy
+from collections import Counter
+from pathlib import Path
+
+from chatwaifu_runtime.providers.input_estimation import count_reference_tokens
+
+
+def read_json(path):
+    return json.loads(path.read_text())
+
+
+def read_lines(path):
+    return [json.loads(line) for line in path.read_text().splitlines() if line]
+
+
+def text_sha(text):
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
+def percentile(values, fraction):
+    values = sorted(values)
+    index = (len(values) - 1) * fraction
+    lower = int(index)
+    upper = min(lower + 1, len(values) - 1)
+    return round(values[lower] + (values[upper] - values[lower]) * (index - lower), 3)
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--write-reports", action="store_true")
+args = parser.parse_args()
+phase = Path(__file__).resolve().parent
+live = phase / "live"
+policy_file = (
+    phase / "candidate-code/services__runtime__src__chatwaifu_runtime__agent__source_answer.py.txt"
+)
+provided_source_answer_revision_prompt = runpy.run_path(str(policy_file))[
+    "provided_source_answer_revision_prompt"
+]
+sources = read_json(live / "frozen-sources.json")
+fixtures = {row["id"]: row for row in read_json(live / "fixtures.json")}
+replies = read_lines(live / "results.jsonl")
+rounds = read_lines(live / "provider-rounds.jsonl")
+wire = read_lines(live / "actual-provider-payloads.jsonl")
+http = read_lines(live / "http-outcomes.jsonl")
+assert len(replies) == 16 and len(rounds) == len(wire) == len(http) == 32
+expected_keys = {
+    f"frozen_{source}:r{repeat}:t{turn}"
+    for source in sources
+    for repeat in range(2)
+    for turn in range(1, 5)
+}
+by_key = {row["sample_key"]: row for row in replies}
+assert set(by_key) == expected_keys and len(by_key) == 16
+assert {row["logical_request"] for row in rounds} == set(range(1, 33))
+assert {row["http_attempt"] for row in http} == set(range(1, 33))
+assert {row["logical_request"] for row in wire} == set(range(1, 33))
+assert {row["http_attempt"] for row in wire} == set(range(1, 33))
+by_request = {row["logical_request"]: row for row in rounds}
+by_http = {row["http_attempt"]: row for row in http}
+wire_checks = []
+usage_rows = []
+for row in wire:
+    payload = row["payload"]
+    logical = by_request[row["logical_request"]]
+    assert row["logical_request"] == row["http_attempt"]
+    assert logical["sample_key"] == row["sample_key"]
+    assert (
+        logical["generation_id"]
+        == row["generation_id"]
+        == by_key[row["sample_key"]]["generation_id"]
+    )
+    assert logical["phase"] == row["phase"] in {"draft", "review"}
+    assert logical["response_schema"] is None
+    assert (
+        text_sha(json.dumps(payload, ensure_ascii=False, sort_keys=True)) == row["payload_sha256"]
+    )
+    assert payload["model"] == "gemini-3.8-flash-high" and payload["max_tokens"] == 8192
+    assert payload["stream"] is True and payload["stream_options"]["include_usage"] is True
+    assert not payload.get("tools") and not payload.get("response_format")
+    assert by_http[row["http_attempt"]]["status"] == 200
+    assert by_http[row["http_attempt"]]["error_type"] is None
+    document_blocks = []
+    draft_blocks = []
+    for message in payload["messages"]:
+        content = message.get("content", "")
+        assert isinstance(content, str)
+        if content.startswith("[SOURCE ANSWER MATERIAL 1.0]\n"):
+            block = json.loads(content.split("\n", 1)[1])
+            assert message["role"] == "user" and block["untrusted"] is True
+            assert block["origin"] == "provided" and block["version"] == "1.0"
+            document_blocks.extend(block["documents"])
+        if content.startswith("[UNPUBLISHED ANSWER DRAFT]\n"):
+            block = json.loads(content.split("\n", 1)[1])
+            assert message["role"] == "user" and block["untrusted"] is True
+            draft_blocks.append(block["text"])
+    source = sources[row["source_key"]]
+    assert len(document_blocks) == 1
+    document = document_blocks[0]
+    assert document["text"] == source["text"]
+    assert document["url"] == source["url"] and document["body_sha256"] == source["body_sha256"]
+    assert text_sha(document["text"]) == row["source_text_sha256"] == source["text_sha256"]
+    source_key, repeat, turn_id = row["sample_key"].split(":")
+    turn_id = int(turn_id.removeprefix("t"))
+    expected_prior = [
+        by_key[f"{source_key}:{repeat}:t{turn}"]["reply_text"] for turn in range(1, turn_id)
+    ]
+    assert row["prior_replies"] == logical["prior_replies"] == expected_prior
+    history = [message for message in payload["messages"] if message["role"] == "assistant"]
+    assert history == [{"role": "assistant", "content": text} for text in expected_prior]
+    for fixture_turn in fixtures[source_key]["turns"][:turn_id]:
+        assert {"role": "user", "content": fixture_turn["user_text"]} in payload["messages"]
+    persona = (phase / "persona.md").read_text()
+    assert persona in payload["messages"][0]["content"]
+    if row["phase"] == "review":
+        draft = next(
+            item
+            for item in rounds
+            if item["sample_key"] == row["sample_key"] and item["phase"] == "draft"
+        )
+        assert draft_blocks == [draft["raw_text"]]
+        assert payload["messages"][-1] == {
+            "role": "system",
+            "content": provided_source_answer_revision_prompt(),
+        }
+    else:
+        assert not draft_blocks
+        assert provided_source_answer_revision_prompt() not in [
+            m["content"] for m in payload["messages"]
+        ]
+    projection = {
+        key: payload[key]
+        for key in ("messages", "tools", "tool_choice", "response_format")
+        if key in payload
+    }
+    reference = count_reference_tokens(
+        json.dumps(projection, ensure_ascii=False, separators=(",", ":"))
+    )
+    reference += 16 * len(payload["messages"]) + 16 * len(payload.get("tools", []))
+    assert reference == logical["reference_input_tokens"]
+    report = logical["input_budget_report"]
+    assert report["estimator"] == "cl100k_chat_json_v1"
+    assert report["estimated_input_tokens"] == reference <= report["estimated_token_limit"] == 21370
+    assert not report["omitted_history_indices"] and not report["omitted_tool_preamble_indices"]
+    assert report["estimated_image_tokens"] == 0
+    assert logical["error_type"] is None
+    terminal = logical["terminal"]
+    assert terminal["finish_reason"] == "stop" and not terminal["identity"]["incomplete"]
+    usage = terminal["usage"]
+    assert all(
+        usage.get(key) is not None for key in ("prompt_tokens", "completion_tokens", "total_tokens")
+    )
+    usage_rows.append(
+        {
+            "sample_key": row["sample_key"],
+            "phase": row["phase"],
+            "logical_request": row["logical_request"],
+            "http_attempt": row["http_attempt"],
+            "usage": usage,
+            "reference_input_tokens": reference,
+            "reference_error_percent": round(
+                (reference - usage["prompt_tokens"]) / usage["prompt_tokens"] * 100, 6
+            ),
+        }
+    )
+    wire_checks.append(
+        {
+            "sample_key": row["sample_key"],
+            "phase": row["phase"],
+            "http_attempt": row["http_attempt"],
+            "complete_source": True,
+            "complete_own_history": True,
+            "untrusted_provided_data": True,
+            "withheld_draft_whole_on_review_wire": row["phase"] == "review",
+            "reference_wire_recount_matched": True,
+        }
+    )
+publication_checks = []
+for reply in replies:
+    phases = [row for row in rounds if row["sample_key"] == reply["sample_key"]]
+    assert [row["phase"] for row in phases] == ["draft", "review"]
+    assert reply["execution"] == reply["state"] == "completed" and reply["error_code"] is None
+    assert reply["reply_origin"] == "provider" and reply["frame_version"] is None
+    assert not reply["completed_gaps"]
+    assert reply["reply_text"] == phases[1]["raw_text"]
+    publication_checks.append(
+        {
+            "sample_key": reply["sample_key"],
+            "draft_sha256": text_sha(phases[0]["raw_text"]),
+            "review_sha256": text_sha(phases[1]["raw_text"]),
+            "published_sha256": text_sha(reply["reply_text"]),
+            "runtime_appended_or_rewrote_final_text": False,
+        }
+    )
+
+usage_keys = ("prompt_tokens", "completion_tokens", "total_tokens")
+phase_usage = {}
+for phase_name in ("draft", "review"):
+    data = [row["usage"] for row in usage_rows if row["phase"] == phase_name]
+    phase_usage[phase_name] = {
+        "reported_calls": len(data),
+        **{key: sum(row[key] for row in data) for key in usage_keys},
+        "reasoning_reported_calls": sum(row.get("reasoning_tokens") is not None for row in data),
+        "reasoning_reported_subtotal": sum(row.get("reasoning_tokens") or 0 for row in data),
+    }
+references = [row["reference_input_tokens"] for row in usage_rows]
+errors = [row["reference_error_percent"] for row in usage_rows]
+accounting = {
+    "actual_http_attempts": len(http),
+    "logical_requests": len(rounds),
+    "complete_four_turn_flows": 4,
+    "provider_published_replies": 16,
+    "runtime_fallback": 0,
+    "checker_rejected": 0,
+    "failed_turns": 0,
+    "not_executed_turns": 0,
+    "whole_input_omissions": [],
+    "reported_usage_calls": 32,
+    "unknown_usage_logical_calls": 0,
+    "extra_http_attempts_usage_unknown": 0,
+    "usage_subtotals": {key: sum(row["usage"][key] for row in usage_rows) for key in usage_keys},
+    "reasoning_reported_calls": sum(
+        row["usage"].get("reasoning_tokens") is not None for row in usage_rows
+    ),
+    "reasoning_reported_subtotal": sum(
+        row["usage"].get("reasoning_tokens") or 0 for row in usage_rows
+    ),
+    "phase_usage": phase_usage,
+    "reference_input_min": min(references),
+    "reference_input_max": max(references),
+    "reference_error_min_percent": min(errors),
+    "reference_error_max_percent": max(errors),
+    "reference_margin_is_error_bound": False,
+    "http_p50_ms": percentile([row["elapsed_ms"] for row in http], 0.5),
+    "http_p95_ms": percentile([row["elapsed_ms"] for row in http], 0.95),
+    "turn_p50_ms": percentile([row["elapsed_ms"] for row in replies], 0.5),
+    "turn_p95_ms": percentile([row["elapsed_ms"] for row in replies], 0.95),
+    "model_reported_ids": dict(
+        Counter(
+            model for row in rounds for model in row["terminal"]["identity"]["reported_model_ids"]
+        )
+    ),
+    "native_model_caps_or_alias_mapping_verified": False,
+    "first_user_token_latency_captured": False,
+    "new_public_search_calls": 0,
+    "new_public_read_calls": 0,
+    "new_tts_or_channel_calls": 0,
+    "frames_enabled": False,
+    "quality_approval": False,
+    "automatic_semantic_grading": False,
+}
+reports = {
+    "accounting.json": accounting,
+    "usage-by-request.json": usage_rows,
+    "flow-integrity.json": {
+        "wire_checks": wire_checks,
+        "publication_checks": publication_checks,
+        "quality_approval": False,
+    },
+}
+for name, value in reports.items():
+    path = live / name
+    if args.write_reports:
+        assert not path.exists(), name
+        path.write_text(json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2) + "\n")
+    else:
+        assert read_json(path) == value, name
+print(json.dumps(accounting, ensure_ascii=False, sort_keys=True))

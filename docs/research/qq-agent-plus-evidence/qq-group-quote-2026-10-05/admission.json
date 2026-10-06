@@ -1,0 +1,110 @@
+{
+  "source": "authenticated_read_only_napcat_history_and_runtime_ledger",
+  "group_id": "931709239",
+  "history_limit": 20,
+  "before": {
+    "observed_at": "2026-10-05T07:07:21.960543+00:00",
+    "quoted_inputs": [
+      {
+        "message_id": "1390993153",
+        "time": 1791183582,
+        "sender_is_bot": false,
+        "segments": [
+          "reply",
+          "at",
+          "text",
+          "text"
+        ],
+        "bot_mentions": 1,
+        "quote_count": 1,
+        "runtime_status": null,
+        "references": [
+          {
+            "id_matches": true,
+            "same_group": true,
+            "message_type": "group",
+            "author_is_bot": true
+          }
+        ],
+        "current_normalizer_accepts_history_shape": false
+      },
+      {
+        "message_id": "1254562282",
+        "time": 1791183623,
+        "sender_is_bot": false,
+        "segments": [
+          "reply",
+          "at",
+          "text",
+          "text"
+        ],
+        "bot_mentions": 1,
+        "quote_count": 1,
+        "runtime_status": null,
+        "references": [
+          {
+            "id_matches": true,
+            "same_group": true,
+            "message_type": "group",
+            "author_is_bot": true
+          }
+        ],
+        "current_normalizer_accepts_history_shape": false
+      }
+    ]
+  },
+  "after": {
+    "observed_at": "2026-10-05T07:22:05.938013+00:00",
+    "quoted_inputs": [
+      {
+        "message_id": "1390993153",
+        "time": 1791183582,
+        "sender_is_bot": false,
+        "segments": [
+          "reply",
+          "at",
+          "text",
+          "text"
+        ],
+        "bot_mentions": 1,
+        "quote_count": 1,
+        "runtime_status": null,
+        "references": [
+          {
+            "id_matches": true,
+            "same_group": true,
+            "message_type": "group",
+            "author_is_bot": true
+          }
+        ],
+        "current_normalizer_accepts_history_shape": true
+      },
+      {
+        "message_id": "1254562282",
+        "time": 1791183623,
+        "sender_is_bot": false,
+        "segments": [
+          "reply",
+          "at",
+          "text",
+          "text"
+        ],
+        "bot_mentions": 1,
+        "quote_count": 1,
+        "runtime_status": null,
+        "references": [
+          {
+            "id_matches": true,
+            "same_group": true,
+            "message_type": "group",
+            "author_is_bot": true
+          }
+        ],
+        "current_normalizer_accepts_history_shape": true
+      }
+    ]
+  },
+  "manual_external_messages_sent": 0,
+  "runtime_inputs_replayed": 0,
+  "interpretation": "history-shape normalizer replay only; new live model and handset acceptance pending"
+}

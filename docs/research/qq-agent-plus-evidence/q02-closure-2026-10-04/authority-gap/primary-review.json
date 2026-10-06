@@ -1,0 +1,41 @@
+{
+  "reviewer": "Implementing primary Codex agent; full retrieved text review, not keyword approval",
+  "entries": [
+    {
+      "artifact": "server/read-1.json",
+      "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XWZX/XB_DQYW/202507/t20250710_227953.html",
+      "text_sha256": "25767c72cf06cdf73858568e482a66d80f07b04eabdabe1b3a4fda5df46a1f5a",
+      "body_sha256": "60e0fe8147e861ac5f59dab06654c8912996ae997c34a7370cd5abc7d6102596",
+      "truncated": false,
+      "visible_time": "2025-07-10 16:59",
+      "source_scope": "西北局辖区落实报道；转述民航局部署，非全国通知原件",
+      "explicitly_supported": "3C缺标识/不清晰及召回条件；第二篇明确境内航班与型号/批次",
+      "not_established": [
+        "全国通知原件已取得",
+        "2026-10-04现行穷尽",
+        "全部承运人更新/审批规则",
+        "动态召回目录全面核对"
+      ],
+      "date_not_inferred_from_url": true
+    },
+    {
+      "artifact": "server/read-2.json",
+      "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/DB_DQXW/202507/t20250709_227899.html",
+      "text_sha256": "69070cf576eb5ffd0ec2cfc37b21846e76df46b71c3398e6a6a10590abdf78e2",
+      "body_sha256": "b5ff0b049a687378b389391416edb38b7e9dbafc05a38448671ef0ca32982b65",
+      "truncated": false,
+      "visible_time": "2025-06-30 15:04",
+      "source_scope": "东北局沈阳机场督导报道；转述境内航班通知，非通知原件/全承运人政策",
+      "explicitly_supported": "3C缺标识/不清晰及召回条件；第二篇明确境内航班与型号/批次",
+      "not_established": [
+        "全国通知原件已取得",
+        "2026-10-04现行穷尽",
+        "全部承运人更新/审批规则",
+        "动态召回目录全面核对"
+      ],
+      "date_not_inferred_from_url": true
+    }
+  ],
+  "conclusion": "Two explicit queries and two new official-body reads address the observed source gap at adapter scope; autonomous model selection and overall source/answer quality remain unapproved",
+  "model_calls": 0
+}

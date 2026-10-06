@@ -1,0 +1,35 @@
+import asyncio,json,shutil,sys
+from dataclasses import asdict, replace
+from pathlib import Path
+from uuid import UUID
+import study as s
+from chatwaifu_runtime.providers.contracts import LlmRequest,LlmInputBudget
+from chatwaifu_runtime.providers.input_estimation import estimate_reference_input_tokens
+from chatwaifu_runtime.providers.openai_compatible import build_messages,build_chat_completions_payload
+from chatwaifu_runtime.agent.input_budget import fit_input_budget
+original_root=s.ROOT
+s.ROOT=original_root/'whole-request'
+s.ROOT.mkdir(exist_ok=True)
+if sys.argv[1]=='prepare':
+ original=json.loads((original_root/'requests.json').read_text())
+ base=next(x for x in original if x['case']=='short_control' and x['variant']=='current')
+ raw=base['request'];raw['generation_id']=UUID(raw['generation_id']);raw['input_budget']=None;raw['input_budget_report']=None
+ gold='WIRE-7528'
+ question='之前助手传达的合成档案编号是什么？只依据所给历史，缺少原文就填 null；只输出 JSON，fact 填精确编号字符串或 null，reason 简述依据。'
+ text=('背景资料：此段为已完成的合成说明，不含当前所问编号。\n'*450)+'\n档案编号为 '+gold+'。'
+ raw['context']=tuple(tuple(x) for x in raw['context']);raw['history']=(('assistant',text),('user','请核对前面的合成档案。'));raw['user_text']=question
+ request=LlmRequest(**raw)
+ records=[]
+ for variant,budget in [('current',7292),('window_only',31868)]:
+  fitted=fit_input_budget(replace(request,input_budget=LlmInputBudget(budget)))
+  payload=build_chat_completions_payload('unset',fitted,build_messages(fitted),request_usage=True)
+  records.append({'case':'whole_request_history','variant':variant,'gold':gold,'fact_available':gold in json.dumps(payload,ensure_ascii=False),'request':asdict(fitted),'payload':payload,'reference_tokens':estimate_reference_input_tokens(fitted),'local_budget_error':None})
+ s.write('requests.json',records)
+ s.write('original-material.json',{'text':text,'question':question,'gold':gold})
+ plan=json.loads((original_root/'plan.json').read_text())
+ plan.update({'maximum_generation_requests':12,'maximum_http_attempts':12,'requests_sha256':s.sha((s.ROOT/'requests.json').read_bytes()),'supplement_driver_sha256':s.sha(Path(__file__).read_bytes())})
+ s.write('plan.json',plan);shutil.copyfile(original_root/'endpoint-metadata.json',s.ROOT/'endpoint-metadata.json')
+ print(json.dumps([{'variant':x['variant'],'available':x['fact_available'],'reference':x['reference_tokens'],'fitter':x['request']['input_budget_report']} for x in records]))
+else:
+ assert s.sha(Path(__file__).read_bytes())==json.loads((s.ROOT/'plan.json').read_text())['supplement_driver_sha256']
+ asyncio.run(s.run())

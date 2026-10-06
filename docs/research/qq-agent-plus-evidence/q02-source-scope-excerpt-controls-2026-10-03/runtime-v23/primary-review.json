@@ -1,0 +1,48 @@
+{
+  "reviewer": "primary Codex",
+  "blind": false,
+  "quality_approved": false,
+  "scope": "Eight actual replies, native decisions and retained successful bodies; not full Q02 blind acceptance.",
+  "reviews": [
+    {
+      "sample_key": "topic_switch:r0:t1:candidate",
+      "rating": "partial",
+      "reason": "真实读取原论文5.6/5.2两个片段，150–300ms示例现在有实际正文依据，并避免每次收到心跳都必须重抽；开头仍将心跳固定间隔概括为协议要求，且“没有收到任何通信”未保留来自有效领导者/候选人的限定。"
+    },
+    {
+      "sample_key": "topic_switch:r0:t2:candidate",
+      "rating": "partial",
+      "reason": "正确转到饮食话题，未继续Raft；开场停顿和长篇自述超出轻量闲聊目标。"
+    },
+    {
+      "sample_key": "topic_switch:r0:t3:candidate",
+      "rating": "partial",
+      "reason": "有轻微吐槽和尊重用户口味的回应，未升级关系；篇幅仍偏长。"
+    },
+    {
+      "sample_key": "topic_switch:r0:t4:candidate",
+      "rating": "pass",
+      "reason": "角色口味偏好与熟悉程度相符，无无源共同经历或已执行现实动作承诺。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t1:candidate",
+      "rating": "partial",
+      "reason": "满足三类各三条；加入无来源的民航/铁路通用100Wh限额及实体证件必需说法，结尾另加行李建议。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "rating": "fail",
+      "reason": "三条组织、3C/召回与Wh各分档及引用完整，但仅读2015民航指南和2025新闻，查新词仍预填3C且忽略返回的2026线索；未说明日期、后续更新和范围缺口，不能视为现行规则已核实。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t3:candidate",
+      "rating": "partial",
+      "reason": "两项独立室内方案、时长与注意事项完整，没有具体停止入场时刻；未给定场馆时仍将雨具存放方式写为必须，范围需收敛。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t4:candidate",
+      "rating": "partial",
+      "reason": "三类项目、数量、两套活动及各自时长保留，删除了前轮铁路100Wh概括；仍继承旧法规覆盖不足，未保留更新未核实的说明。"
+    }
+  ]
+}

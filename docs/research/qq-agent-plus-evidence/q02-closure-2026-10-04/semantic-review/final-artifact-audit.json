@@ -1,0 +1,22 @@
+{
+  "current_checkout_check_optional": true,
+  "documents_snapshotted": 4,
+  "existing_v39_targeted_reviews": 5,
+  "existing_wire_payloads_bound": 32,
+  "full_existing_natural_answers_reviewed": 32,
+  "new_model_calls": 0,
+  "new_prompt_rules": 0,
+  "new_retrieval_calls": 0,
+  "prior_frozen_entries_unchanged": {
+    "deployed-retrieval-check": 31,
+    "reader-integration": 35,
+    "revision-pipeline": 84,
+    "scope-blocks": 93
+  },
+  "production_mutations": 0,
+  "published_date_regrades": 4,
+  "q02_approval": false,
+  "raw_replies_replaced": 0,
+  "semantic_quality_auto_approval": false,
+  "source_and_history_integrity_retained": true
+}

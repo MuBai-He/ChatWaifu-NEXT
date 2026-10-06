@@ -1,0 +1,63 @@
+{
+  "review_group_id": "single_text:topic_switch:r0",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "0a95c7ec3b3b1ec403959bb9fbda36b4448e22db6f1dbc353b6ed274bcd92467",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 531,
+    "total_tokens": 4842,
+    "prompt_tokens": 4311
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"single_text:topic_switch:r0\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"fail\",\n      \"candidate_2_compliance\": \"fail\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两候选均触发搜索失败提示，诚实拒绝但未能回答技术问题，表现一致。\",\n      \"factual_checks_needed\": [\n        \"Raft 选举超时与心跳超时的具体计算与时间区间关系\"\n      ]\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"均迅速脱离技术话题，轻松自然地探讨番茄炒蛋调味，无生硬感。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"候选2打趣两勺糖像甜点并理解配米饭的美味，互动感更生动活泼。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"候选2提出出汁料理与红茶点心，更贴合宁宁的温和细腻性格。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "single_text:topic_switch:r0",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "fail",
+        "candidate_2_compliance": "fail",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两候选均触发搜索失败提示，诚实拒绝但未能回答技术问题，表现一致。",
+        "factual_checks_needed": [
+          "Raft 选举超时与心跳超时的具体计算与时间区间关系"
+        ]
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "均迅速脱离技术话题，轻松自然地探讨番茄炒蛋调味，无生硬感。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "候选2打趣两勺糖像甜点并理解配米饭的美味，互动感更生动活泼。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "候选2提出出汁料理与红茶点心，更贴合宁宁的温和细腻性格。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 3307
+}

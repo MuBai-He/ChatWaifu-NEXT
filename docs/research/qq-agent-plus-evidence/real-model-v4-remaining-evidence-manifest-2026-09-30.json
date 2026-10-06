@@ -1,0 +1,190 @@
+{
+  "schema_version": "1.1",
+  "source_fixture_sha256_first16": "9c5a731b5d92559e",
+  "source_tool_version": "1.1.0",
+  "samples": 432,
+  "pairs": 216,
+  "models": [
+    {
+      "model": "gemini-3.8-flash-high",
+      "identity": {
+        "tool": "evaluate_character_scenarios",
+        "version": "1.1.0",
+        "fixtures_hash": "9c5a731b5d92559e",
+        "provider": "openai_compatible",
+        "model": "gemini-3.8-flash-high",
+        "repeats": 3,
+        "base_url_hash": "937c7a5a291b7e56",
+        "input_usd_per_million": null,
+        "output_usd_per_million": null,
+        "pricing_source": null,
+        "cost_policy": "no_cost_ceiling",
+        "cost_ceiling": null,
+        "variants": {
+          "baseline_v3": {
+            "hash": "7f9daf3c6cefd57f"
+          },
+          "candidate_v4": {
+            "hash": "3ab060352dcb8e25"
+          }
+        }
+      },
+      "new_samples": 144,
+      "new_pairs": 72,
+      "directory": "character_scenarios_ab_gemini_3_8_flash_high_v4_remaining_before_seed_fix",
+      "files": [
+        {
+          "path": "blind_judge_prompt.txt",
+          "sha256": "b76256a94a2cc75d46a1e734f82e9e36bc0920c12689ca92806ba23e5d6fc77e"
+        },
+        {
+          "path": "blind_judge_report.json",
+          "sha256": "8a7d71c0d6b34c9c0d60c38d08f72ea090612494bf94d362779294130fd68b3a"
+        },
+        {
+          "path": "blinded_key.json",
+          "sha256": "995037a56d48e57493bd3fe1670db7d813d700bb20941112f19aed220998cea2"
+        },
+        {
+          "path": "blinded_review_template.md",
+          "sha256": "560458efc200c287dd182c123720718008fdd3cf6d128ce15f60f3bf453b0bfd"
+        },
+        {
+          "path": "metadata.json",
+          "sha256": "271eec3d67d05bc728acf8a954e07ae21849fb6eb5fa22911d315bfd7bd4052d"
+        },
+        {
+          "path": "results.jsonl",
+          "sha256": "0fe044a7279c7d9f516d7c99b5287175c304663eec7a4582f901c11965d01252"
+        },
+        {
+          "path": "summary.json",
+          "sha256": "31941eec8ba450506c166f95b2b60340f153c5e0e455682af94d8188f6ce9ea2"
+        }
+      ],
+      "release_approved": false,
+      "state_grounding": "not recorded in rows; offline reconstruction from original runner shows acquaintance on every turn"
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "identity": {
+        "tool": "evaluate_character_scenarios",
+        "version": "1.1.0",
+        "fixtures_hash": "9c5a731b5d92559e",
+        "provider": "openai_compatible",
+        "model": "claude-sonnet-4-6",
+        "repeats": 3,
+        "base_url_hash": "937c7a5a291b7e56",
+        "input_usd_per_million": null,
+        "output_usd_per_million": null,
+        "pricing_source": null,
+        "cost_policy": "no_cost_ceiling",
+        "cost_ceiling": null,
+        "variants": {
+          "baseline_v3": {
+            "hash": "7f9daf3c6cefd57f"
+          },
+          "candidate_v4": {
+            "hash": "3ab060352dcb8e25"
+          }
+        }
+      },
+      "new_samples": 144,
+      "new_pairs": 72,
+      "directory": "character_scenarios_ab_claude_sonnet_4_6_v4_remaining_before_seed_fix",
+      "files": [
+        {
+          "path": "blind_judge_prompt.txt",
+          "sha256": "9606b2a5c5e802befdf5b0633e8f4a5c03927b8b4ff925faea1a3961b3d4cfce"
+        },
+        {
+          "path": "blind_judge_report.json",
+          "sha256": "2ecb6815dc2025f92f0af2e9880e2dab3fac158f49410b0dd64230ea668cb567"
+        },
+        {
+          "path": "blinded_key.json",
+          "sha256": "995037a56d48e57493bd3fe1670db7d813d700bb20941112f19aed220998cea2"
+        },
+        {
+          "path": "blinded_review_template.md",
+          "sha256": "6294322450e30d4a54c324f3615630853a2a3fca773e5902ba10d3a3185fd3c4"
+        },
+        {
+          "path": "metadata.json",
+          "sha256": "2f6bbee90c5a90a39cfcdf5f57ed1392584f805342e6dc09a94c55be2dc6b8d9"
+        },
+        {
+          "path": "results.jsonl",
+          "sha256": "c8ea530d00e75ed9d3296b970675fca8b6ca4bad20febaf9901d227900754d36"
+        },
+        {
+          "path": "summary.json",
+          "sha256": "a0f39300fe8995fa46fa730180094ca75954f109a5ed32afff758fe68372404c"
+        }
+      ],
+      "release_approved": false,
+      "state_grounding": "not recorded in rows; offline reconstruction from original runner shows acquaintance on every turn"
+    },
+    {
+      "model": "claude-opus-4-6-thinking",
+      "identity": {
+        "tool": "evaluate_character_scenarios",
+        "version": "1.1.0",
+        "fixtures_hash": "9c5a731b5d92559e",
+        "provider": "openai_compatible",
+        "model": "claude-opus-4-6-thinking",
+        "repeats": 3,
+        "base_url_hash": "937c7a5a291b7e56",
+        "input_usd_per_million": null,
+        "output_usd_per_million": null,
+        "pricing_source": null,
+        "cost_policy": "no_cost_ceiling",
+        "cost_ceiling": null,
+        "variants": {
+          "baseline_v3": {
+            "hash": "7f9daf3c6cefd57f"
+          },
+          "candidate_v4": {
+            "hash": "3ab060352dcb8e25"
+          }
+        }
+      },
+      "new_samples": 144,
+      "new_pairs": 72,
+      "directory": "character_scenarios_ab_claude_opus_4_6_thinking_v4_remaining_before_seed_fix",
+      "files": [
+        {
+          "path": "blind_judge_prompt.txt",
+          "sha256": "2d41bc5dbd9be52fccdd3ffe3381b2ac998242a05bb4e178ba8e30265442516b"
+        },
+        {
+          "path": "blind_judge_report.json",
+          "sha256": "c9a29b1443eb92b6b3fff607431b44f069bb6e1c35da674464661fcb65ad26d8"
+        },
+        {
+          "path": "blinded_key.json",
+          "sha256": "995037a56d48e57493bd3fe1670db7d813d700bb20941112f19aed220998cea2"
+        },
+        {
+          "path": "blinded_review_template.md",
+          "sha256": "d541a021a587c80d04bf8e0559b9945df154af0a910b480f5611293fad94752b"
+        },
+        {
+          "path": "metadata.json",
+          "sha256": "fc57bd4284c462d1d08c3e4a24745239ce3f2b097d011ec39f0a30be113089d9"
+        },
+        {
+          "path": "results.jsonl",
+          "sha256": "d45bbdbb7014931ca18536f8e2d15bc3eaebc8ea04d9da52604e58f6b8c1a153"
+        },
+        {
+          "path": "summary.json",
+          "sha256": "a0cb93ea8415297ca6989cae1b84f571a4b324b51446946d0de865a8e348a63d"
+        }
+      ],
+      "release_approved": false,
+      "state_grounding": "not recorded in rows; offline reconstruction from original runner shows acquaintance on every turn"
+    }
+  ],
+  "release_approved": false
+}

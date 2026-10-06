@@ -1,0 +1,31 @@
+{
+  "boundary_evidence": [
+    "provided originals use same existing review requirements; no false claim READ performed",
+    "known schema/gap overhead guarded before draft; final whole-input guard includes actual draft and review policy",
+    "draft never published or adopted as completed-gap state",
+    "oversized draft, absent/late terminal or tool call rejected",
+    "draft provider generator closes on cancellation; no completion callback",
+    "existing complete-generation/reset/stop/routes/history/state isolation regressions retained"
+  ],
+  "code_review": "Implementation author reviewed actual4 incremental diffs plus new regression test; not independent agent review",
+  "controlled_fixture_model_calls": 0,
+  "controlled_fixture_replies": 16,
+  "controlled_logical_requests": 32,
+  "diff_check": "passed",
+  "frontend_changes": false,
+  "local_tests": 312,
+  "new_regression_tests": 8,
+  "no_agy_invocations": true,
+  "paid_quality_replies": 16,
+  "paid_quality_requests": 32,
+  "preexisting_worktree_changes_preserved": true,
+  "pyright_errors": 0,
+  "read_source_policy_golden_unchanged": true,
+  "ruff_check": "passed",
+  "ruff_format_check": "5 Python files already formatted",
+  "server_tests": 286,
+  "test_setup_errors_not_product_defects": [
+    "Old request-position assertions adapted for two-phase provided path",
+    "Four static typing errors were test fixture annotations and empty ToolCall arguments; corrected before final checks"
+  ]
+}

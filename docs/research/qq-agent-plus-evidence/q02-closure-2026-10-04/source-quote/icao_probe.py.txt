@@ -1,0 +1,152 @@
+"""Two ICAO T4 controls with existing unstructured historical T3s, no tools."""
+
+import asyncio
+import copy
+import hashlib
+import json
+import sys
+import time
+from pathlib import Path
+
+ROOT = Path('/tmp/cw2-q02-source-quote-v20-eval')
+STAGE = Path('/tmp/cw2-q02-source-quote-icao-20261004')
+INPUT = Path('/tmp/cw2-q02-closure-candidate-one-20261004')
+sys.path[:0] = [str(ROOT / 'services/runtime/src'),
+               str(ROOT / 'packages/protocol-python/src'), '/tmp/cw2-q02-eval-deps']
+import httpx2
+from chatwaifu_runtime.agent.source_answer_frame import (
+    MAX_FRAME_BYTES, FrameSource, SourceAnswerGap, SourceAnswerFrameError,
+)
+from chatwaifu_runtime.agent.source_quote_frame import (
+    QuoteFrameSource, source_quote_frame_messages, source_quote_frame_schema,
+    decode_source_quote_frame,
+)
+from chatwaifu_runtime.providers.input_estimation import count_reference_tokens
+
+assert not (STAGE / 'admission.json').exists(), 'Inspect existing invocation before retry'
+STAGE.mkdir(mode=0o700, exist_ok=True)
+key = json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+rows = [json.loads(x) for x in (INPUT / 'results/results.jsonl').read_text().splitlines()]
+wires = {row['generation_id']: row for row in (json.loads(x) for x in (INPUT / 'actual-provider-payloads.jsonl').read_text().splitlines())}
+src = json.loads((INPUT / 'frozen-sources.json').read_text())['icao']
+assert hashlib.sha256(src['text'].encode()).hexdigest() == src['text_sha256']
+sources = (QuoteFrameSource(FrameSource(src['url'], src['body_sha256']), src['text']),)
+assert ''.join(sources[0].units) == src['text']
+
+
+def save(name, row):
+    serialized = json.dumps(row, ensure_ascii=False, default=str)
+    assert key not in serialized
+    with (STAGE / name).open('a') as target:
+        target.write(serialized + '\n')
+
+
+from uuid import uuid5, NAMESPACE_URL
+prepared = []
+for repeat in range(2):
+    selected = {row['turn_id']: row for row in rows if row['sample_key'].startswith(f'frozen_icao:r{repeat}:')}
+    assert len(selected) == 4
+    original = wires[str(uuid5(NAMESPACE_URL, selected[4]['sample_key']))]
+    old = original['payload']
+    payload = copy.deepcopy(old)
+    assert old['messages'][-2]['role'] == 'assistant' and old['messages'][-2]['content'] == selected[3]['raw_reply']
+    prior = ()  # No declared frame state existed; do not extract control state from prose.
+    prior_row = {'published_reply': selected[3]['raw_reply'], 'gaps': []}
+    question = payload['messages'].pop()
+    payload['messages'].extend([{'role': role, 'content': content} for role, content in source_quote_frame_messages(sources, prior)])
+    payload['messages'].append(question)
+    payload['response_format'] = {'type': 'json_schema', 'json_schema': {
+        'name': 'source_unit_frame_v2', 'strict': True, 'schema': source_quote_frame_schema(1)}}
+    assert payload['messages'][:-3] == old['messages'][:-1]
+    assert payload['messages'][-1] == old['messages'][-1]
+    unit_data = json.loads(payload['messages'][-2]['content'].split('\n', 1)[1])
+    assert ''.join(u['text'] for u in unit_data['sources'][0]['units']) == src['text']
+    projection = {k: v for k, v in payload.items() if k in ('messages', 'tools', 'tool_choice', 'response_format')}
+    estimate = count_reference_tokens(json.dumps(projection, ensure_ascii=False, separators=(',', ':'))) + 16 * len(payload['messages'])
+    assert estimate <= 21370
+    old_projection = {k: v for k, v in old.items() if k in ('messages', 'tools', 'tool_choice', 'response_format')}
+    previous_estimate = count_reference_tokens(json.dumps(old_projection, ensure_ascii=False, separators=(',', ':'))) + 16 * len(old['messages'])
+    prepared.append((f'quote_icao:r{repeat}:t4', payload, prior, prior_row, original, estimate, previous_estimate))
+
+assert len(prepared) == 2
+save('admission.json', {'model': 'gemini-3.8-flash-high',
+     'endpoint': 'https://mubai.website:8318/v1', 'http_limit': 2,
+     'scope': 'same two completed ICAO T1-T3 prefixes and T4 questions; complete original source plus source-unit schema; no historical typed gaps were available',
+     'prototype_version': '2.0', 'production_changed': False,
+     'input_budget': 21370, 'window': 32768, 'output_reserve_and_cap': 8192,
+     'margin': .15, 'q02_approved': False, 'schema_included_in_reference': True})
+
+async def main():
+    attempts = 0
+    completed = 0
+    try:
+        for sample, payload, prior, prior_row, original, estimate, old_estimate in prepared:
+            save('actual-provider-payloads.jsonl', {'sample': sample, 'payload': payload,
+                 'original_payload_sha256': original['payload_sha256'],
+                 'payload_sha256': hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode()).hexdigest(),
+                 'reference_input_tokens': estimate, 'previous_reference_input_tokens': old_estimate,
+                 'reference_overhead': estimate - old_estimate,
+                 'reference_estimator': 'cl100k_chat_json_v1_plus_response_format',
+                 'omitted_contents': [], 't3_actual_reply_in_t4': prior_row['published_reply'],
+                 'controlled_changes': ['insert source-unit policy and complete data before current question', 'response_format:source-unit schema'],
+                 't3_reused': True, 'complete_runtime_flow': False})
+            before = time.monotonic()
+            row = {'sample': sample, 'raw_frame': '', 'rendered_reply': None,
+                   'terminal_received': False, 'finish_reason': None, 'usage': None,
+                   'http_status': None, 'schema_valid': False, 'reported_model_ids': [],
+                   'prior_gaps': prior_row['gaps'], 'reply_origin': 'not_rendered',
+                   'production_delivery': False}
+            try:
+                attempts += 1
+                save('http-attempts.jsonl', {'sample': sample, 'attempt': attempts})
+                async with httpx2.AsyncClient(timeout=180) as client:
+                    async with client.stream('POST', 'https://mubai.website:8318/v1/chat/completions',
+                                             headers={'Authorization': f'Bearer {key}'}, json=payload) as response:
+                        row['http_status'] = response.status_code
+                        response.raise_for_status()
+                        async for line in response.aiter_lines():
+                            if not line.startswith('data:'):
+                                continue
+                            data = line[5:].strip()
+                            if data == '[DONE]':
+                                continue
+                            packet = json.loads(data)
+                            if packet.get('usage') is not None:
+                                row['usage'] = packet['usage']
+                            reported_model = packet.get('model')
+                            if reported_model and reported_model not in row['reported_model_ids']:
+                                row['reported_model_ids'].append(reported_model)
+                            for choice in packet.get('choices', []):
+                                delta = choice.get('delta', {})
+                                if delta.get('tool_calls'):
+                                    raise SourceAnswerFrameError('unexpected_tool_call')
+                                piece = delta.get('content') or ''
+                                if len(row['raw_frame'].encode()) + len(piece.encode()) > MAX_FRAME_BYTES:
+                                    raise SourceAnswerFrameError('frame_bound')
+                                row['raw_frame'] += piece
+                                if choice.get('finish_reason') is not None:
+                                    row['finish_reason'] = choice['finish_reason']
+                                    row['terminal_received'] = True
+                if not row['terminal_received'] or row['finish_reason'] != 'stop':
+                    raise SourceAnswerFrameError('nonterminal_frame')
+                frame = decode_source_quote_frame(row['raw_frame'], sources=sources, prior_gaps=prior, frame_id=sample)
+                row['schema_valid'] = True
+                row['rendered_reply'] = frame.text
+                row['reply_origin'] = 'isolated_provider_frame_rendered'
+                row['gaps'] = [{'gap_id': g.gap_id, 'source_keys': g.source_keys, 'statement': g.statement} for g in frame.gaps]
+                row['selected_units'] = frame.selected_units
+                completed += 1
+            except Exception as error:
+                row['error_type'] = type(error).__name__
+                if isinstance(error, SourceAnswerFrameError):
+                    row['error_code'] = error.code
+                row['reply_origin'] = 'frame_rejected'
+            finally:
+                row['latency_ms'] = round((time.monotonic() - before) * 1000)
+                save('results.jsonl', row)
+                print(json.dumps({k: row.get(k) for k in ('sample', 'http_status', 'finish_reason', 'schema_valid', 'error_type', 'error_code', 'latency_ms')}), flush=True)
+    finally:
+        save('exit.json', {'terminal': True, 'actual_http_attempts': attempts, 'rendered': completed,
+                          'complete_four_turn_runtime_flows': 0})
+
+asyncio.run(main())

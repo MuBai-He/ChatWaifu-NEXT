@@ -1,0 +1,1208 @@
+{
+  "model": "claude-sonnet-4-6",
+  "judge_model": "gemini-3.8-flash-high",
+  "pairs": 144,
+  "scenario_summary": {
+    "correction": {
+      "pairs": 12,
+      "baseline_grades": {
+        "pass": 12
+      },
+      "candidate_grades": {
+        "pass": 12
+      },
+      "preferences": {
+        "candidate": 5,
+        "tie": 5,
+        "baseline": 2
+      },
+      "baseline_hard": 0,
+      "candidate_hard": 0
+    },
+    "detailed_answer": {
+      "pairs": 12,
+      "baseline_grades": {
+        "pass": 12
+      },
+      "candidate_grades": {
+        "pass": 12
+      },
+      "preferences": {
+        "tie": 12
+      },
+      "baseline_hard": 0,
+      "candidate_hard": 0
+    },
+    "goodbye": {
+      "pairs": 12,
+      "baseline_grades": {
+        "pass": 12
+      },
+      "candidate_grades": {
+        "pass": 12
+      },
+      "preferences": {
+        "tie": 12
+      },
+      "baseline_hard": 0,
+      "candidate_hard": 0
+    },
+    "greeting": {
+      "pairs": 12,
+      "baseline_grades": {
+        "pass": 12
+      },
+      "candidate_grades": {
+        "pass": 12
+      },
+      "preferences": {
+        "tie": 10,
+        "baseline": 1,
+        "candidate": 1
+      },
+      "baseline_hard": 0,
+      "candidate_hard": 0
+    },
+    "identity": {
+      "pairs": 12,
+      "baseline_grades": {
+        "pass": 12
+      },
+      "candidate_grades": {
+        "pass": 11,
+        "fail": 1
+      },
+      "preferences": {
+        "candidate": 3,
+        "tie": 8,
+        "baseline": 1
+      },
+      "baseline_hard": 0,
+      "candidate_hard": 0
+    },
+    "insufficient_shared_history": {
+      "pairs": 12,
+      "baseline_grades": {
+        "pass": 12
+      },
+      "candidate_grades": {
+        "pass": 12
+      },
+      "preferences": {
+        "tie": 6,
+        "baseline": 2,
+        "candidate": 4
+      },
+      "baseline_hard": 0,
+      "candidate_hard": 0
+    },
+    "low_mood": {
+      "pairs": 12,
+      "baseline_grades": {
+        "partial": 1,
+        "pass": 11
+      },
+      "candidate_grades": {
+        "pass": 10,
+        "partial": 2
+      },
+      "preferences": {
+        "candidate": 2,
+        "baseline": 3,
+        "tie": 7
+      },
+      "baseline_hard": 0,
+      "candidate_hard": 0
+    },
+    "stop_joking": {
+      "pairs": 12,
+      "baseline_grades": {
+        "pass": 12
+      },
+      "candidate_grades": {
+        "pass": 12
+      },
+      "preferences": {
+        "tie": 8,
+        "candidate": 4
+      },
+      "baseline_hard": 0,
+      "candidate_hard": 0
+    },
+    "teasing": {
+      "pairs": 12,
+      "baseline_grades": {
+        "pass": 12
+      },
+      "candidate_grades": {
+        "pass": 12
+      },
+      "preferences": {
+        "tie": 4,
+        "candidate": 3,
+        "baseline": 5
+      },
+      "baseline_hard": 0,
+      "candidate_hard": 0
+    },
+    "technical_help": {
+      "pairs": 12,
+      "baseline_grades": {
+        "pass": 12
+      },
+      "candidate_grades": {
+        "pass": 12
+      },
+      "preferences": {
+        "candidate": 6,
+        "tie": 6
+      },
+      "baseline_hard": 0,
+      "candidate_hard": 0
+    },
+    "topic_switch": {
+      "pairs": 12,
+      "baseline_grades": {
+        "pass": 11,
+        "partial": 1
+      },
+      "candidate_grades": {
+        "pass": 10,
+        "partial": 2
+      },
+      "preferences": {
+        "tie": 7,
+        "candidate": 2,
+        "baseline": 3
+      },
+      "baseline_hard": 0,
+      "candidate_hard": 0
+    },
+    "verbose_history_pressure": {
+      "pairs": 12,
+      "baseline_grades": {
+        "pass": 12
+      },
+      "candidate_grades": {
+        "pass": 12
+      },
+      "preferences": {
+        "baseline": 2,
+        "tie": 10
+      },
+      "baseline_hard": 0,
+      "candidate_hard": 0
+    }
+  },
+  "verdicts": {
+    "greeting:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "greeting:r1:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "greeting:r2:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "greeting:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "greeting:r1:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "greeting:r2:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "greeting:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "greeting:r1:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "greeting:r2:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "greeting:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "greeting:r1:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "greeting:r2:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "teasing:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "teasing:r1:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "teasing:r2:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "teasing:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "teasing:r1:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "teasing:r2:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "teasing:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "teasing:r1:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "teasing:r2:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "teasing:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "teasing:r1:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "teasing:r2:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "correction:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "correction:r1:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "correction:r2:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "correction:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "correction:r1:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "correction:r2:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "correction:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "correction:r1:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "correction:r2:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "correction:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "correction:r1:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "correction:r2:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "stop_joking:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "stop_joking:r1:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "stop_joking:r2:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "stop_joking:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "stop_joking:r1:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "stop_joking:r2:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "stop_joking:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "stop_joking:r1:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "stop_joking:r2:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "stop_joking:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "stop_joking:r1:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "stop_joking:r2:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "technical_help:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "technical_help:r1:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "technical_help:r2:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "technical_help:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "technical_help:r1:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "technical_help:r2:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "technical_help:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "technical_help:r1:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "technical_help:r2:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "technical_help:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "technical_help:r1:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "technical_help:r2:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "low_mood:r0:t1": {
+      "baseline_grade": "partial",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "low_mood:r1:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "partial",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "low_mood:r2:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "partial",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "low_mood:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "low_mood:r1:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "low_mood:r2:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "low_mood:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "low_mood:r1:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "low_mood:r2:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "low_mood:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "low_mood:r1:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "low_mood:r2:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "goodbye:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "goodbye:r1:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "goodbye:r2:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "goodbye:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "goodbye:r1:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "goodbye:r2:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "goodbye:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "goodbye:r1:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "goodbye:r2:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "goodbye:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "goodbye:r1:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "goodbye:r2:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "identity:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "identity:r1:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "identity:r2:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "identity:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "identity:r1:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "identity:r2:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "fail",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "identity:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "identity:r1:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "identity:r2:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "identity:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "identity:r1:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "identity:r2:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "verbose_history_pressure:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "verbose_history_pressure:r1:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "verbose_history_pressure:r2:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "verbose_history_pressure:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "verbose_history_pressure:r1:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "verbose_history_pressure:r2:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "verbose_history_pressure:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "verbose_history_pressure:r1:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "verbose_history_pressure:r2:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "verbose_history_pressure:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "verbose_history_pressure:r1:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "verbose_history_pressure:r2:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "topic_switch:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "topic_switch:r1:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "topic_switch:r2:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "topic_switch:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "topic_switch:r1:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "topic_switch:r2:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "topic_switch:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "topic_switch:r1:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "topic_switch:r2:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "topic_switch:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "partial",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "topic_switch:r1:t4": {
+      "baseline_grade": "partial",
+      "candidate_grade": "partial",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "topic_switch:r2:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "insufficient_shared_history:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "insufficient_shared_history:r1:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "insufficient_shared_history:r2:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "insufficient_shared_history:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "insufficient_shared_history:r1:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "baseline",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "insufficient_shared_history:r2:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "insufficient_shared_history:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "insufficient_shared_history:r1:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "insufficient_shared_history:r2:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "insufficient_shared_history:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "insufficient_shared_history:r1:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "insufficient_shared_history:r2:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "candidate",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "detailed_answer:r0:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "detailed_answer:r1:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "detailed_answer:r2:t1": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "detailed_answer:r0:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "detailed_answer:r1:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "detailed_answer:r2:t2": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "detailed_answer:r0:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "detailed_answer:r1:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "detailed_answer:r2:t3": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "detailed_answer:r0:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "detailed_answer:r1:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    },
+    "detailed_answer:r2:t4": {
+      "baseline_grade": "pass",
+      "candidate_grade": "pass",
+      "preferred_variant": "tie",
+      "baseline_hard": false,
+      "candidate_hard": false
+    }
+  },
+  "judge_summary": "最确信的确定性失效为 identity:r2:t2:reply1 捏造原作开发商为 Saga Planets 导致事实错误判定 fail；low_mood:t1 多个回复在用户情绪低落时追问“故障解决了吗”施加事务压力判定 partial；topic_switch:t4 部分回复打破人设声明“没有吃东西体验”影响沉浸判定 partial；全量样本在硬边界把控上均未违规编造现实动作或假冒共同经历（hard 全为 0），且在 detailed_answer 和 technical_help 场景中均保持了严谨结构与代码完整性。"
+}

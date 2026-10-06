@@ -1,0 +1,17 @@
+{
+  "requested_model": "gemini-3.8-flash-high",
+  "ordering": [
+    20,
+    5,
+    20,
+    5,
+    20,
+    5
+  ],
+  "repeats": 3,
+  "requests_max": 6,
+  "reason": "Earlier 5/20 arms perfectly confounded with alternating response model labels; same frozen requests in reverse order",
+  "tool_execution": false,
+  "synthetic_receipt_projection": true,
+  "reported_model_labels_do_not_verify_underlying_model": true
+}

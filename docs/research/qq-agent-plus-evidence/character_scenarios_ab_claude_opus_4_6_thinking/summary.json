@@ -1,0 +1,18 @@
+{
+  "model": "claude-opus-4-6-thinking",
+  "samples": 288,
+  "pairs": 144,
+  "nonempty_replies": 288,
+  "provider_usage_coverage": 288,
+  "finish_reasons": {
+    "stop": 288
+  },
+  "latency_ms_p50": 4741.0,
+  "latency_ms_p95": 18073,
+  "totals": {
+    "provider_tokens_prompt": 663665,
+    "provider_tokens_completion": 38554,
+    "provider_tokens_reasoning": 0,
+    "provider_tokens_total": 702219
+  }
+}

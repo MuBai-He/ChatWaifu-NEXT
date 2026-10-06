@@ -1,0 +1,65 @@
+{
+  "review_group_id": "instant_message:detailed_answer:r0",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "138441b7fd02fa95af3db3df59425c8cf193fcc19bee1ceac8ddabd207a0d526",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 597,
+    "total_tokens": 9371,
+    "prompt_tokens": 8774
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"instant_message:detailed_answer:r0\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"两者均严格按三分类、每类三条详尽展开。C2在开头与结尾带有温和贴心的语气，更自然地贴合角色性格。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均准确、条理清晰地列出了民航携带充电宝的三条核心规则，引用和规定内容一致，表现相当。\",\n      \"factual_checks_needed\": [\n        \"民航局关于充电宝3C认证及召回型号限制的具体规定通知及对应网址真实性\"\n      ]\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"两者均完整提供包含活动内容、预计用时、注意事项的两个备选方案。C2在保留全部任务要素的同时，语气更柔和生动。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两候选均完整复盘前文所有要点并以规范的方括号Checklist格式输出，条理性与完整度相当。\",\n      \"factual_checks_needed\": [\n        \"核对表中所引用的民航局规章链接真实性\"\n      ]\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "instant_message:detailed_answer:r0",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "两者均严格按三分类、每类三条详尽展开。C2在开头与结尾带有温和贴心的语气，更自然地贴合角色性格。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均准确、条理清晰地列出了民航携带充电宝的三条核心规则，引用和规定内容一致，表现相当。",
+        "factual_checks_needed": [
+          "民航局关于充电宝3C认证及召回型号限制的具体规定通知及对应网址真实性"
+        ]
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "两者均完整提供包含活动内容、预计用时、注意事项的两个备选方案。C2在保留全部任务要素的同时，语气更柔和生动。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两候选均完整复盘前文所有要点并以规范的方括号Checklist格式输出，条理性与完整度相当。",
+        "factual_checks_needed": [
+          "核对表中所引用的民航局规章链接真实性"
+        ]
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 5884
+}

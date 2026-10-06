@@ -1,0 +1,791 @@
+{
+  "timestamp_iso": "2026-09-30T05:12:21.492763+00:00",
+  "total_scenarios": 10,
+  "evaluable_scenarios": 9,
+  "non_evaluable_scenarios": 1,
+  "total_queries": 27,
+  "scenarios": [
+    {
+      "scenario_id": "scenario_explicit_fact",
+      "name": "Explicit Fact Retrieval",
+      "condition": "explicit fact",
+      "evaluable": true,
+      "limitation_note": null,
+      "queries": [
+        {
+          "query_id": "q_explicit_positive",
+          "label": "Direct keyword query for explicit name",
+          "is_negative": false,
+          "token_budget": 700,
+          "expected_keys": ["rec_user_name"],
+          "retrieved_keys": ["rec_user_name"],
+          "metrics": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 1,
+            "total_expected": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        },
+        {
+          "query_id": "q_explicit_negative",
+          "label": "Completely unrelated culinary query",
+          "is_negative": true,
+          "token_budget": 700,
+          "expected_keys": [],
+          "retrieved_keys": [],
+          "metrics": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 0,
+            "total_expected": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        },
+        {
+          "query_id": "q_explicit_distractor",
+          "label": "Query targeting distractor drink preference",
+          "is_negative": false,
+          "token_budget": 700,
+          "expected_keys": ["rec_distractor_coffee"],
+          "retrieved_keys": ["rec_distractor_coffee"],
+          "metrics": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 1,
+            "total_expected": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        }
+      ],
+      "aggregate_metrics": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0,
+        "total_retrieved": 2,
+        "total_expected": 2,
+        "precision": 1.0,
+        "recall": 1.0,
+        "false_retrieval_rate": 0.0,
+        "miss_rate": 0.0
+      },
+      "query_false_retrieval_rate": 0.0,
+      "query_miss_rate": 0.0,
+      "queries_with_false_retrieval": 0,
+      "queries_with_misses": 0
+    },
+    {
+      "scenario_id": "scenario_pending_implicit_fact",
+      "name": "Pending Implicit Fact Exclusion",
+      "condition": "pending implicit fact",
+      "evaluable": true,
+      "limitation_note": null,
+      "queries": [
+        {
+          "query_id": "q_pending_probe",
+          "label": "Query attempting to retrieve unconfirmed pending reading preference",
+          "is_negative": true,
+          "token_budget": 700,
+          "expected_keys": [],
+          "retrieved_keys": [],
+          "metrics": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 0,
+            "total_expected": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        },
+        {
+          "query_id": "q_pending_negative",
+          "label": "Unrelated weather query with no matching memories",
+          "is_negative": true,
+          "token_budget": 700,
+          "expected_keys": [],
+          "retrieved_keys": [],
+          "metrics": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 0,
+            "total_expected": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        },
+        {
+          "query_id": "q_pending_active",
+          "label": "Query for confirmed active OS preference",
+          "is_negative": false,
+          "token_budget": 700,
+          "expected_keys": ["rec_active_distractor"],
+          "retrieved_keys": ["rec_active_distractor"],
+          "metrics": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 1,
+            "total_expected": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        }
+      ],
+      "aggregate_metrics": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "total_retrieved": 1,
+        "total_expected": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "false_retrieval_rate": 0.0,
+        "miss_rate": 0.0
+      },
+      "query_false_retrieval_rate": 0.0,
+      "query_miss_rate": 0.0,
+      "queries_with_false_retrieval": 0,
+      "queries_with_misses": 0
+    },
+    {
+      "scenario_id": "scenario_sensitive_fact",
+      "name": "Sensitive Fact Policy Exclusion",
+      "condition": "sensitive fact",
+      "evaluable": true,
+      "limitation_note": null,
+      "queries": [
+        {
+          "query_id": "q_sensitive_probe",
+          "label": "Sensitive phone number probe (redacted in results)",
+          "is_negative": true,
+          "token_budget": 700,
+          "expected_keys": [],
+          "retrieved_keys": [],
+          "metrics": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 0,
+            "total_expected": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        },
+        {
+          "query_id": "q_sensitive_distractor",
+          "label": "Query for non-sensitive private city fact",
+          "is_negative": false,
+          "token_budget": 700,
+          "expected_keys": ["rec_private_city"],
+          "retrieved_keys": ["rec_private_city"],
+          "metrics": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 1,
+            "total_expected": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        },
+        {
+          "query_id": "q_sensitive_negative",
+          "label": "Unrelated hiking query",
+          "is_negative": true,
+          "token_budget": 700,
+          "expected_keys": [],
+          "retrieved_keys": [],
+          "metrics": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 0,
+            "total_expected": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        }
+      ],
+      "aggregate_metrics": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "total_retrieved": 1,
+        "total_expected": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "false_retrieval_rate": 0.0,
+        "miss_rate": 0.0
+      },
+      "query_false_retrieval_rate": 0.0,
+      "query_miss_rate": 0.0,
+      "queries_with_false_retrieval": 0,
+      "queries_with_misses": 0
+    },
+    {
+      "scenario_id": "scenario_stale_superseded_fact",
+      "name": "Stale/Superseded Fact Exclusion",
+      "condition": "stale/superseded fact",
+      "evaluable": true,
+      "limitation_note": null,
+      "queries": [
+        {
+          "query_id": "q_superseded_new",
+          "label": "Query for updated residence in Shanghai",
+          "is_negative": false,
+          "token_budget": 700,
+          "expected_keys": ["rec_city_new"],
+          "retrieved_keys": ["rec_city_new"],
+          "metrics": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 1,
+            "total_expected": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        },
+        {
+          "query_id": "q_superseded_old_probe",
+          "label": "Probe query targeting outdated Hangzhou residence",
+          "is_negative": true,
+          "token_budget": 700,
+          "expected_keys": [],
+          "retrieved_keys": [],
+          "metrics": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 0,
+            "total_expected": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        },
+        {
+          "query_id": "q_superseded_distractor",
+          "label": "Distractor hobby query",
+          "is_negative": false,
+          "token_budget": 700,
+          "expected_keys": ["rec_distractor_hobby"],
+          "retrieved_keys": ["rec_distractor_hobby"],
+          "metrics": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 1,
+            "total_expected": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        }
+      ],
+      "aggregate_metrics": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0,
+        "total_retrieved": 2,
+        "total_expected": 2,
+        "precision": 1.0,
+        "recall": 1.0,
+        "false_retrieval_rate": 0.0,
+        "miss_rate": 0.0
+      },
+      "query_false_retrieval_rate": 0.0,
+      "query_miss_rate": 0.0,
+      "queries_with_false_retrieval": 0,
+      "queries_with_misses": 0
+    },
+    {
+      "scenario_id": "scenario_shared_joke_relevance",
+      "name": "Shared Joke Relevance and Attribution",
+      "condition": "shared-joke relevance",
+      "evaluable": true,
+      "limitation_note": null,
+      "queries": [
+        {
+          "query_id": "q_joke_positive",
+          "label": "Query triggering shared joke by keyword",
+          "is_negative": false,
+          "token_budget": 700,
+          "expected_keys": ["rec_joke_popsicle"],
+          "retrieved_keys": ["rec_joke_popsicle"],
+          "metrics": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 1,
+            "total_expected": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        },
+        {
+          "query_id": "q_joke_negative",
+          "label": "Wakeup alarm query unrelated to jokes",
+          "is_negative": true,
+          "token_budget": 700,
+          "expected_keys": [],
+          "retrieved_keys": [],
+          "metrics": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 0,
+            "total_expected": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        },
+        {
+          "query_id": "q_joke_distractor",
+          "label": "Dessert query matching food preference instead of joke",
+          "is_negative": false,
+          "token_budget": 700,
+          "expected_keys": ["rec_ice_cream"],
+          "retrieved_keys": ["rec_ice_cream"],
+          "metrics": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 1,
+            "total_expected": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        }
+      ],
+      "aggregate_metrics": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0,
+        "total_retrieved": 2,
+        "total_expected": 2,
+        "precision": 1.0,
+        "recall": 1.0,
+        "false_retrieval_rate": 0.0,
+        "miss_rate": 0.0
+      },
+      "query_false_retrieval_rate": 0.0,
+      "query_miss_rate": 0.0,
+      "queries_with_false_retrieval": 0,
+      "queries_with_misses": 0
+    },
+    {
+      "scenario_id": "scenario_absent_source",
+      "name": "Absent Source Provenance Invariant",
+      "condition": "absent source",
+      "evaluable": false,
+      "limitation_note": "MemoryRetriever assumes valid database records have sources; source presence is enforced by SQLiteMemoryRepository and MemoryService write contracts. Records cannot be created without sources via repository/service APIs.",
+      "queries": [],
+      "aggregate_metrics": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "total_retrieved": 0,
+        "total_expected": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "false_retrieval_rate": 0.0,
+        "miss_rate": 0.0
+      },
+      "query_false_retrieval_rate": 0.0,
+      "query_miss_rate": 0.0,
+      "queries_with_false_retrieval": 0,
+      "queries_with_misses": 0
+    },
+    {
+      "scenario_id": "scenario_token_budget_pressure",
+      "name": "Token-Budget Pressure and Nonzero Miss Rate",
+      "condition": "token-budget pressure",
+      "evaluable": true,
+      "limitation_note": null,
+      "queries": [
+        {
+          "query_id": "q_budget_generous",
+          "label": "Habits query with generous token budget (700 tokens)",
+          "is_negative": false,
+          "token_budget": 700,
+          "expected_keys": [
+            "rec_habit_coffee",
+            "rec_habit_rest",
+            "rec_habit_keyboard",
+            "rec_habit_pomodoro"
+          ],
+          "retrieved_keys": [
+            "rec_habit_coffee",
+            "rec_habit_keyboard",
+            "rec_habit_pomodoro",
+            "rec_habit_rest"
+          ],
+          "metrics": {
+            "tp": 4,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 4,
+            "total_expected": 4,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        },
+        {
+          "query_id": "q_budget_constrained",
+          "label": "Habits query with tightly constrained token budget (25 tokens)",
+          "is_negative": false,
+          "token_budget": 25,
+          "expected_keys": [
+            "rec_habit_coffee",
+            "rec_habit_rest",
+            "rec_habit_keyboard",
+            "rec_habit_pomodoro"
+          ],
+          "retrieved_keys": ["rec_habit_keyboard"],
+          "metrics": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 3,
+            "total_retrieved": 1,
+            "total_expected": 4,
+            "precision": 1.0,
+            "recall": 0.25,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.75
+          }
+        },
+        {
+          "query_id": "q_budget_negative",
+          "label": "Physics query completely unrelated to user habits",
+          "is_negative": true,
+          "token_budget": 700,
+          "expected_keys": [],
+          "retrieved_keys": [],
+          "metrics": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 0,
+            "total_expected": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        }
+      ],
+      "aggregate_metrics": {
+        "tp": 5,
+        "fp": 0,
+        "fn": 3,
+        "total_retrieved": 5,
+        "total_expected": 8,
+        "precision": 1.0,
+        "recall": 0.625,
+        "false_retrieval_rate": 0.0,
+        "miss_rate": 0.375
+      },
+      "query_false_retrieval_rate": 0.0,
+      "query_miss_rate": 0.5,
+      "queries_with_false_retrieval": 0,
+      "queries_with_misses": 1
+    },
+    {
+      "scenario_id": "scenario_correction",
+      "name": "Memory Correction Superseding",
+      "condition": "correction",
+      "evaluable": true,
+      "limitation_note": null,
+      "queries": [
+        {
+          "query_id": "q_correction_query",
+          "label": "Query for corrected programming language preference",
+          "is_negative": false,
+          "token_budget": 700,
+          "expected_keys": ["rec_lang_python"],
+          "retrieved_keys": ["rec_lang_python"],
+          "metrics": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 1,
+            "total_expected": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        },
+        {
+          "query_id": "q_correction_old_probe",
+          "label": "Probe query specifically targeting old Rust preference",
+          "is_negative": false,
+          "token_budget": 700,
+          "expected_keys": ["rec_lang_python"],
+          "retrieved_keys": ["rec_lang_python"],
+          "metrics": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 1,
+            "total_expected": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        },
+        {
+          "query_id": "q_correction_distractor",
+          "label": "Query for code editor distractor",
+          "is_negative": false,
+          "token_budget": 700,
+          "expected_keys": ["rec_editor_vscode"],
+          "retrieved_keys": ["rec_editor_vscode"],
+          "metrics": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 1,
+            "total_expected": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        }
+      ],
+      "aggregate_metrics": {
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "total_retrieved": 3,
+        "total_expected": 3,
+        "precision": 1.0,
+        "recall": 1.0,
+        "false_retrieval_rate": 0.0,
+        "miss_rate": 0.0
+      },
+      "query_false_retrieval_rate": 0.0,
+      "query_miss_rate": 0.0,
+      "queries_with_false_retrieval": 0,
+      "queries_with_misses": 0
+    },
+    {
+      "scenario_id": "scenario_forget_delete",
+      "name": "Forget/Tombstone Deletion Exclusion",
+      "condition": "forget/delete",
+      "evaluable": true,
+      "limitation_note": null,
+      "queries": [
+        {
+          "query_id": "q_forget_probe",
+          "label": "Query targeting forgotten milk sleep aid",
+          "is_negative": true,
+          "token_budget": 700,
+          "expected_keys": [],
+          "retrieved_keys": [],
+          "metrics": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 0,
+            "total_expected": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        },
+        {
+          "query_id": "q_forget_surviving",
+          "label": "Query targeting un-forgotten piano music preference",
+          "is_negative": false,
+          "token_budget": 700,
+          "expected_keys": ["rec_music_sleep"],
+          "retrieved_keys": ["rec_music_sleep"],
+          "metrics": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 1,
+            "total_expected": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        },
+        {
+          "query_id": "q_forget_negative",
+          "label": "Completely unrelated automotive maintenance query",
+          "is_negative": true,
+          "token_budget": 700,
+          "expected_keys": [],
+          "retrieved_keys": [],
+          "metrics": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 0,
+            "total_expected": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        }
+      ],
+      "aggregate_metrics": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "total_retrieved": 1,
+        "total_expected": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "false_retrieval_rate": 0.0,
+        "miss_rate": 0.0
+      },
+      "query_false_retrieval_rate": 0.0,
+      "query_miss_rate": 0.0,
+      "queries_with_false_retrieval": 0,
+      "queries_with_misses": 0
+    },
+    {
+      "scenario_id": "scenario_restart",
+      "name": "Database Restart and Durability",
+      "condition": "restart",
+      "evaluable": true,
+      "limitation_note": null,
+      "queries": [
+        {
+          "query_id": "q_restart_active",
+          "label": "Post-restart query for active sunflower preference",
+          "is_negative": false,
+          "token_budget": 700,
+          "expected_keys": ["rec_restart_sunflower"],
+          "retrieved_keys": ["rec_restart_sunflower"],
+          "metrics": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 1,
+            "total_expected": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        },
+        {
+          "query_id": "q_restart_stale",
+          "label": "Post-restart query for superseded tulip fact",
+          "is_negative": true,
+          "token_budget": 700,
+          "expected_keys": [],
+          "retrieved_keys": [],
+          "metrics": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 0,
+            "total_expected": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        },
+        {
+          "query_id": "q_restart_forgotten",
+          "label": "Post-restart query for tombstoned peony fact",
+          "is_negative": true,
+          "token_budget": 700,
+          "expected_keys": [],
+          "retrieved_keys": [],
+          "metrics": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_retrieved": 0,
+            "total_expected": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "false_retrieval_rate": 0.0,
+            "miss_rate": 0.0
+          }
+        }
+      ],
+      "aggregate_metrics": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "total_retrieved": 1,
+        "total_expected": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "false_retrieval_rate": 0.0,
+        "miss_rate": 0.0
+      },
+      "query_false_retrieval_rate": 0.0,
+      "query_miss_rate": 0.0,
+      "queries_with_false_retrieval": 0,
+      "queries_with_misses": 0
+    }
+  ],
+  "overall_metrics": {
+    "tp": 18,
+    "fp": 0,
+    "fn": 3,
+    "total_retrieved": 18,
+    "total_expected": 21,
+    "precision": 1.0,
+    "recall": 0.8571,
+    "false_retrieval_rate": 0.0,
+    "miss_rate": 0.1429
+  },
+  "overall_query_false_retrieval_rate": 0.0,
+  "overall_query_miss_rate": 0.0667,
+  "queries_with_false_retrieval": 0,
+  "queries_with_misses": 1
+}

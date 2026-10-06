@@ -1,0 +1,13 @@
+{
+  "source": "server /v1/models live read; selected fields only",
+  "http_status": 200,
+  "observed_date": "2026-10-03",
+  "matching_models": [
+    {
+      "id": "gemini-3.8-flash-high",
+      "owned_by": "antigravity"
+    }
+  ],
+  "context_and_output_limits_returned": false,
+  "does_not_verify_underlying_model_or_reasoning_effort": true
+}

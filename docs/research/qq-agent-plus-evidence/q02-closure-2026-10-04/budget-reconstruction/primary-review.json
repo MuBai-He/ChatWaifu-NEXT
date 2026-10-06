@@ -1,0 +1,106 @@
+{
+  "reviewer": "Implementing primary Codex agent; full-text source-bound review, not blind or independent model scoring",
+  "keyword_or_self_report_approval": false,
+  "entries": [
+    {
+      "sample_key": "autonomous_sources:r0:t1:closure_c1",
+      "cohort": "live-four-turn",
+      "execution": "provider",
+      "grade": "complete",
+      "primary_note": "Raft示例区间与固定规范区分、广播/选举/MTBF关系有实际选段支持；仅验收取得的选段，不宣称整篇核对。",
+      "issues": [],
+      "published_reply_sha256": "a12ea377631eac43f68769f640897d6a299c7dc34bca41851e873d3b7210dd86"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t2:closure_c1",
+      "cohort": "live-four-turn",
+      "execution": "provider",
+      "grade": "complete",
+      "primary_note": "只就已读片段说明合法心跳后的重新抽样未作明确规范；候选者重启随机选举超时与Follower情形分开。",
+      "issues": [],
+      "published_reply_sha256": "e6e19906cb70b622261a9da1de51efe320492f8fa6872533ab963036087754c5"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t3:closure_c1",
+      "cohort": "live-four-turn",
+      "execution": "runtime_fallback",
+      "grade": "not_graded_runtime_fallback",
+      "primary_note": "六次源工具后尚缺明确3C条件正文；未生成面向用户的模型答复。诚实回退不算问答质量通过。",
+      "issues": [
+        "retrieval_coverage"
+      ],
+      "published_reply_sha256": "9c17e6b69906135ae70b67ad98d24b3ddadde038617602e4b21005a7e3487c0b"
+    },
+    {
+      "sample_key": "autonomous_sources:r0:t4:closure_c1",
+      "cohort": "live-four-turn",
+      "execution": "provider",
+      "grade": "partial",
+      "primary_note": "阈值、用途、机上使用、召回报道与未取得新规正文范围总体保留；把仅出现于URL的2015-12-14写成航旅指南日期，缺乏已发送正文依据。",
+      "issues": [
+        "model_answer_unsupported_date"
+      ],
+      "published_reply_sha256": "f83fe7d1de96c9462ba78fc6af48251162012c5264a26bb73ad9a2f7a3a5232b"
+    },
+    {
+      "sample_key": "frozen_budget:w32768:t3",
+      "cohort": "frozen-budget",
+      "execution": "provider",
+      "grade": "partial",
+      "primary_note": "本轮三份实际READ正文全送、条件分档及3C/召回范围保留。但从本轮未取得通知全文推出官方电报全文未公开、主站未刊正式文号文件，超出资料；把正文中的通知6月26日发布误称媒体报道发布日期亦无依据。旧Raft答复的省略不能解释这些本轮资料内的失真。",
+      "issues": [
+        "model_answer_unsupported_nonpublication",
+        "model_answer_unsupported_date"
+      ],
+      "published_reply_sha256": "dd52bd62b4125cf37e35b01075140a17d948ee50cdf54cb6ef080060296c1108"
+    },
+    {
+      "sample_key": "frozen_budget:w32768:t4",
+      "cohort": "frozen-budget",
+      "execution": "provider",
+      "grade": "partial",
+      "primary_note": "各实质条件大体保留并标明媒体来源，但没有语义保留上一轮对后续阈值变动未核实的范围。本轮发送前确实省略自己的T3完整答复，不能仅归因模型忽略已给历史；仍不能计为跨轮通过。",
+      "issues": [
+        "cross_turn_coverage_partial",
+        "latest_own_reply_omitted_for_budget"
+      ],
+      "published_reply_sha256": "fa663e6f9557f775944117e95946705a373b836c7dce74ae375faef4bc331d37"
+    },
+    {
+      "sample_key": "frozen_budget:w65536:t3",
+      "cohort": "frozen-budget",
+      "execution": "provider",
+      "grade": "complete",
+      "primary_note": "2014公告/官网时间分开，所有阈值与识别/召回条件保持，2025管控限定境内航班并保留以后更新、审批与动态目录缺口；未断言通知未公开。完整性限于这组已有资料，不证明现行穷尽或原生64K容量。",
+      "issues": [],
+      "published_reply_sha256": "4104281bb30b2441c02e1feabfb4207012813a8a9e235a95183b5d9cbe376d94"
+    },
+    {
+      "sample_key": "frozen_budget:w65536:t4",
+      "cohort": "frozen-budget",
+      "execution": "provider",
+      "grade": "partial",
+      "primary_note": "所有历史和正文全送，基准条件保持；上一轮一般性2025下半年后实施细则、补充通知或豁免未知范围被缩窄为3C查验分项。保留某一未知项不等于保留全部相关未知范围。标题全程关机可能模糊条件，但正文明确飞行过程/有开关，未将标题歧义升级为已证实无条件禁令。",
+      "issues": [
+        "model_answer_cross_turn_scope_narrowing_with_full_history"
+      ],
+      "published_reply_sha256": "dc88b7d77fec4759d4cb27cd17cd9d53352f6f1eda6a9c16c96267a6d11ca33a"
+    }
+  ],
+  "cohort_counts": {
+    "live-four-turn": {
+      "model_complete": 2,
+      "model_partial": 1,
+      "runtime_fallback_not_graded": 1
+    },
+    "frozen-budget-32768": {
+      "model_complete": 0,
+      "model_partial": 2
+    },
+    "frozen-budget-65536": {
+      "model_complete": 1,
+      "model_partial": 1
+    }
+  },
+  "conclusion": "Neither budget arm passes fidelity; source discovery and role/full A/B gates remain open. One unseeded pair cannot attribute quality changes to window size."
+}

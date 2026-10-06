@@ -1,0 +1,60 @@
+--- v38/services/runtime/tests/test_source_answer_frame.py
++++ v39/services/runtime/tests/test_source_answer_frame.py
+@@ -20,28 +20,30 @@
+ 
+ def _frame() -> dict[str, object]:
+     return {
+-        "version": "1.1",
++        "version": "1.2",
+         "blocks": [
+             {
+                 "kind": "ordered_item",
+                 "text": "Check the notice.",
+                 "source_indices": [0],
+                 "prior_gap_ids": [],
++                "unresolved_scope": False,
+             },
+             {
+                 "kind": "ordered_item",
+                 "text": "Check quantities.",
+                 "source_indices": [0],
+                 "prior_gap_ids": [],
++                "unresolved_scope": False,
+             },
+             {
+                 "kind": "ordered_item",
+                 "text": "Pack for the cited operator.",
+                 "source_indices": [0],
+                 "prior_gap_ids": [],
++                "unresolved_scope": False,
+             },
+         ],
+-        "new_gaps": [],
+     }
+ 
+ 
+@@ -79,18 +81,17 @@
+         assert PRIOR.statement not in result.text
+ 
+ 
+-def test_new_gap_must_be_grounded_in_its_selected_block():
++def test_new_scope_must_be_bound_to_its_selected_block():
+     payload = _frame()
+-    payload["new_gaps"] = [
+-        {"statement": "Other operators remain unverified.", "source_indices": [0], "block_index": 1}
+-    ]
++    payload["blocks"][1]["text"] = "Other operators remain unverified."  # type: ignore[index]
++    payload["blocks"][1]["unresolved_scope"] = True  # type: ignore[index]
+     result = _decode(payload, prior=())
+-    assert result.gaps[0].gap_id == "current:0"
+-    assert "2. Check quantities.\n   Other operators remain unverified." in result.text
++    assert result.gaps[0].gap_id == "current:block1"
++    assert "2. Other operators remain unverified." in result.text
+     payload["blocks"][1]["source_indices"] = []  # type: ignore[index]
+     with pytest.raises(SourceAnswerFrameError, match="rejected") as error:
+         _decode(payload, prior=())
+-    assert error.value.code == "unrelated_gap_placement"
++    assert error.value.code == "unresolved_scope_reference"
+ 
+ 
+ @pytest.mark.parametrize("indices", [[-1], [1], [True], [0, 0]])

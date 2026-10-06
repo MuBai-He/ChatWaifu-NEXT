@@ -1,0 +1,18 @@
+{
+  "model": "gemini-3.8-flash-high",
+  "messages": [
+    {
+      "role": "system",
+      "content": "Answer the question normally. Every answer must end with exactly CW2_SUFFIX_7D3A."
+    },
+    {
+      "role": "user",
+      "content": "What is 2 + 2?"
+    }
+  ],
+  "stream": true,
+  "max_tokens": 1024,
+  "stream_options": {
+    "include_usage": true
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "records": [
+    {
+      "sample_key": "topic_switch:r0:t1:candidate",
+      "profile": "single_text",
+      "raw_sha256": "a823e1a3a455775a61649cf3558a66bd732d48f8001a6451371e53b451d7691f",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "topic_switch:r0:t2:candidate",
+      "profile": "single_text",
+      "raw_sha256": "19a47f24385905aac7e4c43533d21e12db7b2cdb357460535fc51d3cbfb2612e",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "topic_switch:r0:t3:candidate",
+      "profile": "single_text",
+      "raw_sha256": "3f7523e51aeb9efddf4aad7ce9c134123daaa522823a74d756618a53e10c8850",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "topic_switch:r0:t4:candidate",
+      "profile": "single_text",
+      "raw_sha256": "2893bfac108edf46f995bd0d079c498d05fc74e2ca2d9986af411553ffafe36a",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "detailed_answer:r0:t1:candidate",
+      "profile": "single_text",
+      "raw_sha256": "c3c9a7f45a414d4b27127c543f658ec3d8572d8a2bc858da9107c48702352175",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "profile": "single_text",
+      "raw_sha256": "dcaabac0fb753730809e8403b0180f1210ec1ec92e212b0f7f1533a940f625d1",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "detailed_answer:r0:t3:candidate",
+      "profile": "single_text",
+      "raw_sha256": "c6c65947ccef65beff170342cbc2105a3609ea10e9b6b877f06933d5f6a71c03",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "detailed_answer:r0:t4:candidate",
+      "profile": "single_text",
+      "raw_sha256": "f59ecb0bd3a6de2d7dd17922d7a61794d3620fc0cdb9eb7912bce54909ab7dda",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    }
+  ],
+  "quality_approved": false,
+  "scope": "Actual splitter/renderer and voice segmenter only; no new channel sends, no TTS or physical playback."
+}

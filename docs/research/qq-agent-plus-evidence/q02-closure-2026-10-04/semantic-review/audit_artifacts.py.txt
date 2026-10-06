@@ -1,0 +1,130 @@
+"""Read-only provenance audit, never a semantic quality checker or model run."""
+
+import argparse
+import hashlib
+import json
+from pathlib import Path
+
+
+def load(path):
+    return json.loads(path.read_text())
+
+
+def lines(path):
+    return [json.loads(line) for line in path.read_text().splitlines()]
+
+
+def sha(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def text_sha(text):
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--write-report", action="store_true")
+parser.add_argument("--check-current", action="store_true")
+args = parser.parse_args()
+phase = Path(__file__).resolve().parent
+root = phase.parent
+repo = phase.parents[4]
+for rel, digest in load(phase / "input-sha256.json")["files"].items():
+    assert sha(root / rel) == digest, rel
+counts = {}
+for group, digest in load(phase / "prior-versions.json").items():
+    prior = root / group
+    assert sha(prior / "manifest.json") == digest
+    files = load(prior / "manifest.json")["files"]
+    for rel, expected in files.items():
+        assert sha(prior / rel) == expected, (group, rel)
+    counts[group] = len(files)
+assert counts == {
+    "revision-pipeline": 84, "scope-blocks": 93,
+    "deployed-retrieval-check": 31, "reader-integration": 35}
+documents = load(phase / "document-sha256.json")["files"]
+for rel, digest in documents.items():
+    assert sha(phase / "final-documents" / (rel.replace("/", "__") + ".txt")) == digest
+    if args.check_current:
+        assert sha(repo / rel) == digest
+review = load(phase / "review.json")
+assert not review["new_model_calls"] and not review["production_mutations"]
+assert not review["new_prompt_rules"] and not review["raw_replies_replaced"]
+assert review["original_reviews_unchanged"] and review["criteria_unchanged"]
+assert not review["q02_approval"] and len(review["items"]) == 32
+all_items = {row["sample_key"]: row for row in review["items"]}
+assert len(all_items) == 32
+observed = {}
+wire_count = 0
+for group in ["frozen-quality", "candidate-one"]:
+    data = root / group
+    original = {row["sample_key"]: row for row in load(data / "primary-review.json")["items"]}
+    sources = load(data / "frozen-sources.json")
+    replies = lines(data / "results/results.jsonl")
+    wire = lines(data / "actual-provider-payloads.jsonl")
+    assert len(replies) == len(wire) == 16
+    for row in replies:
+        item = all_items[row["sample_key"]]
+        assert item["group"] == group and item["full_text_reviewed"]
+        assert text_sha(row["raw_reply"]) == item["reply_sha256"]
+        assert item["original_grade"] == original[row["sample_key"]]["grade"]
+    for row in wire:
+        body = row["payload"]
+        assert body["model"] == "gemini-3.8-flash-high" and body["max_tokens"] == 8192
+        assert text_sha(json.dumps(body, ensure_ascii=False, sort_keys=True)) == row["payload_sha256"]
+        found = []
+        for message in body["messages"]:
+            try:
+                decoded = json.loads(message.get("content", ""))
+            except (TypeError, ValueError):
+                continue
+            if isinstance(decoded, dict) and "frozen_public_document" in decoded:
+                found.append(decoded["frozen_public_document"])
+        assert found == [sources[row["source_key"]]]
+        assert text_sha(found[0]["text"]) == row["source_text_sha256"]
+    history = load(data / "prior-history-integrity.json")
+    assert len(history) == 16 and all(row["all_prior_replies_whole_on_wire"] for row in history)
+    observed[group] = {grade: sum(row["group"] == group and row["reviewed_grade"] == grade
+                                   for row in review["items"])
+                       for grade in ["complete", "partial"]}
+    wire_count += len(wire)
+assert observed == review["summaries"] == {
+    "frozen-quality": {"complete": 13, "partial": 3},
+    "candidate-one": {"complete": 10, "partial": 6}}
+changed = [row for row in review["items"] if row["grade_changed"]]
+assert len(changed) == 4
+assert all(row["group"] == "candidate-one" and row["sample_key"].startswith("frozen_icao:")
+           and row["original_grade"] == "complete" and row["reviewed_grade"] == "partial"
+           for row in changed)
+icao = load(root / "frozen-quality/frozen-sources.json")["icao"]
+assert text_sha(icao["text"]) == review["source_date"]["source_text_sha256"]
+assert "\n27 March 2026\n" in icao["text"]
+v39 = {row["sample_key"]: row for row in lines(root / "scope-blocks/live/results.jsonl")}
+targeted = review["v39_targeted_review"]
+assert len(targeted) == 5
+for row in targeted:
+    assert row["full_text_reviewed"] and row["organization_failure_retained"]
+    assert text_sha(v39[row["sample_key"]]["reply_text"]) == row["published_sha256"]
+assert not review["v39_scope_adjudication"]["literal_absence_alone_proves_semantic_scope_loss"]
+decision = review["candidate_decision"]
+assert not decision["closure_c1_adopted"] and not decision["full_ab_started"]
+assert not decision["new_candidate_created"]
+report = {
+    "new_model_calls": 0, "new_retrieval_calls": 0, "production_mutations": 0,
+    "new_prompt_rules": 0, "q02_approval": False, "semantic_quality_auto_approval": False,
+    "full_existing_natural_answers_reviewed": 32, "existing_wire_payloads_bound": wire_count,
+    "source_and_history_integrity_retained": True, "published_date_regrades": 4,
+    "existing_v39_targeted_reviews": 5, "raw_replies_replaced": 0,
+    "prior_frozen_entries_unchanged": counts,
+    "documents_snapshotted": len(documents), "current_checkout_check_optional": True,
+}
+out = phase / "final-artifact-audit.json"
+if args.write_report:
+    assert not out.exists()
+    out.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n")
+else:
+    assert load(out) == report
+    actual = {str(p.relative_to(phase)): sha(p) for p in phase.rglob("*")
+              if p.is_file() and p != phase / "manifest.json"}
+    assert actual == load(phase / "manifest.json")["files"]
+print(json.dumps(report, sort_keys=True))

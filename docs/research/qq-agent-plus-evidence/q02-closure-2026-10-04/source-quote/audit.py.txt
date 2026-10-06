@@ -1,0 +1,114 @@
+"""Freeze actual evidence and account for wire contents, not semantic grading."""
+
+import hashlib
+import json
+import shutil
+import statistics
+from pathlib import Path
+
+from chatwaifu_runtime.agent.source_answer_frame import FrameSource, SourceAnswerGap
+from chatwaifu_runtime.agent.source_quote_frame import QuoteFrameSource, decode_source_quote_frame
+from jsonschema import validate
+
+ROOT = Path('/Users/mubai/Desktop/CW2/.worktrees/qq-agent-plus-adoption')
+BASE = Path('/tmp/cw2-q02-source-quote-prep')
+EVIDENCE = ROOT / 'docs/research/qq-agent-plus-evidence/q02-closure-2026-10-04'
+TARGET = EVIDENCE / 'source-quote'
+CORPUS = json.loads((EVIDENCE / 'frozen-quality/frozen-sources.json').read_text())
+TARGET.mkdir(exist_ok=True)
+
+def write(path, row):
+    path.write_text(json.dumps(row, ensure_ascii=False, indent=2) + '\n')
+
+def percentile(values, quantile):
+    values = sorted(values)
+    position = (len(values) - 1) * quantile
+    lower = int(position)
+    upper = min(lower + 1, len(values) - 1)
+    return round(values[lower] + (values[upper] - values[lower]) * (position - lower), 2)
+
+groups = {}
+all_rows = []
+for name in ('airchina', 'icao'):
+    source = CORPUS[name]
+    assert hashlib.sha256(source['text'].encode()).hexdigest() == source['text_sha256']
+    folder = TARGET / name
+    folder.mkdir(exist_ok=True)
+    for path in (BASE / name).iterdir():
+        assert path.is_file() and path.suffix in {'.json', '.jsonl'}
+        shutil.copyfile(path, folder / path.name)
+    rows = [json.loads(x) for x in (folder / 'results.jsonl').read_text().splitlines()]
+    wires = [json.loads(x) for x in (folder / 'actual-provider-payloads.jsonl').read_text().splitlines()]
+    attempts = [json.loads(x) for x in (folder / 'http-attempts.jsonl').read_text().splitlines()]
+    assert len(rows) == len(wires) == len(attempts) == 2
+    assert json.loads((folder / 'exit.json').read_text())['actual_http_attempts'] == 2
+    errors = []
+    checks = []
+    for row, wire in zip(rows, wires, strict=True):
+        payload = wire['payload']
+        assert payload['model'] == 'gemini-3.8-flash-high' and payload['max_tokens'] == 8192
+        assert row['schema_valid'] and row['finish_reason'] == 'stop' and row['terminal_received']
+        assert row['reply_origin'] == 'isolated_provider_frame_rendered' and not row['production_delivery']
+        assert wire['reference_input_tokens'] <= 21370 and wire['omitted_contents'] == []
+        assert hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode()).hexdigest() == wire['payload_sha256']
+        documents = [json.loads(m['content'])['frozen_public_document'] for m in payload['messages']
+                     if m['content'].startswith('{"frozen_public_document":')]
+        assert len(documents) == 1 and documents[0]['text'] == source['text']
+        assert documents[0]['text_sha256'] == source['text_sha256']
+        data = json.loads(payload['messages'][-2]['content'].split('\n', 1)[1])
+        assert ''.join(u['text'] for u in data['sources'][0]['units']) == source['text']
+        assert data['sources'][0]['text_sha256'] == source['text_sha256']
+        assert any(m['role'] == 'assistant' and m['content'] == wire['t3_actual_reply_in_t4'] for m in payload['messages'])
+        prior = tuple(SourceAnswerGap(g['gap_id'], tuple(g['source_keys']), g['statement']) for g in row['prior_gaps'])
+        if name == 'icao':
+            assert not prior  # Original completed T3 had no structured state.
+        frame = decode_source_quote_frame(row['raw_frame'],
+                 sources=(QuoteFrameSource(FrameSource(source['url'], source['body_sha256']), source['text']),),
+                 prior_gaps=prior, frame_id=row['sample'])
+        assert frame.text == row['rendered_reply']
+        assert [list(ref) for ref in frame.selected_units] == row['selected_units']
+        validate(json.loads(row['raw_frame']), payload['response_format']['json_schema']['schema'])
+        assert all(g.statement in frame.text for g in prior)
+        usage = row['usage']
+        errors.append((wire['reference_input_tokens'] - usage['prompt_tokens']) / usage['prompt_tokens'] * 100)
+        checks.append({'sample': row['sample'], 'original_text_sha256': source['text_sha256'],
+              'reference_input_tokens': wire['reference_input_tokens'],
+              'previous_reference_input_tokens': wire['previous_reference_input_tokens'],
+              'reference_overhead': wire['reference_overhead'], 'schema_valid': True,
+              'whole_source_and_actual_history_present': True, 'omitted_input': [],
+              'source_wording_from_actual_units': True, 'prior_gap_state_available': bool(prior),
+              'renderer_recomputed': True, 'semantic_quality_approved_by_this_audit': False})
+    reason = [r['usage']['completion_tokens_details']['reasoning_tokens'] for r in rows
+              if 'reasoning_tokens' in r['usage'].get('completion_tokens_details', {})]
+    groups[name] = {'actual_http': len(rows), 'raw_provider_frames': len(rows), 'rendered_replies': len(rows),
+         'runtime_fallback': 0, 'frame_rejections': 0, 'complete_new_four_turn_flows': 0,
+         'usage': {k: sum(r['usage'][k] for r in rows) for k in ('prompt_tokens', 'completion_tokens', 'total_tokens')},
+         'reasoning': {'reported_count': len(reason), 'unknown_count': len(rows) - len(reason), 'reported_subtotal': sum(reason)},
+         'latency_ms': {'n': 2, 'p50': statistics.median(r['latency_ms'] for r in rows),
+                        'p95': percentile([r['latency_ms'] for r in rows], .95)},
+         'reference_error_percent': {'min': round(min(errors), 4), 'max': round(max(errors), 4)}, 'checks': checks}
+    write(folder / 'accounting.json', groups[name])
+    all_rows.extend(rows)
+
+reasoning = [r['usage']['completion_tokens_details']['reasoning_tokens'] for r in all_rows]
+write(TARGET / 'accounting.json', {'model_http': 4, 'groups': groups,
+       'total_usage': {k: sum(r['usage'][k] for r in all_rows) for k in ('prompt_tokens', 'completion_tokens', 'total_tokens')},
+       'reasoning_reported_count': 4, 'reasoning_unknown_count': 0, 'reasoning_reported_subtotal': sum(reasoning),
+       'window': 32768, 'output_reserve_and_cap': 8192, 'margin': .15, 'input_allowance': 21370,
+       'schema_and_full_unit_catalog_counted': True, 'source_and_history_not_clipped': True,
+       'production_changed': False, 'no_agy': True, 'quality_approved': False,
+       'dollar_cost': None, 'supplier_internal_processing_and_reported_model_ids_verified': False})
+for name in ('control_probe.py', 'icao_probe.py', 'audit.py'):
+    shutil.copyfile(BASE / name, TARGET / (name + '.txt'))
+for name in ('validation-local.log', 'server-code-sha256.json', 'expected-runtime-sha256.json', 'historical-adr0064-source-frame.md.txt'):
+    shutil.copyfile(BASE / name, TARGET / name)
+for name in ('source_quote_frame.py', 'source_answer_frame.py'):
+    shutil.copyfile(ROOT / 'services/runtime/src/chatwaifu_runtime/agent' / name, TARGET / (name + '.txt'))
+legacy = json.loads((EVIDENCE / 'source-frame/prototype-sha256.json').read_text())
+historical_adr = TARGET / 'historical-adr0064-source-frame.md.txt'
+assert hashlib.sha256(historical_adr.read_bytes()).hexdigest() == legacy['docs/adr/0064-structured-source-answer-fidelity-prototype.md']
+write(TARGET / 'historical-provenance.json', {'previous_artifacts': 195, 'all_previous_artifacts_unchanged_before_this_stage': True,
+       'original_runtime_v36_fingerprints_unchanged': 13, 'historical_adr_exact_hash_recovered_from_current_prefix': True,
+       'historical_adr_sha256': hashlib.sha256(historical_adr.read_bytes()).hexdigest(),
+       'new_module_not_a_production_entrypoint': True})
+print(json.dumps({'groups': groups, 'total_usage': {k: sum(r['usage'][k] for r in all_rows) for k in ('prompt_tokens', 'completion_tokens', 'total_tokens')}}, ensure_ascii=False))

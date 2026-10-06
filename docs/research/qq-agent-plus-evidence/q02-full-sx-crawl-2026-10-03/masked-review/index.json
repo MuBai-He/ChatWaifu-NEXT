@@ -1,0 +1,150 @@
+{
+  "packets": [
+    {
+      "file": "instant_message--greeting.json",
+      "trajectories": 3
+    },
+    {
+      "file": "instant_message--teasing.json",
+      "trajectories": 3
+    },
+    {
+      "file": "instant_message--correction.json",
+      "trajectories": 3
+    },
+    {
+      "file": "instant_message--stop_joking.json",
+      "trajectories": 3
+    },
+    {
+      "file": "instant_message--technical_help.json",
+      "trajectories": 3
+    },
+    {
+      "file": "instant_message--low_mood.json",
+      "trajectories": 3
+    },
+    {
+      "file": "instant_message--goodbye.json",
+      "trajectories": 3
+    },
+    {
+      "file": "instant_message--identity.json",
+      "trajectories": 3
+    },
+    {
+      "file": "instant_message--verbose_history_pressure.json",
+      "trajectories": 3
+    },
+    {
+      "file": "instant_message--topic_switch.json",
+      "trajectories": 3
+    },
+    {
+      "file": "instant_message--insufficient_shared_history.json",
+      "trajectories": 3
+    },
+    {
+      "file": "instant_message--detailed_answer.json",
+      "trajectories": 3
+    },
+    {
+      "file": "single_text--greeting.json",
+      "trajectories": 3
+    },
+    {
+      "file": "single_text--teasing.json",
+      "trajectories": 3
+    },
+    {
+      "file": "single_text--correction.json",
+      "trajectories": 3
+    },
+    {
+      "file": "single_text--stop_joking.json",
+      "trajectories": 3
+    },
+    {
+      "file": "single_text--technical_help.json",
+      "trajectories": 3
+    },
+    {
+      "file": "single_text--low_mood.json",
+      "trajectories": 3
+    },
+    {
+      "file": "single_text--goodbye.json",
+      "trajectories": 3
+    },
+    {
+      "file": "single_text--identity.json",
+      "trajectories": 3
+    },
+    {
+      "file": "single_text--verbose_history_pressure.json",
+      "trajectories": 3
+    },
+    {
+      "file": "single_text--topic_switch.json",
+      "trajectories": 3
+    },
+    {
+      "file": "single_text--insufficient_shared_history.json",
+      "trajectories": 3
+    },
+    {
+      "file": "single_text--detailed_answer.json",
+      "trajectories": 3
+    },
+    {
+      "file": "default_voice--greeting.json",
+      "trajectories": 3
+    },
+    {
+      "file": "default_voice--teasing.json",
+      "trajectories": 3
+    },
+    {
+      "file": "default_voice--correction.json",
+      "trajectories": 3
+    },
+    {
+      "file": "default_voice--stop_joking.json",
+      "trajectories": 3
+    },
+    {
+      "file": "default_voice--technical_help.json",
+      "trajectories": 3
+    },
+    {
+      "file": "default_voice--low_mood.json",
+      "trajectories": 3
+    },
+    {
+      "file": "default_voice--goodbye.json",
+      "trajectories": 3
+    },
+    {
+      "file": "default_voice--identity.json",
+      "trajectories": 3
+    },
+    {
+      "file": "default_voice--verbose_history_pressure.json",
+      "trajectories": 3
+    },
+    {
+      "file": "default_voice--topic_switch.json",
+      "trajectories": 3
+    },
+    {
+      "file": "default_voice--insufficient_shared_history.json",
+      "trajectories": 3
+    },
+    {
+      "file": "default_voice--detailed_answer.json",
+      "trajectories": 3
+    }
+  ],
+  "reviewer": "primary implementer; version-masked but not independent or double-blind",
+  "reveal_rule": "Save judgments before reading private-version-key.json"
+}

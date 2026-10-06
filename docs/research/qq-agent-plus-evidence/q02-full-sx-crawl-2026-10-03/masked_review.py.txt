@@ -1,0 +1,39 @@
+"""Make trajectory-stable version-masked packets; do not reveal the saved key.
+
+Author review remains non-independent even with version labels hidden.
+"""
+import json,secrets,sys
+from pathlib import Path
+root=Path(sys.argv[1]);out=root/'masked-review';out.mkdir(exist_ok=True)
+key_path=out/'private-version-key.json'
+keys=json.loads(key_path.read_text()) if key_path.exists() else {}
+created=[]
+for profile in ['instant_message','single_text','default_voice']:
+ p=root/profile/'results.jsonl'
+ if not p.exists():continue
+ rows=[json.loads(x) for x in p.read_text().splitlines()]
+ index={(r['scenario_id'],r['repeat_index'],r['turn_id'],r['variant']):r for r in rows}
+ fixtures=json.loads((root/(profile+'-fixtures.json')).read_text())
+ for scene in fixtures:
+  packets=[]
+  for repeat in range(3):
+   group=f"{profile}:{scene['id']}:r{repeat}"
+   if not all((scene['id'],repeat,t['turn_id'],v) in index for t in scene['turns'] for v in ['baseline','candidate']):continue
+   if group not in keys:
+    order=['baseline','candidate']
+    if secrets.randbelow(2):order.reverse()
+    keys[group]={'candidate_1':order[0],'candidate_2':order[1]}
+   packet={'review_group_id':group,'profile':profile,'scene_description':scene['description'],'initial_state':scene['initial_state'],'synthetic_memory':scene['synthetic_memory'],'seed_history':scene['seed_history'],'turns':[]}
+   for turn in scene['turns']:
+    row={'turn_id':turn['turn_id'],'user_text':turn['user_text'],'expected_behavior':turn['expected_behavior'],'forbidden_behavior':turn['forbidden_behavior'],'review_criteria':turn['review_criteria']}
+    for label,variant in keys[group].items():
+     record=index[(scene['id'],repeat,turn['turn_id'],variant)]
+     row[label]={'reply':record['raw_reply'],'input_snapshot':record['input_snapshot']}
+    packet['turns'].append(row)
+   packets.append(packet)
+  if packets:
+   path=out/(profile+'--'+scene['id']+'.json')
+   path.write_text(json.dumps(packets,ensure_ascii=False,indent=2)+'\n');created.append({'file':path.name,'trajectories':len(packets)})
+key_path.write_text(json.dumps(keys,ensure_ascii=False,indent=2)+'\n')
+(out/'index.json').write_text(json.dumps({'packets':created,'reviewer':'primary implementer; version-masked but not independent or double-blind','reveal_rule':'Save judgments before reading private-version-key.json'},ensure_ascii=False,indent=2)+'\n')
+print(json.dumps({'packet_count':len(created),'trajectory_count':sum(p['trajectories'] for p in created)},ensure_ascii=False))

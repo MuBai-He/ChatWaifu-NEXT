@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "base_snapshot": "v26",
+  "sha256": {
+    "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py": "d40b8a2086fe2b7a6baebbdeec1ba8941cbef49e510adf999f2bcc9da411ce09",
+    "services/runtime/tests/test_tool_calling_agent.py": "e9aac3deec7d224d19f3932619147ebbcdc56de00accbe1fa5edd7b5d9e1b913",
+    "tools/runtime_source_evaluation.py": "611fe5324ebcecf0ae75ed5ba1b14f56ba0289b99beb3f1ff130546ec8380a9a",
+    "tools/source_decision_evaluation.py": "70ccc4bd70624425300cc2895f8c10312c92d92f145a5619020b523e88e42b0c",
+    "tools/evaluate_character_scenarios.py": "b1a5a7bc89d3095da0ff0b0e8c12a3392d31b4d3bd6a17d52c6d1bcb80ca6305",
+    "tools/tests/test_source_decision_evaluation.py": "bc7453f6ad0abd15d50b0d7ad1eafe1eb373c949c4fc09f1b4009fc6d222ed05"
+  }
+}

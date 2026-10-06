@@ -1,0 +1,314 @@
+{
+  "quality_approved": false,
+  "requests": 18,
+  "requested_models": [
+    "gemini-3.8-flash-high"
+  ],
+  "reported_models": [
+    "gemini-3.8-flash",
+    "gemini-3.8-flash-control"
+  ],
+  "raw_usage": {
+    "prompt_tokens": 179445,
+    "completion_tokens": 14497,
+    "total_tokens": 193942
+  },
+  "p50_ms": 5700,
+  "p95_ms": 10635,
+  "max_actual_input_tokens": 13845,
+  "max_reference_input_tokens": 17346,
+  "reference_error_percent_min_max": [
+    18.707,
+    26.736
+  ],
+  "records": [
+    {
+      "key": "raft:0:original",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash-control",
+      "usage": {
+        "completion_tokens": 463,
+        "total_tokens": 6651,
+        "prompt_tokens": 6188
+      },
+      "latency_ms": 5307,
+      "reference_input_tokens": 7504,
+      "reference_error_percent": 21.267,
+      "tool_execution": false
+    },
+    {
+      "key": "raft:0:answer_only",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash",
+      "usage": {
+        "completion_tokens": 602,
+        "total_tokens": 6911,
+        "prompt_tokens": 6309
+      },
+      "latency_ms": 4858,
+      "reference_input_tokens": 7634,
+      "reference_error_percent": 21.002,
+      "tool_execution": false
+    },
+    {
+      "key": "raft:0:grounded",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash-control",
+      "usage": {
+        "completion_tokens": 1116,
+        "total_tokens": 7830,
+        "prompt_tokens": 6714
+      },
+      "latency_ms": 6929,
+      "reference_input_tokens": 7970,
+      "reference_error_percent": 18.707,
+      "tool_execution": false
+    },
+    {
+      "key": "regulations:0:original",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash",
+      "usage": {
+        "completion_tokens": 476,
+        "total_tokens": 13795,
+        "prompt_tokens": 13319
+      },
+      "latency_ms": 4494,
+      "reference_input_tokens": 16880,
+      "reference_error_percent": 26.736,
+      "tool_execution": false
+    },
+    {
+      "key": "regulations:0:answer_only",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash-control",
+      "usage": {
+        "completion_tokens": 445,
+        "total_tokens": 13885,
+        "prompt_tokens": 13440
+      },
+      "latency_ms": 5700,
+      "reference_input_tokens": 17010,
+      "reference_error_percent": 26.562,
+      "tool_execution": false
+    },
+    {
+      "key": "regulations:0:grounded",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash",
+      "usage": {
+        "completion_tokens": 990,
+        "total_tokens": 14835,
+        "prompt_tokens": 13845
+      },
+      "latency_ms": 6000,
+      "reference_input_tokens": 17346,
+      "reference_error_percent": 25.287,
+      "tool_execution": false
+    },
+    {
+      "key": "raft:1:original",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash-control",
+      "usage": {
+        "completion_tokens": 567,
+        "total_tokens": 6755,
+        "prompt_tokens": 6188,
+        "prompt_tokens_details": {
+          "cached_tokens": 4058
+        }
+      },
+      "latency_ms": 6245,
+      "reference_input_tokens": 7504,
+      "reference_error_percent": 21.267,
+      "tool_execution": false
+    },
+    {
+      "key": "raft:1:answer_only",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash",
+      "usage": {
+        "completion_tokens": 570,
+        "total_tokens": 6879,
+        "prompt_tokens": 6309,
+        "prompt_tokens_details": {
+          "cached_tokens": 4056
+        }
+      },
+      "latency_ms": 8265,
+      "reference_input_tokens": 7634,
+      "reference_error_percent": 21.002,
+      "tool_execution": false
+    },
+    {
+      "key": "raft:1:grounded",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash-control",
+      "usage": {
+        "completion_tokens": 2461,
+        "total_tokens": 9175,
+        "prompt_tokens": 6714,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1483
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4059
+        }
+      },
+      "latency_ms": 10635,
+      "reference_input_tokens": 7970,
+      "reference_error_percent": 18.707,
+      "tool_execution": false
+    },
+    {
+      "key": "regulations:1:original",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash",
+      "usage": {
+        "completion_tokens": 439,
+        "total_tokens": 13758,
+        "prompt_tokens": 13319,
+        "prompt_tokens_details": {
+          "cached_tokens": 8142
+        }
+      },
+      "latency_ms": 5666,
+      "reference_input_tokens": 16880,
+      "reference_error_percent": 26.736,
+      "tool_execution": false
+    },
+    {
+      "key": "regulations:1:answer_only",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash-control",
+      "usage": {
+        "completion_tokens": 437,
+        "total_tokens": 13877,
+        "prompt_tokens": 13440,
+        "prompt_tokens_details": {
+          "cached_tokens": 8140
+        }
+      },
+      "latency_ms": 5629,
+      "reference_input_tokens": 17010,
+      "reference_error_percent": 26.562,
+      "tool_execution": false
+    },
+    {
+      "key": "regulations:1:grounded",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash",
+      "usage": {
+        "completion_tokens": 1097,
+        "total_tokens": 14942,
+        "prompt_tokens": 13845,
+        "prompt_tokens_details": {
+          "cached_tokens": 8142
+        }
+      },
+      "latency_ms": 6534,
+      "reference_input_tokens": 17346,
+      "reference_error_percent": 25.287,
+      "tool_execution": false
+    },
+    {
+      "key": "raft:2:original",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash-control",
+      "usage": {
+        "completion_tokens": 553,
+        "total_tokens": 6741,
+        "prompt_tokens": 6188,
+        "prompt_tokens_details": {
+          "cached_tokens": 4058
+        }
+      },
+      "latency_ms": 5623,
+      "reference_input_tokens": 7504,
+      "reference_error_percent": 21.267,
+      "tool_execution": false
+    },
+    {
+      "key": "raft:2:answer_only",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash",
+      "usage": {
+        "completion_tokens": 517,
+        "total_tokens": 6826,
+        "prompt_tokens": 6309,
+        "prompt_tokens_details": {
+          "cached_tokens": 4056
+        }
+      },
+      "latency_ms": 4783,
+      "reference_input_tokens": 7634,
+      "reference_error_percent": 21.002,
+      "tool_execution": false
+    },
+    {
+      "key": "raft:2:grounded",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash-control",
+      "usage": {
+        "completion_tokens": 1894,
+        "total_tokens": 8608,
+        "prompt_tokens": 6714,
+        "completion_tokens_details": {
+          "reasoning_tokens": 932
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4059
+        }
+      },
+      "latency_ms": 8750,
+      "reference_input_tokens": 7970,
+      "reference_error_percent": 18.707,
+      "tool_execution": false
+    },
+    {
+      "key": "regulations:2:original",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash",
+      "usage": {
+        "completion_tokens": 416,
+        "total_tokens": 13735,
+        "prompt_tokens": 13319,
+        "prompt_tokens_details": {
+          "cached_tokens": 8142
+        }
+      },
+      "latency_ms": 7782,
+      "reference_input_tokens": 16880,
+      "reference_error_percent": 26.736,
+      "tool_execution": false
+    },
+    {
+      "key": "regulations:2:answer_only",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash-control",
+      "usage": {
+        "completion_tokens": 433,
+        "total_tokens": 13873,
+        "prompt_tokens": 13440
+      },
+      "latency_ms": 3789,
+      "reference_input_tokens": 17010,
+      "reference_error_percent": 26.562,
+      "tool_execution": false
+    },
+    {
+      "key": "regulations:2:grounded",
+      "model_requested": "gemini-3.8-flash-high",
+      "model_reported": "gemini-3.8-flash",
+      "usage": {
+        "completion_tokens": 1021,
+        "total_tokens": 14866,
+        "prompt_tokens": 13845
+      },
+      "latency_ms": 5959,
+      "reference_input_tokens": 17346,
+      "reference_error_percent": 25.287,
+      "tool_execution": false
+    }
+  ]
+}

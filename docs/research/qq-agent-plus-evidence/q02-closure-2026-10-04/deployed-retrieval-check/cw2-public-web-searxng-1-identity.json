@@ -1,0 +1,7 @@
+{
+  "name": "cw2-public-web-searxng-1",
+  "image_id": "sha256:85b1794aa5c7ba4d5f382d101426d2af32da2728dd1d17228b9172f444ab7a7b",
+  "image": "ghcr.io/searxng/searxng:latest",
+  "started_at": "2026-10-03T04:45:34.589376209Z",
+  "running": true
+}

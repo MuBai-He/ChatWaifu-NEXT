@@ -1,0 +1,13 @@
+--- v36/services/runtime/src/chatwaifu_runtime/providers/input_estimation.py
++++ v37/services/runtime/src/chatwaifu_runtime/providers/input_estimation.py
+@@ -73,7 +73,9 @@
+     messages = build_messages(text_request)
+     payload = build_chat_completions_payload("reference", text_request, messages)
+     projection = {
+-        key: payload[key] for key in ("messages", "tools", "tool_choice") if key in payload
++        key: payload[key]
++        for key in ("messages", "tools", "tool_choice", "response_format")
++        if key in payload
+     }
+     wire = json.dumps(projection, ensure_ascii=False, separators=(",", ":"))
+     return (

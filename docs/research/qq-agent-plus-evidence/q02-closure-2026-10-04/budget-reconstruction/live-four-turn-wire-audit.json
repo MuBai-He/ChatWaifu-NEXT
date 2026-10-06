@@ -1,0 +1,621 @@
+[
+  {
+    "sample_key": "autonomous_sources:r0:t1:closure_c1",
+    "call_id": "5d4ccfc1-ac08-4513-af7f-c268e97d5e42",
+    "http_attempt": 1,
+    "reference_tokens": 2337,
+    "limit": 21370,
+    "usage": {
+      "prompt_tokens": 2334,
+      "completion_tokens": 69,
+      "total_tokens": 2615,
+      "reasoning_tokens": 212
+    },
+    "bias_percent": 0.128535,
+    "history_omitted": [],
+    "preambles_omitted": [],
+    "projected_sources": [],
+    "http_elapsed_ms": 4904
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t1:closure_c1",
+    "call_id": "50016451-0d8b-455c-a6d9-f534820d2a41",
+    "http_attempt": 2,
+    "reference_tokens": 5520,
+    "limit": 21370,
+    "usage": {
+      "prompt_tokens": 4863,
+      "completion_tokens": 76,
+      "total_tokens": 4939,
+      "reasoning_tokens": null
+    },
+    "bias_percent": 13.510179,
+    "history_omitted": [],
+    "preambles_omitted": [],
+    "projected_sources": [],
+    "http_elapsed_ms": 2637
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t1:closure_c1",
+    "call_id": "c9c15604-1513-42d9-b555-4dcac85b5eaf",
+    "http_attempt": 3,
+    "reference_tokens": 7167,
+    "limit": 21370,
+    "usage": {
+      "prompt_tokens": 6490,
+      "completion_tokens": 73,
+      "total_tokens": 6563,
+      "reasoning_tokens": null
+    },
+    "bias_percent": 10.431433,
+    "history_omitted": [],
+    "preambles_omitted": [],
+    "projected_sources": [],
+    "http_elapsed_ms": 2759
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t1:closure_c1",
+    "call_id": "c8f9abd2-163c-4aee-b524-d361258bbe2e",
+    "http_attempt": 4,
+    "reference_tokens": 8824,
+    "limit": 21370,
+    "usage": {
+      "prompt_tokens": 8126,
+      "completion_tokens": 74,
+      "total_tokens": 8241,
+      "reasoning_tokens": 41
+    },
+    "bias_percent": 8.589712,
+    "history_omitted": [],
+    "preambles_omitted": [],
+    "projected_sources": [],
+    "http_elapsed_ms": 2968
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t1:closure_c1",
+    "call_id": "64a60bdb-8c3d-4ba1-8f55-378db0d7f502",
+    "http_attempt": 5,
+    "reference_tokens": 10563,
+    "limit": 21370,
+    "usage": {
+      "prompt_tokens": 9820,
+      "completion_tokens": 480,
+      "total_tokens": 10300,
+      "reasoning_tokens": null
+    },
+    "bias_percent": 7.566191,
+    "history_omitted": [],
+    "preambles_omitted": [],
+    "projected_sources": [],
+    "http_elapsed_ms": 6873
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t1:closure_c1",
+    "call_id": "f9c8dfbf-530c-4f72-9301-a5809b38759c",
+    "http_attempt": 6,
+    "reference_tokens": 10755,
+    "limit": 21370,
+    "usage": {
+      "prompt_tokens": 9519,
+      "completion_tokens": 608,
+      "total_tokens": 10127,
+      "reasoning_tokens": null
+    },
+    "bias_percent": 12.984557,
+    "history_omitted": [],
+    "preambles_omitted": [],
+    "projected_sources": [],
+    "http_elapsed_ms": 32390
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t2:closure_c1",
+    "call_id": "fcea00b7-701a-4c36-a108-4bd303819bf4",
+    "http_attempt": 7,
+    "reference_tokens": 9494,
+    "limit": 21370,
+    "usage": {
+      "prompt_tokens": 8829,
+      "completion_tokens": 145,
+      "total_tokens": 9980,
+      "reasoning_tokens": 1006
+    },
+    "bias_percent": 7.531997,
+    "history_omitted": [],
+    "preambles_omitted": [],
+    "projected_sources": [
+      {
+        "skill_run_id": "86117849-64e5-4348-8d7b-cec877605659",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "1a89059b527c20c342128efe962cfb5128a3c9718ab256e9f040e72eaed74dd1"
+      },
+      {
+        "skill_run_id": "4be90091-66e6-424d-be56-0e485baf0038",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "781e5b739d9476efd848fa5623584df05ecc08246206379a98c22c67a23655b6"
+      },
+      {
+        "skill_run_id": "31552e7b-f631-49f0-b8c5-df8e623f4779",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "e93f46d7e96e366544a05838cb936a193ec1a5462dfb79e1d38d086d4397be53"
+      },
+      {
+        "skill_run_id": "7a80e3eb-8403-4b01-846d-fe370499bac2",
+        "skill_id": "web.search",
+        "original_result": "available",
+        "url": null,
+        "body_sha256": "784efd54256b1960af0a284d56f18dec308989a0d9f01c2386a81ab2382445af"
+      }
+    ],
+    "http_elapsed_ms": 34049
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t3:closure_c1",
+    "call_id": "0964e696-304a-4a48-ae0a-bf0796a875ed",
+    "http_attempt": 8,
+    "reference_tokens": 9525,
+    "limit": 21370,
+    "usage": {
+      "prompt_tokens": 9485,
+      "completion_tokens": 54,
+      "total_tokens": 10161,
+      "reasoning_tokens": 622
+    },
+    "bias_percent": 0.421719,
+    "history_omitted": [],
+    "preambles_omitted": [],
+    "projected_sources": [
+      {
+        "skill_run_id": "86117849-64e5-4348-8d7b-cec877605659",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "1a89059b527c20c342128efe962cfb5128a3c9718ab256e9f040e72eaed74dd1"
+      },
+      {
+        "skill_run_id": "4be90091-66e6-424d-be56-0e485baf0038",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "781e5b739d9476efd848fa5623584df05ecc08246206379a98c22c67a23655b6"
+      },
+      {
+        "skill_run_id": "31552e7b-f631-49f0-b8c5-df8e623f4779",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "e93f46d7e96e366544a05838cb936a193ec1a5462dfb79e1d38d086d4397be53"
+      },
+      {
+        "skill_run_id": "7a80e3eb-8403-4b01-846d-fe370499bac2",
+        "skill_id": "web.search",
+        "original_result": "available",
+        "url": null,
+        "body_sha256": "784efd54256b1960af0a284d56f18dec308989a0d9f01c2386a81ab2382445af"
+      }
+    ],
+    "http_elapsed_ms": 22792
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t3:closure_c1",
+    "call_id": "9c72ed81-a215-4cb2-a278-fc60f5565db0",
+    "http_attempt": 9,
+    "reference_tokens": 13023,
+    "limit": 21370,
+    "usage": {
+      "prompt_tokens": 11963,
+      "completion_tokens": 60,
+      "total_tokens": 12023,
+      "reasoning_tokens": null
+    },
+    "bias_percent": 8.860654,
+    "history_omitted": [],
+    "preambles_omitted": [],
+    "projected_sources": [
+      {
+        "skill_run_id": "86117849-64e5-4348-8d7b-cec877605659",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "1a89059b527c20c342128efe962cfb5128a3c9718ab256e9f040e72eaed74dd1"
+      },
+      {
+        "skill_run_id": "4be90091-66e6-424d-be56-0e485baf0038",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "781e5b739d9476efd848fa5623584df05ecc08246206379a98c22c67a23655b6"
+      },
+      {
+        "skill_run_id": "31552e7b-f631-49f0-b8c5-df8e623f4779",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "e93f46d7e96e366544a05838cb936a193ec1a5462dfb79e1d38d086d4397be53"
+      },
+      {
+        "skill_run_id": "7a80e3eb-8403-4b01-846d-fe370499bac2",
+        "skill_id": "web.search",
+        "original_result": "available",
+        "url": null,
+        "body_sha256": "784efd54256b1960af0a284d56f18dec308989a0d9f01c2386a81ab2382445af"
+      }
+    ],
+    "http_elapsed_ms": 3675
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t3:closure_c1",
+    "call_id": "84b5a925-e3fb-4d99-a9f1-8675b69c8365",
+    "http_attempt": 10,
+    "reference_tokens": 14381,
+    "limit": 21370,
+    "usage": {
+      "prompt_tokens": 13019,
+      "completion_tokens": 77,
+      "total_tokens": 13169,
+      "reasoning_tokens": 73
+    },
+    "bias_percent": 10.461633,
+    "history_omitted": [],
+    "preambles_omitted": [],
+    "projected_sources": [
+      {
+        "skill_run_id": "86117849-64e5-4348-8d7b-cec877605659",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "1a89059b527c20c342128efe962cfb5128a3c9718ab256e9f040e72eaed74dd1"
+      },
+      {
+        "skill_run_id": "4be90091-66e6-424d-be56-0e485baf0038",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "781e5b739d9476efd848fa5623584df05ecc08246206379a98c22c67a23655b6"
+      },
+      {
+        "skill_run_id": "31552e7b-f631-49f0-b8c5-df8e623f4779",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "e93f46d7e96e366544a05838cb936a193ec1a5462dfb79e1d38d086d4397be53"
+      },
+      {
+        "skill_run_id": "7a80e3eb-8403-4b01-846d-fe370499bac2",
+        "skill_id": "web.search",
+        "original_result": "available",
+        "url": null,
+        "body_sha256": "784efd54256b1960af0a284d56f18dec308989a0d9f01c2386a81ab2382445af"
+      }
+    ],
+    "http_elapsed_ms": 4313
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t3:closure_c1",
+    "call_id": "724f840c-e1b8-4851-8160-effc6f2ced0f",
+    "http_attempt": 11,
+    "reference_tokens": 19904,
+    "limit": 21370,
+    "usage": {
+      "prompt_tokens": 17174,
+      "completion_tokens": 64,
+      "total_tokens": 17238,
+      "reasoning_tokens": null
+    },
+    "bias_percent": 15.896122,
+    "history_omitted": [],
+    "preambles_omitted": [],
+    "projected_sources": [
+      {
+        "skill_run_id": "86117849-64e5-4348-8d7b-cec877605659",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "1a89059b527c20c342128efe962cfb5128a3c9718ab256e9f040e72eaed74dd1"
+      },
+      {
+        "skill_run_id": "4be90091-66e6-424d-be56-0e485baf0038",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "781e5b739d9476efd848fa5623584df05ecc08246206379a98c22c67a23655b6"
+      },
+      {
+        "skill_run_id": "31552e7b-f631-49f0-b8c5-df8e623f4779",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "e93f46d7e96e366544a05838cb936a193ec1a5462dfb79e1d38d086d4397be53"
+      },
+      {
+        "skill_run_id": "7a80e3eb-8403-4b01-846d-fe370499bac2",
+        "skill_id": "web.search",
+        "original_result": "available",
+        "url": null,
+        "body_sha256": "784efd54256b1960af0a284d56f18dec308989a0d9f01c2386a81ab2382445af"
+      }
+    ],
+    "http_elapsed_ms": 3104
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t3:closure_c1",
+    "call_id": "845afa75-b65e-4a2f-b0cf-e75e085cc2f1",
+    "http_attempt": 12,
+    "reference_tokens": 20457,
+    "limit": 21370,
+    "usage": {
+      "prompt_tokens": 17642,
+      "completion_tokens": 94,
+      "total_tokens": 17736,
+      "reasoning_tokens": null
+    },
+    "bias_percent": 15.956241,
+    "history_omitted": [],
+    "preambles_omitted": [],
+    "projected_sources": [
+      {
+        "skill_run_id": "86117849-64e5-4348-8d7b-cec877605659",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "1a89059b527c20c342128efe962cfb5128a3c9718ab256e9f040e72eaed74dd1"
+      },
+      {
+        "skill_run_id": "4be90091-66e6-424d-be56-0e485baf0038",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "781e5b739d9476efd848fa5623584df05ecc08246206379a98c22c67a23655b6"
+      },
+      {
+        "skill_run_id": "31552e7b-f631-49f0-b8c5-df8e623f4779",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "e93f46d7e96e366544a05838cb936a193ec1a5462dfb79e1d38d086d4397be53"
+      },
+      {
+        "skill_run_id": "7a80e3eb-8403-4b01-846d-fe370499bac2",
+        "skill_id": "web.search",
+        "original_result": "available",
+        "url": null,
+        "body_sha256": "784efd54256b1960af0a284d56f18dec308989a0d9f01c2386a81ab2382445af"
+      }
+    ],
+    "http_elapsed_ms": 2834
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t3:closure_c1",
+    "call_id": "f18deb01-3285-4d5e-ac97-72a009cfd990",
+    "http_attempt": 13,
+    "reference_tokens": 21131,
+    "limit": 21370,
+    "usage": {
+      "prompt_tokens": 18157,
+      "completion_tokens": 81,
+      "total_tokens": 18238,
+      "reasoning_tokens": null
+    },
+    "bias_percent": 16.379358,
+    "history_omitted": [
+      1
+    ],
+    "preambles_omitted": [],
+    "projected_sources": [
+      {
+        "skill_run_id": "86117849-64e5-4348-8d7b-cec877605659",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "1a89059b527c20c342128efe962cfb5128a3c9718ab256e9f040e72eaed74dd1"
+      },
+      {
+        "skill_run_id": "4be90091-66e6-424d-be56-0e485baf0038",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "781e5b739d9476efd848fa5623584df05ecc08246206379a98c22c67a23655b6"
+      },
+      {
+        "skill_run_id": "31552e7b-f631-49f0-b8c5-df8e623f4779",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "e93f46d7e96e366544a05838cb936a193ec1a5462dfb79e1d38d086d4397be53"
+      },
+      {
+        "skill_run_id": "7a80e3eb-8403-4b01-846d-fe370499bac2",
+        "skill_id": "web.search",
+        "original_result": "available",
+        "url": null,
+        "body_sha256": "784efd54256b1960af0a284d56f18dec308989a0d9f01c2386a81ab2382445af"
+      }
+    ],
+    "http_elapsed_ms": 2965
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t4:closure_c1",
+    "call_id": "6bd8008b-0869-4a1a-8f09-0770e84a6d65",
+    "http_attempt": 14,
+    "reference_tokens": 20439,
+    "limit": 21370,
+    "usage": {
+      "prompt_tokens": 17702,
+      "completion_tokens": 899,
+      "total_tokens": 20667,
+      "reasoning_tokens": 2066
+    },
+    "bias_percent": 15.46153,
+    "history_omitted": [],
+    "preambles_omitted": [],
+    "projected_sources": [
+      {
+        "skill_run_id": "cb2717bd-6d34-436c-b83d-5bc76ca13ee7",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://www.caac.gov.cn/PHONE/XWZX/MHYW/201508/t20150815_14129.html",
+        "body_sha256": "2b77497fc2bd81deab13c9c3b08e691c7a914c2493c1c11846a28d6b325cfa9c"
+      },
+      {
+        "skill_run_id": "6f22edad-6c42-41b2-896a-4fef9c3fac6c",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/DB_XXGK/DB_GZDT/202508/t20250813_228260.html",
+        "body_sha256": "f1e2a5e9407a9d1f72a5646fdbffb62d8e1f045f37cb9d1f0f081c64849f4da3"
+      },
+      {
+        "skill_run_id": "7bade909-affd-47cf-8846-8e5e516bfa38",
+        "skill_id": "web.search",
+        "original_result": "available",
+        "url": null,
+        "body_sha256": "9bf60ca22b2da35b83885304aa03c0d03574f962a02cfb1617955141b24e165b"
+      },
+      {
+        "skill_run_id": "cb6c0802-851f-4692-b23d-a27fcae0e0d7",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://www.caac.gov.cn/CXCK/HLZN/201512/t20151214_15866.html",
+        "body_sha256": "232225153808bc7dba02b36d9f1bb7fddacea4a2a6b63f0348f49505b3a61f57"
+      },
+      {
+        "skill_run_id": "c4d50038-3532-4671-9b67-60075da24213",
+        "skill_id": "web.search",
+        "original_result": "available",
+        "url": null,
+        "body_sha256": "a11cf23dc61fd54bdbf0ddc6ef0030f79be1f2a9cc0a9f5a407ece7573bd17c0"
+      },
+      {
+        "skill_run_id": "28fdcfbc-15e7-47aa-ac59-c3cda9ee4c2e",
+        "skill_id": "web.search",
+        "original_result": "available",
+        "url": null,
+        "body_sha256": "103302c1e31777bcd3be5bb400e4fe6124dfc9d8a71e80b1af58ef09ab9ba614"
+      },
+      {
+        "skill_run_id": "86117849-64e5-4348-8d7b-cec877605659",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "1a89059b527c20c342128efe962cfb5128a3c9718ab256e9f040e72eaed74dd1"
+      },
+      {
+        "skill_run_id": "4be90091-66e6-424d-be56-0e485baf0038",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "781e5b739d9476efd848fa5623584df05ecc08246206379a98c22c67a23655b6"
+      },
+      {
+        "skill_run_id": "31552e7b-f631-49f0-b8c5-df8e623f4779",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "e93f46d7e96e366544a05838cb936a193ec1a5462dfb79e1d38d086d4397be53"
+      },
+      {
+        "skill_run_id": "7a80e3eb-8403-4b01-846d-fe370499bac2",
+        "skill_id": "web.search",
+        "original_result": "available",
+        "url": null,
+        "body_sha256": "784efd54256b1960af0a284d56f18dec308989a0d9f01c2386a81ab2382445af"
+      }
+    ],
+    "http_elapsed_ms": 11809
+  },
+  {
+    "sample_key": "autonomous_sources:r0:t4:closure_c1",
+    "call_id": "a2f93146-a4ca-4e2d-ae90-aaa724594eea",
+    "http_attempt": 15,
+    "reference_tokens": 21233,
+    "limit": 21370,
+    "usage": {
+      "prompt_tokens": 18131,
+      "completion_tokens": 998,
+      "total_tokens": 19129,
+      "reasoning_tokens": null
+    },
+    "bias_percent": 17.108819,
+    "history_omitted": [
+      1
+    ],
+    "preambles_omitted": [],
+    "projected_sources": [
+      {
+        "skill_run_id": "cb2717bd-6d34-436c-b83d-5bc76ca13ee7",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://www.caac.gov.cn/PHONE/XWZX/MHYW/201508/t20150815_14129.html",
+        "body_sha256": "2b77497fc2bd81deab13c9c3b08e691c7a914c2493c1c11846a28d6b325cfa9c"
+      },
+      {
+        "skill_run_id": "6f22edad-6c42-41b2-896a-4fef9c3fac6c",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/DB_XXGK/DB_GZDT/202508/t20250813_228260.html",
+        "body_sha256": "f1e2a5e9407a9d1f72a5646fdbffb62d8e1f045f37cb9d1f0f081c64849f4da3"
+      },
+      {
+        "skill_run_id": "7bade909-affd-47cf-8846-8e5e516bfa38",
+        "skill_id": "web.search",
+        "original_result": "available",
+        "url": null,
+        "body_sha256": "9bf60ca22b2da35b83885304aa03c0d03574f962a02cfb1617955141b24e165b"
+      },
+      {
+        "skill_run_id": "cb6c0802-851f-4692-b23d-a27fcae0e0d7",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://www.caac.gov.cn/CXCK/HLZN/201512/t20151214_15866.html",
+        "body_sha256": "232225153808bc7dba02b36d9f1bb7fddacea4a2a6b63f0348f49505b3a61f57"
+      },
+      {
+        "skill_run_id": "c4d50038-3532-4671-9b67-60075da24213",
+        "skill_id": "web.search",
+        "original_result": "available",
+        "url": null,
+        "body_sha256": "a11cf23dc61fd54bdbf0ddc6ef0030f79be1f2a9cc0a9f5a407ece7573bd17c0"
+      },
+      {
+        "skill_run_id": "28fdcfbc-15e7-47aa-ac59-c3cda9ee4c2e",
+        "skill_id": "web.search",
+        "original_result": "available",
+        "url": null,
+        "body_sha256": "103302c1e31777bcd3be5bb400e4fe6124dfc9d8a71e80b1af58ef09ab9ba614"
+      },
+      {
+        "skill_run_id": "86117849-64e5-4348-8d7b-cec877605659",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "1a89059b527c20c342128efe962cfb5128a3c9718ab256e9f040e72eaed74dd1"
+      },
+      {
+        "skill_run_id": "4be90091-66e6-424d-be56-0e485baf0038",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "781e5b739d9476efd848fa5623584df05ecc08246206379a98c22c67a23655b6"
+      },
+      {
+        "skill_run_id": "31552e7b-f631-49f0-b8c5-df8e623f4779",
+        "skill_id": "web.read",
+        "original_result": "available",
+        "url": "https://s3.amazonaws.com/systemsandpapers/papers/raft.pdf",
+        "body_sha256": "e93f46d7e96e366544a05838cb936a193ec1a5462dfb79e1d38d086d4397be53"
+      },
+      {
+        "skill_run_id": "7a80e3eb-8403-4b01-846d-fe370499bac2",
+        "skill_id": "web.search",
+        "original_result": "omitted_for_input_budget",
+        "url": null,
+        "body_sha256": "784efd54256b1960af0a284d56f18dec308989a0d9f01c2386a81ab2382445af"
+      }
+    ],
+    "http_elapsed_ms": 9082
+  }
+]

@@ -1,0 +1,24 @@
+{
+  "evidence": "v41 replay reproduced all 15 actual payloads and all four published outputs; third-turn mandatory fitted input 24917 exceeds 21370 with old Raft bodies held fixed",
+  "change": "Reproject prior-source bodies against the complete outgoing request when later policies, current tool results, or withheld draft make it exceed its unchanged input budget. Replace the prior Runtime envelope rather than append another copy.",
+  "priority": "Current user, full current tool calls/results, supplied material, policies/schemas and surviving history remain inputs. Prior-source metadata remains; prior bodies are indivisible newest-first under the existing policy. Omissions stay explicit. No inferred topical deletion.",
+  "scope": [
+    "services/runtime/src/chatwaifu_runtime/agent/source_context.py",
+    "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py",
+    "services/runtime/tests/test_source_context_projection.py",
+    "services/runtime/tests/test_tool_calling_agent.py"
+  ],
+  "constraints": [
+    "No prompt/persona/schema or context-window change",
+    "No new correction attempts or tool calls",
+    "No production deployment",
+    "No raw production prompt logs",
+    "Frames keep their existing preparation path",
+    "No claim that budget fit establishes answer quality"
+  ],
+  "verification": [
+    "Before/after meaningful regressions for late policies, acquired-result accumulation, review overhead, indivisible omissions, mandatory overflow, cancellation",
+    "Same four offline controls; retain changed payloads and omitted source states",
+    "Only after checks, separately admitted bounded same-material live four-turn comparison"
+  ]
+}

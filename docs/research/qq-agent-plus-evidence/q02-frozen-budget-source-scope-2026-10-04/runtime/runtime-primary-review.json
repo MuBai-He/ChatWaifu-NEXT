@@ -1,0 +1,67 @@
+{
+  "reviewer": "Primary Codex implementation author",
+  "blind": false,
+  "independent_double_blind": false,
+  "scope": "Read-recovery and provided-document scope pilot; original full Q02 remains failed",
+  "items": [
+    {
+      "batch": "v29-builtin-recovery",
+      "sample_key": "icao_provided_source_recovery:r0:t1:baseline",
+      "reply_sha256": "9c17e6b69906135ae70b67ad98d24b3ddadde038617602e4b21005a7e3487c0b",
+      "origin": "runtime_fallback",
+      "grade": "fail",
+      "reason": "按国内综合核查词项检查一个指定ICAO公告，误拦截了已覆盖所需内容的读取结果；实际输出没有回答问题。",
+      "full_q02_quality_approval": false
+    },
+    {
+      "batch": "v29-builtin-recovery",
+      "sample_key": "icao_provided_source_recovery:r0:t2:baseline",
+      "reply_sha256": "29ccd4b54cd4299eecf7d52315cd45461a85b11c23a88b57670e3129fd21f009",
+      "origin": "provider",
+      "grade": "pass_for_narrow_question",
+      "reason": "同一已读文本的两段摘录合并覆盖全文，原文确实没有100Wh/160Wh；答复指出本文未写分档，没有用其他旧规则冒充本文。此判断不证明当前国内执行或完整Q02质量。",
+      "full_q02_quality_approval": false
+    },
+    {
+      "batch": "v30-scope-receipts",
+      "sample_key": "icao_provided_source_recovery:r0:t1:baseline",
+      "reply_sha256": "cb5c0a39ebb993ebdb1b1348d6ad75c7d6bc9472aee9616796a8ace29df74f91",
+      "origin": "provider",
+      "grade": "partial",
+      "reason": "日期、两块、禁止再充电和机组例外有真实正文依据；193个成员国为分发范围，提供给成员国执行的措辞仍应更准确地区分公告与各国实际实施。两段摘录覆盖同一指纹的完整提取文本，完整查阅正文不是仅凭一次6000字符读取的声称。",
+      "full_q02_quality_approval": false
+    },
+    {
+      "batch": "v30-scope-receipts",
+      "sample_key": "icao_provided_source_recovery:r0:t2:baseline",
+      "reply_sha256": "7d00bdb93e898034e7e5621f08d47417c8f8c7a9aa8d5ae27556c7493dcaa51c",
+      "origin": "provider",
+      "grade": "pass_for_narrow_question",
+      "reason": "同一已读文本的两段摘录合并覆盖全文，原文确实没有100Wh/160Wh；答复指出本文未写分档，没有用其他旧规则冒充本文。此判断不证明当前国内执行或完整Q02质量。",
+      "full_q02_quality_approval": false
+    }
+  ],
+  "incomplete_not_scored": [
+    {
+      "batch": "v29",
+      "turn": 3,
+      "reason": "SourceDecisionRejected/read_receipt_missing"
+    },
+    {
+      "batch": "v30",
+      "turn": 3,
+      "reason": "RuntimeError, detailed original wire failure unproven"
+    }
+  ],
+  "unexecuted_not_scored": [
+    {
+      "batch": "v29",
+      "turn": 4
+    },
+    {
+      "batch": "v30",
+      "turn": 4
+    }
+  ],
+  "q02_approved": false
+}

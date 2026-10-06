@@ -1,0 +1,46 @@
+{
+  "scope": "Direct unmasked primary review; 8-turn single-text v13 smoke, not paired quality acceptance. All tool receipts and final replies inspected.",
+  "quality_approved": false,
+  "turns": [
+    {
+      "sample_key": "topic_switch:r0:t1:candidate",
+      "status": "partial",
+      "notes": "Original Raft PDF discovered/read; removes every-heartbeat random redraw and generic fixed-ratio claims. Separates the 10-500ms deployment choice from the 150-300ms random interval example, but the read excerpt is only timing and membership sections; that interval is not in the actual excerpt. Do not count full PDF as read."
+    },
+    {
+      "sample_key": "topic_switch:r0:t2:candidate",
+      "status": "pass",
+      "notes": "Follows new food topic with a preference and relevant question."
+    },
+    {
+      "sample_key": "topic_switch:r0:t3:candidate",
+      "status": "partial",
+      "notes": "Responds to sweet preference but remains wordier than the short casual target; hypothetical cooking experience should remain character framing."
+    },
+    {
+      "sample_key": "topic_switch:r0:t4:candidate",
+      "status": "pass",
+      "notes": "Answers preference without returning to prior technical topic."
+    },
+    {
+      "sample_key": "detailed_answer:r0:t1:candidate",
+      "status": "fail",
+      "notes": "Three categories with three suggestions each, but volunteers an unverified generalized aviation/railway 100Wh requirement; this turn executed no source tools. Extra concluding advice also remains."
+    },
+    {
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "status": "fail",
+      "notes": "Two old CAAC pages read. Later-change hints appeared in actual search results, yet no later original was followed up; answer still attaches quantity limit only to >100Wh category without a concrete coverage caveat. The final broad query lost the specific topic."
+    },
+    {
+      "sample_key": "detailed_answer:r0:t3:candidate",
+      "status": "partial",
+      "notes": "Two activity/time/precaution alternatives complete, but blanket museum umbrella-entry prohibition is unverified; venue policies should be conditional."
+    },
+    {
+      "sample_key": "detailed_answer:r0:t4:candidate",
+      "status": "partial",
+      "notes": "Both activity durations retained; main categories and old CAAC conditions retained. Inherits currency gap; some initial packing quantities generalized. Initial trip assistant history was trimmed only during final revision; draft carried derived checklist."
+    }
+  ]
+}

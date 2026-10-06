@@ -1,0 +1,109 @@
+{
+  "reviewer": "implementation author; direct full-text review, not blind or independent",
+  "criteria": "Same frozen baseline criteria, all conditions/scope/unresolved status; no added domestic requirements for ICAO",
+  "complete": 14,
+  "partial": 2,
+  "fail": 0,
+  "candidate_gate_pass": false,
+  "candidate_adopted": false,
+  "full_ab_started": false,
+  "items": [
+    {
+      "sample_key": "frozen_icao:r0:t1:closure_c1",
+      "grade": "complete",
+      "reason": "日期表述保持保守，与基线相同审查尺度；明确生效日期、2个、乘客禁充、机组运行例外与成员国分发。未要求额外国内条件。",
+      "reply_sha256": "22609c111cce5ef9bfc4730c2285396ba5dcb328c2b75bdadcb5a363a388a360"
+    },
+    {
+      "sample_key": "frozen_icao:r0:t2:closure_c1",
+      "grade": "complete",
+      "reason": "如实说明正文没有100Wh/160Wh分档，没有补写常识为公告条款。",
+      "reply_sha256": "d999afaa03d80ae582c166dc3fcc0993f909ed947f93b6258579eea01c0d2aee"
+    },
+    {
+      "sample_key": "frozen_icao:r0:t3:closure_c1",
+      "grade": "complete",
+      "reason": "核心结论与证据缺口明确；国内转化仅表述为本文未说明的事项，没有宣称必须履行某种法律机制。不同于基线将通常转化机制作为事实解释。",
+      "reply_sha256": "fa5e86c8fc724a90014b83ee491f6b59a840399faa17df00949ca168aef74dca"
+    },
+    {
+      "sample_key": "frozen_icao:r0:t4:closure_c1",
+      "grade": "complete",
+      "reason": "三条清单含日期保守表述、原链接、数量、禁止行为、机组例外与不能证明各国实际实施的范围。",
+      "reply_sha256": "7a804582fbc336c82f7e679297d45f7f17965033b0f3520c1c721436fc8eca9e"
+    },
+    {
+      "sample_key": "frozen_airchina:r0:t1:closure_c1",
+      "grade": "complete",
+      "reason": "日期、国航范围、总数、能量分档审批、召回/外观/标识、境内3C、携带存放和机上限制完整。",
+      "reply_sha256": "bc4a64bf6887e97cbaa6b3a11023b829238291a54963040b11fc12aa966bf7a1"
+    },
+    {
+      "sample_key": "frozen_airchina:r0:t2:closure_c1",
+      "grade": "complete",
+      "reason": "100Wh以下同样计入总数；上档审批、境内3C、禁托运、绝缘/开关/放置与机上限制保留。",
+      "reply_sha256": "64e7574c03114fa0cb7a2f45abdd5072dcb106e033858b85711f904284a6c3e6"
+    },
+    {
+      "sample_key": "frozen_airchina:r0:t3:closure_c1",
+      "grade": "complete",
+      "reason": "限定运营商原文，区分民航局引述与原始规则，并明确8月4日至10月4日后续变化尚未核实。",
+      "reply_sha256": "214084bd096730afdc01964e40a6e59ff15390b3af06b94b7d08ec7d1318c26d"
+    },
+    {
+      "sample_key": "frozen_airchina:r0:t4:closure_c1",
+      "grade": "partial",
+      "reason": "携带条款、国航范围、8月4日日期和链接保留；仍遗漏前轮明确的截至10月4日后续更新尚未核实状态。明确写入候选要求后，两次最终清单仍未保留，不能批准跨轮保真。",
+      "reply_sha256": "951ab8a585a33251eb12e770c50c1d7785c5cffbee25d5dba6122cf91b407b39"
+    },
+    {
+      "sample_key": "frozen_icao:r1:t1:closure_c1",
+      "grade": "complete",
+      "reason": "日期表述保持保守，与基线相同审查尺度；明确生效日期、2个、乘客禁充、机组运行例外与成员国分发。未要求额外国内条件。",
+      "reply_sha256": "650ecb58c493e99fb4556400c0590cd9817978c0bc8332964243ca37679a16cf"
+    },
+    {
+      "sample_key": "frozen_icao:r1:t2:closure_c1",
+      "grade": "complete",
+      "reason": "如实说明正文没有100Wh/160Wh分档，没有补写常识为公告条款。",
+      "reply_sha256": "7a839ceb051986ca36e7704f6612cd0956f1113568fcc6b9d3884ab534f2d724"
+    },
+    {
+      "sample_key": "frozen_icao:r1:t3:closure_c1",
+      "grade": "complete",
+      "reason": "核心结论与证据缺口明确；国内转化仅表述为本文未说明的事项，没有宣称必须履行某种法律机制。不同于基线将通常转化机制作为事实解释。",
+      "reply_sha256": "42bfba9c58361758731435b98468f191c20cf7ebdbbb7564682f328bf47b0d4a"
+    },
+    {
+      "sample_key": "frozen_icao:r1:t4:closure_c1",
+      "grade": "complete",
+      "reason": "三条清单含日期保守表述、原链接、数量、禁止行为、机组例外与不能证明各国实际实施的范围。",
+      "reply_sha256": "f0a688972f22db56fdbedfe8ffdde55e462a21d814066819d2d376bba453bf45"
+    },
+    {
+      "sample_key": "frozen_airchina:r1:t1:closure_c1",
+      "grade": "complete",
+      "reason": "日期、国航范围、总数、能量分档审批、召回/外观/标识、境内3C、携带存放和机上限制完整。",
+      "reply_sha256": "20f13460c024ee63fdf218d5a66531d49a667e52f3341bd459f92bed32e1617b"
+    },
+    {
+      "sample_key": "frozen_airchina:r1:t2:closure_c1",
+      "grade": "complete",
+      "reason": "100Wh以下同样计入总数；上档审批、境内3C、禁托运、绝缘/开关/放置与机上限制保留。",
+      "reply_sha256": "0b6fce7092f9e5bb6886a891a3bbe5462afbcdb2f45c105a6f76887ce2f91930"
+    },
+    {
+      "sample_key": "frozen_airchina:r1:t3:closure_c1",
+      "grade": "complete",
+      "reason": "限定运营商原文，区分民航局引述与原始规则，并明确8月4日至10月4日后续变化尚未核实。",
+      "reply_sha256": "02ce0408a4d5a6354d67b3263b365d94aa664a79e1c47e43addfb0c16d60c459"
+    },
+    {
+      "sample_key": "frozen_airchina:r1:t4:closure_c1",
+      "grade": "partial",
+      "reason": "携带条款、国航范围、8月4日日期和链接保留；仍遗漏前轮明确的截至10月4日后续更新尚未核实状态。明确写入候选要求后，两次最终清单仍未保留，不能批准跨轮保真。",
+      "reply_sha256": "5be0984e11ea351f747e62782828a9d7a49ebe326ebd998a29dd0e573958a605"
+    }
+  ],
+  "interpretation": "14/16 vs earlier 13/16 is narrow sequential evidence, not causal/persona improvement; recurring missing freshness status rejects candidate at the prespecified stage1 gate."
+}

@@ -1,0 +1,62 @@
+{
+  "actual_source_sha256_after": "9095b832c38f799b90eb1243c06f0690694e78fc9b2535604e5780047e51cf37",
+  "backup_env_mode": "0o600",
+  "backup_private_mode": "0o700",
+  "code_sha256_after_expected": "9095b832c38f799b90eb1243c06f0690694e78fc9b2535604e5780047e51cf37",
+  "code_sha256_before": "5a9073cede807269d606b79e80622346970c42c0f6e0d2043f104af511a5ff60",
+  "commands": [
+    {
+      "argv": [
+        "docker",
+        "compose",
+        "up",
+        "-d",
+        "--no-deps",
+        "--pull",
+        "never",
+        "crawl4ai"
+      ],
+      "exit_code": 0,
+      "output": " Container cw2-public-web-crawl4ai-1  Recreate\n Container cw2-public-web-crawl4ai-1  Recreated\n Container cw2-public-web-crawl4ai-1  Starting\n Container cw2-public-web-crawl4ai-1  Started\n"
+    },
+    {
+      "argv": [
+        "systemctl",
+        "--user",
+        "restart",
+        "chatwaifu-runtime.service"
+      ],
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "argv": [
+        "/home/mubai/chatwaifu-server/source/.venv/bin/python",
+        "/tmp/cw2-q02-reader-integration-20261004/smoke_deployed_reader.py"
+      ],
+      "exit_code": 0,
+      "output": "{\"kind\": \"html\", \"arguments\": {\"url\": \"https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml\", \"focus\": \"\\u5145\\u7535\\u5b9d\", \"max_characters\": 6000, \"dns_resolver\": \"cloudflare\", \"fresh\": true}, \"origin\": \"specified_html\", \"model_calls\": 0, \"ok\": true, \"elapsed_ms\": 3436}\n{\"kind\": \"pdf\", \"arguments\": {\"url\": \"https://raft.github.io/raft.pdf\", \"focus\": \"randomized election timeouts\", \"max_characters\": 6000, \"dns_resolver\": \"cloudflare\", \"fresh\": true}, \"origin\": \"previous_production_search_rank4\", \"model_calls\": 0, \"ok\": true, \"elapsed_ms\": 4331}\n"
+    }
+  ],
+  "completed_at_utc": "2026-10-04T05:38:40.463436+00:00",
+  "crawler_health": {
+    "http": 200,
+    "status": "ok",
+    "version": "0.9.3"
+  },
+  "model_calls": 0,
+  "new_crawler_image": "unclecode/crawl4ai@sha256:84751dab794259db05d5bd4e5c766a8041a65f0554326e4516e620abdf2fa18b",
+  "only_reader_class_ast_changed": true,
+  "protected_file_count": 14,
+  "protected_files_unchanged": true,
+  "q02_approval": false,
+  "rollback_executed": false,
+  "rollout": "functional_reader_checks_passed",
+  "runtime_health": {
+    "certificate_verified": true,
+    "database": "ready",
+    "http": 200,
+    "status": "ok"
+  },
+  "started_at_utc": "2026-10-04T05:38:15.495792+00:00"
+}

@@ -1,0 +1,12 @@
+{
+  "parent_snapshot": "/tmp/cw2-q02-source-decision-v24-eval",
+  "snapshot": "/tmp/cw2-q02-provider-identity-v25-eval",
+  "sha256": {
+    "services/runtime/src/chatwaifu_runtime/providers/contracts.py": "99ffdb79bd68a9476dd0fd435a47927457a5dc067f23beee86852ff1a53946e2",
+    "services/runtime/src/chatwaifu_runtime/providers/openai_compatible.py": "fe83c453204ab372cfa77f23835558dcba648f98abd2623d8955eed1055de40a",
+    "tools/runtime_source_evaluation.py": "a8073fd3cf84f8af221ef2e6861b80e783d25c427c573e74aab185a158bd86b5",
+    "tools/evaluate_character_scenarios.py": "d60ba69f0d18fc5851c3aff881da7e0b4b4ca546ca8a7a398717226f9adccda6",
+    "services/runtime/tests/test_llm_stream_lifecycle.py": "3a7bb6fa822fface80437ce8970616ea2d5ef4d32217abbffc57e600be818a76",
+    "tools/tests/test_evaluate_character_scenarios.py": "9caeb7f46fe7c8aae725c7b8e4af5491d46779900d78c0e2b7f84d28ea40e56c"
+  }
+}

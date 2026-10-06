@@ -1,0 +1,29 @@
+{
+  "image_id": "sha256:85b1794aa5c7ba4d5f382d101426d2af32da2728dd1d17228b9172f444ab7a7b",
+  "engines": [
+    "baidu",
+    "yahoo",
+    "qwant",
+    "mojeek",
+    "startpage",
+    "bing news"
+  ],
+  "queries": [
+    "民航局 充电宝 乘机规定 最新规定",
+    "民航旅客携带充电宝乘机规定 额定能量 3C标识 托运",
+    "Raft consensus algorithm election timeout heartbeat interval broadcastTime",
+    "2026 充电宝 飞机 航空公司 最新规定"
+  ],
+  "query_origin": [
+    "v24_actual",
+    "v24_actual",
+    "v24_actual",
+    "diagnostic_current_operator_query"
+  ],
+  "requests_max": 24,
+  "proxy_from_existing_candidate": true,
+  "language_parameter_omitted_like_runtime": true,
+  "stop_engine_after_challenge_or_denial": true,
+  "production_unchanged": true,
+  "port": 18082
+}

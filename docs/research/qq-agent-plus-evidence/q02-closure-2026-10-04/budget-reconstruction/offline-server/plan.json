@@ -1,0 +1,31 @@
+{
+  "stage": "v43-budget-reconstruction",
+  "purpose": "Separate mandatory-result overflow, late policy overhead, acquired-material routing, and independent section limits using the already frozen v41 evidence.",
+  "mode": "offline-first",
+  "new_model_http_calls_admitted": 0,
+  "new_source_http_calls_admitted": 0,
+  "base_source_versions": ["v41", "v42"],
+  "frozen_evidence": "../autonomous-discovery/live",
+  "frozen_history": "Each turn starts with the actual published v41 prefix, including its Runtime fallbacks. Changed replay outputs never replace that prefix.",
+  "comparisons": [
+    "v41 at its admitted 32768 window / 8192 reserve / 15 percent estimate margin / scaled sections",
+    "v42 at identical configuration and acquired-material inputs",
+    "Offline 65536 counterfactual at identical reserve and margin; both legacy and scaled section policies. This does not establish endpoint limits or quality gains."
+  ],
+  "capture": [
+    "Complete compiled LlmRequest and actual guard input, including unsent request",
+    "Complete fitted request or failure report; source projection and decision-history reductions separately",
+    "Serialized OpenAI-compatible payload and equality against each known historical wire payload",
+    "Recorded old model responses and terminal tool snapshots with usage and identity deliberately excluded from simulated events",
+    "The first boundary without a recorded response is captured and stopped; no invented model answer"
+  ],
+  "constraints": [
+    "No AGY, no delegation, no new prompt/persona rule, no production configuration/deployment",
+    "No credentials loaded; all HTTP dispatch hard-blocked",
+    "Original frozen evidence and code snapshots remain immutable",
+    "Replay timing and cached replies are not live model latency or quality acceptance",
+    "Native usage belongs only to the 15 historical HTTP requests",
+    "No implementation change until evidence identifies its cause; no automatic window enlargement or compression toward 7292"
+  ],
+  "next_gate": "Review reconstruction before choosing any bounded code fix and affected regressions. Then a separately admitted same-material four-turn real flow; role/full A/B remain closed."
+}

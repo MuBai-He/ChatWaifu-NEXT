@@ -1,0 +1,32 @@
+{
+  "scope": "citation-correction-controls",
+  "release_approved": false,
+  "source_urls": [
+    "https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html",
+    "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227950.html"
+  ],
+  "groups": {
+    "correction": {
+      "completed": 3,
+      "stop": 3,
+      "source_url_present": 3,
+      "all_two_source_urls_present": 3,
+      "provider_usage": {
+        "prompt_tokens": 33057,
+        "completion_tokens": 1688,
+        "reasoning_tokens": 1710,
+        "total_tokens": 36455
+      },
+      "latency_ms": [
+        7096,
+        7385,
+        8559
+      ],
+      "median_ms": 7385,
+      "latency_p50_ms": 7385,
+      "latency_p95_ms": 8559
+    }
+  },
+  "metrics_note": "URL presence is a diagnostic observation, not factual approval; aliases do not independently verify the underlying model.",
+  "percentile_method": "nearest_rank; tiny samples describe this batch only"
+}

@@ -1,0 +1,18 @@
+{
+  "model": "gemini-3.8-flash-high",
+  "source_file_sha256": "07195b28a06ce05b84e1b7845a50dfb93d5f14b9f203d6a34ef68c337c1f7b15",
+  "wire_indexes": {
+    "raft": 4,
+    "regulations": 14
+  },
+  "arms": [
+    "original",
+    "answer_only",
+    "grounded"
+  ],
+  "repeats": 3,
+  "requests_max": 18,
+  "tool_execution": false,
+  "production_changed": false,
+  "schema_validity_is_not_quality": true
+}

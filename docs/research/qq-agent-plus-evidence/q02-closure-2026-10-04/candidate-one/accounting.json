@@ -1,0 +1,469 @@
+{
+  "actual_http_attempts": 16,
+  "completed_model_answers": 16,
+  "live_search_and_read_calls": 0,
+  "all_frozen_sources_whole_on_every_actual_wire": true,
+  "source_text_hashes": {
+    "icao": "4dfe7980b04b1c65ed14156ce7cd8381f19b0cd7874e76b42315491f19df1fe3",
+    "airchina": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38"
+  },
+  "input_budget_limit": 21370,
+  "output_reserve_and_max_output": 8192,
+  "usage": {
+    "prompt_tokens": {
+      "reported": 16,
+      "attempts": 16,
+      "known_subtotal": 88177,
+      "complete_total": 88177
+    },
+    "completion_tokens": {
+      "reported": 16,
+      "attempts": 16,
+      "known_subtotal": 4506,
+      "complete_total": 4506
+    },
+    "total_tokens": {
+      "reported": 16,
+      "attempts": 16,
+      "known_subtotal": 105028,
+      "complete_total": 105028
+    },
+    "reasoning_tokens": {
+      "reported": 16,
+      "attempts": 16,
+      "known_subtotal": 12345,
+      "complete_total": 12345
+    }
+  },
+  "reference_error_percent_min_max": [
+    -16.7616,
+    29.7149
+  ],
+  "actual_reference_tokens_min_max": [
+    3776,
+    6724
+  ],
+  "omitted_history_calls": 0,
+  "http_latency_p50_ms": 5220.0,
+  "http_latency_p95_ms": 7465.0,
+  "wire_checks": [
+    {
+      "sample_key": "frozen_icao:r0:t1:closure_c1",
+      "source": "icao",
+      "source_text_sha256": "4dfe7980b04b1c65ed14156ce7cd8381f19b0cd7874e76b42315491f19df1fe3",
+      "payload_sha256": "9d570d342d4f68ee850248b9d7356af708af4fda44d9ebe0fb8e86913c6c9b39",
+      "reference_tokens": 5453,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 5453,
+        "estimated_input_tokens": 5453,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "compiler_estimate_excludes_control_injection": 3017,
+      "latency_ms": 6008,
+      "reported_identity": {
+        "reported_model_ids": [
+          "gemini-3.8-flash-control"
+        ],
+        "incomplete": false,
+        "version": "1.0"
+      }
+    },
+    {
+      "sample_key": "frozen_icao:r0:t2:closure_c1",
+      "source": "icao",
+      "source_text_sha256": "4dfe7980b04b1c65ed14156ce7cd8381f19b0cd7874e76b42315491f19df1fe3",
+      "payload_sha256": "750c737ec0fc7373c467268d12de730e9c4c8ad2cc13ce991cb2303e204e1db1",
+      "reference_tokens": 5885,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 5885,
+        "estimated_input_tokens": 5885,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "compiler_estimate_excludes_control_injection": 3219,
+      "latency_ms": 3622,
+      "reported_identity": {
+        "reported_model_ids": [
+          "gemini-3.8-flash"
+        ],
+        "incomplete": false,
+        "version": "1.0"
+      }
+    },
+    {
+      "sample_key": "frozen_icao:r0:t3:closure_c1",
+      "source": "icao",
+      "source_text_sha256": "4dfe7980b04b1c65ed14156ce7cd8381f19b0cd7874e76b42315491f19df1fe3",
+      "payload_sha256": "43c64c776405e06a433c8a1587036911f1e3e2cd912208f1d5b48ee7c79e6fe5",
+      "reference_tokens": 6105,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 6105,
+        "estimated_input_tokens": 6105,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "compiler_estimate_excludes_control_injection": 3306,
+      "latency_ms": 5233,
+      "reported_identity": {
+        "reported_model_ids": [
+          "gemini-3.8-flash-control"
+        ],
+        "incomplete": false,
+        "version": "1.0"
+      }
+    },
+    {
+      "sample_key": "frozen_icao:r0:t4:closure_c1",
+      "source": "icao",
+      "source_text_sha256": "4dfe7980b04b1c65ed14156ce7cd8381f19b0cd7874e76b42315491f19df1fe3",
+      "payload_sha256": "d1aa4442e885d934daddc3dc774366cc1367c974610de4bdee0bee777b24f0b0",
+      "reference_tokens": 6600,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 6600,
+        "estimated_input_tokens": 6600,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "compiler_estimate_excludes_control_injection": 3520,
+      "latency_ms": 5190,
+      "reported_identity": {
+        "reported_model_ids": [
+          "gemini-3.8-flash"
+        ],
+        "incomplete": false,
+        "version": "1.0"
+      }
+    },
+    {
+      "sample_key": "frozen_airchina:r0:t1:closure_c1",
+      "source": "airchina",
+      "source_text_sha256": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+      "payload_sha256": "d4b384ee332a174ca7d68885ec4d128d30b4ec4dc3ffe90604fb4faf6ab60797",
+      "reference_tokens": 3776,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 3776,
+        "estimated_input_tokens": 3776,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "compiler_estimate_excludes_control_injection": 3009,
+      "latency_ms": 6456,
+      "reported_identity": {
+        "reported_model_ids": [
+          "gemini-3.8-flash-control"
+        ],
+        "incomplete": false,
+        "version": "1.0"
+      }
+    },
+    {
+      "sample_key": "frozen_airchina:r0:t2:closure_c1",
+      "source": "airchina",
+      "source_text_sha256": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+      "payload_sha256": "7b57a938127c602153631aa99a7084c28b7a1b2b5392c7979d01a89f093ac2a3",
+      "reference_tokens": 4481,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 4481,
+        "estimated_input_tokens": 4481,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "compiler_estimate_excludes_control_injection": 3321,
+      "latency_ms": 5173,
+      "reported_identity": {
+        "reported_model_ids": [
+          "gemini-3.8-flash"
+        ],
+        "incomplete": false,
+        "version": "1.0"
+      }
+    },
+    {
+      "sample_key": "frozen_airchina:r0:t3:closure_c1",
+      "source": "airchina",
+      "source_text_sha256": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+      "payload_sha256": "c64d8b9930657ac88e99bea62f894f3c068025da8bb2520ccdd044f32bc0c5b7",
+      "reference_tokens": 5005,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 5005,
+        "estimated_input_tokens": 5005,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "compiler_estimate_excludes_control_injection": 3548,
+      "latency_ms": 6081,
+      "reported_identity": {
+        "reported_model_ids": [
+          "gemini-3.8-flash-control"
+        ],
+        "incomplete": false,
+        "version": "1.0"
+      }
+    },
+    {
+      "sample_key": "frozen_airchina:r0:t4:closure_c1",
+      "source": "airchina",
+      "source_text_sha256": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+      "payload_sha256": "4fa8b775b954ee47919039e4136a6ac8403ef5cb074ef394c16bada1df06866c",
+      "reference_tokens": 5690,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 5690,
+        "estimated_input_tokens": 5690,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "compiler_estimate_excludes_control_injection": 3850,
+      "latency_ms": 5908,
+      "reported_identity": {
+        "reported_model_ids": [
+          "gemini-3.8-flash"
+        ],
+        "incomplete": false,
+        "version": "1.0"
+      }
+    },
+    {
+      "sample_key": "frozen_icao:r1:t1:closure_c1",
+      "source": "icao",
+      "source_text_sha256": "4dfe7980b04b1c65ed14156ce7cd8381f19b0cd7874e76b42315491f19df1fe3",
+      "payload_sha256": "9d570d342d4f68ee850248b9d7356af708af4fda44d9ebe0fb8e86913c6c9b39",
+      "reference_tokens": 5453,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 5453,
+        "estimated_input_tokens": 5453,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "compiler_estimate_excludes_control_injection": 3017,
+      "latency_ms": 7711,
+      "reported_identity": {
+        "reported_model_ids": [
+          "gemini-3.8-flash-control"
+        ],
+        "incomplete": false,
+        "version": "1.0"
+      }
+    },
+    {
+      "sample_key": "frozen_icao:r1:t2:closure_c1",
+      "source": "icao",
+      "source_text_sha256": "4dfe7980b04b1c65ed14156ce7cd8381f19b0cd7874e76b42315491f19df1fe3",
+      "payload_sha256": "7e347a980dafbc5a1e12ccb64e81ec983e3f005703dcae48f33a2720aa681390",
+      "reference_tokens": 5920,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 5920,
+        "estimated_input_tokens": 5920,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "compiler_estimate_excludes_control_injection": 3275,
+      "latency_ms": 3725,
+      "reported_identity": {
+        "reported_model_ids": [
+          "gemini-3.8-flash"
+        ],
+        "incomplete": false,
+        "version": "1.0"
+      }
+    },
+    {
+      "sample_key": "frozen_icao:r1:t3:closure_c1",
+      "source": "icao",
+      "source_text_sha256": "4dfe7980b04b1c65ed14156ce7cd8381f19b0cd7874e76b42315491f19df1fe3",
+      "payload_sha256": "fb78653961dcfb42a1b688de2964dbb93e9531fd447e8560e1ceca4e75d778c9",
+      "reference_tokens": 6161,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 6161,
+        "estimated_input_tokens": 6161,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "compiler_estimate_excludes_control_injection": 3371,
+      "latency_ms": 5207,
+      "reported_identity": {
+        "reported_model_ids": [
+          "gemini-3.8-flash-control"
+        ],
+        "incomplete": false,
+        "version": "1.0"
+      }
+    },
+    {
+      "sample_key": "frozen_icao:r1:t4:closure_c1",
+      "source": "icao",
+      "source_text_sha256": "4dfe7980b04b1c65ed14156ce7cd8381f19b0cd7874e76b42315491f19df1fe3",
+      "payload_sha256": "a97130fb0f36821a6a9ce29538fb46311113ed63bb305508c499df4f9961c6c6",
+      "reference_tokens": 6724,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 6724,
+        "estimated_input_tokens": 6724,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "compiler_estimate_excludes_control_injection": 3625,
+      "latency_ms": 5483,
+      "reported_identity": {
+        "reported_model_ids": [
+          "gemini-3.8-flash"
+        ],
+        "incomplete": false,
+        "version": "1.0"
+      }
+    },
+    {
+      "sample_key": "frozen_airchina:r1:t1:closure_c1",
+      "source": "airchina",
+      "source_text_sha256": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+      "payload_sha256": "d4b384ee332a174ca7d68885ec4d128d30b4ec4dc3ffe90604fb4faf6ab60797",
+      "reference_tokens": 3776,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 3776,
+        "estimated_input_tokens": 3776,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "compiler_estimate_excludes_control_injection": 3009,
+      "latency_ms": 4829,
+      "reported_identity": {
+        "reported_model_ids": [
+          "gemini-3.8-flash-control"
+        ],
+        "incomplete": false,
+        "version": "1.0"
+      }
+    },
+    {
+      "sample_key": "frozen_airchina:r1:t2:closure_c1",
+      "source": "airchina",
+      "source_text_sha256": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+      "payload_sha256": "05032c1b40a5772faa5da31ff3e5a52f47342949fe9fc8a0c2f7d0efca7d08da",
+      "reference_tokens": 4512,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 4512,
+        "estimated_input_tokens": 4512,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "compiler_estimate_excludes_control_injection": 3332,
+      "latency_ms": 4203,
+      "reported_identity": {
+        "reported_model_ids": [
+          "gemini-3.8-flash"
+        ],
+        "incomplete": false,
+        "version": "1.0"
+      }
+    },
+    {
+      "sample_key": "frozen_airchina:r1:t3:closure_c1",
+      "source": "airchina",
+      "source_text_sha256": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+      "payload_sha256": "d81e25c6d77911badfb56f4c956649ddeb3287998847b4bb1962eef8bfe7c89e",
+      "reference_tokens": 5097,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 5097,
+        "estimated_input_tokens": 5097,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "compiler_estimate_excludes_control_injection": 3585,
+      "latency_ms": 4846,
+      "reported_identity": {
+        "reported_model_ids": [
+          "gemini-3.8-flash-control"
+        ],
+        "incomplete": false,
+        "version": "1.0"
+      }
+    },
+    {
+      "sample_key": "frozen_airchina:r1:t4:closure_c1",
+      "source": "airchina",
+      "source_text_sha256": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+      "payload_sha256": "87976845d7bf6bdceb4c567d4e8ed8a93ec1bf7a518033723966a9e6cfebe246",
+      "reference_tokens": 5799,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 5799,
+        "estimated_input_tokens": 5799,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "compiler_estimate_excludes_control_injection": 3902,
+      "latency_ms": 7383,
+      "reported_identity": {
+        "reported_model_ids": [
+          "gemini-3.8-flash"
+        ],
+        "incomplete": false,
+        "version": "1.0"
+      }
+    }
+  ],
+  "q02_approval": false,
+  "limitation": "Isolated frozen-source capability control; no live Runtime tool receipts. Compiler estimate predates the added document block; use journal and actual wire reference, not the evaluator summary estimate."
+}

@@ -1,0 +1,248 @@
+# CW2 借鉴 QQ Agent Plus：实施方案
+
+日期：2026-09-29。原始状态：待实施方案。当前状态：Q01–Q07 的代码切片、确定性测试和受控证据已落地；Q02 的真实微信文字投递、桌面播放 ACK 和用户听见确认已分别记录，但真实模型质量、稳定来源发现和来源失败时的事实覆盖仍未通过。当前进展和验收边界见 [实施状态](qq-agent-plus-evidence/implementation-status.md)；下文保留原任务卡及制定方案时的基线描述。
+
+## 1. 范围与基线
+
+本方案的实施对象是 **CW2**，基于本地提交 `285262a`。借鉴来源是 [QQ Agent Plus 研究](qq-agent-plus-review.md)，不继续修复 QQAP，也不移植其整套运行框架。
+
+此前的 `649 passed / 21 failed / 9 skipped` 是 **QQAP** 的测试结果，不是 CW2 的缺陷清单。本轮只产出方案、校对当前源码和文档链接，不调用真实模型、不发送消息、不修改运行配置。
+
+预期用户变化：宁宁在不同场景中的反应更稳定；认真求助时仍可靠；结束话题时能自然停住；换配置后可追查角色行为变化；出现沉默、重复或交付问题时能定位原因。
+
+执行前必须重新核对目标分支、受控文件和已有工作。其他 CW2 工作树的功能不能仅凭名称或历史记录算作本基线已完成。
+
+## 2. 已有基础与实际增量
+
+| 方向     | 当前源码基础                                                     | 本方案增加什么                              | 不重复建设什么                 |
+| -------- | ---------------------------------------------------------------- | ------------------------------------------- | ------------------------------ |
+| 人格表达 | 六文件角色包、Character Kernel、PromptCompiler、即时消息风格约束 | 场景行为规范与多轮评估                      | 新角色框架、通用巨型提示词     |
+| 角色规划 | `_plan_response()` 生成 ResponsePlan；当前未使用传入的 character | 经评估证明必要的角色风格映射                | 由模型任意修改关系或情绪数值   |
+| 上下文   | 每轮编译历史、预算与摘要；角色包启动时加载                       | 本轮配置快照、版本标识及旧历史处理规则      | QQAP 的 thread/lease 框架      |
+| 诊断     | 事件存储、事件读取、记忆召回与 prompt budget 事件、交付/播放事实 | 一个按互动串联的只读诊断视图                | 原始提示词或隐式推理的常规日志 |
+| 记忆     | 来源、策略、纠错替代、遗忘、敏感项过滤、共同梗                   | 针对实际缺口的检索和修订评估                | 全局人物 JSON 库、平行备份真源 |
+| 表情     | 可选学习、作用域、删除、防复活、真实交付使用记录、重复规避       | 已有链路的行为验收；必要时补标签/候选相关性 | 另一套收藏、使用计数与发送队列 |
+| 主动行为 | Attention、Ambient、quiet hours、冷却和预算                      | 参与原因与拒绝/结束场景的一致处理           | 无需求的自动追问和群聊随机插话 |
+| 渠道交付 | 稳定分条计划、租约、ACK、持久化节奏、尾部取消                    | 展示和验证现有终态                          | 新 Outbox 或 adapter 内 sleep  |
+
+源码入口见第 5 节各任务；架构依据包括 [ADR 0015](../adr/0015-persistent-character-kernel.md)、[ADR 0022](../adr/0022-conversation-composition-and-persistence-ports.md)、[ADR 0032](../adr/0032-durable-multipart-channel-delivery.md)、[ADR 0033](../adr/0033-instant-messaging-bubble-planning-and-durable-cadence.md)、[ADR 0036](../adr/0036-opt-in-learned-sticker-library.md)、[ADR 0044](../adr/0044-delivery-backed-sticker-usage-history.md) 和 [ADR 0045](../adr/0045-bounded-sticker-repeat-avoidance.md)。这是代码与设计层面的复用依据，不是本轮重新完成了全部运行验收。
+
+## 3. 执行顺序与边界
+
+| 任务   | 产物                                     | 依赖                         | 大小 | 状态     |
+| ------ | ---------------------------------------- | ---------------------------- | ---- | -------- |
+| CW-Q01 | 可复现的角色行为基线与评估工具           | 无                           | M    | 已实现，质量评估持续进行 |
+| CW-Q02 | 场景角色卡及必要的规划修正               | Q01                          | M    | 已实现，真实模型质量未通过 |
+| CW-Q03 | 本轮上下文身份和配置一致性               | Q01                          | M/L  | 已实现，真实设备/凭据轮换未验 |
+| CW-Q04 | 单次互动只读诊断视图                     | Q03；Q01 提供复现场景        | L    | 已实现，真实渠道/播放未验 |
+| CW-Q05 | 参与、静默、主动行为的统一验收与增量修正 | Q01；诊断展示接 Q04          | M    | 已实现，真实环境触达未验 |
+| CW-Q06 | 记忆边界和修订链评估与修正               | Q01；诊断展示接 Q04          | M    | 已实现，多账号边界未验 |
+| CW-Q07 | 表情链路体验验收与候选质量改进           | Q01、Q02；记忆绑定需 Q06     | M    | 已实现，真实渠道体验未验 |
+| CW-Q08 | 配置生效值与成本来源透明度               | Q03、Q04；明确使用需求后执行 | M    | 后续候选 |
+
+M/L 表示相对复杂度，不承诺日历工期。首批范围为 **Q01 → Q02**，同时允许 Q03 在独立分支推进；Q04 建立在 Q03 的元数据之上。Q05–Q07 按实测问题选择实施，不要求为了任务数量修改已经正确的行为。
+
+共用约束：领域代码通过端口访问持久化；Provider 对象留在适配器；只允许当前 generation 输出；不改变现有关系推进规则；保留实际发送/播放与模型生成的区别。新跨域契约必须类型化、带版本并进入协议生成检查。长久影响持久化或配置切换语义的决定，在对应任务中补 ADR，不能将本方案直接当成 Accepted ADR。
+
+本方案采用的产品默认值：保留宁宁性格，不把她改成“损友”；诊断放在本地所有者的高级设置中，默认收起；不自动开启表情学习或主动追问；不扩大多用户/群聊记忆共享范围。当前忙碌时仍遵循既有主动行为 policy，新增群聊抢占规则留给明确的群聊切片。
+
+## 4. 统一评估与交付标准
+
+### 4.1 分开评价正确性与角色表现
+
+确定性测试检查权限、来源、取消、配置快照、数据持久化和交付终态。真实模型评估检查自然程度、人物一致、任务保真与场景反应；不能只检查是否含某个口癖或控制字数。
+
+保留 [现有八场景](../../tests/fixtures/conversation/instant_chat_style.json)，另拟新增 12 组四轮场景：普通问候、被调侃、被纠正、要求停止玩笑、认真技术求助、情绪低落、结束对话、身份询问、旧风格历史压力、话题切换、共同经历来源不足、明确要求详细回答。
+
+初始比较使用同一模型配置、相同固定输入、相同角色状态与合成记忆，A/B 各重复 3 次；12 × 4 × 3 × 2 = 288 次模型调用。正式执行前由运行器输出预计调用数与成本上限；默认 dry-run，不自动发送到 QQ/微信。第二 Provider 是额外兼容性验证，单独记账，不能与提示词变化混为一个变量。
+
+### 4.2 发布门槛
+
+- 固定用例中的硬边界不允许回归：无来源的共同经历、声称未执行动作、用户叫停后继续同类玩笑、角色关系越级、明确任务被短句要求截断。
+- 其他体验按场景记录“符合 / 部分符合 / 不符合”及理由。A/B 盲评中，目标弱项必须有可指认的改善，其他场景不能系统性退化；分歧样本人工复核，保留原始合成测试输出。
+- 报告列出每场景失败数、总样本数、模型/参数、版本、输入状态、token 与延迟；同时展示 p50/p95，不只展示平均值。模型不支持 seed 时明确写出，不能保证采样可完全复现。
+- 零次观察到某问题只说明本样本未出现，不证明任意长对话中绝不会出现。模型评分可辅助排序，不能单独批准角色质量。
+- Q02 通过自动与模型评估后，再进行现有受控 Runtime 的交互验收。真实渠道消息、真实账号和公开副作用按具体实施任务范围处理，不由本方案自动触发。
+
+## 5. 可独立实施的任务卡
+
+路径约定：以下 `character_kernel/`、`conversation/`、`providers/`、`memory/`、`persistence/`、`eventing/`、`api/`、`companion/`、`external_channels/` 均相对于 `services/runtime/src/chatwaifu_runtime/`；其他路径从仓库根目录起算。标为“拟新增”的文件、模块和类型目前不存在。
+
+### CW-Q01：角色行为基线与可复现评估
+
+**目标**：让“更像宁宁”可以被复查，并能分辨 persona、历史、planner 和模型的影响。
+
+**现有落点**：`tests/fixtures/conversation/instant_chat_style.json`、`services/runtime/tests/test_character_kernel.py`、`services/runtime/tests/test_bubble_presentation.py`、`docs/research/instant-chat-style-evaluation.md`。
+
+**新增产物（拟新增，当前不存在）**：`tests/fixtures/conversation/character_scenarios.json`、`tools/evaluate_character_scenarios.py`、配套运行器单测、脱敏结果模板。
+
+**实施步骤**：
+
+1. 固定 12 组四轮输入、角色状态、记忆来源和预期/禁止行为；输入仅使用合成数据。
+2. 运行器复用真实 PromptCompiler、Character Kernel 与 Provider 适配器，使用隔离数据库；与渠道发送器断开。
+3. 默认输出预算与配置摘要；显式选择执行模式后才调用指定 Provider。支持最大请求数、费用估算限额、超时、中断、部分结果保存和显式续跑，不在断网后无限重试。
+4. 输出 A/B 配对的输入、结果、版本及盲评表；记录模型产生的回复，不存放凭据或隐式推理字段。
+
+**完成标准**：Demo/受控适配器能跑完所有场景；中断续跑不会重复已完成样本；两次相同输入的确定性元数据一致；预算耗尽能停止并标出未完成项；真实模型结果与单元测试分开报告。
+
+**契约与回退**：只增加开发评估工具和 fixtures，无生产数据库迁移、无用户数据回填。失败不影响 Runtime，旧八场景继续可用。
+
+### CW-Q02：场景化角色行为
+
+**当前收口入口（2026-10-04）**：[四类阻塞台账与冻结结论](qq-agent-plus-evidence/q02-closure-ledger-2026-10-04.md)。Q02未通过。最新v40只修复显式版本化提供资料跳过既有核对的路由，帧关闭、无新persona/提示规则/窗口，未部署。四组真实四轮32HTTP/16模型答复、0回退/拒绝/未执行，正文与历史全送，usage全采；全文14完整/2部分。核对正文丢充电电源限定和存放对象，另一末轮漏前轮后续更新未知；一次核对及完整流程不算保真。旧v39重复退化、所有失败及误判撤销证据继续保留。下一依赖是依据草稿→核对的具体条件失真确定可审查机制，停止同义规则/格式变体和替换采样。
+
+生产读取器PDF分支与固定Crawl4AI0.9.3已部署，实际指定HTML/PDF正文读取通过；其他Runtime修复的隔离验证不冒充生产整体升级。保持Gemini3.8FlashHigh/当前HTTPS8318、服务器SearXNG18080+Crawl4AI11235、公网读取Cloudflare，由主代理直接执行，无AGY。自主发现与回答能力分开，预算按实际payload、省略、usage和延迟记录，不压缩回7292或自动放大窗口。
+
+角色定向及原12场景×4轮×3重复×A/B×三presentation的864回复完整验收尚未执行，须等保真和自主发现前置门槛通过。原完成标准不变，已有有效微信文字及桌面播放ACK/用户听见确认按其实际范围沿用。
+
+**目标**：保留宁宁现有性格，让认真、害羞、轻微吐槽、收住和结束话题都有明确场景约束。
+
+**现有落点**：`characters/default/persona.md`、`characters/default/character.yaml`、`services/runtime/src/chatwaifu_runtime/character_kernel/prompt.py:PromptCompiler.compile`、`services/runtime/src/chatwaifu_runtime/character_kernel/service.py:_plan_response`。
+
+**实施步骤**：
+
+1. 为 Q01 的场景补简短行为规则与原创正反例；身份问题诚实回答，日常问候不机械重复产品介绍。
+2. 明确优先级：安全与真实来源、用户明确边界和当前任务、关系约束、角色表达、通用短消息风格。认真求助不套用 QQAP 的“装傻、不必帮忙”。
+3. 先只修改 persona 与提示冲突；验证 persona budget 下关键规则不会被截掉。详细任务继续保留完整内容。
+4. `_plan_response` 当前 `del character` 是改进候选，不能直接当作 bug。若 Q01 显示通用计划压过人物风格，再单独提交小改动，使用现有 `style` 字段在已有 tone/length 范围内映射；不新增模型分类调用，不改变关系数值，不凭生成文本操作 Avatar。
+
+**完成标准**：Q01 的硬边界无回归；目标场景改善有样本证据；即时消息、普通文本和语音 presentation 均检查；人物包加载及 budget 测试通过；分条后内容仍完整。
+
+**契约与回退**：首个提交不增加协议或数据表；回退角色文本和对应编译规则即可。planner 增量若涉及共享字段，另行做协议兼容检查，不能与纯文案改动捆绑。
+
+### CW-Q03：上下文版本和本轮配置一致性
+
+**目标**：一轮回答使用一致的角色/模型/工具配置，能解释配置切换后的行为变化；旧历史保留事实，不成为新角色口癖的权威。
+
+**现有落点**：`characters/service.py:CharacterService.start`、`character_kernel/prompt.py:PromptCompilation`、`conversation/service.py`、`conversation/models.py`、`providers/model_config.py`、`conversation/repository.py`、`persistence/sqlite_conversation.py`，以上均位于 `services/runtime/src/chatwaifu_runtime/`。
+
+**选择的方案**：按 generation 捕获不可变上下文身份，复用当前 `character.prompt_compiled` 事件持久化非敏感元数据。当前每轮都会重编译上下文，不照搬 QQAP 的 provider thread rollover。
+
+1. 拟新增内部类型 `PromptContextIdentity`：版本、角色包内容摘要、prompt 模板版本、模型路由摘要、可见工具 schema 摘要、presentation profile。摘要排除密钥、用户文本、记忆正文和动态 token 统计。
+2. 生成受理时冻结本轮配置；编译预算和实际 Provider 请求使用同一快照。普通模型设置更新从下一 generation 生效；显式停止、撤权等现有取消规则仍立即生效。
+3. 角色包当前启动时加载：文件变化以重启后的新指纹生效，不顺带开发热更新 UI。同一 character_id 新版本保留关系和来源事实；切换 character_id 使用对应会话/作用域，不改写旧历史。
+4. 历史条目关联已有 generation/event 中的版本。旧 assistant 风格与当前版本不同时，编译器明确当前规则优先；摘要保留事实与来源，不总结旧口癖为人格。缺失旧版本标为 unknown，不伪造回填，不默认删除历史。
+5. 先采用事件增量和领域值，不新增平行线程数据库。实现前写清配置快照、历史兼容和恢复语义 ADR；若事件查询不足，需要持久索引时再做独立迁移与回退设计。
+
+**完成标准**：配置恰在编译/请求之间变化仍使用同一快照；下轮使用新版本；凭据轮换不暴露到指纹；重启后能读回；旧事件缺字段不报错；取消后的旧输出仍被丢弃；用户事实不会因换卡而消失。
+
+### CW-Q04：单次互动的只读诊断视图
+
+**目标**：从一个 turn 看清触发、计划、召回、生成、动作和实际交付，区分没有参与、取消、失败和未确认。
+
+**现有落点**：`persistence/event_store.py`、`eventing/publisher.py`、`api/routes.py:read_session_events`、`conversation/service.py`、`memory/service.py:retrieve_context`、`external_channels/service.py`、`persistence/sqlite_external_channels.py`，以及 `apps/web/src/features/chat/runtimeEventReducer.ts` 与 `apps/web/src/features/desktop-settings/DesktopSettingsPage.tsx`。
+
+**拟新增模块**：Runtime 的 `diagnostics/` 领域读模型/端口、`api/interaction_diagnostics_routes.py`，以及设置中的 `InteractionDiagnosticsPanel.tsx`。这些名称为建议，不是当前已有接口。
+
+1. 拟定版本化 `InteractionTraceV1`，按 session/turn/generation 关联已有事件和交付事实；包括 Q03 上下文身份、参与理由、ResponsePlan、memory IDs/得分、预算、工具状态及用时。
+2. `memory.recalled` 表示检索结果，不能直接标成“最终注入”。补充编译器预算筛选后的最终选中 ID，分别展示候选、选中、删除后不可见；不得从 token 数猜注入项。
+3. 分列 generation 终态、各文本/图片 part 的终态、音频 playback ACK。生成完成不等于发出，文本到达不等于可选图片到达，语音合成完成不等于听到。
+4. 复用现有认证、事件和仓储，领域不直接查询 SQLite。作用域由 Runtime 验证的本地主体确定，不接受客户端自行指定主体来扩大读取范围。首次读取最多 50 条互动、单条最多 200 项，显示截断标志并使用稳定分页键；无历史事件时显示 unknown，不能补造成功。
+5. 常规视图只含元数据和来源 ID。私密记忆正文通过现有授权来源界面查看；不保存完整 prompt、密钥、隐式推理。删除/重置后重新检查可见性，UI 清除失效缓存。
+
+**完成标准**：受控场景覆盖正常、未参与、工具失败、取消、迟到事件、部分交付、重启回放；重复事件不重复计数；边界账号/会话不能交叉读取；过期 UI 请求不能覆盖新选择；Web 与 Desktop 共用视图均可操作。
+
+**契约与回退**：新增 API/类型先兼容旧事件，更新 Python→Schema→TS/Zod 与 fixtures；无须存储第二套交付事实。诊断不可用不阻断对话，回退 UI/API 不影响核心状态。
+
+### CW-Q05：参与和结束语义
+
+**目标**：支持自然停顿和结束，主动行为尊重边界，并能说明为什么没有开口。
+
+**现有落点**：`companion/attention.py`、`companion/ambient.py:decide_proactive`、`companion/settings.py`、`conversation/service.py`、`external_channels/burst.py`、`external_channels/service.py`；对应 `services/runtime/tests/test_companion.py`、`test_realtime.py`、`test_external_channels.py` 和 `test_inbound_multi_image_burst.py`。
+
+1. 固定已有入口行为矩阵：直接提问正常响应；告别可简短回应且不额外追问；环境语音经 attention；主动唤醒经过 quiet hours、冷却和预算；外部输入走既有来源和绑定校验。
+   “别再开这个玩笑”约束当前互动方式，不等于永久静默；之后的明确问题仍应正常回答。禁止把一次拒绝扩散成对新话题的冷淡态度。
+2. 先扩展确定性场景测试。只对可复现的不一致修改现有 policy，不新增与之平行的全局开关或调度器。
+3. 记录允许/延后/抑制及原因码，接 Q04；“安静”以无输出和状态表示，不发送“我不接了”。
+4. 如果需要跨重启保存“稍后别打扰”，优先复用现有设置/持久状态；新状态须带作用域和失效条件。未知外部发送结果沿用既有交付状态，不另建重试逻辑。
+
+**完成标准**：直接求助不因泛化静默被吞掉；明确停止后不自动补问；quiet hours 跨午夜、恢复、并发新输入、取消均符合矩阵；语音入口不被加上群聊秒级等待。
+
+**范围限制**：群聊多用户策略和自主 schedule-wake 不是本批必做项。只有启用相应产品入口时再确定身份、权限、持续状态和外部副作用契约。
+
+### CW-Q06：记忆来源、修订与可见范围
+
+**目标**：记得准确、有出处，纠错后不再使用旧事实；借鉴“可恢复修订”，保留 CW2 已有策略。
+
+**现有落点**：`memory/service.py`、`memory/retrieval.py`、`memory/policy.py`、`memory/shared_joke.py`、`persistence/sqlite_memory_repository.py`、`conversation/reset.py`，以及 `apps/web/src/features/chat/MemoryControlCenter.tsx`。
+
+1. 对已有 correct/supersede、forget/tombstone、source API 和 reset 建立端到端测试矩阵；当前已经有非覆盖式纠错，先检查修订链能否完整追溯。
+2. 评估明确记住、隐含事实待确认、敏感信息不自动召回、过时状态、共同梗相关性、来源缺失、预算压力、纠错、删除和重启。分别统计误召回与遗漏，不能只测返回条数。
+3. 如修订展示缺失，在现有来源和记录链上增加只读视图；如缺失来源或删除传播，则修正现有仓储事务，不新增全局人物文件备份。
+4. 当前基础以本地单用户/角色作用域为主。跨参与者隔离不能仅加一个 ID 或靠 prompt 保密；多用户/群聊扩展需另起 ADR，覆盖入站鉴权、会话、后台投影、检索、照片、技能、角色状态和重置。本批不宣称已支持它。
+
+**完成标准**：纠错后旧值不再注入；忘记或重置后不由 embedding、摘要或异步任务复活；敏感内容按现有策略过滤；照片和文字来源不混淆；修订视图显示来源而不扩大访问范围。
+
+**迁移与回退**：本批优先无迁移的测试、策略修正与读视图；确需新增持久字段时编写可重启迁移和删除传播测试，不恢复已 tombstone 的资料。
+
+### CW-Q07：复用表情闭环并验证体验
+
+**目标**：表情合场景、不过度重复、失败时不破坏文字回答；不再建一套已经存在的能力。
+
+**现有落点**：`services/runtime/src/chatwaifu_runtime/sticker_library/service.py`、`external_channels/stickers.py`、`external_channels/presentation.py`、`persistence/sqlite_external_channels.py`；测试包括 `test_sticker_learning_integration.py`、`test_sticker_usage.py`、`test_sticker_repeat_avoidance.py` 和 `test_sticker_repeat_delivery.py`。
+
+1. 复用已启用/关闭的学习策略、来源校验、hash 去重、删除 fence、交付事实和候选间重复规避。
+2. 以合成素材验证相关候选缺失、单候选、多候选、删除中学习、失败发送、重复 ACK、重启、拒绝继续玩笑和快速换话题。
+3. 仅当相关性评估暴露问题时调整现有标签和候选排序；失败发送不能算用户不喜欢，生成选中不能算成功使用；仍无合适候选就不发。
+4. 共同梗绑定表情暂不默认开启，只有 Q06 的来源与可见范围验证通过且存在明确需求时再做独立切片。
+
+**完成标准**：文字和可选图片终态分开；重复事件不重复计数；删除不复活；快速换话题取消未发尾部；不为去重选择无关表情；学习与发送的两个开关保持独立。
+
+**迁移与回退**：首轮只补评估与必要策略，不改数据结构或交付计划；回退选择策略保留已保存资产、删除事实和交付证据。
+
+### CW-Q08：配置生效值和成本来源（后续候选）
+
+**目标**：用户能知道当前模型、限制和估算依据，避免“保存了”和“本轮已使用”混淆。
+
+**现有落点**：`providers/model_config.py`、`character_kernel/prompt.py`、模型设置 UI 与 Q04 的只读汇总。
+
+先展示配置版本、实际生效模型、上下文预算和已有 usage；缺计费数据时显示未知。确需价格估算时再增加有来源/时间戳的价目适配器，区分估算和账单。缺失 usage 不记为零费用，不能用当前模型价格无标记地回算其他模型。
+
+**完成标准**：设置变化与 Q03 生效时机一致；缓存 token 与输入 token 不重复计费；未知价格可见；无明文 Key；诊断失败不影响聊天。该项不包含自动升级系统或新渠道接入。
+
+## 6. 实施时的检查命令
+
+以下为**对应代码切片的验收命令**。方案初稿制定时未执行应用测试；当前实际运行结果见[实施状态](qq-agent-plus-evidence/implementation-status.md)。
+
+角色与文本表现：
+
+```sh
+uv run pytest services/runtime/tests/test_character_kernel.py services/runtime/tests/test_bubble_presentation.py
+```
+
+参与、记忆与表情：
+
+```sh
+uv run pytest services/runtime/tests/test_companion.py services/runtime/tests/test_realtime.py services/runtime/tests/test_external_channels.py services/runtime/tests/test_inbound_multi_image_burst.py services/runtime/tests/test_memory.py
+uv run pytest services/runtime/tests/test_sticker_learning_integration.py services/runtime/tests/test_sticker_usage.py services/runtime/tests/test_sticker_repeat_avoidance.py services/runtime/tests/test_sticker_repeat_delivery.py services/runtime/tests/test_sticker_end_to_end.py services/runtime/tests/test_sticker_interaction_selection.py services/runtime/tests/test_learned_sticker_delivery.py services/runtime/tests/test_sticker_delivery_lifecycle.py
+```
+
+每个切片还要运行新增测试；上述已有用例不能替代 Q03 的切换竞争和 Q04 的 API/UI 集成测试。涉及实时输出时加入取消、迟到输出和播放 ACK 测试。
+
+按变更范围执行仓库 gate：
+
+```sh
+uv run ruff format --check services/runtime packages/protocol-python
+uv run ruff check services/runtime packages/protocol-python
+uv run pyright
+make test-runtime
+make test-contract
+make check-generated
+pnpm --filter @chatwaifu/web lint
+pnpm --filter @chatwaifu/web typecheck
+pnpm --filter @chatwaifu/web test
+make build-web
+make build-desktop-ui
+```
+
+协议变化必须逐层检查 Python、JSON Schema、TypeScript、Zod 和 fixtures；前端变化必须用真实浏览器验收目标操作。真实模型结果、真实交付和真实播放另列证据，不能由 build/HTTP 200/agent SUCCESS 代替。
+
+## 7. 后续维护和增量交接
+
+CW-Q01–CW-Q07 的首批代码、场景、诊断、记忆和表情切片已经在实现分支完成，并有对应的自动化测试与受控证据。后续只针对证据中仍开放的 Q02 缺口推进：来源条件和技术正确性、完整十二场景三重复、三种 presentation，以及来源发现失败时的事实边界。真实微信文字投递、桌面播放 ACK 和用户听见确认已有独立证据；不得把生成完成、HTTP 200、浏览器读取或模型评分当作模型质量门槛的替代物。
+
+新增改动必须保留身份诚实、来源事实、关系推进、详细任务和三种 presentation 约束；先补确定性回归和失败样本，再做小范围模型复测。完成报告必须列出实际改动、模型配置、失败样本、成本与未验收项；不修改渠道、数据库结构、头像资产或自动部署。更新全局 implementation-status 时，只登记已实际验收的切片。
+
+本节保留方案初稿的交接说明。当前应用实现的已验收范围、真实模型比较与上线验收缺口，以[实施状态](qq-agent-plus-evidence/implementation-status.md)为准。
+
+核对方法：Gemini 3.8 Flash High 提供只读调用链映射，Astra 对照源码和已接受 ADR 决定采纳范围。没有将“缺少 QQAP 同款快照表/URL 刷新器”直接当成 CW2 缺陷：CW2 已有非覆盖式修订和本地表情资产，只有验证暴露真实缺口时才增加机制。

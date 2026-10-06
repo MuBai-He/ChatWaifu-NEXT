@@ -1,0 +1,247 @@
+{
+  "reason": "Windows checkout rejects colon characters in path segments",
+  "original_content_unchanged": true,
+  "source_snapshot": "f6ffecb5c14328cc902faece91faee7400d9a0a0",
+  "renames": [
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/citation-correction-controls/correction:r0-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/citation-correction-controls/correction-r0-request.json",
+      "sha256": "8580d9a3f36ea7b5922a87e81ab5ac6c6a9bec0abb0c39bb9d8a43c4151bce3f"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/citation-correction-controls/correction:r1-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/citation-correction-controls/correction-r1-request.json",
+      "sha256": "8580d9a3f36ea7b5922a87e81ab5ac6c6a9bec0abb0c39bb9d8a43c4151bce3f"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/citation-correction-controls/correction:r2-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/citation-correction-controls/correction-r2-request.json",
+      "sha256": "8580d9a3f36ea7b5922a87e81ab5ac6c6a9bec0abb0c39bb9d8a43c4151bce3f"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/citation-correction-pro-stream-fix/correction:r0-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/citation-correction-pro-stream-fix/correction-r0-request.json",
+      "sha256": "c38cbcfe668c2a2dfa1d212afba5c46c3a2e9cce5fa3b97a8cbaca0ae052938f"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/citation-correction-pro-stream-fix/correction:r1-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/citation-correction-pro-stream-fix/correction-r1-request.json",
+      "sha256": "c38cbcfe668c2a2dfa1d212afba5c46c3a2e9cce5fa3b97a8cbaca0ae052938f"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/citation-correction-pro-stream-fix/correction:r2-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/citation-correction-pro-stream-fix/correction-r2-request.json",
+      "sha256": "c38cbcfe668c2a2dfa1d212afba5c46c3a2e9cce5fa3b97a8cbaca0ae052938f"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/endpoint-canaries/system_priority:r0-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/endpoint-canaries/system_priority-r0-request.json",
+      "sha256": "fd1554b0b257826fa398cf6c1607a65878d8b3dce0dad5b064319767235f93a3"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/endpoint-canaries/system_priority:r1-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/endpoint-canaries/system_priority-r1-request.json",
+      "sha256": "fd1554b0b257826fa398cf6c1607a65878d8b3dce0dad5b064319767235f93a3"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/endpoint-canaries/system_suffix:r0-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/endpoint-canaries/system_suffix-r0-request.json",
+      "sha256": "b5f3ffdb2b1956adeca7218015e9d2ab810484d70ec88ac671f9e2d98d66fb17"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/endpoint-canaries/system_suffix:r1-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/endpoint-canaries/system_suffix-r1-request.json",
+      "sha256": "b5f3ffdb2b1956adeca7218015e9d2ab810484d70ec88ac671f9e2d98d66fb17"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/endpoint-canaries/url_echo:r0-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/endpoint-canaries/url_echo-r0-request.json",
+      "sha256": "aef7ae9c44c8dcced9b698f46e21cba3a99331f3cf99eca90093925315730f0b"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/endpoint-canaries/url_echo:r1-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/endpoint-canaries/url_echo-r1-request.json",
+      "sha256": "aef7ae9c44c8dcced9b698f46e21cba3a99331f3cf99eca90093925315730f0b"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/flash-draft-revision/missing_links:r0-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/flash-draft-revision/missing_links-r0-request.json",
+      "sha256": "c6697cd7c25cf14f079588f21188e61694ff356bb0bf86d7566946ffe42c15f7"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/flash-draft-revision/missing_links:r1-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/flash-draft-revision/missing_links-r1-request.json",
+      "sha256": "c6697cd7c25cf14f079588f21188e61694ff356bb0bf86d7566946ffe42c15f7"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/flash-draft-revision/missing_links:r2-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/flash-draft-revision/missing_links-r2-request.json",
+      "sha256": "c6697cd7c25cf14f079588f21188e61694ff356bb0bf86d7566946ffe42c15f7"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/flash-draft-revision/narrowed_scope:r0-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/flash-draft-revision/narrowed_scope-r0-request.json",
+      "sha256": "ffa057304b4aa54c0adf30b1279de3f3937fac9998e3c895a5a0db8bdc08389b"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/flash-draft-revision/narrowed_scope:r1-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/flash-draft-revision/narrowed_scope-r1-request.json",
+      "sha256": "ffa057304b4aa54c0adf30b1279de3f3937fac9998e3c895a5a0db8bdc08389b"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/flash-draft-revision/narrowed_scope:r2-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/flash-draft-revision/narrowed_scope-r2-request.json",
+      "sha256": "ffa057304b4aa54c0adf30b1279de3f3937fac9998e3c895a5a0db8bdc08389b"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/flash-draft-revision/partial_condition_conclusion:r0-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/flash-draft-revision/partial_condition_conclusion-r0-request.json",
+      "sha256": "a7284f01faaf2f310c0fde9e9800c6f94f83ceb4be4eefc000cecde89b0b7cf9"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/flash-draft-revision/partial_condition_conclusion:r1-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/flash-draft-revision/partial_condition_conclusion-r1-request.json",
+      "sha256": "a7284f01faaf2f310c0fde9e9800c6f94f83ceb4be4eefc000cecde89b0b7cf9"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/flash-draft-revision/partial_condition_conclusion:r2-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/flash-draft-revision/partial_condition_conclusion-r2-request.json",
+      "sha256": "a7284f01faaf2f310c0fde9e9800c6f94f83ceb4be4eefc000cecde89b0b7cf9"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/gemini-route-controls/gemini-3.1-pro-low:r0-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/gemini-route-controls/gemini-3.1-pro-low-r0-request.json",
+      "sha256": "c9e0b2ec729dfd14b0509515a5ea995f6ca0884c8843e3c50da6e019b2df5a49"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/gemini-route-controls/gemini-3.1-pro-low:r1-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/gemini-route-controls/gemini-3.1-pro-low-r1-request.json",
+      "sha256": "c9e0b2ec729dfd14b0509515a5ea995f6ca0884c8843e3c50da6e019b2df5a49"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/gemini-route-controls/gemini-3.1-pro-low:r2-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/gemini-route-controls/gemini-3.1-pro-low-r2-request.json",
+      "sha256": "c9e0b2ec729dfd14b0509515a5ea995f6ca0884c8843e3c50da6e019b2df5a49"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/gemini-route-controls/gemini-pro-agent:r0-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/gemini-route-controls/gemini-pro-agent-r0-request.json",
+      "sha256": "a2afbe447674f85c7c66fdd5a64d5f08ff08566057cd5148c3b67301332de4dc"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/gemini-route-controls/gemini-pro-agent:r1-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/gemini-route-controls/gemini-pro-agent-r1-request.json",
+      "sha256": "a2afbe447674f85c7c66fdd5a64d5f08ff08566057cd5148c3b67301332de4dc"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/gemini-route-controls/gemini-pro-agent:r2-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/gemini-route-controls/gemini-pro-agent-r2-request.json",
+      "sha256": "a2afbe447674f85c7c66fdd5a64d5f08ff08566057cd5148c3b67301332de4dc"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/character_native:r0-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/character_native-r0-request.json",
+      "sha256": "8719121668ad4026e51e1e1e66c6224cc05ae02f45cda60942cf1f5834bbc133"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/character_native:r1-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/character_native-r1-request.json",
+      "sha256": "8719121668ad4026e51e1e1e66c6224cc05ae02f45cda60942cf1f5834bbc133"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/character_native:r2-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/character_native-r2-request.json",
+      "sha256": "8719121668ad4026e51e1e1e66c6224cc05ae02f45cda60942cf1f5834bbc133"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/character_source_user:r0-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/character_source_user-r0-request.json",
+      "sha256": "b1ccbe5d1c35b9cd391ce3dc58e55dc13fb9d7b74ece46be781cc78bd4b800c9"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/character_source_user:r1-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/character_source_user-r1-request.json",
+      "sha256": "b1ccbe5d1c35b9cd391ce3dc58e55dc13fb9d7b74ece46be781cc78bd4b800c9"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/character_source_user:r2-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/character_source_user-r2-request.json",
+      "sha256": "b1ccbe5d1c35b9cd391ce3dc58e55dc13fb9d7b74ece46be781cc78bd4b800c9"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/neutral_native:r0-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/neutral_native-r0-request.json",
+      "sha256": "fb5ed96393ba970c23bbe2f70cc295845833badd71724e4a39e4a4bba01ded0a"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/neutral_native:r1-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/neutral_native-r1-request.json",
+      "sha256": "fb5ed96393ba970c23bbe2f70cc295845833badd71724e4a39e4a4bba01ded0a"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/neutral_native:r2-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/neutral_native-r2-request.json",
+      "sha256": "fb5ed96393ba970c23bbe2f70cc295845833badd71724e4a39e4a4bba01ded0a"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/neutral_source_user:r0-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/neutral_source_user-r0-request.json",
+      "sha256": "7d509946f0327771bfe08801879f78287a76511f18a3706064f4feaa295e5a2f"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/neutral_source_user:r1-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/neutral_source_user-r1-request.json",
+      "sha256": "7d509946f0327771bfe08801879f78287a76511f18a3706064f4feaa295e5a2f"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/neutral_source_user:r2-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/role-persona-controls/neutral_source_user-r2-request.json",
+      "sha256": "7d509946f0327771bfe08801879f78287a76511f18a3706064f4feaa295e5a2f"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/wire-capture/answer-phase-controls/closed_phase:r0-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/wire-capture/answer-phase-controls/closed_phase-r0-request.json",
+      "sha256": "41dce46ce421da29aa6ac27a8f69b2ae6d03b5e3f4211a0be772400d5687d00a"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/wire-capture/answer-phase-controls/closed_phase:r1-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/wire-capture/answer-phase-controls/closed_phase-r1-request.json",
+      "sha256": "41dce46ce421da29aa6ac27a8f69b2ae6d03b5e3f4211a0be772400d5687d00a"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/wire-capture/answer-phase-controls/closed_phase:r2-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/wire-capture/answer-phase-controls/closed_phase-r2-request.json",
+      "sha256": "41dce46ce421da29aa6ac27a8f69b2ae6d03b5e3f4211a0be772400d5687d00a"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/wire-capture/answer-phase-controls/native_auto:r0-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/wire-capture/answer-phase-controls/native_auto-r0-request.json",
+      "sha256": "3d8459e303d1572bd13783c320fabeb9d319abb07a29618a5fc1794e4e027d92"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/wire-capture/answer-phase-controls/native_auto:r1-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/wire-capture/answer-phase-controls/native_auto-r1-request.json",
+      "sha256": "3d8459e303d1572bd13783c320fabeb9d319abb07a29618a5fc1794e4e027d92"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/wire-capture/answer-phase-controls/native_auto:r2-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/wire-capture/answer-phase-controls/native_auto-r2-request.json",
+      "sha256": "3d8459e303d1572bd13783c320fabeb9d319abb07a29618a5fc1794e4e027d92"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/wire-capture/answer-phase-controls/no_schema:r0-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/wire-capture/answer-phase-controls/no_schema-r0-request.json",
+      "sha256": "8719121668ad4026e51e1e1e66c6224cc05ae02f45cda60942cf1f5834bbc133"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/wire-capture/answer-phase-controls/no_schema:r1-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/wire-capture/answer-phase-controls/no_schema-r1-request.json",
+      "sha256": "8719121668ad4026e51e1e1e66c6224cc05ae02f45cda60942cf1f5834bbc133"
+    },
+    {
+      "original_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/wire-capture/answer-phase-controls/no_schema:r2-request.json",
+      "portable_path": "docs/research/qq-agent-plus-evidence/q02-server-deployed-vs-jina-2026-10-03/wire-capture/answer-phase-controls/no_schema-r2-request.json",
+      "sha256": "8719121668ad4026e51e1e1e66c6224cc05ae02f45cda60942cf1f5834bbc133"
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+"""Three-arm frozen-source evidence-before-answer probe; no tool execution."""
+import copy, hashlib, json, time
+from pathlib import Path
+import requests
+
+root = Path('/tmp/cw2-q02-grounded-answer-probe-20261003')
+root.mkdir(mode=0o700, exist_ok=True)
+source = Path('/tmp/cw2-q02-v24-source-smoke-20261003/results/actual-provider-payloads.jsonl')
+wire = [json.loads(l)['payload'] for l in source.read_text().splitlines()]
+key = json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+session = requests.Session(); session.trust_env = False
+
+def obj(properties):
+    return {'type':'object','properties':properties,'required':list(properties),'additionalProperties':False}
+text = {'type':'string'}
+answer_schema = obj({'answer':text})
+grounded_schema = obj({
+ 'supported_claims': {'type':'array','maxItems':12,'items':obj({
+  'claim':text,
+  'evidence':{'type':'array','minItems':1,'maxItems':3,'items':obj({'url':text,'exact_quote':{'type':'string','minLength':10,'maxLength':600}})},
+  'applicability':text
+ })},
+ 'unverified_gaps': {'type':'array','maxItems':10,'items':text},
+ 'answer':text,
+})
+format_policy = 'For this evaluation, return the complete user-facing answer in the answer field of exactly one native cw2_grounded_answer_v1 call. This call has no execution or side effect. Preserve the full user request and character contract. Do not output ordinary text outside the call.'
+grounding_policy = '''Before composing answer, provide a concise factual support record, not internal reasoning: supported_claims lists the external claims needed for this answer, each with literal exact_quote copied from an actually successful web.read body and that body's exact URL. Search snippets, prior assistant text, withheld drafts and native inventories are not body evidence. Keep the scope and qualifications of each quote; do not convert implementation choices, dated reports, examples or operator-specific conditions into universal rules. Record unsupported parts of the user's request in unverified_gaps. The answer may state supported claims at their evidenced scope and name specific evidence gaps; it must not add external factual assertions beyond this record. A quote existing is not proof of current applicability. If no original or applicable later evidence was read, do not infer its contents. Do not invent quotes, source dates, citations or new URLs. Retain the requested structure and useful explanation; no explanation of this evaluation mechanism in answer.'''
+plan={'model':'gemini-3.8-flash-high','source_file_sha256':hashlib.sha256(source.read_bytes()).hexdigest(),'wire_indexes':{'raft':4,'regulations':14},'arms':['original','answer_only','grounded'],'repeats':3,'requests_max':18,'tool_execution':False,'production_changed':False,'schema_validity_is_not_quality':True}
+(root/'plan.json').write_text(json.dumps(plan,ensure_ascii=False,indent=2)+'\n')
+started=[json.loads(l)['key'] for l in (root/'attempts.jsonl').read_text().splitlines()] if (root/'attempts.jsonl').exists() else []
+done=[json.loads(l)['key'] for l in (root/'results.jsonl').read_text().splitlines()] if (root/'results.jsonl').exists() else []
+assert len(started)==len(set(started)) and len(done)==len(set(done)) and set(started)==set(done),'Unresolved or duplicate attempts; inspect before resume'
+
+def scrub(value):
+ if isinstance(value,dict): return {k:scrub(v) for k,v in value.items() if k not in {'reasoning','reasoning_content','thinking'}}
+ if isinstance(value,list): return [scrub(v) for v in value]
+ return value
+
+for repeat in range(3):
+ for label,index in plan['wire_indexes'].items():
+  for arm in plan['arms']:
+   sample=f'{label}:{repeat}:{arm}'
+   if sample in done:continue
+   p=copy.deepcopy(wire[index]);assert p['model']==plan['model'] and 'tools' not in p
+   p['stream']=False;p.pop('stream_options',None)
+   if arm!='original':
+    schema=grounded_schema if arm=='grounded' else answer_schema
+    p['tools']=[{'type':'function','function':{'name':'cw2_grounded_answer_v1','description':'Return an evaluation answer; no tool execution.', 'parameters':schema}}]
+    p['tool_choice']='required'
+    p['messages'][-1]['content']+='\n'+format_policy+ ('\n'+grounding_policy if arm=='grounded' else '')
+   digest=hashlib.sha256(json.dumps(p,ensure_ascii=False,sort_keys=True).encode()).hexdigest()
+   with (root/'attempts.jsonl').open('a') as f:f.write(json.dumps({'key':sample,'request_sha256':digest})+'\n')
+   before=time.monotonic();record={'key':sample,'label':label,'arm':arm,'repeat':repeat,'request':p,'request_sha256':digest,'tool_execution':False}
+   try:
+    response=session.post('https://mubai.website:8318/v1/chat/completions',json=p,headers={'Authorization':'Bearer '+key},timeout=180)
+    record['http_status']=response.status_code
+    record['response']=scrub(response.json())
+   except (requests.RequestException,ValueError) as exc:
+    record['error_type']=type(exc).__name__
+   record['latency_ms']=round((time.monotonic()-before)*1000)
+   assert key not in json.dumps(record,ensure_ascii=False)
+   with (root/'results.jsonl').open('a') as f:f.write(json.dumps(record,ensure_ascii=False)+'\n')
+   print(json.dumps({k:record.get(k) for k in ['key','http_status','error_type','latency_ms']}),flush=True)
+(root/'exit-code.json').write_text('{"exit_code":0}\n')
+print('complete',flush=True)

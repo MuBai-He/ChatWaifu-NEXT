@@ -1,0 +1,41 @@
+{
+  "verified_at": "2026-10-05T10:53:57.559743+00:00",
+  "affected_files": [
+    "docs/adr/0074-scoped-qq-sticker-learning.md",
+    "services/runtime/src/chatwaifu_runtime/external_channels/adapters/qq_napcat/management.py",
+    "services/runtime/src/chatwaifu_runtime/external_channels/service.py",
+    "services/runtime/tests/test_channel_audio_ingress.py",
+    "services/runtime/tests/test_qq_channels.py",
+    "services/runtime/tests/test_qq_sticker_learning.py"
+  ],
+  "other_source_unchanged": true,
+  "runtime_active": true,
+  "napcat_restarted": false,
+  "all_model_routes_unchanged": true,
+  "chat_model": "gemini-3.8-flash-high",
+  "connection_configurations_unchanged": true,
+  "credential_and_configuration_files_unchanged": true,
+  "restored_groups": [
+    {
+      "is_requested_group": true,
+      "members": 5,
+      "revision": 14,
+      "same_scene_and_grants": true
+    },
+    {
+      "is_requested_group": false,
+      "members": 2,
+      "revision": 35,
+      "same_scene_and_grants": true
+    }
+  ],
+  "sqlite_checks_passed": true,
+  "manual_external_messages_sent": 0,
+  "previously_dropped_inputs_replayed": 0,
+  "private_sticker_learning_enabled": true,
+  "requested_group_learning_enabled": true,
+  "other_group_learning_disabled": true,
+  "schema_version": 42,
+  "web_updated": true,
+  "fresh_phone_sticker_acceptance": "pending"
+}

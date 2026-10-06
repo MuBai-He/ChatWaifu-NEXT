@@ -1,0 +1,56 @@
+--- v36/services/runtime/src/chatwaifu_runtime/providers/openai_compatible.py
++++ v37/services/runtime/src/chatwaifu_runtime/providers/openai_compatible.py
+@@ -23,6 +23,7 @@
+     LlmRequest,
+     LlmResponseCompleted,
+     LlmResponseIdentity,
++    LlmResponseSchemaUnavailableError,
+     LlmStreamEvent,
+     LlmTextDelta,
+     LlmToolCall,
+@@ -44,6 +45,7 @@
+ class OpenAiCompatibleLlmProvider:
+     kind = "openai_compatible"
+     supports_tool_calling = True
++    supports_response_schema = True
+ 
+     def __init__(
+         self,
+@@ -204,6 +206,10 @@
+                     )
+                     if response.status_code >= 400:
+                         body = await response.aread()
++                        if request.response_schema is not None and _rejects_response_schema(
++                            response.status_code, body
++                        ):
++                            raise LlmResponseSchemaUnavailableError()
+                         if request.tools and _rejects_tool_calling(response.status_code, body):
+                             raise _ToolCallingUnsupported
+                     response.raise_for_status()
+@@ -468,6 +474,8 @@
+         payload["max_tokens"] = request.max_output_tokens
+     if request_usage:
+         payload["stream_options"] = {"include_usage": True}
++    if request.response_schema is not None:
++        payload["response_format"] = request.response_schema.response_format()
+     if request.tools:
+         payload["tools"] = [
+             {
+@@ -482,6 +490,17 @@
+         ]
+         payload["tool_choice"] = request.tool_choice
+     return payload
++
++
++def _rejects_response_schema(status_code: int, body: bytes) -> bool:
++    if status_code not in {400, 422}:
++        return False
++    # Only a specific format rejection, not quota/auth/other client errors.
++    text = body[:16_384].decode("utf-8", errors="replace").lower()
++    return bool(
++        ("response_format" in text or "json_schema" in text)
++        and any(word in text for word in ("not supported", "unsupported", "not implemented"))
++    )
+ 
+ 
+ def _parse_usage(raw: dict[str, object]) -> LlmUsage | None:

@@ -1,0 +1,42 @@
+{
+  "actual_http": 2,
+  "provider_raw_frames": 2,
+  "rendered_replies": 0,
+  "rejected_frames": 0,
+  "complete_four_turn_flows": 0,
+  "usage": {
+    "prompt_tokens": 64,
+    "completion_tokens": 161,
+    "total_tokens": 1063
+  },
+  "reasoning": {
+    "reported_count": 2,
+    "unknown_count": 0,
+    "reported_subtotal": 838
+  },
+  "latency_ms": {
+    "n": 2,
+    "p50": 5149.0,
+    "p95": 6723.1
+  },
+  "reference_error_percent": null,
+  "checks": [
+    {
+      "sample": 0,
+      "wire_sha256": "2c59007296917587da550cb0d3ab0964dfad2d164e17597e68c21ec9a668d9d7",
+      "complete_original_and_no_omission": false,
+      "schema_valid": true,
+      "runtime_path_used": false,
+      "no_live_search": true
+    },
+    {
+      "sample": 1,
+      "wire_sha256": "12a0644eaf55589864021275e8866fe990201fae75e2a86d1d36135bbf6ff3c2",
+      "complete_original_and_no_omission": false,
+      "schema_valid": true,
+      "runtime_path_used": false,
+      "no_live_search": true
+    }
+  ],
+  "quality_approval": false
+}

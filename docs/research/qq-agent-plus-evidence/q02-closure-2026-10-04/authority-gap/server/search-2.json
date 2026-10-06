@@ -1,0 +1,59 @@
+{
+  "arguments": {
+    "query": "旅客 充电宝 3C 标识 召回",
+    "domains": [
+      "caac.gov.cn"
+    ],
+    "max_results": 5,
+    "dns_resolver": "cloudflare"
+  },
+  "started_at": "2026-10-04T11:09:13.950412+00:00",
+  "ok": true,
+  "result": {
+    "provider": "searxng",
+    "query": "旅客 充电宝 3C 标识 召回",
+    "effective_query": "旅客 充电宝 3C 标识 召回",
+    "provider_queries": [
+      {
+        "query": "旅客 充电宝 3C 标识 召回 site:caac.gov.cn",
+        "body_sha256": "2bbcf2a55b6ff4bf351e035d5d5354fa675ff1bfe069d6488bc7f2a31b2b6a61"
+      }
+    ],
+    "search_url": "http://127.0.0.1:18080/search",
+    "retrieved_at": "2026-10-04T11:09:14.617582+00:00",
+    "body_sha256": "2bbcf2a55b6ff4bf351e035d5d5354fa675ff1bfe069d6488bc7f2a31b2b6a61",
+    "dns_resolver": "system",
+    "results": [
+      {
+        "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XWZX/XB_DQYW/202507/t20250710_227953.html",
+        "title": "caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XWZX/XB_DQYW...",
+        "snippet": "辖区各机场广泛动员，通过广播、电子屏、公告牌、乘机短信等多渠道向旅客传达充电宝新规内容，设置充电宝暂存与自弃点，开设快递服务台，提升旅客处置. 效率。 安排专人现场引导旅客识别充电宝是否合规，提高出行效率。"
+      },
+      {
+        "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/DB_DQXW/202507/t20250709_227899.html",
+        "title": "caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/DB_DQXW/202507...",
+        "snippet": "日前民航局发布紧急通知，自6月28日起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。 东北局及辽宁监管局紧急部署，要求辖区单位严格落实卡控政策。 辖区各机场及航司迅速行动，多措 并举保障政策实施。"
+      },
+      {
+        "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+        "title": "caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT...",
+        "snippet": "组织了人员话术培训，做好旅客服务指引及解释。 设置了管控充电宝后续处置服务设施，提供了充电宝3C标识、召回型号查询、充电宝暂存等服务，让旅客感受到民航对充电宝的管控是有温度的执法，旅."
+      },
+      {
+        "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227950.html",
+        "title": "caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT...",
+        "snippet": "无3C标识、3C标识不清晰、被召回型号或批次”的充电宝识别出、卡控住；二是要真情服务，在向旅客宣传到位、耐心解释的基础上，尽最大努力为旅客处理."
+      },
+      {
+        "url": "https://www.caac.gov.cn/local/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+        "title": "宁夏监管局注重充电宝管控与服务并行 保旅客平安温馨出行",
+        "snippet": "6月28日，是民航局关于“禁止旅客携带无3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班”有关规定执行的首日。"
+      }
+    ],
+    "total_matched": 6,
+    "filtered_count": 0,
+    "truncated": true,
+    "empty_reason": null
+  },
+  "elapsed_ms": 668
+}

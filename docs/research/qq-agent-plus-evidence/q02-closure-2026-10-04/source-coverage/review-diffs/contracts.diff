@@ -1,0 +1,92 @@
+--- v36/services/runtime/src/chatwaifu_runtime/providers/contracts.py
++++ v37/services/runtime/src/chatwaifu_runtime/providers/contracts.py
+@@ -1,5 +1,9 @@
+ """Provider-neutral streaming and synthesis contracts."""
+ 
++from __future__ import annotations
++
++import json
++import re
+ from collections.abc import AsyncIterator
+ from dataclasses import dataclass, field
+ from pathlib import Path
+@@ -49,6 +53,71 @@
+     def __init__(self, *, has_tool_results: bool = False) -> None:
+         super().__init__("LLM completed without visible answer text")
+         self.has_tool_results = has_tool_results
++
++
++class LlmResponseSchemaUnavailableError(RuntimeError):
++    """A provider cannot honor a declared format; no silent prose downgrade."""
++
++    code = "response_schema_unavailable"
++
++    def __init__(self) -> None:
++        super().__init__("The selected LLM cannot honor the declared response schema")
++
++
++def _schema_pairs(pairs: list[tuple[str, object]]) -> dict[str, object]:
++    result: dict[str, object] = {}
++    for key, value in pairs:
++        if key in result:
++            raise ValueError("invalid response schema")
++        result[key] = value
++    return result
++
++
++def _schema_constant(_: str) -> object:
++    raise ValueError("invalid response schema")
++
++
++@dataclass(frozen=True, slots=True)
++class LlmResponseSchema:
++    """Immutable provider-neutral JSON Schema snapshot, with no SDK objects."""
++
++    name: str
++    schema_json: str = field(repr=False)
++    version: Literal["1.0"] = "1.0"
++
++    def __post_init__(self) -> None:
++        if self.version != "1.0" or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,63}", self.name):
++            raise ValueError("invalid response schema identity")
++        try:
++            if len(self.schema_json.encode()) > 16_384:
++                raise ValueError("response schema exceeds bound")
++            value = json.loads(
++                self.schema_json, object_pairs_hook=_schema_pairs, parse_constant=_schema_constant
++            )
++        except (json.JSONDecodeError, UnicodeError, RecursionError) as error:
++            raise ValueError("invalid response schema") from error
++        if not isinstance(value, dict):
++            raise ValueError("response schema must be an object")
++
++    @classmethod
++    def from_schema(cls, name: str, schema: JsonObject) -> LlmResponseSchema:
++        return cls(
++            name,
++            json.dumps(
++                schema, ensure_ascii=False, separators=(",", ":"), sort_keys=True, allow_nan=False
++            ),
++        )
++
++    def response_format(self) -> JsonObject:
++        # Return a fresh object each time; callers cannot mutate the snapshot.
++        return {
++            "type": "json_schema",
++            "json_schema": {
++                "name": self.name,
++                "strict": True,
++                "schema": json.loads(self.schema_json),
++            },
++        }
+ 
+ 
+ @dataclass(frozen=True, slots=True)
+@@ -207,6 +276,7 @@
+     # Trusted Runtime output policy after context/history, before the current user.
+     # Included by build_messages in every provider-wire budget estimate.
+     pre_user_system_prompt: str | None = None
++    response_schema: LlmResponseSchema | None = None
+ 
+     def __post_init__(self) -> None:
+         if self.max_output_tokens is not None and (

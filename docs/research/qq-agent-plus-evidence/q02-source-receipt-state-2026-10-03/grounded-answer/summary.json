@@ -1,0 +1,40 @@
+{
+  "total_requests": 18,
+  "quality_approved": false,
+  "arms": {
+    "original": {
+      "n": 6,
+      "usage": {
+        "prompt_tokens": 58521,
+        "completion_tokens": 2914,
+        "total_tokens": 61435
+      },
+      "p50_ms": 5623,
+      "p95_ms": 7782,
+      "format_valid": 6
+    },
+    "answer_only": {
+      "n": 6,
+      "usage": {
+        "prompt_tokens": 59247,
+        "completion_tokens": 3004,
+        "total_tokens": 62251
+      },
+      "p50_ms": 4858,
+      "p95_ms": 8265,
+      "format_valid": 6
+    },
+    "grounded": {
+      "n": 6,
+      "usage": {
+        "prompt_tokens": 61677,
+        "completion_tokens": 8579,
+        "total_tokens": 70256
+      },
+      "p50_ms": 6534,
+      "p95_ms": 10635,
+      "format_valid": 5
+    }
+  },
+  "raw_api_usage_includes_possible_reasoning": true
+}

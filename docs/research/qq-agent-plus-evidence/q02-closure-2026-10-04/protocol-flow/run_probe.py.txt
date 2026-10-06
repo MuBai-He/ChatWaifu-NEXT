@@ -1,0 +1,60 @@
+"""Isolated server recovery probe on the requested 3.8 Flash route."""
+import asyncio
+import hashlib
+import json
+import os
+import sys
+import time
+from datetime import UTC, datetime
+from pathlib import Path
+
+ROOT = Path('/tmp/cw2-q02-protocol-recovery-v34-eval')
+STAGE = Path('/tmp/cw2-q02-v34-protocol-recovery-20261004')
+sys.path[:0] = [str(ROOT/'services/runtime/src'), str(ROOT/'packages/protocol-python/src'), str(ROOT/'packages/model-worker-sdk-python/src'), '/tmp/cw2-q02-eval-deps', str(ROOT)]
+
+import httpx2
+import yaml
+from jsonschema import validate
+from pydantic import SecretStr
+from chatwaifu_runtime.config.settings import PublicWebConfig
+from chatwaifu_runtime.runtime_skills.public_web import PublicWebReader
+from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
+from tools.evaluate_character_scenarios import main
+
+assert not (STAGE/'admission.json').exists(), 'Inspect existing run before retry'
+KEY = json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+os.environ['OPENAI_API_KEY'] = KEY
+for line in Path('/home/mubai/.local/share/chatwaifu-server/config/public-web.env').read_text().splitlines():
+    if line.startswith('CHATWAIFU_PUBLIC_WEB__') and '=' in line:
+        name, value = line.split('=', 1)
+        if name in {'CHATWAIFU_PUBLIC_WEB__CRAWL4AI_API_TOKEN'}:
+            os.environ[name] = value.strip().strip(chr(34)).strip(chr(39))
+os.environ['CHATWAIFU_PUBLIC_WEB__SEARXNG_ENDPOINT'] = 'http://127.0.0.1:18081'
+os.environ['CHATWAIFU_PUBLIC_WEB__CRAWL4AI_ENDPOINT'] = 'http://127.0.0.1:11236'
+TOKEN = os.environ.get('CHATWAIFU_PUBLIC_WEB__CRAWL4AI_API_TOKEN')
+SECRETS = [s for s in [KEY, TOKEN] if s]
+
+def append(name, row):
+    text = json.dumps(row, ensure_ascii=False, default=str)
+    assert all(secret not in text for secret in SECRETS)
+    with (STAGE/name).open('a') as target:
+        target.write(text+'\n')
+
+append('admission.json', {'model':'gemini-3.8-flash-high', 'source_route':'searxng+crawl4ai with explicit builtin recovery', 'dns_resolver':'cloudflare', 'logical_limit':4, 'http_limit':20, 'production_changed':False, 'live_channel_sends':False, 'q02_approval':False, 'fresh_four_turn_run':True, 'prior_batch_not_resumed':True, 'started_at_utc':datetime.now(UTC).isoformat()})
+
+http_count = 0
+original_stream = httpx2.AsyncClient.stream
+def capture(self, method, url, **kwargs):
+    global http_count
+    if method.upper() == 'POST' and str(url).endswith('/chat/completions'):
+        assert http_count < 20, 'Bounded HTTP attempts exhausted'
+        http_count += 1
+        body = kwargs['json']
+        assert body['model'] == 'gemini-3.8-flash-high'
+        append('actual-provider-payloads.jsonl', {'http_attempt':http_count,'captured_at_utc':datetime.now(UTC).isoformat(),'payload':body,'payload_sha256':hashlib.sha256(json.dumps(body,ensure_ascii=False,sort_keys=True).encode()).hexdigest()})
+    return original_stream(self,method,url,**kwargs)
+httpx2.AsyncClient.stream = capture
+
+sys.argv = ['evaluate_character_scenarios', '--fixtures',str(STAGE/'fixtures.json'),'--output-dir',str(STAGE/'runtime-pilot'),'--provider','openai_compatible','--model','gemini-3.8-flash-high','--base-url','https://mubai.website:8318/v1','--execute','--repeats','1','--max-requests','4','--max-provider-requests','20','--no-cost-ceiling','--timeout','180','--context-window','32768','--model-budget-json',str(STAGE/'budget.json'),'--runtime-source-tools','--source-decision-contract','--allow-source-tools-once','--source-dns-resolver','cloudflare','--source-search-provider','searxng','--source-reader-provider','crawl4ai','--source-reader-builtin-fallback','--prompt-as-of','2026-10-04T03:30:00+08:00']
+exit_code = main()
+append('exit.json', {'exit_code':exit_code,'actual_http_attempts':http_count})

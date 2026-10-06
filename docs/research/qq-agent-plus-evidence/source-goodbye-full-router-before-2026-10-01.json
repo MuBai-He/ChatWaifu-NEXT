@@ -1,0 +1,35 @@
+{
+  "scope": "Isolated actual Conversation + full registered Skill router; controlled Provider, original READ allow_once; no endpoint calls or production data.",
+  "followup": "goodbye/no conversation reminders",
+  "provider_requests": 4,
+  "followup_tool_choices": ["required", "required"],
+  "followup_tool_schemas": [
+    [
+      "cw_1ab1f20907c96f6a",
+      "cw_c3ce6bb59720e6d0",
+      "cw_6f83d4ef8f607a96",
+      "cw_8ecef634476f492b",
+      "cw_86c6427628e8ceaa",
+      "cw_b7f421822ef9876e",
+      "cw_e787a5b9b13ba742",
+      "cw_05c0c4107c6b4c71"
+    ],
+    [
+      "cw_1ab1f20907c96f6a",
+      "cw_c3ce6bb59720e6d0",
+      "cw_6f83d4ef8f607a96",
+      "cw_8ecef634476f492b",
+      "cw_86c6427628e8ceaa",
+      "cw_b7f421822ef9876e",
+      "cw_e787a5b9b13ba742",
+      "cw_05c0c4107c6b4c71"
+    ]
+  ],
+  "no_extra_tool_control_failure": "source-summary no-extra-tool assertions failed for goodbye",
+  "code_commit": "fb6ee1704167d54abfe3e4feaa7a1b1df0ef75e1",
+  "endpoint_calls": 0,
+  "persistent_grants": 0,
+  "new_tool_run_observed": false,
+  "provider_scope": "controlled test Provider; first actual Runtime READ handler uses a synthetic original; no real external actions",
+  "status": "reproduced; repair pending; independent of the restricted-router paid goodbye success"
+}

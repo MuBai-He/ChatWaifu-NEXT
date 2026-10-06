@@ -1,0 +1,19 @@
+import hashlib,json,os,subprocess,sys
+from pathlib import Path
+stage=Path('/tmp/cw2-q02-v27-budget-guard-20261004');root=Path('/tmp/cw2-q02-budget-guard-v27-eval')
+assert json.loads((stage/'server-tests-exit.json').read_text())['exit_code']==0
+assert not (stage/'focused-probe-exit.json').exists()
+jobs=[]
+for profile,position in [('instant_message','pre_user'),('single_text','system')]:
+    args=['--execute','--provider','openai_compatible','--model','gemini-3.8-flash-high','--base-url','https://mubai.website:8318/v1','--context-window','32768','--model-budget-json',str(stage/'budget.json'),'--output-contract-position',position,'--fixtures',str(stage/f'fixtures-{profile}-{position}-four-turn.json'),'--persona',str(stage/'persona-v7.md.txt'),'--variant-name','candidate','--repeats','1','--max-requests','1','--runtime-source-tools','--allow-source-tools-once','--max-provider-requests','13','--source-dns-resolver','cloudflare','--source-search-provider','searxng','--source-reader-provider','crawl4ai','--prompt-as-of','2026-10-04T00:00:00Z','--no-cost-ceiling','--timeout','180','--output-dir',str(stage/f'results/focused-{profile}-{position}'),'--source-decision-contract']
+    jobs.append({'profile':profile,'position':position,'arguments':args})
+(stage/'focused-commands.json').write_text(json.dumps(jobs,indent=2)+'\n')
+# Launch injects only the remote configured credentials and imports this frozen snapshot.
+results=[]
+for job in jobs:
+    assert not (stage/f'results/focused-{job["profile"]}-{job["position"]}').exists()
+    with (stage/f'{job["profile"]}-{job["position"]}.log').open('w') as log:
+        rc=subprocess.run([sys.executable,str(stage/'launch.py'),*job['arguments']],cwd=root,stdout=log,stderr=subprocess.STDOUT).returncode
+    results.append({'profile':job['profile'],'position':job['position'],'exit_code':rc})
+    print(json.dumps(results[-1]),flush=True)
+(stage/'focused-probe-exit.json').write_text(json.dumps(results,indent=2)+'\n')

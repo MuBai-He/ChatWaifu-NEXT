@@ -1,0 +1,91 @@
+{
+  "records": [
+    {
+      "call_id": "3a9481ac-800c-4adc-8b15-6fe5a0350fbf",
+      "sample_key": "topic_switch:r0:t1:candidate",
+      "tools_available": true,
+      "last_system_hash_matches": true,
+      "reference_estimate": 5224
+    },
+    {
+      "call_id": "67ff5dc4-e685-43c1-b7e6-b25f09fbbabd",
+      "sample_key": "topic_switch:r0:t1:candidate",
+      "tools_available": true,
+      "last_system_hash_matches": true,
+      "reference_estimate": 5438
+    },
+    {
+      "call_id": "c909d657-b019-47b9-a6f4-1996708d3efc",
+      "sample_key": "topic_switch:r0:t1:candidate",
+      "tools_available": true,
+      "last_system_hash_matches": true,
+      "reference_estimate": 6150
+    },
+    {
+      "call_id": "58bd235a-094b-415b-b686-9b1844caa342",
+      "sample_key": "topic_switch:r0:t1:candidate",
+      "tools_available": true,
+      "last_system_hash_matches": true,
+      "reference_estimate": 7919
+    },
+    {
+      "call_id": "e7dac089-1d5c-41e0-aba1-33fe158cf350",
+      "sample_key": "topic_switch:r0:t1:candidate",
+      "tools_available": false,
+      "last_system_hash_matches": true,
+      "reference_estimate": 8329
+    },
+    {
+      "call_id": "ca520bce-513b-422e-81c9-f18ca33f52f8",
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "tools_available": true,
+      "last_system_hash_matches": true,
+      "reference_estimate": 6908
+    },
+    {
+      "call_id": "68e7b16a-20ef-4dcb-8576-22c9144a0194",
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "tools_available": true,
+      "last_system_hash_matches": true,
+      "reference_estimate": 11381
+    },
+    {
+      "call_id": "3dc0d487-bf3c-4b08-84ab-e489b548ceee",
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "tools_available": true,
+      "last_system_hash_matches": true,
+      "reference_estimate": 12816
+    },
+    {
+      "call_id": "3ee8c880-c8ea-4412-84ad-f094b71c2cc9",
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "tools_available": true,
+      "last_system_hash_matches": true,
+      "reference_estimate": 13040
+    },
+    {
+      "call_id": "746240fa-67ab-4d47-bc9b-a5d50f713b95",
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "tools_available": true,
+      "last_system_hash_matches": true,
+      "reference_estimate": 18339
+    },
+    {
+      "call_id": "ba23af70-cb1c-4c73-8d3a-d34e5d12dd36",
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "tools_available": false,
+      "last_system_hash_matches": true,
+      "reference_estimate": 18619
+    },
+    {
+      "call_id": "64d78311-e57d-4984-8e30-3da992ff1f5a",
+      "sample_key": "detailed_answer:r0:t4:candidate",
+      "tools_available": false,
+      "last_system_hash_matches": true,
+      "reference_estimate": 19871
+    }
+  ],
+  "count": 12,
+  "all_match": true,
+  "quality_approved": false
+}

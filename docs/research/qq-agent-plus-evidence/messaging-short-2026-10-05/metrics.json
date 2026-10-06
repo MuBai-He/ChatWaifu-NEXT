@@ -1,0 +1,36 @@
+{
+  "baseline": {
+    "completed": 12,
+    "casual_chars_median": 27.5,
+    "casual_chars_max": 47,
+    "latency_p50_ms": 4108.0,
+    "latency_p95_ms_nearest_rank": 8526,
+    "wire_reference_token_range": [
+      2740,
+      2844
+    ],
+    "provider_usage": {
+      "prompt_tokens": 25602,
+      "completion_tokens": 1750,
+      "reasoning_tokens": 5776,
+      "total_tokens": 33128
+    }
+  },
+  "candidate": {
+    "completed": 12,
+    "casual_chars_median": 25.0,
+    "casual_chars_max": 37,
+    "latency_p50_ms": 3693.0,
+    "latency_p95_ms_nearest_rank": 7275,
+    "wire_reference_token_range": [
+      2790,
+      2894
+    ],
+    "provider_usage": {
+      "prompt_tokens": 26214,
+      "completion_tokens": 1510,
+      "reasoning_tokens": 5073,
+      "total_tokens": 32797
+    }
+  }
+}

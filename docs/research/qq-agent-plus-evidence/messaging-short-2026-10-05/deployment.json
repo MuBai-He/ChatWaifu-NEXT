@@ -1,0 +1,155 @@
+{
+  "commit": "bd0097048abe745d322ea2cb9b9f6dc1355bfaa3",
+  "branch": "mubai/messaging-short-replies",
+  "source": "/home/mubai/chatwaifu-server/releases/messaging-short-20261005-bd00970/source",
+  "runtime_pid": 631734,
+  "frozen_product_files_verified": 261,
+  "web_files_unchanged": 44,
+  "configuration_and_key_hashes_unchanged": true,
+  "prior_committed_rows_preserved": {
+    "model_role_configs": 4,
+    "turns": 109,
+    "generations": 56,
+    "channel_turns": 43,
+    "channel_deliveries": 43,
+    "channel_delivery_parts": 46,
+    "memory_records": 4,
+    "memory_sources": 4,
+    "memory_proposals": 5,
+    "participants": 2,
+    "conversation_scenes": 1,
+    "channel_participant_links": 2,
+    "channel_proactive_policies": 1,
+    "character_states": 3,
+    "relationship_states": 3
+  },
+  "models_unchanged": [
+    {
+      "role": "chat",
+      "model": "gemini-3.8-flash-high",
+      "endpoint": "https://mubai.website:8318/v1",
+      "context_window": 65536
+    },
+    {
+      "role": "memory_extraction",
+      "model": "gemini-3.8-flash-high",
+      "endpoint": "https://mubai.website:8318/v1",
+      "context_window": 65536
+    },
+    {
+      "role": "memory_summary",
+      "model": "gemini-3.8-flash-high",
+      "endpoint": "https://mubai.website:8318/v1",
+      "context_window": 65536
+    },
+    {
+      "role": "embedding",
+      "model": "voyage-4",
+      "endpoint": "https://api.voyageai.com/v1",
+      "context_window": 32000
+    }
+  ],
+  "checked_at": "2026-10-04T20:31:52.376630+00:00",
+  "stage": "runtime_deployed_connections_ready_original_group_restored_phone_ux_pending",
+  "runtime": "ok",
+  "database": "ready",
+  "schema": 41,
+  "integrity": "ok",
+  "foreign_key_errors": 0,
+  "connections": [
+    {
+      "provider": "weixin_ilink",
+      "status": "ready",
+      "revision": 2,
+      "presentation_policy": {
+        "schema_version": "1.0",
+        "profile": "instant_message",
+        "max_parts": 3,
+        "preferred_chars_per_part": 30,
+        "soft_max_chars_per_part": 60,
+        "cadence_enabled": true,
+        "min_delay_ms": 800,
+        "max_delay_ms": 3000,
+        "total_cadence_delay_ceiling_ms": 6000,
+        "typing_enabled": false,
+        "stickers_enabled": false,
+        "bypass_long_form": true,
+        "version": 2
+      },
+      "last_error_code": null
+    },
+    {
+      "provider": "qq_napcat",
+      "status": "ready",
+      "revision": 3,
+      "presentation_policy": {
+        "schema_version": "1.0",
+        "profile": "instant_message",
+        "max_parts": 3,
+        "preferred_chars_per_part": 30,
+        "soft_max_chars_per_part": 60,
+        "cadence_enabled": true,
+        "min_delay_ms": 800,
+        "max_delay_ms": 3000,
+        "total_cadence_delay_ceiling_ms": 6000,
+        "typing_enabled": false,
+        "stickers_enabled": true,
+        "bypass_long_form": true,
+        "version": 2
+      },
+      "last_error_code": null
+    }
+  ],
+  "group": {
+    "enabled": true,
+    "pause_reason": null,
+    "revision": 21,
+    "original_scene_preserved": true,
+    "original_members_and_speaking_grants_preserved": true,
+    "original_account_preserved": true
+  },
+  "napcat": {
+    "same_container_restarted": true,
+    "quick_login_original_account": true,
+    "quick_login_error": "saved_login_session_expired",
+    "complete_member_list_before_restart": "empty",
+    "complete_member_list_after_restart": "validated_original_self_plus_two_members",
+    "root_cause_of_pre_restart_empty_list": "unproven",
+    "previous_platform_login_rejection": {
+      "checked_at": "2026-10-04T20:16:16.369867+00:00",
+      "qr_scanned": true,
+      "login_confirmed": false,
+      "server_error_code": 168,
+      "platform_message": "你的账号近期存在安全风险，部分功能使用受限，请登录最新手机QQ并根据提示恢复账号使用。",
+      "source": "dedicated NapCat startup log; account field removed",
+      "cause_of_pre_restart_empty_members": "unproven",
+      "no_channel_messages_sent_by_verifier": true
+    },
+    "platform_login": {
+      "checked_at": "2026-10-04T20:31:52.376630+00:00",
+      "login_confirmed": true,
+      "account_matches": true,
+      "user_reports_restriction_removed": true
+    }
+  },
+  "no_channel_messages_sent_by_verifier": true,
+  "quality": "targeted_samples_only_Q02_unapproved_handset_UX_pending",
+  "pending_channel_deliveries": 0,
+  "group_recovery": {
+    "checked_at": "2026-10-04T20:31:52.376630+00:00",
+    "source_commit": "bd0097048abe745d322ea2cb9b9f6dc1355bfaa3",
+    "account_matches": true,
+    "fresh_runtime_observation_used": true,
+    "nonself_member_count": 2,
+    "member_set_matches": true,
+    "members_links_and_speaking_grants_preserved": true,
+    "scene_preserved": true,
+    "group_enabled": true,
+    "group_revision_before": 20,
+    "group_revision_after": 21,
+    "group_pause_reason": null,
+    "no_channel_messages_sent_by_verifier": true,
+    "integrity": "ok",
+    "foreign_key_errors": 0
+  }
+}

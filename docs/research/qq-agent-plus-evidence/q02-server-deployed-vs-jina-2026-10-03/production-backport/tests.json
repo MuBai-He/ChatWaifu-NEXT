@@ -1,0 +1,8 @@
+{
+  "scope": "SearXNG subset from existing regressions, exact production backport modules, server Python 3.12.3; pytest dependencies isolated under /tmp",
+  "passed": 12,
+  "deselected": 50,
+  "skipped": 0,
+  "exit_code": 0,
+  "seconds": 2.11
+}

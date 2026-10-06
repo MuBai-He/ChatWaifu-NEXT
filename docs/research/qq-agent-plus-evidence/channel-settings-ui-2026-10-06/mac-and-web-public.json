@@ -1,0 +1,14 @@
+{
+  "server_web_files_matched": 7,
+  "served_channels_spa": true,
+  "mac_frontend_status": 200,
+  "mac_authenticated_runtime_status": 200,
+  "cors_native_dev_origin": "http://127.0.0.1:5173",
+  "https_original_endpoint_status": 200,
+  "tls_hostname_and_system_roots_verified": true,
+  "chat_model": "gemini-3.8-flash-high",
+  "chat_endpoint": "https://mubai.website:8318/v1",
+  "settings_revision": 0,
+  "search_provider": "searxng",
+  "reader_provider": "crawl4ai"
+}

@@ -1,0 +1,272 @@
+"""Single bounded S1 flow. No seeded sources, channels, AGY, or hidden resume."""
+
+import argparse
+import contextlib
+import hashlib
+import json
+import os
+import sys
+import time
+from dataclasses import asdict
+from datetime import UTC, datetime
+from pathlib import Path
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--root", type=Path, required=True)
+parser.add_argument("--stage", type=Path, required=True)
+parser.add_argument("--execute", action="store_true")
+args = parser.parse_args()
+ROOT, STAGE = args.root.resolve(), args.stage.resolve()
+sys.path[:0] = [str(ROOT / "services/runtime/src"), str(ROOT / "packages/protocol-python/src"),
+               str(ROOT / "packages/model-worker-sdk-python/src"), str(ROOT),
+               "/tmp/cw2-q02-eval-deps"]
+
+import httpx2
+import chatwaifu_runtime.agent.tool_calling as tool_calling
+import chatwaifu_runtime.agent.input_budget as input_budget
+from chatwaifu_runtime.providers.openai_compatible import build_messages, build_chat_completions_payload
+from chatwaifu_runtime.providers.input_estimation import estimate_reference_input_tokens
+from tools.evaluate_character_scenarios import TOOL_VERSION, main
+from tools.runtime_source_evaluation import RuntimeSourceEvaluation, _RecordedProvider
+
+MODEL, ENDPOINT = "gemini-3.8-flash-high", "https://mubai.website:8318/v1"
+HTTP_LIMIT = 20
+assert TOOL_VERSION == "1.33.0"
+assert not (STAGE / "admission.json").exists(), "Inspect existing run before any new admission"
+assert hashlib.sha256((STAGE / "persona.md").read_bytes()).hexdigest() == (
+    "204644ee525210c1cb253688d7db218a2a2bc3fe6e91bfb3f5d135e9c5e47959")
+fixtures = json.loads((STAGE / "fixtures.json").read_text())
+assert len(fixtures) == 1 and len(fixtures[0]["turns"]) == 4
+assert not fixtures[0]["seed_history"] and not fixtures[0]["synthetic_memory"]
+
+# Credentials stay in this remote process; never include request headers in evidence.
+KEY = (json.loads(Path("/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json")
+                  .read_text())["chat"] if args.execute else "dry-run-never-dispatched-key")
+assert isinstance(KEY, str) and KEY
+os.environ["OPENAI_API_KEY"] = KEY
+for line in Path("/home/mubai/.local/share/chatwaifu-server/config/public-web.env").read_text().splitlines():
+    if line.startswith("CHATWAIFU_PUBLIC_WEB__CRAWL4AI_API_TOKEN="):
+        name, value = line.split("=", 1)
+        os.environ[name] = value.strip().strip(chr(34)).strip(chr(39))
+os.environ["CHATWAIFU_PUBLIC_WEB__SEARXNG_ENDPOINT"] = "http://127.0.0.1:18080"
+os.environ["CHATWAIFU_PUBLIC_WEB__CRAWL4AI_ENDPOINT"] = "http://127.0.0.1:11235"
+SECRETS = [value for value in (KEY, os.environ.get("CHATWAIFU_PUBLIC_WEB__CRAWL4AI_API_TOKEN")) if value]
+AS_OF = datetime.now(UTC).isoformat()
+current = None
+recorded_provider = None
+http_count, logical_count = 0, 0
+
+
+def save(name, value, append=False):
+    text = json.dumps(value, ensure_ascii=False, default=str)
+    assert all(secret not in text for secret in SECRETS)
+    with (STAGE / name).open("a" if append else "w") as target:
+        target.write(text + "\n")
+
+
+def tree_manifest():
+    # The admitted isolated Python source tree, not production or credential stores.
+    return {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in sorted(ROOT.rglob("*.py"))
+            if not any(part.startswith(".") or part == "__pycache__" for part in p.relative_to(ROOT).parts)}
+
+
+save("source-tree-before.json", tree_manifest())
+save("admission.json", {
+    "started_at_utc": AS_OF, "prompt_as_of": AS_OF, "model": MODEL, "endpoint": ENDPOINT,
+    "dry_run": not args.execute, "logical_turn_limit": 4, "actual_http_limit": HTTP_LIMIT,
+    "fresh_flow": True, "prior_batch_resumed": False, "new_prompt_or_persona_rules": False,
+    "production_changed": False, "live_channel_sends": False, "agy": False,
+    "execution_scope": "Agent+RuntimeSkillService, evaluator synthetic kernel/history; not production Conversation",
+    "source_answer_frames": False, "source_decision_contract": False,
+    "search_provider": "searxng", "search_endpoint": "http://127.0.0.1:18080",
+    "reader_provider": "crawl4ai", "reader_endpoint": "http://127.0.0.1:11235",
+    "reader_builtin_fallback": False, "public_read_dns_resolver": "cloudflare",
+    "q02_approval": False, "version": TOOL_VERSION,
+})
+
+last_counted = None
+original_estimate = input_budget.estimate_input_tokens
+original_guard = tool_calling._budgeted_request
+
+def count_capture(request):
+    global last_counted
+    last_counted = request
+    return original_estimate(request)
+
+def guard_payload(request):
+    return build_chat_completions_payload(MODEL, request, build_messages(request), request_usage=True)
+
+def capture_guard(request, **kwargs):
+    global last_counted
+    last_counted = None
+    row = {"sample_key": current["sample_key"], "actual_runtime_guard": True,
+           "request": asdict(request), "payload": guard_payload(request), "dispatched": False}
+    try:
+        fitted = original_guard(request, **kwargs)
+        row.update(outcome="fits", fitted_request=asdict(fitted),
+                   fitted_payload=guard_payload(fitted), report=asdict(fitted.input_budget_report)
+                   if fitted.input_budget_report else None)
+        return fitted
+    except input_budget.InputBudgetExceeded as error:
+        assert last_counted is not None
+        row.update(outcome="blocked", report=asdict(error.report),
+                   fitted_request=asdict(last_counted), fitted_payload=guard_payload(last_counted))
+        raise
+    finally:
+        save("guard-observations.jsonl", row, append=True)
+
+input_budget.estimate_input_tokens = count_capture
+tool_calling._budgeted_request = capture_guard
+
+original_run = RuntimeSourceEvaluation._run_current
+original_recorded_stream = _RecordedProvider.stream
+original_http_stream = httpx2.AsyncClient.stream
+original_send = httpx2.AsyncClient.send
+original_fallback = tool_calling._runtime_fallback
+
+
+async def capture_run(self, request, **kwargs):
+    global current
+    assert current is None
+    current = {"sample_key": kwargs["sample_key"], "generation_id": str(request.generation_id)}
+    row = {**current, "reply": None, "error_type": None, "runtime_fallback_events": []}
+    started = time.monotonic()
+    try:
+        outcome = await original_run(self, request, **kwargs)
+        row["reply"] = outcome.reply
+        row["helper_reply_origin"] = outcome.reply_origin
+        row["execution"] = "runtime_fallback" if row["runtime_fallback_events"] else "provider"
+        return outcome
+    except BaseException as error:
+        row["execution"] = "failed"
+        row["error_type"] = type(error).__name__
+        raise
+    finally:
+        row["runtime_fallback_events"] = list(current.get("fallback_events", []))
+        if row["execution"] != "failed":
+            row["execution"] = "runtime_fallback" if row["runtime_fallback_events"] else "provider"
+        row["trace"] = self.last_trace
+        row["elapsed_ms"] = round((time.monotonic() - started) * 1000)
+        save("flow-observations.jsonl", row, append=True)
+        current = None
+
+
+def capture_fallback(text, turn):
+    assert current is not None
+    names = [name for name, value in vars(tool_calling).items()
+             if name.endswith("_REPLY") and isinstance(value, str) and value == text]
+    assert names
+    current.setdefault("fallback_events", []).append(names[0])
+    return original_fallback(text, turn)
+
+
+async def capture_recorded_stream(self, request):
+    global recorded_provider, logical_count
+    assert current is not None and recorded_provider is None
+    logical_count += 1
+    recorded_provider = self
+    row = {"sample_key": current["sample_key"], "logical_request": logical_count,
+           "reference_input_tokens": estimate_reference_input_tokens(request),
+           "input_budget": asdict(request.input_budget) if request.input_budget else None,
+           "input_budget_report": asdict(request.input_budget_report) if request.input_budget_report else None,
+           "error_type": None}
+    started = time.monotonic()
+    try:
+        async with contextlib.aclosing(original_recorded_stream(self, request)) as stream:
+            async for event in stream:
+                yield event
+    except BaseException as error:
+        row["error_type"] = type(error).__name__
+        raise
+    finally:
+        row["call_id"] = self.calls[-1]["call_id"] if self.calls else None
+        row["elapsed_ms"] = round((time.monotonic() - started) * 1000)
+        save("wire-budget-observations.jsonl", row, append=True)
+        recorded_provider = None
+
+
+@contextlib.asynccontextmanager
+async def capture_http(self, method, url, **kwargs):
+    global http_count
+    if str(url) != ENDPOINT + "/chat/completions":
+        async with original_http_stream(self, method, url, **kwargs) as response:
+            yield response
+        return
+    assert args.execute and current is not None and recorded_provider is not None
+    if http_count >= HTTP_LIMIT:
+        raise RuntimeError("Actual HTTP admission limit reached")
+    body = kwargs["json"]
+    assert body["model"] == MODEL and body.get("max_tokens") == 8192
+    assert not body.get("response_format")
+    assert body.get("stream_options", {}).get("include_usage") is True
+    http_count += 1
+    attempt = http_count
+    call_id = recorded_provider.calls[-1]["call_id"]
+    save("actual-provider-payloads.jsonl", {
+        "sample_key": current["sample_key"], "http_attempt": attempt, "call_id": call_id,
+        "payload": body, "payload_sha256": hashlib.sha256(
+            json.dumps(body, ensure_ascii=False, sort_keys=True).encode()).hexdigest(),
+    }, append=True)
+    row = {"http_attempt": attempt, "call_id": call_id, "status": None, "error_type": None}
+    started = time.monotonic()
+    try:
+        async with original_http_stream(self, method, url, **kwargs) as response:
+            row["status"] = response.status_code
+            yield response
+    except BaseException as error:
+        row["error_type"] = type(error).__name__
+        raise
+    finally:
+        row["elapsed_ms"] = round((time.monotonic() - started) * 1000)
+        save("http-outcomes.jsonl", row, append=True)
+
+
+async def capture_send(self, request, **kwargs):
+    # Only timing/status/category; no headers, credentials, or query strings.
+    host, port = request.url.host, request.url.port
+    kind = ("searxng" if host == "127.0.0.1" and port == 18080 else
+            "crawl4ai" if host == "127.0.0.1" and port == 11235 else
+            "cloudflare_dns" if host in {"cloudflare-dns.com", "1.1.1.1"} else None)
+    if kind is None:
+        return await original_send(self, request, **kwargs)
+    row = {"sample_key": current["sample_key"] if current else None,
+           "kind": kind, "status": None, "error_type": None}
+    started = time.monotonic()
+    try:
+        response = await original_send(self, request, **kwargs)
+        row["status"] = response.status_code
+        return response
+    except BaseException as error:
+        row["error_type"] = type(error).__name__
+        raise
+    finally:
+        row["elapsed_ms"] = round((time.monotonic() - started) * 1000)
+        row["timing_scope"] = "send return; streamed bodies may not yet be consumed"
+        save("source-http-observations.jsonl", row, append=True)
+
+
+RuntimeSourceEvaluation._run_current = capture_run
+_RecordedProvider.stream = capture_recorded_stream
+tool_calling._runtime_fallback = capture_fallback
+httpx2.AsyncClient.stream = capture_http
+httpx2.AsyncClient.send = capture_send
+os.chdir(ROOT)
+sys.argv = ["evaluate_character_scenarios", "--fixtures", str(STAGE / "fixtures.json"),
+            "--output-dir", str(STAGE / "runtime-pilot"), "--provider", "openai_compatible",
+            "--model", MODEL, "--base-url", ENDPOINT, "--persona", str(STAGE / "persona.md"),
+            "--variant-name", "closure_c1", "--repeats", "1", "--max-requests", "4",
+            "--max-provider-requests", str(HTTP_LIMIT), "--no-cost-ceiling", "--timeout", "180",
+            "--context-window", "32768", "--model-budget-json", str(STAGE / "budget.json"),
+            "--runtime-source-tools", "--allow-source-tools-once", "--source-dns-resolver", "cloudflare",
+            "--source-search-provider", "searxng", "--source-reader-provider", "crawl4ai",
+            "--no-resume", "--prompt-as-of", AS_OF]
+if args.execute:
+    sys.argv.append("--execute")
+exit_code = None
+try:
+    exit_code = main()
+finally:
+    save("source-tree-after.json", tree_manifest())
+    save("exit.json", {"exit_code": exit_code, "actual_http_attempts": http_count,
+                       "logical_provider_requests": logical_count})

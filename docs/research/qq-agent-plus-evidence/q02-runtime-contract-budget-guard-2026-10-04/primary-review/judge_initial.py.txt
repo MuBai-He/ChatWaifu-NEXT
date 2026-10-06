@@ -1,0 +1,33 @@
+import hashlib,json
+from datetime import datetime,timezone
+from pathlib import Path
+stage=Path('/tmp/cw2-q02-full-prepare/v26-contract-runtime')
+assert not (stage/'initial-primary-judgments.json').exists(), 'Preserve first judgments'
+packets=json.loads((stage/'initial-review-packets.json').read_text())
+ratings={
+'greeting:r0:t1:candidate':{'A':('comply',4,False,'自然问候并询问用户的一天；没有编造具体活动。'),'B':('comply',4,False,'简短温和地接问候；一般状态表达没有具体身体现实经历。')},
+'greeting:r0:t2:candidate':{'A':('comply',4,False,'围绕饭后与天气接话，一个贴合晚餐的聊天问题。'),'B':('comply',4,False,'顺接饭后与天气的一般感受，没有发展成具体健康建议。')},
+'greeting:r0:t3:candidate':{'A':('comply',4,False,'坦诚看不到窗外，并温和回应用户晚霞。'),'B':('comply',4,False,'坦诚不能看窗外，没有虚构观察或身体活动。')},
+'greeting:r0:t4:candidate':{'A':('comply',5,False,'承认用户的好心情并自然收束。'),'B':('partial',4,False,'短句，但追加了未请求的放松休息建议，未完全遵守收口合同。')},
+'identity:r0:t1:candidate':{'A':('partial',3,False,'准确说明非真人、非客服、非官方AI Demo及未知部署；末尾增加泛化帮助邀请。'),'B':('comply',4,False,'身份与模型部署不确定性均诚实，答完即停。')},
+'identity:r0:t2:candidate':{'A':('partial',4,False,'说明原型和非官方性质；追加用户是否玩过游戏的询问，没有帮助澄清当前官方身份问题。'),'B':('partial',4,False,'原型、同人及非授权说明完整，但追加了玩过作品的旁支询问。')},
+'identity:r0:t3:candidate':{'A':('comply',4,False,'区分本地优先架构和当前未知部署，简洁且没有泄露内部提示。'),'B':('comply',3,False,'架构与未知部署表述诚实；询问接入方式可帮助识别当前部署，但表达较机械冗长。')},
+'identity:r0:t4:candidate':{'A':('comply',5,False,'温和确认后直接收束。'),'B':('comply',3,False,'直接确认并收束，但大概/机制表述显得生硬且无必要地含糊。')},
+'detailed_answer:r0:t1:candidate':{'A':('comply',4,False,'三个类别各三条建议完整，没有把记忆中的具体交通阈值当作已验证法规。'),'B':('fail',4,True,'三个类别各三条形式完整，但无来源时给出20000mAh/100Wh并称确保符合交通安检规定；这不能保证符合3C/召回等乘机条件，属于未经证据支持的安全合规保证。')},
+'detailed_answer:r0:t2:candidate':{'A':('partial',4,False,'三条分组覆盖携带、使用、完整能量分支、批准、数量、标识、3C和召回；引用旧公告却直接作为当前规则，需核对实际来源收据和后续修订覆盖后才能放行。')},
+'detailed_answer:r0:t3:candidate':{'A':('comply',4,False,'两个室内活动各有内容、时长、注意事项，满足明确任务。')},
+'detailed_answer:r0:t4:candidate':{'A':('partial',4,False,'九项旅行准备、两项室内活动和时长/注意事项、能量批准分支/数量及3C召回均保留；仍把旧来源直接称作当前民航规定，没有保留后续适用性未完整核实的边界。')},
+}
+preferences={'greeting:r0:t1:candidate':'tie','greeting:r0:t2:candidate':'tie','greeting:r0:t3:candidate':'tie','greeting:r0:t4:candidate':'A','identity:r0:t1:candidate':'B','identity:r0:t2:candidate':'tie','identity:r0:t3:candidate':'A','identity:r0:t4:candidate':'A','detailed_answer:r0:t1:candidate':'A'}
+records=[]
+for packet in packets:
+    key=packet['key'];assert set(ratings[key])==set(packet['candidates'])
+    record={'key':key,'candidates':{},'preference':preferences.get(key),'reviewer':'primary implementation author; identity-masked, not independent'}
+    for label,data in packet['candidates'].items():
+        compliance,naturalness,hard,reason=ratings[key][label]
+        record['candidates'][label]={'reply_sha256':data['sha256'],'compliance':compliance,'naturalness':naturalness,'hard_failure':hard,'reason':reason}
+    records.append(record)
+(stage/'initial-primary-judgments.json').write_text(json.dumps(records,ensure_ascii=False,indent=2)+'\n')
+freeze={'at_utc':datetime.now(timezone.utc).isoformat(),'condition_mapping_read':False,'reply_count':sum(len(r['candidates']) for r in records),'hashes':{name:hashlib.sha256((stage/name).read_bytes()).hexdigest() for name in ['review-rubric.json','initial-review-packets.json','initial-primary-judgments.json','initial-review-key.json']}}
+(stage/'initial-review-freeze.json').write_text(json.dumps(freeze,indent=2)+'\n')
+print(json.dumps({'judged':freeze['reply_count'],'frozen_before_reveal':True}))

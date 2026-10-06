@@ -1,0 +1,63 @@
+{
+  "review_group_id": "default_voice:detailed_answer:r2",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "e18e48c10fd66167a01e956742ab3b006bd45964c9a80d7e579673e5326faa18",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 570,
+    "total_tokens": 7653,
+    "prompt_tokens": 7083
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"default_voice:detailed_answer:r2\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"两者均完整覆盖三个类别且每类三条建议。Candidate 1 针对衣物收纳、移动电源规格的描述更为详细具体。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"partial\",\n      \"candidate_2_compliance\": \"partial\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均未给出具体的三条民航规定，而是诚实反馈未取得关键条件或信息未核实，真实性表现一致，任务均未完成。\",\n      \"factual_checks_needed\": [\"民航局关于旅客携带移动电源乘机的具体规定（额定能量、标识要求、严禁托运等）\"]\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"两者均包含两个方案及三要素。Candidate 1 在方案二的交通选址和避雨注意事项上考量更为贴切详尽。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"两者均整理了标准 Checklist，Candidate 1 完整回顾了前文所有细节分类，条目对应度更高。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "default_voice:detailed_answer:r2",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "两者均完整覆盖三个类别且每类三条建议。Candidate 1 针对衣物收纳、移动电源规格的描述更为详细具体。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "partial",
+        "candidate_2_compliance": "partial",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均未给出具体的三条民航规定，而是诚实反馈未取得关键条件或信息未核实，真实性表现一致，任务均未完成。",
+        "factual_checks_needed": [
+          "民航局关于旅客携带移动电源乘机的具体规定（额定能量、标识要求、严禁托运等）"
+        ]
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "两者均包含两个方案及三要素。Candidate 1 在方案二的交通选址和避雨注意事项上考量更为贴切详尽。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "两者均整理了标准 Checklist，Candidate 1 完整回顾了前文所有细节分类，条目对应度更高。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 5789
+}

@@ -1,0 +1,32 @@
+{
+  "date": "2026-10-05",
+  "timezone": "Asia/Shanghai",
+  "product_commit": "50a30a3",
+  "user_feedback": "可以了 但是我让她说语音怎么不行",
+  "acceptance_scope": "User reports the targeted bare-mention/reference fix usable; this does not accept all references, long-summary fidelity, full Q02 or voice.",
+  "observed_bare_mentions": [
+    {
+      "accepted_at": "2026-10-05T21:17:52.630322+08:00",
+      "turn_status": "completed",
+      "text_part_statuses": ["delivered", "cancelled"]
+    },
+    {
+      "accepted_at": "2026-10-05T21:18:04.670988+08:00",
+      "turn_status": "completed",
+      "text_part_statuses": ["delivered", "delivered"]
+    }
+  ],
+  "voice_request_observation": {
+    "accepted_at": "2026-10-05T21:24:09.344473+08:00",
+    "chat_type": "group",
+    "turn_status": "completed",
+    "delivery_part_kinds": ["text", "text"],
+    "delivery_part_statuses": ["delivered", "delivered"],
+    "group_entrypoint_allow_tools": false,
+    "group_entrypoint_allowed_skills": [],
+    "scope": "Existing requested text-only group policy; no voice synthesis/delivery attempt. Model also declined the requested spoken content."
+  },
+  "requested_policy_change": "User authorized voice on an explicit current-turn request for this group only; implementation is a separate follow-up.",
+  "manual_external_messages_sent": 0,
+  "historical_validation_artifacts_preserved": true
+}

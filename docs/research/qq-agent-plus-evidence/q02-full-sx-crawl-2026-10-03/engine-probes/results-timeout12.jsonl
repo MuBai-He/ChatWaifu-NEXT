@@ -1,0 +1,10 @@
+{"query": "2026 国内航班 充电宝 最新 规定", "engine": "google", "request_timeout": 12, "http_status": 200, "unresponsive_engines": [["google", "SSL error: certificate validation has failed"]], "results": [], "latency_ms": 8566}
+{"query": "2026 国内航班 充电宝 最新 规定", "engine": "brave", "request_timeout": 12, "http_status": 200, "unresponsive_engines": [["brave", "timeout"]], "results": [], "latency_ms": 12005}
+{"query": "2026 国内航班 充电宝 最新 规定", "engine": "duckduckgo", "request_timeout": 12, "http_status": 200, "unresponsive_engines": [["duckduckgo", "SSL error: certificate validation has failed"]], "results": [], "latency_ms": 8277}
+{"query": "2026 国内航班 充电宝 最新 规定", "engine": "bing", "request_timeout": 12, "http_status": 200, "unresponsive_engines": [], "results": [], "latency_ms": 184}
+{"query": "2026 国内航班 充电宝 最新 规定", "engine": "sogou", "request_timeout": 12, "http_status": 200, "unresponsive_engines": [["sogou", "unexpected crash"]], "results": [], "latency_ms": 91}
+{"query": "Raft paper election timeout heartbeat 150 300", "engine": "google", "request_timeout": 12, "http_status": 200, "unresponsive_engines": [["google", "SSL error: certificate validation has failed"]], "results": [], "latency_ms": 6055}
+{"query": "Raft paper election timeout heartbeat 150 300", "engine": "brave", "request_timeout": 12, "http_status": 200, "unresponsive_engines": [["brave", "timeout"]], "results": [], "latency_ms": 12017}
+{"query": "Raft paper election timeout heartbeat 150 300", "engine": "duckduckgo", "request_timeout": 12, "http_status": 200, "unresponsive_engines": [["duckduckgo", "SSL error: certificate validation has failed"]], "results": [], "latency_ms": 8242}
+{"query": "Raft paper election timeout heartbeat 150 300", "engine": "bing", "request_timeout": 12, "http_status": 200, "unresponsive_engines": [], "results": [], "latency_ms": 204}
+{"query": "Raft paper election timeout heartbeat 150 300", "engine": "sogou", "request_timeout": 12, "http_status": 200, "unresponsive_engines": [["sogou", "unexpected crash"]], "results": [], "latency_ms": 32}

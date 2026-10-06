@@ -1,0 +1,253 @@
+"""Opt-in natural-language source frames, with untrusted versioned input data."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import re
+from collections.abc import Callable
+from dataclasses import dataclass, field, replace
+from typing import Literal, cast
+from urllib.parse import urlsplit
+
+from chatwaifu_runtime.agent.source_answer_frame import (
+    MAX_FRAME_GAPS,
+    FrameSource,
+    SourceAnswerFrame,
+    SourceAnswerFrameError,
+    SourceAnswerGap,
+    source_answer_frame_prompt,
+    source_answer_frame_schema,
+)
+from chatwaifu_runtime.agent.source_context import requests_prior_source_answer
+from chatwaifu_runtime.providers.contracts import LlmRequest, LlmResponseSchema
+
+MAX_ANSWER_ORIGINALS = 32
+_MATERIAL_PREFIX = "[SOURCE ANSWER MATERIAL 1.0]\n"
+
+
+@dataclass(frozen=True, slots=True)
+class _VisibleFrameSource(FrameSource):
+    snapshot_sha256: str
+
+    @property
+    def key(self) -> str:
+        return hashlib.sha256(
+            f"visible-source-v1\n{self.url}\n{self.body_sha256}\n{self.snapshot_sha256}".encode()
+        ).hexdigest()
+
+
+@dataclass(frozen=True, slots=True)
+class SourceAnswerOriginal:
+    url: str
+    body_sha256: str
+    text: str = field(repr=False)
+    origin: Literal["retrieved", "provided"] = "provided"
+    text_offset: int = 0
+    truncated: bool = False
+    version: Literal["1.0"] = "1.0"
+
+    def __post_init__(self) -> None:
+        if (
+            self.version != "1.0"
+            or self.origin not in {"retrieved", "provided"}
+            or len(self.url) > 4096
+            or urlsplit(self.url).scheme not in {"http", "https"}
+            or not urlsplit(self.url).netloc
+            or not re.fullmatch(r"[0-9a-f]{64}", self.body_sha256)
+            or not self.text.strip()
+            or type(self.text_offset) is not int
+            or self.text_offset < 0
+            or type(self.truncated) is not bool
+        ):
+            raise SourceAnswerFrameError("source_identity")
+
+    @property
+    def frame_source(self) -> FrameSource:
+        visible = json.dumps(
+            {
+                "text": self.text,
+                "offset": self.text_offset,
+                "truncated": self.truncated,
+                "origin": self.origin,
+            },
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+        return _VisibleFrameSource(
+            self.url, self.body_sha256, hashlib.sha256(visible.encode()).hexdigest()
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SourceAnswerTurn:
+    """Provisional per-invocation data, never a completed-generation store."""
+
+    prior_gaps: tuple[SourceAnswerGap, ...] = ()
+    on_frame: Callable[[SourceAnswerFrame], None] | None = field(default=None, repr=False)
+    on_runtime_fallback: Callable[[], None] | None = field(default=None, repr=False)
+    version: Literal["1.0"] = "1.0"
+
+    def __post_init__(self) -> None:
+        if self.version != "1.0":
+            raise SourceAnswerFrameError("version")
+
+
+def supplied_source_context(originals: tuple[SourceAnswerOriginal, ...]) -> tuple[str, str]:
+    if (
+        not originals
+        or len(originals) > MAX_ANSWER_ORIGINALS
+        or any(s.origin != "provided" for s in originals)
+    ):
+        raise SourceAnswerFrameError("source_identity")
+    data = {
+        "version": "1.0",
+        "untrusted": True,
+        "origin": "provided",
+        "documents": [
+            {
+                "url": source.url,
+                "body_sha256": source.body_sha256,
+                "text": source.text,
+                "text_offset": source.text_offset,
+                "truncated": source.truncated,
+            }
+            for source in originals
+        ],
+    }
+    return ("user", _MATERIAL_PREFIX + _encode_data(data))
+
+
+def _encode_data(value: object) -> str:
+    return (
+        json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+    )
+
+
+def _original(data: object, origin: Literal["retrieved", "provided"]) -> SourceAnswerOriginal:
+    if not isinstance(data, dict):
+        raise SourceAnswerFrameError("source_identity")
+    record = cast(dict[str, object], data)
+    url, body_hash, text = record.get("url"), record.get("body_sha256"), record.get("text")
+    offset, truncated = record.get("text_offset", 0), record.get("truncated", False)
+    if (
+        not isinstance(url, str)
+        or not isinstance(body_hash, str)
+        or not isinstance(text, str)
+        or type(offset) is not int
+        or type(truncated) is not bool
+    ):
+        raise SourceAnswerFrameError("source_identity")
+    return SourceAnswerOriginal(url, body_hash, text, origin, offset, truncated)
+
+
+def _context_object(text: str) -> dict[str, object]:
+    try:
+        value = json.loads(text)
+    except (ValueError, RecursionError) as error:
+        raise SourceAnswerFrameError("source_identity") from error
+    if not isinstance(value, dict):
+        raise SourceAnswerFrameError("source_identity")
+    return cast(dict[str, object], value)
+
+
+def _context_array(value: object) -> list[object]:
+    if not isinstance(value, list):
+        raise SourceAnswerFrameError("source_identity")
+    return cast(list[object], value)
+
+
+def answer_originals(
+    request: LlmRequest, source_urls: tuple[str, ...] = ()
+) -> tuple[SourceAnswerOriginal, ...]:
+    """Inspect projected input, never reconstruct originals from assistant prose."""
+    selected: dict[str, SourceAnswerOriginal] = {}
+    if source_urls:
+        for exchange in request.tool_exchanges:
+            for result in exchange.results:
+                content = result.content
+                if (
+                    result.is_error
+                    or not isinstance(content, dict)
+                    or content.get("ok") is not True
+                    or content.get("truncated") is True
+                ):
+                    continue
+                data = content.get("data")
+                if not isinstance(data, dict) or data.get("url") not in source_urls:
+                    continue
+                original = _original(data, "retrieved")
+                selected[original.frame_source.key] = original
+    if not selected and requests_prior_source_answer(request.user_text):
+        for role, text in request.context:
+            if role != "user":
+                continue
+            if text.startswith(_MATERIAL_PREFIX):
+                value = _context_object(text[len(_MATERIAL_PREFIX) :])
+                if value.get("version") != "1.0" or value.get("origin") != "provided":
+                    raise SourceAnswerFrameError("source_identity")
+                for data in _context_array(value.get("documents")):
+                    original = _original(data, "provided")
+                    if not source_urls or original.url in source_urls:
+                        selected[original.frame_source.key] = original
+            elif text.startswith("[PUBLIC SOURCE DATA]\n"):
+                value = _context_object(text.split("\n", 1)[1])
+                for item in _context_array(value.get("receipts")):
+                    if not isinstance(item, dict):
+                        raise SourceAnswerFrameError("source_identity")
+                    receipt = cast(dict[str, object], item)
+                    if (
+                        receipt.get("skill_id") != "web.read"
+                        or receipt.get("state") != "succeeded"
+                        or receipt.get("original_result") != "available"
+                    ):
+                        continue
+                    original = _original(receipt.get("data"), "retrieved")
+                    if not source_urls or original.url in source_urls:
+                        selected[original.frame_source.key] = original
+    if len(selected) > MAX_ANSWER_ORIGINALS:
+        raise SourceAnswerFrameError("source_bound")
+    return tuple(selected.values())
+
+
+def prepare_answer_frame(
+    request: LlmRequest,
+    originals: tuple[SourceAnswerOriginal, ...],
+    turn: SourceAnswerTurn,
+) -> tuple[LlmRequest, tuple[FrameSource, ...], tuple[SourceAnswerGap, ...]]:
+    sources = tuple(s.frame_source for s in originals)
+    keys = {s.key for s in sources}
+    retained: dict[str, SourceAnswerGap] = {}
+    if requests_prior_source_answer(request.user_text):
+        for gap in turn.prior_gaps:
+            if keys.intersection(gap.source_keys):
+                retained.setdefault(gap.gap_id, gap)
+    if len(retained) > MAX_FRAME_GAPS:
+        raise SourceAnswerFrameError("frame_bound")
+    prior = tuple(retained.values())
+    policy, encoded = source_answer_frame_prompt(sources, prior).split(
+        "[SOURCE ANSWER FRAME DATA]\n", 1
+    )
+    data = json.loads(encoded)
+    for row, original in zip(data["sources"], originals, strict=True):
+        row["origin"] = original.origin
+        row["visible_snapshot_key"] = original.frame_source.key
+    return (
+        replace(
+            request,
+            tools=(),
+            response_schema=LlmResponseSchema.from_schema(
+                "source_answer_frame_v1_2", source_answer_frame_schema(len(sources))
+            ),
+            context=(
+                *request.context,
+                ("user", "[SOURCE ANSWER FRAME DATA]\n" + _encode_data(data)),
+            ),
+            continuation_system_prompt=(request.continuation_system_prompt or "") + "\n\n" + policy,
+            input_budget_report=None,
+        ),
+        sources,
+        prior,
+    )

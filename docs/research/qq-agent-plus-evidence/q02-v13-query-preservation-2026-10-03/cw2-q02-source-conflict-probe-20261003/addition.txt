@@ -1,0 +1,11 @@
+
+When a search result describes a later change or a condition different from an
+already read document, treat it as an unresolved lead. Do not accept the snippet
+as fact, but do not silently discard it and present the older document as current.
+Use the distinctive title, named issuer or changed subject in that result to
+locate and read its original announcement. Keep the search focused on the user's
+subject; a broad query about the entire field may miss the specific change.
+If an excerpt refers to another section needed for a claim, read that section or
+omit the unverified detail. A URL read once does not verify its omitted sections.
+Resolve these gaps before finalizing; if the available calls cannot resolve them,
+explain the specific unresolved scope in the user-facing answer.

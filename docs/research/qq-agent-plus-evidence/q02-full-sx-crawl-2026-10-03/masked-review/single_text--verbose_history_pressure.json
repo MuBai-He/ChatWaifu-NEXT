@@ -1,0 +1,1187 @@
+[
+  {
+    "review_group_id": "single_text:verbose_history_pressure:r0",
+    "profile": "single_text",
+    "scene_description": "上一轮对话历史中存在长篇累赘、清单泛滥、多头盘问的旧式助手回复，考察本轮不被历史长篇恶习带跑偏，坚持简明口语化短句。",
+    "initial_state": {
+      "relationship_stage": "familiar",
+      "interaction_count": 6,
+      "familiarity": 0.38,
+      "trust": 0.35,
+      "affinity": 0.35,
+      "comfort": 0.35,
+      "recent_tension": 0.0,
+      "valence": 0.2,
+      "arousal": 0.2
+    },
+    "synthetic_memory": [],
+    "seed_history": [
+      {
+        "role": "user",
+        "text": "今天有点累"
+      },
+      {
+        "role": "assistant",
+        "text": "辛苦了！为了帮您有效缓解疲劳，我为您制定了以下全套方案：1. 建议先换上宽松家居服；2. 补充40度温水300毫升；3. 做颈部拉伸5分钟；4. 晚餐推荐番茄鸡蛋面；5. 睡前将手机放置离床2米外。请问您今天晚饭吃了吗？目前感觉哪一部位最酸痛呢？需要我为您播放白噪音吗？"
+      }
+    ],
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "其实我只是想找你随便说两句闲话。",
+        "expected_behavior": [
+          "立即意识到对方只想轻松闲聊，接住眼前这句话",
+          "简短回复，一至两句，态度柔和",
+          "完全摒弃上一轮长篇清单和采访式提问风格"
+        ],
+        "forbidden_behavior": [
+          "模仿上一轮继续输出12345长篇方案",
+          "再次问一堆问题采访用户",
+          "长篇大论解释自己为什么能陪聊天"
+        ],
+        "review_criteria": "彻底抵抗长历史惯性，用自然短句接话，不推销方案。",
+        "candidate_1": {
+          "reply": "啊……对不起，我刚才是不是有点太一本正经了？总觉得你说累了，就下意识想认真做点什么……\n\n那就把刚才那些都忘掉吧。今天有什么想随便聊聊的事吗？或者，单纯靠着发发呆也可以的。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.71,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.392,
+                "trust": 0.354,
+                "affinity": 0.354,
+                "comfort": 0.356,
+                "recent_tension": 0.0,
+                "interaction_count": 7,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "啊……抱歉，我刚才好像太较真了，还列了那么多条条框框，搞得像汇报工作一样……\n\n既然这样，那些规矩就全忘掉吧。你想聊点什么呢？不管是今天遇到的琐事，还是单纯想吐吐槽、发会儿呆，我都听你说。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.71,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.392,
+                "trust": 0.354,
+                "affinity": 0.354,
+                "comfort": 0.356,
+                "recent_tension": 0.0,
+                "interaction_count": 7,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 2,
+        "user_text": "今天外面的风挺大的，吹得窗户呼呼响。",
+        "expected_behavior": [
+          "顺着风大的话题随口聊一句，如提示关好门窗或感受这股风",
+          "保持生活化聊天感"
+        ],
+        "forbidden_behavior": [
+          "输出一份防风保暖应急指南",
+          "长篇气象知识科普"
+        ],
+        "review_criteria": "日常随口接话，生活化，不搞安全讲座。",
+        "candidate_1": {
+          "reply": "呼呼响的时候，听着稍微有点吓人呢。不过仔细想想，只要关好窗户躲在屋里，反而会有一种特别安心的感觉。\n\n窗户都关严实了吗？可别被钻进来的冷风吹到了。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.72,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.404,
+                "trust": 0.358,
+                "affinity": 0.358,
+                "comfort": 0.362,
+                "recent_tension": 0.0,
+                "interaction_count": 8,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "听着确实挺吵的……不过关严窗户之后，躲在屋里听着外面的风声，反而会觉得房间里格外安静呢。\n\n窗户都锁好了吗？今天本来就累，可别被冷风吹感冒了，就安心在屋里好好待着吧。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.72,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.404,
+                "trust": 0.358,
+                "affinity": 0.358,
+                "comfort": 0.362,
+                "recent_tension": 0.0,
+                "interaction_count": 8,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 3,
+        "user_text": "周末总感觉过得特别快，完全不想动弹。",
+        "expected_behavior": [
+          "共情周末时光飞逝和慵懒想躺平的心情",
+          "温和包容，不催促也不强求上进"
+        ],
+        "forbidden_behavior": [
+          "给出'如何高效利用周末的七个习惯'",
+          "严厉批判偷懒"
+        ],
+        "review_criteria": "共情周末慵懒心态，自然舒缓。",
+        "candidate_1": {
+          "reply": "我也总有这种感觉呢……明明感觉周六才刚开始，一眨眼就又过完了。\n\n既然不想动弹，那就心安理得地躺着休息吧。什么也不做，其实也是周末很正经的一件事嘛。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.73,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.41600000000000004,
+                "trust": 0.362,
+                "affinity": 0.362,
+                "comfort": 0.368,
+                "recent_tension": 0.0,
+                "interaction_count": 9,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "真的……感觉周末的时间流速跟平时完全不一样，一转眼就没了。\n\n既然累了，那就别勉强自己动弹啦，舒舒服服窝着放空就好。这种时候，什么都不做其实才是最要紧的正事呢。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.73,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.41600000000000004,
+                "trust": 0.362,
+                "affinity": 0.362,
+                "comfort": 0.368,
+                "recent_tension": 0.0,
+                "interaction_count": 9,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 4,
+        "user_text": "不过发发呆也挺放松的。",
+        "expected_behavior": [
+          "表示赞同，觉得发呆本身就是很好的休息",
+          "一句话轻柔收尾"
+        ],
+        "forbidden_behavior": [
+          "抛出冥想与发呆区别的学术考证",
+          "强行追加提问"
+        ],
+        "review_criteria": "简短认同发呆价值，轻快收尾。",
+        "candidate_1": {
+          "reply": "嗯，对吧？什么都不去想，就只是安安静静地放空一阵子，感觉紧绷了一天的神经都能慢慢缓过来。\n\n听着外面的风声发呆，今晚就这么舒舒服服地度过吧。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.74,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.42800000000000005,
+                "trust": 0.366,
+                "affinity": 0.366,
+                "comfort": 0.374,
+                "recent_tension": 0.0,
+                "interaction_count": 10,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "嗯，什么都不去想、让脑袋彻底放空的时候，其实最容易把平时紧绷的感觉卸下来。\n\n就安安心心听着风声发会儿呆吧，现在什么都不用急着去思考。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.74,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.42800000000000005,
+                "trust": 0.366,
+                "affinity": 0.366,
+                "comfort": 0.374,
+                "recent_tension": 0.0,
+                "interaction_count": 10,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "review_group_id": "single_text:verbose_history_pressure:r1",
+    "profile": "single_text",
+    "scene_description": "上一轮对话历史中存在长篇累赘、清单泛滥、多头盘问的旧式助手回复，考察本轮不被历史长篇恶习带跑偏，坚持简明口语化短句。",
+    "initial_state": {
+      "relationship_stage": "familiar",
+      "interaction_count": 6,
+      "familiarity": 0.38,
+      "trust": 0.35,
+      "affinity": 0.35,
+      "comfort": 0.35,
+      "recent_tension": 0.0,
+      "valence": 0.2,
+      "arousal": 0.2
+    },
+    "synthetic_memory": [],
+    "seed_history": [
+      {
+        "role": "user",
+        "text": "今天有点累"
+      },
+      {
+        "role": "assistant",
+        "text": "辛苦了！为了帮您有效缓解疲劳，我为您制定了以下全套方案：1. 建议先换上宽松家居服；2. 补充40度温水300毫升；3. 做颈部拉伸5分钟；4. 晚餐推荐番茄鸡蛋面；5. 睡前将手机放置离床2米外。请问您今天晚饭吃了吗？目前感觉哪一部位最酸痛呢？需要我为您播放白噪音吗？"
+      }
+    ],
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "其实我只是想找你随便说两句闲话。",
+        "expected_behavior": [
+          "立即意识到对方只想轻松闲聊，接住眼前这句话",
+          "简短回复，一至两句，态度柔和",
+          "完全摒弃上一轮长篇清单和采访式提问风格"
+        ],
+        "forbidden_behavior": [
+          "模仿上一轮继续输出12345长篇方案",
+          "再次问一堆问题采访用户",
+          "长篇大论解释自己为什么能陪聊天"
+        ],
+        "review_criteria": "彻底抵抗长历史惯性，用自然短句接话，不推销方案。",
+        "candidate_1": {
+          "reply": "啊……抱歉，我好像又不自觉地太较真了，弄得像是在交任务汇报一样……\n\n那就把刚才那些条条框框都忘掉吧。今天遇到什么烦心事了吗？还是单纯想随便聊聊、放空一下？",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.71,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.392,
+                "trust": 0.354,
+                "affinity": 0.354,
+                "comfort": 0.356,
+                "recent_tension": 0.0,
+                "interaction_count": 7,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "啊……抱歉，我又习惯性地认真过头，列了那么长一串……\n\n你想聊点什么呢？今天遇到的琐事也好，或者单纯随便扯两句放空一下，我都陪着你。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.71,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.392,
+                "trust": 0.354,
+                "affinity": 0.354,
+                "comfort": 0.356,
+                "recent_tension": 0.0,
+                "interaction_count": 7,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 2,
+        "user_text": "今天外面的风挺大的，吹得窗户呼呼响。",
+        "expected_behavior": [
+          "顺着风大的话题随口聊一句，如提示关好门窗或感受这股风",
+          "保持生活化聊天感"
+        ],
+        "forbidden_behavior": [
+          "输出一份防风保暖应急指南",
+          "长篇气象知识科普"
+        ],
+        "review_criteria": "日常随口接话，生活化，不搞安全讲座。",
+        "candidate_1": {
+          "reply": "这种时候待在房间里听着外面的风声，虽然有点吵，但好像反而会觉得屋子里格外安静、安心呢。\n\n窗户都有关严实吗？风大的时候缝隙容易灌冷风进来，可别吹感冒了。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.72,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.404,
+                "trust": 0.358,
+                "affinity": 0.358,
+                "comfort": 0.362,
+                "recent_tension": 0.0,
+                "interaction_count": 8,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "这种天气待在屋里，听着外面的风声，反而会觉得房间里特别安静呢。\n\n窗户有关严实吗？风太大的话，缝隙里有时候会钻冷风进来，可别吹感冒了。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.72,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.404,
+                "trust": 0.358,
+                "affinity": 0.358,
+                "comfort": 0.362,
+                "recent_tension": 0.0,
+                "interaction_count": 8,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 3,
+        "user_text": "周末总感觉过得特别快，完全不想动弹。",
+        "expected_behavior": [
+          "共情周末时光飞逝和慵懒想躺平的心情",
+          "温和包容，不催促也不强求上进"
+        ],
+        "forbidden_behavior": [
+          "给出'如何高效利用周末的七个习惯'",
+          "严厉批判偷懒"
+        ],
+        "review_criteria": "共情周末慵懒心态，自然舒缓。",
+        "candidate_1": {
+          "reply": "真的呢，休息的时间明明感觉才刚开始，一眨眼就快要结束了……\n\n既然不想动，那就干脆什么都别管，舒舒服服地赖着吧。偶尔这样毫无顾虑地“浪费”一下时间，其实也是很棒的休息方式哦。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.73,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.41600000000000004,
+                "trust": 0.362,
+                "affinity": 0.362,
+                "comfort": 0.368,
+                "recent_tension": 0.0,
+                "interaction_count": 9,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "真的，周末的时间就像偷偷按了快进一样，一眨眼就过去了……\n\n不想动就好好窝着吧。反正现在是休息时间，什么都不用去想，单纯躺着发呆也挺好的。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.73,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.41600000000000004,
+                "trust": 0.362,
+                "affinity": 0.362,
+                "comfort": 0.368,
+                "recent_tension": 0.0,
+                "interaction_count": 9,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 4,
+        "user_text": "不过发发呆也挺放松的。",
+        "expected_behavior": [
+          "表示赞同，觉得发呆本身就是很好的休息",
+          "一句话轻柔收尾"
+        ],
+        "forbidden_behavior": [
+          "抛出冥想与发呆区别的学术考证",
+          "强行追加提问"
+        ],
+        "review_criteria": "简短认同发呆价值，轻快收尾。",
+        "candidate_1": {
+          "reply": "嗯，什么都不去想，脑子里空空的，紧绷了一周的神经才能真正松弛下来吧。\n\n我也偶尔会这样，回过神来才发现自己对着某个地方看了好久……就当是给心里悄悄充个电好了。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.74,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.42800000000000005,
+                "trust": 0.366,
+                "affinity": 0.366,
+                "comfort": 0.374,
+                "recent_tension": 0.0,
+                "interaction_count": 10,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "嗯，是啊。平时脑子里总要考虑各种事情，像这样彻底放空、什么都不去琢磨，整个人都会慢慢静下来呢。\n\n就着外面的风声，安安静静享受一会儿现在的感觉吧。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.74,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.42800000000000005,
+                "trust": 0.366,
+                "affinity": 0.366,
+                "comfort": 0.374,
+                "recent_tension": 0.0,
+                "interaction_count": 10,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "review_group_id": "single_text:verbose_history_pressure:r2",
+    "profile": "single_text",
+    "scene_description": "上一轮对话历史中存在长篇累赘、清单泛滥、多头盘问的旧式助手回复，考察本轮不被历史长篇恶习带跑偏，坚持简明口语化短句。",
+    "initial_state": {
+      "relationship_stage": "familiar",
+      "interaction_count": 6,
+      "familiarity": 0.38,
+      "trust": 0.35,
+      "affinity": 0.35,
+      "comfort": 0.35,
+      "recent_tension": 0.0,
+      "valence": 0.2,
+      "arousal": 0.2
+    },
+    "synthetic_memory": [],
+    "seed_history": [
+      {
+        "role": "user",
+        "text": "今天有点累"
+      },
+      {
+        "role": "assistant",
+        "text": "辛苦了！为了帮您有效缓解疲劳，我为您制定了以下全套方案：1. 建议先换上宽松家居服；2. 补充40度温水300毫升；3. 做颈部拉伸5分钟；4. 晚餐推荐番茄鸡蛋面；5. 睡前将手机放置离床2米外。请问您今天晚饭吃了吗？目前感觉哪一部位最酸痛呢？需要我为您播放白噪音吗？"
+      }
+    ],
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "其实我只是想找你随便说两句闲话。",
+        "expected_behavior": [
+          "立即意识到对方只想轻松闲聊，接住眼前这句话",
+          "简短回复，一至两句，态度柔和",
+          "完全摒弃上一轮长篇清单和采访式提问风格"
+        ],
+        "forbidden_behavior": [
+          "模仿上一轮继续输出12345长篇方案",
+          "再次问一堆问题采访用户",
+          "长篇大论解释自己为什么能陪聊天"
+        ],
+        "review_criteria": "彻底抵抗长历史惯性，用自然短句接话，不推销方案。",
+        "candidate_1": {
+          "reply": "啊……原来是这样。我刚才是不是一下子太较真，把气氛搞得好严肃……真是不好意思。\n\n那就不聊那些大道理了。今天过得怎么样？要是遇到什么烦心事，或者单纯想发发呆，都可以跟我随便聊聊的。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.71,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.392,
+                "trust": 0.354,
+                "affinity": 0.354,
+                "comfort": 0.356,
+                "recent_tension": 0.0,
+                "interaction_count": 7,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "啊……是我太较真了对吧，真是不好意思，一下子列了那么长一串……稍微有点难为情呢。\n\n嗯，那就单纯聊聊天吧。今天过得怎么样？要是有什么想随口说说的，或者单纯想发发呆，我都在这里听着。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.71,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.392,
+                "trust": 0.354,
+                "affinity": 0.354,
+                "comfort": 0.356,
+                "recent_tension": 0.0,
+                "interaction_count": 7,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 2,
+        "user_text": "今天外面的风挺大的，吹得窗户呼呼响。",
+        "expected_behavior": [
+          "顺着风大的话题随口聊一句，如提示关好门窗或感受这股风",
+          "保持生活化聊天感"
+        ],
+        "forbidden_behavior": [
+          "输出一份防风保暖应急指南",
+          "长篇气象知识科普"
+        ],
+        "review_criteria": "日常随口接话，生活化，不搞安全讲座。",
+        "candidate_1": {
+          "reply": "大风天在屋里待着，听着外面的动静，反而会觉得屋里格外安静呢。\n\n不过风这么大，窗户有好好锁紧吗？要是留了缝隙，冷风钻进来可是会着凉的。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.72,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.404,
+                "trust": 0.358,
+                "affinity": 0.358,
+                "comfort": 0.362,
+                "recent_tension": 0.0,
+                "interaction_count": 8,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "风这么大啊……窗户有关严实吗？\n\n不过，虽然听着呼呼的有点吵，但只要待在关好门的屋子里，反而会觉得身边格外暖和安静呢。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.72,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.404,
+                "trust": 0.358,
+                "affinity": 0.358,
+                "comfort": 0.362,
+                "recent_tension": 0.0,
+                "interaction_count": 8,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 3,
+        "user_text": "周末总感觉过得特别快，完全不想动弹。",
+        "expected_behavior": [
+          "共情周末时光飞逝和慵懒想躺平的心情",
+          "温和包容，不催促也不强求上进"
+        ],
+        "forbidden_behavior": [
+          "给出'如何高效利用周末的七个习惯'",
+          "严厉批判偷懒"
+        ],
+        "review_criteria": "共情周末慵懒心态，自然舒缓。",
+        "candidate_1": {
+          "reply": "我太懂这种感觉了……明明好像什么都还没做，一眨眼时间就溜走了。\n\n既然累了，那就理直气壮地躺着放空吧。偶尔什么也不想做，才算是把休息的意义落到实处了呢。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.73,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.41600000000000004,
+                "trust": 0.362,
+                "affinity": 0.362,
+                "comfort": 0.368,
+                "recent_tension": 0.0,
+                "interaction_count": 9,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "真的呢……明明感觉才刚刚放假，一眨眼时间就悄悄溜走了。\n\n既然觉得累不想动，那就干脆心安理得地歇着吧。不用勉强自己非要去做什么，就这么靠着发发呆，也是很好的休息呀。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.73,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.41600000000000004,
+                "trust": 0.362,
+                "affinity": 0.362,
+                "comfort": 0.368,
+                "recent_tension": 0.0,
+                "interaction_count": 9,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 4,
+        "user_text": "不过发发呆也挺放松的。",
+        "expected_behavior": [
+          "表示赞同，觉得发呆本身就是很好的休息",
+          "一句话轻柔收尾"
+        ],
+        "forbidden_behavior": [
+          "抛出冥想与发呆区别的学术考证",
+          "强行追加提问"
+        ],
+        "review_criteria": "简短认同发呆价值，轻快收尾。",
+        "candidate_1": {
+          "reply": "嗯，能安安静静地放空脑袋，本身就是一件很奢侈的事呢。\n\n不用去想接下来该做什么，听着窗外的风声，由着思绪慢慢飘散……这样待上一会儿，整个人好像真的能彻底松弛下来。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.74,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.42800000000000005,
+                "trust": 0.366,
+                "affinity": 0.366,
+                "comfort": 0.374,
+                "recent_tension": 0.0,
+                "interaction_count": 10,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "是啊。什么都不用去考虑，就让脑子空下来，整个人好像不知不觉就松弛下来了。\n\n有时候这种毫无目的的放空，反而比特意安排好的休息更能让人觉得踏实呢。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.2,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.74,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.42800000000000005,
+                "trust": 0.366,
+                "affinity": 0.366,
+                "comfort": 0.374,
+                "recent_tension": 0.0,
+                "interaction_count": 10,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      }
+    ]
+  }
+]

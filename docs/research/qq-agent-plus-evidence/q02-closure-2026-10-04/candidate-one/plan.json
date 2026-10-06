@@ -1,0 +1,29 @@
+{
+  "candidate": "closure-c1",
+  "status": "frozen_before_calls",
+  "baseline_persona_sha256": "3ab060352dcb8e25eed5c0b729905f0d5f0eab51c2afef091440c0c38f0cb808",
+  "candidate_persona_sha256": "204644ee525210c1cb253688d7db218a2a2bc3fe6e91bfb3f5d135e9c5e47959",
+  "scope": "one consolidated candidate; default persona and production config unchanged",
+  "changes": [
+    "Preserve v4 technical and correction rules and examples; avoid v7 added technical caveats",
+    "Anchor ordinary greeting in current conversation rather than invented completed activities",
+    "Keep supplied-document evidence scope and unresolved status across transformations",
+    "Retain task elements and respect quiet emotional support"
+  ],
+  "stage1": {
+    "source_fixture": "same ICAO/AirChina complete frozen documents",
+    "turns": 4,
+    "documents": 2,
+    "repeats": 2,
+    "logical_max": 16,
+    "provider_max": 20,
+    "model": "gemini-3.8-flash-high",
+    "budget": "unchanged 32768/8192/15pct",
+    "real_time_retrieval": false,
+    "pass": "Full text review: all requested conditions, scope, unresolved status and no unsupported source-limited explanation; all payload/history checks pass",
+    "stop": "Any material failure: freeze failed result; no further prompt variant or full AB in this closure"
+  },
+  "stage2": "Only after stage1: directed hard-boundary, correction, stop, technical and checklist regressions across three original presentations; no full batch while S1 or candidate gate remains open",
+  "comparison": "Reuse existing same-fixture baseline; sequential candidate evidence is not randomized paired causal AB and cannot establish full persona gains",
+  "original_full_gate": "unchanged: 12 x 4 x 3 x 2 x 3; 864 replies only after prerequisites pass"
+}

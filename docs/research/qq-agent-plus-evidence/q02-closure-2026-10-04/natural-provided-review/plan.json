@@ -1,0 +1,27 @@
+{
+  "allowed_code_writes": [
+    "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py",
+    "services/runtime/tests/test_source_review_pipeline.py"
+  ],
+  "before_sha256": {
+    "services/runtime/src/chatwaifu_runtime/agent/source_answer.py": "d03aa648e46f6a66e552733cf9d59b4f97a54fb116aabfb3ffd5b9ec281ff1c7",
+    "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py": "0274c81fd7befe9ea871a2aa5d5c73e3b01a144ebb96e38e117a9a5c35148935",
+    "services/runtime/tests/test_source_review_pipeline.py": "4d5926302c1e09fb1a9a9d4ae2b9826c6f2832b79dabf70baeb38bd7d0b28966"
+  },
+  "budget": "unchanged32768 window/8192 output/15percent reference margin/21370input",
+  "endpoint": "https://mubai.website:8318/v1",
+  "frame_enabled": false,
+  "gate": "First deterministic failure, bounded plain-text revision, cancellation/stale/nonterminal/whole-budget/ordinary-route tests; then four complete actual Conversation flows over original two documents and two repeats using samec1; all final texts reviewed against original requests, current source and actual history",
+  "max_model_http_attempts": 32,
+  "model": "gemini-3.8-flash-high",
+  "new_persona": false,
+  "new_prompt_rules": false,
+  "no_resume_or_hidden_retry": true,
+  "preserved_policy": "services/runtime/src/chatwaifu_runtime/agent/source_answer.py",
+  "production_deployment": false,
+  "public_read_dns_resolver": "cloudflare",
+  "quality_criteria": "Existing conditions/date/evidence scope/organization/role criteria; no fixed date token requirement or checker-only approval",
+  "scope": "Reuse existing provided-source review for declared structured provided material with natural-text output and frames off",
+  "services_retained": "server SearXNG18080/Crawl4AI11235; this frozen-quality gate makes no live search/read calls",
+  "status": "before implementation/model calls"
+}

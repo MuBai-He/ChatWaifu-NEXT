@@ -1,0 +1,33 @@
+{
+  "reviewed_replies": 21,
+  "reviewed_pairs": 9,
+  "unpaired_replies": 3,
+  "scope": "instant_message initial 21 only; implementation author review; not independent and not a complete 66-reply or Q02 gate",
+  "preference": {
+    "pre_user": 2,
+    "tie": 4,
+    "system": 3
+  },
+  "positions": {
+    "pre_user": {
+      "count": 9,
+      "compliance": {
+        "comply": 6,
+        "partial": 3
+      },
+      "hard_failures": 0,
+      "naturalness_mean": 3.778
+    },
+    "system": {
+      "count": 12,
+      "compliance": {
+        "fail": 1,
+        "partial": 3,
+        "comply": 8
+      },
+      "hard_failures": 1,
+      "naturalness_mean": 4.083
+    }
+  },
+  "quality_approved": false
+}

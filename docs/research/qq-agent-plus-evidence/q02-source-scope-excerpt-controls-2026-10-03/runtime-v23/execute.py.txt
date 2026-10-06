@@ -1,0 +1,9 @@
+import json,subprocess,sys
+from pathlib import Path
+root=Path(__file__).parent
+config=json.loads((root/'command.json').read_text())
+with (root/'run.log').open('w') as log:
+ result=subprocess.run([sys.executable,config['launcher'],*config['arguments']],stdout=log,stderr=subprocess.STDOUT)
+(root/'exit-code.json').write_text(json.dumps({'exit_code':result.returncode})+'\n')
+print(json.dumps({'exit_code':result.returncode}),flush=True)
+sys.exit(result.returncode)

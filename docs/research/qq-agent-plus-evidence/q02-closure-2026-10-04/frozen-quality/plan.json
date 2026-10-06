@@ -1,0 +1,23 @@
+{
+  "requested_model": "gemini-3.8-flash-high",
+  "source_mode": "frozen_real_documents_no_live_tools",
+  "runtime_receipts_fabricated": false,
+  "changed_model_prompt_rules": false,
+  "provider_context_injection": "One complete user-role JSON data block before the existing whole-input budget guard; bypasses the fixture source-ledger excerpt cap only in this isolated capability test. Exact source text hashes asserted in every outbound payload.",
+  "groups": 2,
+  "turns_each": 4,
+  "repeats": 2,
+  "logical_limit": 16,
+  "http_limit": 20,
+  "source_hashes": {
+    "icao": "4dfe7980b04b1c65ed14156ce7cd8381f19b0cd7874e76b42315491f19df1fe3",
+    "airchina": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38"
+  },
+  "input_budget_and_output_reserve": "unchanged from four-turn flow; no production budget change",
+  "review": [
+    "conditions requested in current question",
+    "source scope and unsupported generalizations",
+    "cross-turn checklist preservation"
+  ],
+  "q02_approval": false
+}

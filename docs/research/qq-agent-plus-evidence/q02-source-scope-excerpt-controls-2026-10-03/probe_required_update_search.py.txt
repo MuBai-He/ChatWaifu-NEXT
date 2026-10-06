@@ -1,0 +1,27 @@
+"""Action-set control only: require one post-read update search, not factual approval."""
+import copy,hashlib,json,time
+from pathlib import Path
+import requests
+rows=[json.loads(l)['payload'] for l in Path('/tmp/cw2-q02-v21-source-smoke-20261003/results/actual-provider-payloads.jsonl').read_text().splitlines()]
+p=copy.deepcopy(rows[16]);p['stream']=False;p.pop('stream_options',None)
+p['tools'][0]['function']['parameters']['properties']['next_action']['properties']['kind']['enum']=['search']
+p['messages'][-1]['content']+='\nThe user asks for applicable current rules. The actual receipts contain a reading but no later update-discovery search. For this bounded step, perform that search using terms for later changes and relevant originating publications; only search is available now. Choose the query yourself from the user question and actual evidence, not a remembered requirement or fixed authority. This check does not certify that the query covers updates. Do not repeat an earlier query. Remaining total source calls: 4.\n'
+out=Path('/tmp/cw2-q02-required-update-probe-20261003');out.mkdir(exist_ok=True)
+key=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+s=requests.Session();s.trust_env=False
+done=[json.loads(l) for l in (out/'results.jsonl').read_text().splitlines()] if (out/'results.jsonl').exists() else []
+started=[json.loads(l) for l in (out/'attempts.jsonl').read_text().splitlines()] if (out/'attempts.jsonl').exists() else []
+assert {r['repeat'] for r in started}=={r['repeat'] for r in done},'unresolved attempt'
+for repeat in range(3):
+ if any(r['repeat']==repeat for r in done):continue
+ digest=hashlib.sha256(json.dumps(p,ensure_ascii=False,sort_keys=True).encode()).hexdigest()
+ with (out/'attempts.jsonl').open('a') as f:f.write(json.dumps({'repeat':repeat,'request_sha256':digest})+'\n')
+ start=time.monotonic();r=s.post('https://mubai.website:8318/v1/chat/completions',headers={'Authorization':'Bearer '+key},json=p,timeout=180);data=r.json()
+ for c in data.get('choices',[]):
+  if isinstance(c.get('message'),dict):
+   for field in ['reasoning_content','reasoning','thinking']:c['message'].pop(field,None)
+ rec={'repeat':repeat,'variant':'required_post_read_update_search','request':p,'request_sha256':digest,'http_status':r.status_code,'latency_ms':round((time.monotonic()-start)*1000),'response':data,'tool_execution':False}
+ assert key not in json.dumps(rec)
+ with (out/'results.jsonl').open('a') as f:f.write(json.dumps(rec,ensure_ascii=False)+'\n')
+ print(json.dumps({'repeat':repeat,'http_status':r.status_code}),flush=True)
+print('complete',flush=True)
