@@ -8,7 +8,7 @@ import json
 import threading
 import wave
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import cast
@@ -38,7 +38,10 @@ from chatwaifu_runtime.external_channels.adapters.qq_napcat.client import (
     NapCatRejected,
     NapCatUncertain,
 )
-from chatwaifu_runtime.external_channels.adapters.qq_napcat.delivery import NapCatDelivery
+from chatwaifu_runtime.external_channels.adapters.qq_napcat.delivery import (
+    NapCatDelivery,
+    reconcile_known_sends,
+)
 from chatwaifu_runtime.external_channels.models import (
     ChannelDeliveryPartRecord,
     ChannelDeliveryPlanRecord,
@@ -51,6 +54,7 @@ from chatwaifu_runtime.external_channels.scheduler import (
 )
 from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
 from chatwaifu_runtime.persistence.database import Database
+from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.persistence.sqlite_external_channels import SQLiteExternalChannelRepository
 from chatwaifu_runtime.sticker_library.classifier import StickerClassifier
 from chatwaifu_runtime.sticker_library.ports import StickerLibraryRepository
@@ -503,7 +507,7 @@ async def test_cancelled_or_disabled_delivery_does_not_send(tmp_path: Path, stop
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("stop", ["cancel", "disable"])
+@pytest.mark.parametrize("stop", ["cancel", "disable", "owner"])
 async def test_stopped_delivery_during_account_preflight_prevents_provider_send(
     tmp_path: Path, stop: str
 ) -> None:
@@ -551,7 +555,11 @@ async def test_stopped_delivery_during_account_preflight_prevents_provider_send(
                     connection = await state.repository.get_connection(state.connection_id)
                     assert connection is not None
                     await state.repository.update_connection(
-                        connection.configuration.model_copy(update={"enabled": False}),
+                        connection.configuration.model_copy(
+                            update={"allowed_sender_keys": ["10003"]}
+                            if stop == "owner"
+                            else {"enabled": False}
+                        ),
                         expected_revision=connection.revision,
                         access_token_hash=None,
                         updated_at=datetime.now(UTC),
@@ -573,6 +581,236 @@ async def test_stopped_delivery_during_account_preflight_prevents_provider_send(
                     task.cancel()
                 await asyncio.gather(task, return_exceptions=True)
                 await client.close()
+    finally:
+        await state.database.close()
+
+
+async def test_known_receipt_partial_plan_has_no_terminal_callback(
+    tmp_path: Path,
+) -> None:
+    state = await setup(tmp_path)
+    callbacks: list[ChannelDeliveryStatus] = []
+
+    async def terminal(plan: ChannelDeliveryPlanRecord) -> None:
+        callbacks.append(plan.status)
+
+    try:
+        assert state.plan.channel_turn_id is not None
+        previous = await state.repository.get_turn(state.plan.channel_turn_id)
+        assert previous is not None
+        now = datetime.now(UTC)
+        turn = replace(
+            previous,
+            channel_turn_id=uuid4(),
+            turn_id=uuid4(),
+            generation_id=uuid4(),
+            external_message_id="90002",
+            status=ChannelTurnStatus.ACCEPTED,
+            reply_text=None,
+            delivery_id=None,
+            delivery_status=None,
+            revision=0,
+            accepted_at=now,
+            created_at=now,
+            updated_at=now,
+            completed_at=None,
+        )
+        await state.repository.create_turn(turn)
+        delivery_id = uuid4()
+        await state.repository.complete_turn(
+            turn.channel_turn_id,
+            reply_text="晚安",
+            delivery_id=delivery_id,
+            completed_at=now,
+            parts=(
+                ChannelDeliveryPartDraft(
+                    ordinal=0,
+                    kind=ChannelDeliveryPartKind.TEXT,
+                    payload=ChannelTextDeliveryPartPayload(text="晚安"),
+                ),
+                ChannelDeliveryPartDraft(
+                    ordinal=1,
+                    kind=ChannelDeliveryPartKind.IMAGE,
+                    payload=ChannelImageDeliveryPartPayload(
+                        sticker_id="happy", sha256="a" * 64, mime_type="image/png"
+                    ),
+                    required=False,
+                ),
+            ),
+        )
+        claim = await state.repository.claim_next_delivery_part(
+            ChannelDeliveryPartClaimRequest(delivery_id=delivery_id, lease_id=uuid4()),
+            claimed_at=now,
+        )
+        assert claim is not None
+        part = claimed_part(claim)
+        await state.repository.set_adapter_cursor(
+            state.connection_id,
+            cursor=json.dumps({part.provider_client_id: "123456"}),
+            updated_at=now,
+        )
+        lock = asyncio.Lock()
+        await reconcile_known_sends(
+            state.repository, state.connection_id, AsyncMock(), terminal, journal_lock=lock
+        )
+        partial = await state.repository.get_delivery_plan(delivery_id)
+        assert partial is not None and partial.status is ChannelDeliveryStatus.PENDING
+        assert partial.parts[0].status is ChannelDeliveryPartStatus.DELIVERED
+        assert partial.parts[1].status is ChannelDeliveryPartStatus.PENDING
+        assert callbacks == []
+        image_claim = await state.repository.claim_next_delivery_part(
+            ChannelDeliveryPartClaimRequest(delivery_id=delivery_id, lease_id=uuid4()),
+            claimed_at=now,
+        )
+        assert image_claim is not None
+        image_part = claimed_part(image_claim)
+        await state.repository.set_adapter_cursor(
+            state.connection_id,
+            cursor=json.dumps({image_part.provider_client_id: "123457"}),
+            updated_at=now,
+        )
+        await reconcile_known_sends(
+            state.repository, state.connection_id, AsyncMock(), terminal, journal_lock=lock
+        )
+        completed = await state.repository.get_delivery_plan(delivery_id)
+        assert completed is not None and completed.status is ChannelDeliveryStatus.DELIVERED
+        assert callbacks == [ChannelDeliveryStatus.DELIVERED]
+    finally:
+        await state.database.close()
+
+
+@pytest.mark.parametrize("publish_failure", [False, True])
+async def test_known_receipt_after_cancel_soft_delete_and_reopen_preserves_success(
+    tmp_path: Path, publish_failure: bool
+) -> None:
+    state = await setup(tmp_path)
+    callbacks: list[ChannelDeliveryStatus] = []
+
+    async def terminal(plan: ChannelDeliveryPlanRecord) -> None:
+        callbacks.append(plan.status)
+
+    try:
+        await state.repository.set_adapter_cursor(
+            state.connection_id,
+            cursor=json.dumps({state.part.provider_client_id: "123456"}),
+            updated_at=datetime.now(UTC),
+        )
+        await state.repository.cancel_active_delivery_plans_for_connection(
+            state.connection_id,
+            ChannelDeliveryPartsCancelRequest(
+                reason="operator_stop", requested_at=datetime.now(UTC)
+            ),
+        )
+        await state.repository.soft_delete_connection(
+            state.connection_id, deleted_at=datetime.now(UTC)
+        )
+        await state.reopen()
+        state.repository = SQLiteExternalChannelRepository(
+            state.database, EventStore(state.database)
+        )
+        publisher = AsyncMock()
+        if publish_failure:
+            publisher.publish_persisted.side_effect = RuntimeError("fixture publish failure")
+            with pytest.raises(RuntimeError, match="fixture publish failure"):
+                await reconcile_known_sends(
+                    state.repository,
+                    state.connection_id,
+                    publisher,
+                    terminal,
+                    journal_lock=asyncio.Lock(),
+                )
+        else:
+            await reconcile_known_sends(
+                state.repository,
+                state.connection_id,
+                publisher,
+                terminal,
+                journal_lock=asyncio.Lock(),
+            )
+        saved = await state.repository.get_delivery_plan(state.plan.delivery_id)
+        assert saved is not None and saved.status is ChannelDeliveryStatus.DELIVERED
+        assert saved.parts[0].attempt == 1 and saved.parts[0].provider_message_id == "123456"
+        assert callbacks == [ChannelDeliveryStatus.DELIVERED]
+        assert await state.repository.get_connection(state.connection_id) is None
+        journal = json.loads(await state.repository.get_adapter_cursor(state.connection_id))
+        assert journal == ({state.part.provider_client_id: "123456"} if publish_failure else {})
+    finally:
+        await state.database.close()
+
+
+@pytest.mark.parametrize("size", [128, 256])
+async def test_send_journal_capacity_preserves_unknown_and_conflicting_success_keys(
+    tmp_path: Path, size: int
+) -> None:
+    state = await setup(tmp_path)
+    client = RecordingClient()
+    try:
+        assert state.part.lease_id is not None
+        await state.repository.acknowledge_delivery_part(
+            ChannelDeliveryPartAcknowledgement(
+                delivery_id=state.plan.delivery_id,
+                part_id=state.part.part_id,
+                lease_id=state.part.lease_id,
+                status=ChannelDeliveryPartStatus.DELIVERED,
+                provider_message_id="123456",
+                acknowledged_at=datetime.now(UTC),
+            ),
+            updated_at=datetime.now(UTC),
+        )
+        assert state.plan.channel_turn_id is not None
+        old = await state.repository.get_turn(state.plan.channel_turn_id)
+        assert old is not None
+        now = datetime.now(UTC)
+        turn = replace(
+            old,
+            channel_turn_id=uuid4(),
+            turn_id=uuid4(),
+            generation_id=uuid4(),
+            external_message_id="90003",
+            status=ChannelTurnStatus.ACCEPTED,
+            reply_text=None,
+            delivery_id=None,
+            delivery_status=None,
+            revision=0,
+            accepted_at=now,
+            created_at=now,
+            updated_at=now,
+            completed_at=None,
+        )
+        await state.repository.create_turn(turn)
+        delivery_id = uuid4()
+        await state.repository.complete_turn(
+            turn.channel_turn_id, reply_text="新的文字", delivery_id=delivery_id, completed_at=now
+        )
+        claim = await state.repository.claim_next_delivery_part(
+            ChannelDeliveryPartClaimRequest(delivery_id=delivery_id, lease_id=uuid4()),
+            claimed_at=now,
+        )
+        assert claim is not None
+        part = claimed_part(claim)
+        plan = await state.repository.get_delivery_plan(delivery_id)
+        assert plan is not None
+        journal = {f"unknown-{i}": "unknown" for i in range(size - 1)}
+        journal[state.part.provider_client_id] = "654321"
+        await state.repository.set_adapter_cursor(
+            state.connection_id, cursor=json.dumps(journal), updated_at=now
+        )
+        await reconcile_known_sends(
+            state.repository,
+            state.connection_id,
+            AsyncMock(),
+            AsyncMock(),
+            journal_lock=asyncio.Lock(),
+        )
+        result = await state.executor(client).execute_part(plan, part)
+        saved = json.loads(await state.repository.get_adapter_cursor(state.connection_id))
+        assert all(saved[key] == receipt for key, receipt in journal.items())
+        if size == 128:
+            assert result.outcome is DeliveryPartOutcome.DELIVERED
+            assert len(client.calls) == 1 and len(saved) == 129
+        else:
+            assert result.error is not None and result.error.code == "qq_send_journal_full"
+            assert client.calls == [] and len(saved) == 256
     finally:
         await state.database.close()
 

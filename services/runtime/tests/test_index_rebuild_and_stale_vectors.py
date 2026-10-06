@@ -629,19 +629,22 @@ async def test_manual_rebuild_visits_more_than_management_page_and_reports_progr
     )
     try:
         await service.start_rebuild()
-        await asyncio.wait_for(entered.wait(), 10)
+        # Reaching item 501 includes 500 real SQLite commits. This bounds a
+        # deadlock, rather than imposing a ten-second batch performance SLA.
+        await asyncio.wait_for(entered.wait(), 60)
         progress = service.get_status().domains["memory"]
         assert progress.total_count == 505
         assert progress.indexed_count == 500
         release.set()
         task = service._active_task
         assert task is not None
-        await asyncio.wait_for(task, 10)
+        await asyncio.wait_for(task, 15)
         assert service.get_status().state == OverallRebuildState.COMPLETED
         assert service.get_status().domains["memory"].indexed_count == 505
         assert len(await test_db.fetchall("SELECT * FROM memory_embeddings")) == 505
         assert service.get_status().to_dict()["schema_version"] == "1.0"
     finally:
+        release.set()
         await service.stop()
 
 

@@ -9,7 +9,7 @@ import secrets
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
-from typing import cast
+from typing import TYPE_CHECKING, cast
 from uuid import UUID, uuid4
 
 from chatwaifu_protocol.base import PrivacyLevel
@@ -88,6 +88,9 @@ from chatwaifu_runtime.providers.contracts import LlmInputImage
 from chatwaifu_runtime.sessions.service import SessionService
 from chatwaifu_runtime.sticker_library.selection import StickerSelectionHints, selection_hints
 from chatwaifu_runtime.sticker_library.service import StickerLearningSource, StickerLibraryService
+
+if TYPE_CHECKING:
+    from chatwaifu_runtime.external_channels.proactive import ChannelProactiveService
 
 logger = logging.getLogger(__name__)
 
@@ -256,6 +259,7 @@ class ExternalChannelService:
         self._stopping = False
         self._started = False
         self._on_wake_scheduler: Callable[[UUID], None] | None = None
+        self._proactive: ChannelProactiveService | None = None
         self._burst_coordinator = ImageBurstCoordinator(
             repository=repository,
             scheduler=burst_scheduler,
@@ -276,6 +280,26 @@ class ExternalChannelService:
     def set_scheduler_wake_callback(self, callback: Callable[[UUID], None]) -> None:
         self._on_wake_scheduler = callback
         self._burst_coordinator.set_scheduler_wake_callback(callback)
+
+    def set_proactive_service(self, service: ChannelProactiveService) -> None:
+        self._proactive = service
+
+    def wake_delivery_scheduler(self, connection_id: UUID) -> None:
+        if self._on_wake_scheduler is not None:
+            self._on_wake_scheduler(connection_id)
+
+    async def authorize_proactive_delivery(self, plan: ChannelDeliveryPlanRecord) -> bool:
+        if plan.outbound_intent_id is None:
+            return True
+        return self._proactive is not None and await self._proactive.authorize_delivery(plan)
+
+    async def proactive_delivery_terminal(self, plan: ChannelDeliveryPlanRecord) -> None:
+        if self._proactive is not None:
+            await self._proactive.on_plan_terminal(plan)
+
+    async def cancel_proactive_connection(self, connection_id: UUID, *, reason: str) -> None:
+        if self._proactive is not None:
+            await self._proactive.cancel_for_connection(connection_id, reason=reason)
 
     @property
     def repository(self) -> ExternalChannelRepository:
@@ -411,16 +435,25 @@ class ExternalChannelService:
                     access_token_hash=_token_hash(token) if token is not None else None,
                     updated_at=datetime.now(UTC),
                 )
+                if self._proactive is not None:
+                    self._proactive.fence_route_revision(
+                        configuration.connection_id, updated.revision
+                    )
         except KeyError as error:
             raise ChannelNotFoundError(str(error)) from error
         except ValueError as error:
             raise ChannelConflictError(str(error)) from error
         finally:
             await self._finish_audio_cancellation(records, tasks)
+        if self._proactive is not None:
+            await self._proactive.connection_updated(
+                configuration.connection_id, revision=updated.revision
+            )
         snapshot = self._connection_snapshot(updated)
         return CreatedChannelConnection(snapshot, token) if token is not None else snapshot
 
     async def delete_connection(self, connection_id: UUID) -> None:
+        await self.cancel_proactive_connection(connection_id, reason="connection_deleted")
         await self._cancel_connection_audio(connection_id)
         try:
             removed = await self._repository.soft_delete_connection(
@@ -1322,6 +1355,10 @@ class ExternalChannelService:
                     "conversation_key is already bound to a different sender identity"
                 )
 
+            if self._proactive is not None:
+                self._proactive.fence_binding(binding.binding_id, "owner_input")
+                await self._proactive.cancel_for_binding(binding.binding_id, reason="owner_input")
+
             if supersede_inflight:
                 await self._burst_coordinator.cancel_pending_burst(
                     binding.binding_id, reason="superseded_by_new_inbound_message"
@@ -1747,6 +1784,8 @@ class ExternalChannelService:
         plan = await self._repository.get_delivery_plan(delivery_id)
         if plan is None or plan.connection_id != connection_id:
             raise ChannelNotFoundError(f"unknown channel delivery plan {delivery_id}")
+        if plan.channel_turn_id is None:
+            raise ChannelPolicyError("outbound deliveries require the proactive owner policy")
         turn = await self._required_turn(connection_id, plan.channel_turn_id)
         try:
             result = await self._repository.claim_next_delivery_part(
@@ -1778,6 +1817,8 @@ class ExternalChannelService:
         plan = await self._repository.get_delivery_plan(delivery_id)
         if plan is None or plan.connection_id != connection_id:
             raise ChannelNotFoundError(f"unknown channel delivery plan {delivery_id}")
+        if plan.channel_turn_id is None:
+            raise ChannelPolicyError("outbound deliveries require the proactive owner policy")
         turn = await self._required_turn(connection_id, plan.channel_turn_id)
         try:
             result = await self._repository.acknowledge_delivery_part(
@@ -1816,6 +1857,8 @@ class ExternalChannelService:
         plan = await self._repository.get_delivery_plan(delivery_id)
         if plan is None or plan.connection_id != connection_id:
             raise ChannelNotFoundError(f"unknown channel delivery plan {delivery_id}")
+        if plan.channel_turn_id is None:
+            raise ChannelPolicyError("outbound deliveries require the proactive owner policy")
         turn = await self._required_turn(connection_id, plan.channel_turn_id)
         try:
             result = await self._repository.cancel_remaining_delivery_parts(
@@ -2569,6 +2612,8 @@ def _delivery_part_snapshot(record: ChannelDeliveryPartRecord) -> ChannelDeliver
 
 def _delivery_plan_snapshot(record: ChannelDeliveryPlanRecord) -> ChannelDeliveryPlanSnapshot:
     return ChannelDeliveryPlanSnapshot(
+        schema_version="1.1" if record.outbound_intent_id is not None else "1.0",
+        outbound_intent_id=record.outbound_intent_id,
         delivery_id=record.delivery_id,
         channel_turn_id=record.channel_turn_id,
         connection_id=record.connection_id,
@@ -2587,6 +2632,8 @@ def _delivery_plan_snapshot(record: ChannelDeliveryPlanRecord) -> ChannelDeliver
 
 def _delivery_snapshot(record: ChannelDeliveryRecord) -> ChannelDeliverySnapshot:
     return ChannelDeliverySnapshot(
+        schema_version="1.1" if record.outbound_intent_id is not None else "1.0",
+        outbound_intent_id=record.outbound_intent_id,
         delivery_id=record.delivery_id,
         channel_turn_id=record.channel_turn_id,
         connection_id=record.connection_id,

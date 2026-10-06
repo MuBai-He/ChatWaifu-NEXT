@@ -1,11 +1,12 @@
+# pyright: reportPrivateUsage=false
 """SQLite adapter for the External Channel Gateway repository port."""
 
 from __future__ import annotations
 
 import json
 from collections.abc import Sequence
-from dataclasses import dataclass
-from datetime import datetime, timedelta
+from dataclasses import dataclass, replace
+from datetime import UTC, datetime, timedelta
 from typing import cast
 from uuid import UUID, uuid4
 
@@ -62,10 +63,18 @@ class _TurnDeliveryContext:
     turn_id: UUID
     generation_id: UUID
     connection_id: UUID
-    channel_turn_id: UUID
+    channel_turn_id: UUID | None
+    outbound_intent_id: UUID | None
     chat_type: ChannelChatType
     conversation_key: str
     sender_key: str
+
+    @property
+    def source_payload(self) -> dict[str, str | None]:
+        return {
+            "channel_turn_id": str(self.channel_turn_id) if self.channel_turn_id else None,
+            "outbound_intent_id": str(self.outbound_intent_id) if self.outbound_intent_id else None,
+        }
 
 
 def _single_part_draft(reply_text: str) -> tuple[ChannelDeliveryPartDraft, ...]:
@@ -272,8 +281,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 """
                 SELECT 1
                 FROM channel_deliveries AS d
-                JOIN channel_turns AS t ON t.channel_turn_id = d.channel_turn_id
-                WHERE t.connection_id = ? AND d.status IN ('pending', 'sending')
+                WHERE d.connection_id = ? AND d.status IN ('pending', 'sending')
                 LIMIT 1
                 """,
                 (str(connection_id),),
@@ -462,6 +470,24 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 JOIN turns u ON u.turn_id = t.turn_id AND u.session_id = t.session_id
                 WHERE t.connection_id = ? AND t.binding_id = ?
                     AND p.provider_message_id = ? AND p.status = 'delivered'
+                UNION ALL
+                SELECT 'assistant' AS role, json_extract(p.payload_json,'$.text') AS text,
+                       i.session_id,i.generation_id,u.created_at
+                FROM channel_delivery_parts p
+                JOIN channel_deliveries d ON d.delivery_id=p.delivery_id
+                JOIN channel_outbound_intents i ON i.request_id=d.outbound_intent_id
+                JOIN generations g ON g.generation_id=i.generation_id AND g.session_id=i.session_id
+                    AND g.turn_id=i.turn_id AND g.state='completed' AND g.invalidated_at IS NULL
+                JOIN turns u ON u.turn_id=i.turn_id AND u.session_id=i.session_id AND
+                u.role='system'
+                    AND json_extract(u.source_context_json,'$.outbound_intent_id')=i.request_id
+                JOIN channel_connections current ON current.connection_id=i.connection_id
+                JOIN channel_bindings b ON b.binding_id=i.binding_id AND b.session_id=i.session_id
+                WHERE i.connection_id=? AND i.binding_id=? AND p.provider_message_id=?
+                    AND p.status='delivered' AND p.kind='text'
+                    AND current.account_key=i.account_key AND current.character_id=i.character_id
+                    AND current.principal_scope=i.principal_scope AND b.sender_key=i.sender_key
+                    AND b.conversation_key=i.conversation_key
             )
             SELECT role, substr(text, 1, 2000) AS text, q.generation_id FROM candidates q
             JOIN sessions s ON s.session_id = q.session_id
@@ -479,6 +505,9 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
             LIMIT 2
             """,
             (
+                str(connection_id),
+                str(binding_id),
+                external_message_id,
                 str(connection_id),
                 str(binding_id),
                 external_message_id,
@@ -545,44 +574,82 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
         return row is not None
 
     async def create_turn(self, turn: ChannelTurnRecord) -> ChannelTurnRecord:
-        await self._database.execute(
-            """
-            INSERT INTO channel_turns(
-                channel_turn_id, connection_id, binding_id, external_message_id,
-                content_sha256, account_key, conversation_key, chat_type,
-                conversation_label, sender_key, sender_display_name, principal_scope,
-                session_id, turn_id, generation_id, status, reply_text, error_json,
-                delivery_id, revision, accepted_at, created_at, updated_at, completed_at, input_kind
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                str(turn.channel_turn_id),
-                str(turn.connection_id),
-                str(turn.binding_id),
-                turn.external_message_id,
-                turn.content_sha256,
-                turn.account_key,
-                turn.conversation_key,
-                turn.chat_type.value,
-                turn.conversation_label,
-                turn.sender_key,
-                turn.sender_display_name,
-                turn.principal_scope,
-                str(turn.session_id),
-                str(turn.turn_id),
-                str(turn.generation_id),
-                turn.status.value,
-                turn.reply_text,
-                _error_json(turn.error),
-                str(turn.delivery_id) if turn.delivery_id is not None else None,
-                turn.revision,
-                turn.accepted_at.isoformat(),
-                turn.created_at.isoformat(),
-                turn.updated_at.isoformat(),
-                turn.completed_at.isoformat() if turn.completed_at is not None else None,
-                turn.input_kind.value,
-            ),
+        if any(
+            value.tzinfo is None or value.utcoffset() is None
+            for value in (turn.accepted_at, turn.created_at, turn.updated_at)
+        ):
+            raise ValueError("channel turn timestamps must be timezone aware")
+        turn = replace(
+            turn,
+            accepted_at=turn.accepted_at.astimezone(UTC),
+            created_at=turn.created_at.astimezone(UTC),
+            updated_at=turn.updated_at.astimezone(UTC),
+            completed_at=turn.completed_at.astimezone(UTC) if turn.completed_at else None,
         )
+        async with self._database.transaction() as connection:
+            await connection.execute(
+                """
+                INSERT INTO channel_turns(
+                    channel_turn_id, connection_id, binding_id, external_message_id,
+                    content_sha256, account_key, conversation_key, chat_type,
+                    conversation_label, sender_key, sender_display_name, principal_scope,
+                    session_id, turn_id, generation_id, status, reply_text, error_json,
+                    delivery_id, revision, accepted_at, created_at, updated_at, completed_at,
+                    input_kind
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    str(turn.channel_turn_id),
+                    str(turn.connection_id),
+                    str(turn.binding_id),
+                    turn.external_message_id,
+                    turn.content_sha256,
+                    turn.account_key,
+                    turn.conversation_key,
+                    turn.chat_type.value,
+                    turn.conversation_label,
+                    turn.sender_key,
+                    turn.sender_display_name,
+                    turn.principal_scope,
+                    str(turn.session_id),
+                    str(turn.turn_id),
+                    str(turn.generation_id),
+                    turn.status.value,
+                    turn.reply_text,
+                    _error_json(turn.error),
+                    str(turn.delivery_id) if turn.delivery_id is not None else None,
+                    turn.revision,
+                    turn.accepted_at.isoformat(),
+                    turn.created_at.isoformat(),
+                    turn.updated_at.isoformat(),
+                    turn.completed_at.isoformat() if turn.completed_at is not None else None,
+                    turn.input_kind.value,
+                ),
+            )
+            cursor = await connection.execute(
+                "SELECT policy_json,updated_at FROM channel_proactive_policies "
+                "WHERE connection_id=? AND json_extract(policy_json,'$.enabled')=1",
+                (str(turn.connection_id),),
+            )
+            policy_row = await cursor.fetchone()
+            await cursor.close()
+            if policy_row is not None and turn.accepted_at > _required_datetime(
+                policy_row["updated_at"]
+            ):
+                from chatwaifu_protocol.channel_proactive import ChannelProactivePolicy
+
+                policy = ChannelProactivePolicy.model_validate_json(str(policy_row["policy_json"]))
+                due = turn.accepted_at + timedelta(minutes=policy.idle_minutes)
+                await connection.execute(
+                    "INSERT OR IGNORE INTO channel_proactive_episodes VALUES "
+                    "(?,'idle_check_in',?,?,?,NULL)",
+                    (
+                        str(turn.binding_id),
+                        str(turn.channel_turn_id),
+                        due.isoformat(),
+                        (due + timedelta(minutes=policy.ttl_minutes)).isoformat(),
+                    ),
+                )
         created = await self.get_turn(turn.channel_turn_id)
         if created is None:
             raise RuntimeError("channel turn disappeared after creation")
@@ -771,10 +838,11 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 await connection.execute(
                     """
                     INSERT INTO channel_deliveries(
-                        delivery_id, channel_turn_id, connection_id, status,
+                        delivery_id, channel_turn_id, binding_id, connection_id, status,
                         attempt, created_at, updated_at, plan_version, cancel_requested_at
                     )
-                    SELECT ?, channel_turn_id, connection_id, 'pending', 1, ?, ?, 1, NULL
+                    SELECT ?, channel_turn_id, binding_id, connection_id, 'pending', 1, ?, ?, 1,
+                    NULL
                     FROM channel_turns WHERE channel_turn_id = ?
                     """,
                     (
@@ -833,7 +901,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                                     "privacy": PrivacyLevel.PRIVATE,
                                     "payload": {
                                         "connection_id": str(ctx.connection_id),
-                                        "channel_turn_id": str(ctx.channel_turn_id),
+                                        **ctx.source_payload,
                                         "delivery_id": str(resolved_delivery),
                                         "part_count": len(draft_parts),
                                         "chat_type": ctx.chat_type.value,
@@ -905,7 +973,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                                             "privacy": PrivacyLevel.PRIVATE,
                                             "payload": {
                                                 "connection_id": str(ctx.connection_id),
-                                                "channel_turn_id": str(ctx.channel_turn_id),
+                                                **ctx.source_payload,
                                                 "delivery_id": str(resolved_delivery),
                                                 "part_count": 2,
                                                 "plan_version": 2,
@@ -1010,16 +1078,16 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
             await connection.execute(
                 """
                 INSERT INTO channel_deliveries(
-                    delivery_id, channel_turn_id, connection_id, status,
+                    delivery_id, channel_turn_id, binding_id, connection_id, status,
                     attempt, created_at, updated_at, plan_version, cancel_requested_at
-                ) VALUES (?, ?, ?, 'pending', 1, ?, ?, 1, NULL)
+                ) SELECT ?, channel_turn_id, binding_id, connection_id, 'pending', 1, ?, ?, 1, NULL
+                FROM channel_turns WHERE channel_turn_id = ?
                 """,
                 (
                     str(delivery_id),
+                    created_at.isoformat(),
+                    created_at.isoformat(),
                     str(channel_turn_id),
-                    connection_id,
-                    created_at.isoformat(),
-                    created_at.isoformat(),
                 ),
             )
 
@@ -1081,7 +1149,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                                 "privacy": PrivacyLevel.PRIVATE,
                                 "payload": {
                                     "connection_id": str(ctx.connection_id),
-                                    "channel_turn_id": str(ctx.channel_turn_id),
+                                    **ctx.source_payload,
                                     "delivery_id": str(delivery_id),
                                     "part_count": len(parts),
                                     "chat_type": ctx.chat_type.value,
@@ -1139,17 +1207,16 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
     ) -> _TurnDeliveryContext | None:
         cursor = await connection.execute(
             """
-            SELECT
-                t.session_id,
-                t.turn_id,
-                t.generation_id,
-                t.connection_id,
-                t.channel_turn_id,
-                t.chat_type,
-                t.conversation_key,
-                t.sender_key
+            SELECT COALESCE(t.session_id, i.session_id) AS session_id,
+                   COALESCE(t.turn_id, i.turn_id) AS turn_id,
+                   COALESCE(t.generation_id, i.generation_id) AS generation_id,
+                   d.connection_id, d.channel_turn_id, d.outbound_intent_id,
+                   COALESCE(t.chat_type, 'direct') AS chat_type,
+                   COALESCE(t.conversation_key, i.conversation_key) AS conversation_key,
+                   COALESCE(t.sender_key, i.sender_key) AS sender_key
             FROM channel_deliveries AS d
-            JOIN channel_turns AS t ON t.channel_turn_id = d.channel_turn_id
+            LEFT JOIN channel_turns AS t ON t.channel_turn_id = d.channel_turn_id
+            LEFT JOIN channel_outbound_intents AS i ON i.request_id = d.outbound_intent_id
             WHERE d.delivery_id = ?
             """,
             (str(delivery_id),),
@@ -1163,7 +1230,10 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
             turn_id=UUID(str(row["turn_id"])),
             generation_id=UUID(str(row["generation_id"])),
             connection_id=UUID(str(row["connection_id"])),
-            channel_turn_id=UUID(str(row["channel_turn_id"])),
+            channel_turn_id=UUID(str(row["channel_turn_id"])) if row["channel_turn_id"] else None,
+            outbound_intent_id=UUID(str(row["outbound_intent_id"]))
+            if row["outbound_intent_id"]
+            else None,
             chat_type=ChannelChatType(str(row["chat_type"])),
             conversation_key=str(row["conversation_key"]),
             sender_key=str(row["sender_key"]),
@@ -1357,6 +1427,9 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
         *,
         claimed_at: datetime,
     ) -> DeliveryTransitionResult | None:
+        if claimed_at.tzinfo is None or claimed_at.utcoffset() is None:
+            raise ValueError("delivery claim timestamp must be timezone aware")
+        claimed_at = claimed_at.astimezone(UTC)
         lease_expires_at = claimed_at + timedelta(seconds=claim.lease_seconds)
         async with self._database.transaction() as connection:
             cursor = await connection.execute(
@@ -1381,6 +1454,33 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 or cancel_requested
             ):
                 return None
+
+            if delivery_row["outbound_intent_id"] is not None:
+                from chatwaifu_runtime.persistence.sqlite_channel_proactive import (
+                    SQLiteChannelProactiveRepository,
+                )
+
+                proactive = SQLiteChannelProactiveRepository(
+                    self._database, self._event_store, deliveries=self
+                )
+                intent = await proactive._required_tx(
+                    connection, UUID(str(delivery_row["outbound_intent_id"]))
+                )
+                authorization = await proactive._authorize_tx(
+                    connection, intent, claimed_at.astimezone(UTC)
+                )
+                if not authorization.allowed:
+                    settled = await proactive._settle_tx(
+                        connection,
+                        intent.request_id,
+                        authorization.reason,
+                        claimed_at.astimezone(UTC),
+                        cancel=True,
+                    )
+                    plan = await self._get_delivery_plan_tx(connection, claim.delivery_id)
+                    if plan is None:
+                        raise RuntimeError("unauthorized proactive plan disappeared")
+                    return DeliveryTransitionResult(plan, None, False, settled.persisted_events)
 
             cursor = await connection.execute(
                 """
@@ -1492,7 +1592,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                             "privacy": PrivacyLevel.PRIVATE,
                             "payload": {
                                 "connection_id": str(ctx.connection_id),
-                                "channel_turn_id": str(ctx.channel_turn_id),
+                                **ctx.source_payload,
                                 "delivery_id": str(claim.delivery_id),
                                 "part_id": str(target_part_id),
                                 "ordinal": updated_part.ordinal,
@@ -1638,7 +1738,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                                     "privacy": PrivacyLevel.PRIVATE,
                                     "payload": {
                                         "connection_id": str(ctx.connection_id),
-                                        "channel_turn_id": str(ctx.channel_turn_id),
+                                        **ctx.source_payload,
                                         "delivery_id": str(acknowledgement.delivery_id),
                                         "part_id": str(acknowledgement.part_id),
                                         "ordinal": part_record.ordinal,
@@ -1665,7 +1765,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                                         "privacy": PrivacyLevel.PRIVATE,
                                         "payload": {
                                             "connection_id": str(ctx.connection_id),
-                                            "channel_turn_id": str(ctx.channel_turn_id),
+                                            **ctx.source_payload,
                                             "delivery_id": str(acknowledgement.delivery_id),
                                             "part_id": str(acknowledgement.part_id),
                                             "ordinal": part_record.ordinal,
@@ -1691,7 +1791,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                                         "privacy": PrivacyLevel.PRIVATE,
                                         "payload": {
                                             "connection_id": str(ctx.connection_id),
-                                            "channel_turn_id": str(ctx.channel_turn_id),
+                                            **ctx.source_payload,
                                             "delivery_id": str(acknowledgement.delivery_id),
                                             "part_id": str(acknowledgement.part_id),
                                             "ordinal": part_record.ordinal,
@@ -1721,7 +1821,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                                         "privacy": PrivacyLevel.PRIVATE,
                                         "payload": {
                                             "connection_id": str(ctx.connection_id),
-                                            "channel_turn_id": str(ctx.channel_turn_id),
+                                            **ctx.source_payload,
                                             "delivery_id": str(plan.delivery_id),
                                             "part_count": plan.part_count,
                                         },
@@ -1744,7 +1844,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                                         "privacy": PrivacyLevel.PRIVATE,
                                         "payload": {
                                             "connection_id": str(ctx.connection_id),
-                                            "channel_turn_id": str(ctx.channel_turn_id),
+                                            **ctx.source_payload,
                                             "delivery_id": str(plan.delivery_id),
                                             "delivery_status": plan.status.value,
                                             "chat_type": ctx.chat_type.value,
@@ -1771,7 +1871,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                                         "privacy": PrivacyLevel.PRIVATE,
                                         "payload": {
                                             "connection_id": str(ctx.connection_id),
-                                            "channel_turn_id": str(ctx.channel_turn_id),
+                                            **ctx.source_payload,
                                             "delivery_id": str(plan.delivery_id),
                                         },
                                     }
@@ -1794,7 +1894,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                                         "privacy": PrivacyLevel.PRIVATE,
                                         "payload": {
                                             "connection_id": str(ctx.connection_id),
-                                            "channel_turn_id": str(ctx.channel_turn_id),
+                                            **ctx.source_payload,
                                             "delivery_id": str(plan.delivery_id),
                                         },
                                     }
@@ -1894,7 +1994,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                                 "privacy": PrivacyLevel.PRIVATE,
                                 "payload": {
                                     "connection_id": str(ctx.connection_id),
-                                    "channel_turn_id": str(ctx.channel_turn_id),
+                                    **ctx.source_payload,
                                     "delivery_id": str(plan.delivery_id),
                                     "part_count": plan.part_count,
                                 },
@@ -2046,7 +2146,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                                     "privacy": PrivacyLevel.PRIVATE,
                                     "payload": {
                                         "connection_id": str(ctx.connection_id),
-                                        "channel_turn_id": str(ctx.channel_turn_id),
+                                        **ctx.source_payload,
                                         "delivery_id": str(delivery_id),
                                         "reason": cancel_request.reason,
                                     },
@@ -2070,7 +2170,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                                         "privacy": PrivacyLevel.PRIVATE,
                                         "payload": {
                                             "connection_id": str(ctx.connection_id),
-                                            "channel_turn_id": str(ctx.channel_turn_id),
+                                            **ctx.source_payload,
                                             "delivery_id": str(delivery_id),
                                         },
                                     }
@@ -2095,8 +2195,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 """
                 SELECT d.delivery_id
                 FROM channel_deliveries AS d
-                JOIN channel_turns AS t ON t.channel_turn_id = d.channel_turn_id
-                WHERE t.connection_id = ? AND d.status IN ('pending', 'sending')
+                WHERE d.connection_id = ? AND d.status IN ('pending', 'sending')
                 """,
                 (str(connection_id),),
             )
@@ -2151,8 +2250,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 SELECT 1
                 FROM channel_delivery_parts AS p
                 JOIN channel_deliveries AS d ON d.delivery_id = p.delivery_id
-                JOIN channel_turns AS t ON t.channel_turn_id = d.channel_turn_id
-                WHERE t.connection_id = ? AND p.status IN ('pending', 'sending')
+                WHERE d.connection_id = ? AND p.status IN ('pending', 'sending')
                 LIMIT 1
                 """,
                 (str(connection_id),),
@@ -2175,8 +2273,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 """
                 SELECT d.delivery_id
                 FROM channel_deliveries AS d
-                JOIN channel_turns AS t ON t.channel_turn_id = d.channel_turn_id
-                WHERE t.binding_id = ?
+                WHERE d.binding_id = ?
                   AND d.status IN ('pending', 'sending')
                 ORDER BY d.created_at ASC
                 """,
@@ -2210,9 +2307,8 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                     """
                     SELECT d.delivery_id
                     FROM channel_deliveries AS d
-                    JOIN channel_turns AS t ON t.channel_turn_id = d.channel_turn_id
                     WHERE d.status IN ('pending', 'sending')
-                      AND t.connection_id = ?
+                      AND d.connection_id = ?
                     ORDER BY d.created_at ASC
                     LIMIT ?
                     """,
@@ -2250,18 +2346,16 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                         SELECT p.delivery_id, MIN(p.lease_expires_at) AS wakeup
                         FROM channel_delivery_parts AS p
                         JOIN channel_deliveries AS d ON d.delivery_id = p.delivery_id
-                        JOIN channel_turns AS t ON t.channel_turn_id = d.channel_turn_id
                         WHERE p.status = 'sending' AND p.lease_expires_at IS NOT NULL
-                          AND t.connection_id = ?
+                          AND d.connection_id = ?
                         GROUP BY p.delivery_id
                     ),
                     pending_first_parts AS (
                         SELECT p.delivery_id, p.not_before_at AS wakeup
                         FROM channel_delivery_parts AS p
                         JOIN channel_deliveries AS d ON d.delivery_id = p.delivery_id
-                        JOIN channel_turns AS t ON t.channel_turn_id = d.channel_turn_id
                         WHERE p.status = 'pending' AND p.not_before_at IS NOT NULL
-                          AND t.connection_id = ?
+                          AND d.connection_id = ?
                           AND p.delivery_id NOT IN (
                               SELECT p_s.delivery_id
                               FROM channel_delivery_parts AS p_s
@@ -2399,7 +2493,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                                         "privacy": PrivacyLevel.PRIVATE,
                                         "payload": {
                                             "connection_id": str(ctx.connection_id),
-                                            "channel_turn_id": str(ctx.channel_turn_id),
+                                            **ctx.source_payload,
                                             "delivery_id": str(plan.delivery_id),
                                             "part_count": plan.part_count,
                                         },
@@ -2669,6 +2763,138 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                         ),
                     )
 
+    async def retained_send_journal_keys(
+        self, connection_id: UUID, provider_client_ids: Sequence[str]
+    ) -> frozenset[str]:
+        keys = tuple(dict.fromkeys(provider_client_ids))
+        if len(provider_client_ids) > 256 or any(not key or len(key) > 512 for key in keys):
+            raise ValueError("send journal candidate keys exceed bounds")
+        if not keys:
+            return frozenset()
+        async with self._database.transaction() as connection:
+            cursor = await connection.execute(
+                "SELECT p.provider_client_id FROM channel_delivery_parts p "
+                "JOIN channel_deliveries d ON d.delivery_id=p.delivery_id "
+                "WHERE d.connection_id=? AND p.status='delivered' "
+                "AND p.provider_message_id IS NOT NULL AND p.provider_client_id IN ("
+                + ",".join("?" for _ in keys)
+                + ")",
+                (str(connection_id), *keys),
+            )
+            confirmed = {str(row["provider_client_id"]) for row in await cursor.fetchall()}
+            await cursor.close()
+            return frozenset(set(keys) - confirmed)
+
+    async def list_send_journal_connection_ids(
+        self, *, limit: int = 32, after_connection_id: UUID | None = None
+    ) -> tuple[UUID, ...]:
+        if not 1 <= limit <= 32:
+            raise ValueError("journal scan limit must be between 1 and 32")
+        rows = await self._database.fetchall(
+            (
+                "SELECT c.connection_id FROM channel_connections c JOIN channel_adapter"
+                "_checkpoints a ON a.connection_id=c.connection_id WHERE c.provider_id="
+                "'qq_napcat' AND c.connection_id>? ORDER BY c.connection_id LIMIT ?"
+            ),
+            (str(after_connection_id) if after_connection_id else "", limit),
+        )
+        return tuple(UUID(str(row["connection_id"])) for row in rows)
+
+    async def reconcile_known_delivery_part_receipt(
+        self,
+        connection_id: UUID,
+        provider_client_id: str,
+        provider_message_id: str,
+        *,
+        observed_at: datetime,
+    ) -> DeliveryTransitionResult:
+        if not 1 <= len(provider_client_id) <= 512 or not 1 <= len(provider_message_id) <= 512:
+            raise ValueError("provider receipt identity exceeds bounds")
+        if observed_at.tzinfo is None or observed_at.utcoffset() is None:
+            raise ValueError("provider receipt timestamp must be timezone aware")
+        observed_at = observed_at.astimezone(UTC)
+        async with self._database.transaction() as connection:
+            cursor = await connection.execute(
+                "SELECT p.* FROM channel_delivery_parts p "
+                "JOIN channel_deliveries d ON d.delivery_id=p.delivery_id "
+                "WHERE d.connection_id=? AND p.provider_client_id=?",
+                (str(connection_id), provider_client_id),
+            )
+            row = await cursor.fetchone()
+            await cursor.close()
+            if row is None:
+                raise KeyError("provider receipt has no matching delivery part")
+            if (
+                row["provider_message_id"] is not None
+                and row["provider_message_id"] != provider_message_id
+            ):
+                raise ValueError("provider receipt conflicts with retained success")
+            delivery_id, part_id = UUID(str(row["delivery_id"])), UUID(str(row["part_id"]))
+            if row["status"] == "delivered" and row["provider_message_id"] == provider_message_id:
+                plan = await self._get_delivery_plan_tx(connection, delivery_id)
+                if plan is None:
+                    raise RuntimeError("confirmed delivery disappeared")
+                return DeliveryTransitionResult(
+                    plan, next(p for p in plan.parts if p.part_id == part_id), False, ()
+                )
+            if int(row["attempt"]) < 1:
+                raise ValueError("provider receipt requires a previously attempted part")
+            await connection.execute(
+                "UPDATE channel_delivery_parts SET status='delivered',provider_message_id=?,"
+                "delivered_at=COALESCE(delivered_at,?),updated_at=?,lease_id=NULL,lease_expires_at=NULL,"
+                "last_error_json=NULL WHERE part_id=?",
+                (
+                    provider_message_id,
+                    observed_at.isoformat(),
+                    observed_at.isoformat(),
+                    str(part_id),
+                ),
+            )
+            plan = await self._derive_delivery_plan_state_tx(connection, delivery_id, observed_at)
+            part = next(p for p in plan.parts if p.part_id == part_id)
+            events: list[GenericCoreEvent] = []
+            if self._event_store is not None:
+                ctx = await self._get_turn_context_tx(connection, delivery_id)
+                if ctx is not None:
+                    for event_type in (
+                        "channel.delivery_part_acknowledged",
+                        "channel.delivery_plan_completed",
+                    ):
+                        if (
+                            event_type.endswith("completed")
+                            and plan.status is not ChannelDeliveryStatus.DELIVERED
+                        ):
+                            continue
+                        event = GenericCoreEvent.model_validate(
+                            {
+                                "event_id": uuid4(),
+                                "event_type": event_type,
+                                "session_id": ctx.session_id,
+                                "turn_id": ctx.turn_id,
+                                "generation_id": ctx.generation_id,
+                                "occurred_at": observed_at,
+                                "source": "runtime.external_channels",
+                                "privacy": PrivacyLevel.PRIVATE,
+                                "payload": {
+                                    "connection_id": str(connection_id),
+                                    **ctx.source_payload,
+                                    "delivery_id": str(delivery_id),
+                                    "part_id": str(part_id),
+                                    "ordinal": part.ordinal,
+                                    "status": part.status.value,
+                                    "provider_message_id": provider_message_id,
+                                    "receipt_reconciled": True,
+                                    "chat_type": ctx.chat_type.value,
+                                    "conversation_key": ctx.conversation_key,
+                                    "sender_key": ctx.sender_key,
+                                },
+                            }
+                        )
+                        events.append(
+                            await self._event_store.append_in_transaction(connection, event)
+                        )
+            return DeliveryTransitionResult(plan, part, True, tuple(events))
+
 
 _TURN_SELECT = """
     SELECT t.*, d.status AS delivery_status
@@ -2841,7 +3067,10 @@ def _delivery_record(
 
     return ChannelDeliveryRecord(
         delivery_id=UUID(str(item["delivery_id"])),  # type: ignore[index]
-        channel_turn_id=UUID(str(item["channel_turn_id"])),  # type: ignore[index]
+        channel_turn_id=UUID(str(item["channel_turn_id"])) if item["channel_turn_id"] else None,
+        outbound_intent_id=UUID(str(item["outbound_intent_id"]))
+        if item["outbound_intent_id"]
+        else None,
         connection_id=UUID(str(item["connection_id"])),  # type: ignore[index]
         status=ChannelDeliveryStatus(str(item["status"])),  # type: ignore[index]
         attempt=int(item["attempt"]),  # type: ignore[index]

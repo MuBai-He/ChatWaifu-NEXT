@@ -39,7 +39,7 @@ from chatwaifu_runtime.sticker_library.service import StickerLibraryService
 
 from .audio import NapCatAudioTranscriber, audio_input
 from .client import NapCatClient, NapCatError, validate_endpoint
-from .delivery import NapCatDelivery
+from .delivery import NapCatDelivery, reconcile_known_sends
 from .media import image_input
 from .messages import normalize, normalize_inbound
 from .registration import PROVIDER_ID
@@ -67,6 +67,9 @@ class NapCatManagement:
         sticker_catalog: PresetStickerCatalog | None = None,
         sticker_library: StickerLibraryService | None = None,
         stt_backend: SttBackend | None = None,
+        proactive_authorization: Callable[[ChannelDeliveryPlanRecord], Awaitable[bool]]
+        | None = None,
+        proactive_on_terminal: Callable[[ChannelDeliveryPlanRecord], Awaitable[None]] | None = None,
     ) -> None:
         self._gateway = gateway
         self._repository = repository
@@ -76,6 +79,10 @@ class NapCatManagement:
         self._hub = hub
         self._audio_root = audio_root
         self._on_terminal = on_plan_terminal
+        self._proactive_authorization = (
+            proactive_authorization or gateway.authorize_proactive_delivery
+        )
+        self._proactive_on_terminal = proactive_on_terminal or gateway.proactive_delivery_terminal
         self._factory = client_factory
         self._sticker_catalog = sticker_catalog
         self._sticker_library = sticker_library
@@ -88,9 +95,16 @@ class NapCatManagement:
         self._changed = asyncio.Condition()
         self._lock = asyncio.Lock()
         self._stopping = False
+        self._journal_locks: dict[UUID, asyncio.Lock] = {}
+        self._journal_cursor: UUID | None = None
+        self._journal_task: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
         self._stopping = False
+        await self._reconcile_journals_once()
+        self._journal_task = asyncio.create_task(
+            self._reconcile_journals(), name="qq-send-receipt-reconciliation"
+        )
         for connection in await self._gateway.list_connections():
             if (
                 connection.configuration.provider_id == PROVIDER_ID
@@ -101,11 +115,44 @@ class NapCatManagement:
     async def stop(self) -> None:
         self._stopping = True
         tasks = set(self._pair_tasks.values()) | set(self._tasks.values())
+        if self._journal_task is not None:
+            tasks.add(self._journal_task)
+            self._journal_task = None
         for task in tasks:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
         self._tasks.clear()
         self._pair_tasks.clear()
+
+    async def _terminal(self, plan: ChannelDeliveryPlanRecord) -> None:
+        try:
+            await self._on_terminal(plan)
+        finally:
+            await self._proactive_on_terminal(plan)
+
+    async def _reconcile_connection(self, connection_id: UUID) -> None:
+        lock = self._journal_locks.setdefault(connection_id, asyncio.Lock())
+        await reconcile_known_sends(
+            self._repository, connection_id, self._publisher, self._terminal, journal_lock=lock
+        )
+
+    async def _reconcile_journals_once(self) -> None:
+        connections = await self._repository.list_send_journal_connection_ids(
+            limit=32, after_connection_id=self._journal_cursor
+        )
+        self._journal_cursor = connections[-1] if len(connections) == 32 else None
+        for connection_id in connections:
+            await self._reconcile_connection(connection_id)
+
+    async def _reconcile_journals(self) -> None:
+        while not self._stopping:
+            await asyncio.sleep(15)
+            try:
+                await self._reconcile_journals_once()
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("QQ send receipt reconciliation failed")
 
     async def begin_pairing(self, request: ChannelPairingStartRequest) -> ChannelPairingSnapshot:
         validate_endpoint(request.endpoint)
@@ -321,11 +368,15 @@ class NapCatManagement:
                         self._audio_root,
                         sticker_catalog=self._sticker_catalog,
                         sticker_library=self._sticker_library,
+                        proactive_authorization=self._proactive_authorization,
+                        journal_lock=self._journal_locks.setdefault(connection_id, asyncio.Lock()),
                     ),
                     self._publisher,
                     event_hub=self._hub,
                     connection_id=connection_id,
-                    on_plan_terminal=self._on_terminal,
+                    on_plan_terminal=self._terminal,
+                    before_claim=self._proactive_authorization,
+                    reconcile_receipts=lambda: self._reconcile_connection(connection_id),
                 )
                 self._schedulers[connection_id] = scheduler
                 await scheduler.start()
@@ -436,6 +487,10 @@ class NapCatManagement:
         return await self._gateway.get_connection(connection_id)
 
     async def _stop_connection(self, connection_id: UUID, *, cancel_pending: bool = True) -> None:
+        if cancel_pending:
+            await self._gateway.cancel_proactive_connection(
+                connection_id, reason="qq_connection_stopped"
+            )
         task = self._tasks.pop(connection_id, None)
         if task:
             task.cancel()
@@ -464,7 +519,7 @@ class NapCatManagement:
         for plan in active_plans:
             terminal = await self._repository.get_delivery_plan(plan.delivery_id)
             if terminal is not None:
-                await self._on_terminal(terminal)
+                await self._terminal(terminal)
 
     async def remove(self, connection_id: UUID) -> None:
         await self._stop_connection(connection_id)

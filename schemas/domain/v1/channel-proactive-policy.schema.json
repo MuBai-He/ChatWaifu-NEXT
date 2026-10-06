@@ -1,0 +1,78 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-proactive-policy.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "cooldown_minutes": {
+      "default": 60,
+      "maximum": 10080,
+      "minimum": 1,
+      "title": "Cooldown Minutes",
+      "type": "integer"
+    },
+    "daily_budget": {
+      "default": 3,
+      "maximum": 20,
+      "minimum": 1,
+      "title": "Daily Budget",
+      "type": "integer"
+    },
+    "enabled": {
+      "default": false,
+      "title": "Enabled",
+      "type": "boolean"
+    },
+    "idle_minutes": {
+      "default": 45,
+      "maximum": 1440,
+      "minimum": 1,
+      "title": "Idle Minutes",
+      "type": "integer"
+    },
+    "quiet_end": {
+      "default": "08:00",
+      "pattern": "^\\d{2}:\\d{2}$",
+      "title": "Quiet End",
+      "type": "string"
+    },
+    "quiet_hours_enabled": {
+      "default": true,
+      "title": "Quiet Hours Enabled",
+      "type": "boolean"
+    },
+    "quiet_start": {
+      "default": "23:00",
+      "pattern": "^\\d{2}:\\d{2}$",
+      "title": "Quiet Start",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source": {
+      "const": "idle_check_in",
+      "default": "idle_check_in",
+      "title": "Source",
+      "type": "string"
+    },
+    "timezone": {
+      "default": "Asia/Shanghai",
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Timezone",
+      "type": "string"
+    },
+    "ttl_minutes": {
+      "default": 15,
+      "maximum": 60,
+      "minimum": 1,
+      "title": "Ttl Minutes",
+      "type": "integer"
+    }
+  },
+  "title": "ChannelProactivePolicy",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

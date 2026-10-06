@@ -398,6 +398,10 @@ const genericCoreEventTypes = [
   "companion.proactive_triggered",
   "companion.proactive_deferred",
   "channel.delivery_acknowledged",
+  "channel.proactive_policy_updated",
+  "channel.outbound_intent_reserved",
+  "channel.outbound_intent_generating",
+  "channel.outbound_intent_settled",
   "channel.delivery_plan_created",
   "channel.delivery_part_claimed",
   "channel.delivery_part_acknowledged",
@@ -1086,9 +1090,10 @@ const channelDeliveryClaimRequestSchema = z
 
 const channelDeliverySnapshotSchema = z
   .object({
-    schema_version: channelSchemaVersion.default("1.0"),
+    schema_version: z.enum(["1.0", "1.1"]).default("1.0"),
     delivery_id: uuid,
-    channel_turn_id: uuid,
+    channel_turn_id: uuid.nullable(),
+    outbound_intent_id: uuid.nullish(),
     connection_id: uuid,
     status: channelDeliveryStatusSchema,
     attempt: z.number().int().min(1).default(1),
@@ -1106,6 +1111,7 @@ const channelDeliverySnapshotSchema = z
   })
   .passthrough()
   .superRefine((snapshot, context) => {
+    validateDeliverySource(snapshot, context);
     if (
       snapshot.status === "sending" &&
       (!snapshot.lease_id || !snapshot.lease_expires_at)
@@ -1249,9 +1255,10 @@ const channelDeliveryPartAcknowledgementSchema = z
 
 const channelDeliveryPlanSnapshotSchema = z
   .object({
-    schema_version: channelSchemaVersion.default("1.0"),
+    schema_version: z.enum(["1.0", "1.1"]).default("1.0"),
     delivery_id: uuid,
-    channel_turn_id: uuid,
+    channel_turn_id: uuid.nullable(),
+    outbound_intent_id: uuid.nullish(),
     connection_id: uuid,
     status: channelDeliveryStatusSchema,
     plan_version: z.number().int().min(1).default(1),
@@ -1264,7 +1271,28 @@ const channelDeliveryPlanSnapshotSchema = z
     updated_at: awareDateTime,
     delivered_at: awareDateTime.nullish(),
   })
-  .passthrough();
+  .passthrough()
+  .superRefine(validateDeliverySource);
+
+function validateDeliverySource(
+  source: {
+    schema_version: string;
+    channel_turn_id: string | null;
+    outbound_intent_id?: string | null;
+  },
+  context: z.RefinementCtx,
+) {
+  const valid =
+    source.schema_version === "1.0"
+      ? source.channel_turn_id !== null && !source.outbound_intent_id
+      : source.channel_turn_id === null && Boolean(source.outbound_intent_id);
+  if (!valid)
+    context.addIssue({
+      code: "custom",
+      message: "delivery source must match its schema version",
+      path: ["channel_turn_id"],
+    });
+}
 
 const channelTurnCancelRequestSchema = z
   .object({

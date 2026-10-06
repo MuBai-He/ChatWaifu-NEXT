@@ -7,20 +7,25 @@ import base64
 import hashlib
 import io
 import json
+import logging
 import re
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 from uuid import UUID
 
 from chatwaifu_protocol.base import JsonObject
 from chatwaifu_protocol.channels import (
     ChannelAudioDeliveryPartPayload,
+    ChannelDeliveryStatus,
     ChannelImageDeliveryPartPayload,
     ChannelTextDeliveryPartPayload,
 )
 from chatwaifu_protocol.errors import StructuredError
 from PIL import Image
 
+from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.external_channels.models import (
     ChannelDeliveryPartRecord,
     ChannelDeliveryPlanRecord,
@@ -38,6 +43,70 @@ from .client import NapCatClient, NapCatRejected
 _IMAGE_FORMATS = {"image/png": "PNG", "image/jpeg": "JPEG"}
 _MAX_IMAGE_DIMENSION = 8192
 _MAX_IMAGE_PIXELS = 16_777_216
+logger = logging.getLogger(__name__)
+
+
+async def reconcile_known_sends(
+    repository: ExternalChannelRepository,
+    connection_id: UUID,
+    publisher: EventPublisher,
+    on_terminal: Callable[[ChannelDeliveryPlanRecord], Awaitable[None]],
+    *,
+    journal_lock: asyncio.Lock,
+) -> None:
+    """Import trusted send success without policy, lease, login or another send."""
+    async with journal_lock:
+        cursor = await repository.get_adapter_cursor(connection_id)
+        if not cursor:
+            return
+        try:
+            parsed: object = json.loads(cursor)
+        except ValueError:
+            logger.warning("QQ send journal cannot be decoded; checkpoint retained")
+            return
+        if not isinstance(parsed, dict):
+            return
+        raw = cast(dict[object, object], parsed)
+        if len(raw) > 256 or any(
+            not isinstance(k, str) or not isinstance(v, str) for k, v in raw.items()
+        ):
+            logger.warning("QQ send journal shape rejected; checkpoint retained")
+            return
+        journal = cast(dict[str, str], raw)
+        conflicts: set[str] = set()
+        for key, receipt in journal.items():
+            if receipt == "unknown":
+                continue
+            if not re.fullmatch(r"-?[0-9]{1,20}", receipt):
+                conflicts.add(key)
+                continue
+            try:
+                transition = await repository.reconcile_known_delivery_part_receipt(
+                    connection_id, key, receipt, observed_at=datetime.now(UTC)
+                )
+            except (KeyError, ValueError):
+                conflicts.add(key)
+                continue
+            try:
+                for event in transition.persisted_events:
+                    await publisher.publish_persisted(event)
+            finally:
+                if transition.plan.status in {
+                    ChannelDeliveryStatus.DELIVERED,
+                    ChannelDeliveryStatus.FAILED,
+                    ChannelDeliveryStatus.CANCELLED,
+                }:
+                    await on_terminal(transition.plan)
+        retained = await repository.retained_send_journal_keys(connection_id, tuple(journal))
+        kept = {
+            key: receipt
+            for key, receipt in journal.items()
+            if key in retained or key in conflicts or receipt == "unknown"
+        }
+        if kept != journal:
+            await repository.set_adapter_cursor(
+                connection_id, cursor=json.dumps(kept), updated_at=datetime.now(UTC)
+            )
 
 
 class NapCatDelivery:
@@ -51,6 +120,9 @@ class NapCatDelivery:
         *,
         sticker_catalog: PresetStickerCatalog | None = None,
         sticker_library: StickerLibraryService | None = None,
+        proactive_authorization: Callable[[ChannelDeliveryPlanRecord], Awaitable[bool]]
+        | None = None,
+        journal_lock: asyncio.Lock | None = None,
     ) -> None:
         self._repository = repository
         self._client = client
@@ -59,8 +131,16 @@ class NapCatDelivery:
         self._audio_root = audio_root
         self._sticker_catalog = sticker_catalog
         self._sticker_library = sticker_library
+        self._proactive_authorization = proactive_authorization
+        self._journal_lock = journal_lock or asyncio.Lock()
 
     async def execute_part(
+        self, plan: ChannelDeliveryPlanRecord, part: ChannelDeliveryPartRecord
+    ) -> DeliveryPartExecutionResult:
+        async with self._journal_lock:
+            return await self._execute_part(plan, part)
+
+    async def _execute_part(
         self, plan: ChannelDeliveryPlanRecord, part: ChannelDeliveryPartRecord
     ) -> DeliveryPartExecutionResult:
         # The scheduler serializes one executor per connection. Cursor contains no secrets.
@@ -74,11 +154,14 @@ class NapCatDelivery:
             )
         if known == "unknown":
             return _failed("qq_delivery_unknown", "发送结果待确认，为避免重复消息，未自动重发。")
+        if not await self._authorized(plan):
+            return _failed("qq_proactive_cancelled", "主动文字投递已停止。")
         connection = await self._repository.get_connection(self._connection_id)
         current = await self._repository.get_delivery_plan(plan.delivery_id)
         if (
             connection is None
             or not connection.configuration.enabled
+            or connection.configuration.allowed_sender_keys != [self._owner]
             or current is None
             or current.cancel_requested_at is not None
         ):
@@ -132,7 +215,7 @@ class NapCatDelivery:
                         "data": {"file": "base64://" + base64.b64encode(image).decode("ascii")},
                     }
                 ]
-            if part.ordinal == 0:
+            if part.ordinal == 0 and plan.delivery.channel_turn_id is not None:
                 reply_target = await self._repository.quoted_reply_target(
                     plan.delivery.channel_turn_id
                 )
@@ -141,12 +224,8 @@ class NapCatDelivery:
                         return _failed("qq_reply_invalid", "QQ 引用标识不可用。")
                     segments = [{"type": "reply", "data": {"id": reply_target}}, *segments]
             # echo only correlates RPCs. A persisted fence prevents restart replay.
-            if len(journal) >= 128:
-                active = await self._repository.list_nonterminal_delivery_plans(
-                    connection_id=self._connection_id, limit=10000
-                )
-                keep = {p.provider_client_id for item in active for p in item.parts}
-                journal = {k: v for k, v in journal.items() if k in keep}
+            # Receipt reconciliation owns garbage collection: a delivered
+            # part alone cannot prove a cursor's different receipt is resolved.
             if len(journal) >= 256:
                 return _failed("qq_send_journal_full", "请处理未完成的 QQ 投递后重试。")
             # File reads can overlap cancellation or disabling the connection.
@@ -155,10 +234,13 @@ class NapCatDelivery:
             if (
                 connection is None
                 or not connection.configuration.enabled
+                or connection.configuration.allowed_sender_keys != [self._owner]
                 or current is None
                 or current.cancel_requested_at is not None
             ):
                 return _failed("qq_delivery_cancelled", "QQ 投递已停止。")
+            if not await self._authorized(plan):
+                return _failed("qq_proactive_cancelled", "主动文字投递已停止。")
             journal[key] = "unknown"
             await self._save(journal)
             try:
@@ -169,8 +251,10 @@ class NapCatDelivery:
                     return (
                         connection is not None
                         and connection.configuration.enabled
+                        and connection.configuration.allowed_sender_keys == [self._owner]
                         and current is not None
                         and current.cancel_requested_at is None
+                        and await self._authorized(plan)
                     )
 
                 message_id = await self._client.send(self._owner, segments, before_send=before_send)
@@ -189,6 +273,13 @@ class NapCatDelivery:
     async def _save(self, journal: dict[str, str]) -> None:
         await self._repository.set_adapter_cursor(
             self._connection_id, cursor=json.dumps(journal), updated_at=datetime.now(UTC)
+        )
+
+    async def _authorized(self, plan: ChannelDeliveryPlanRecord) -> bool:
+        if plan.outbound_intent_id is None:
+            return True
+        return self._proactive_authorization is not None and await self._proactive_authorization(
+            plan
         )
 
     def _preset_image(self, payload: ChannelImageDeliveryPartPayload) -> bytes | None:

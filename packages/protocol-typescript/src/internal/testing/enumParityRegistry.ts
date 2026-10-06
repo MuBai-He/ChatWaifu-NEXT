@@ -77,6 +77,18 @@ import {
   structuredErrorSchema,
 } from "../../parsers/protocol";
 
+import {
+  channelProactivePolicySchema,
+  channelProactivePolicyUpdateSchema,
+  channelProactivePolicySnapshotSchema,
+  channelProactivePreviewSchema,
+  channelProactiveReasonSchema,
+  channelOutboundIntentSnapshotSchema,
+  channelOutboundIntentPageSchema,
+  channelOutboundIntentCancelRequestSchema,
+  channelOutboundIntentStatusSchema,
+} from "../../parsers/channelProactive";
+
 export {
   audioFrameHeaderSchema,
   avatarCapabilityManifestSchema,
@@ -155,6 +167,13 @@ export {
  * Registry of all root model schemas that back public parsers.
  */
 export const protocolModelSchemas = {
+  ChannelProactivePolicy: channelProactivePolicySchema,
+  ChannelProactivePolicyUpdate: channelProactivePolicyUpdateSchema,
+  ChannelProactivePolicySnapshot: channelProactivePolicySnapshotSchema,
+  ChannelProactivePreview: channelProactivePreviewSchema,
+  ChannelOutboundIntentSnapshot: channelOutboundIntentSnapshotSchema,
+  ChannelOutboundIntentPage: channelOutboundIntentPageSchema,
+  ChannelOutboundIntentCancelRequest: channelOutboundIntentCancelRequestSchema,
   AudioFrameHeader: audioFrameHeaderSchema,
   AvatarCue: avatarCueSchema,
   AvatarCapabilityManifest: avatarCapabilityManifestSchema,
@@ -214,6 +233,8 @@ export const protocolModelSchemas = {
  * Registry of standalone protocol enum schemas.
  */
 export const protocolEnumSchemas = {
+  ChannelProactiveReason: channelProactiveReasonSchema,
+  ChannelOutboundIntentStatus: channelOutboundIntentStatusSchema,
   ChannelPresentationProfile: channelPresentationProfileSchema,
   ChannelTurnStatus: channelTurnStatusSchema,
   ChannelDeliveryStatus: channelDeliveryStatusSchema,
@@ -231,6 +252,13 @@ export const parserRootRegistry: Record<
   string,
   keyof typeof protocolModelSchemas
 > = {
+  parseChannelProactivePolicy: "ChannelProactivePolicy",
+  parseChannelProactivePolicyUpdate: "ChannelProactivePolicyUpdate",
+  parseChannelProactivePolicySnapshot: "ChannelProactivePolicySnapshot",
+  parseChannelProactivePreview: "ChannelProactivePreview",
+  parseChannelOutboundIntentSnapshot: "ChannelOutboundIntentSnapshot",
+  parseChannelOutboundIntentPage: "ChannelOutboundIntentPage",
+  parseChannelOutboundIntentCancelRequest: "ChannelOutboundIntentCancelRequest",
   parseAudioFrameHeader: "AudioFrameHeader",
   parseAvatarCue: "AvatarCue",
   parseAvatarCapabilityManifest: "AvatarCapabilityManifest",
