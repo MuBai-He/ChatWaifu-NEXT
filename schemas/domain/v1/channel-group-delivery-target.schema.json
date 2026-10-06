@@ -1,0 +1,77 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-group-delivery-target.schema.json",
+  "additionalProperties": false,
+  "description": "Fixed admitted group target; field values cannot grant sending authority.",
+  "properties": {
+    "account_key": {
+      "maxLength": 20,
+      "minLength": 1,
+      "pattern": "^[1-9][0-9]{0,19}$",
+      "title": "Account Key",
+      "type": "string"
+    },
+    "audience_fingerprint": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Audience Fingerprint",
+      "type": "string"
+    },
+    "channel_turn_id": {
+      "format": "uuid",
+      "title": "Channel Turn Id",
+      "type": "string"
+    },
+    "connection_id": {
+      "format": "uuid",
+      "title": "Connection Id",
+      "type": "string"
+    },
+    "group_id": {
+      "maxLength": 20,
+      "minLength": 1,
+      "pattern": "^[1-9][0-9]{0,19}$",
+      "title": "Group Id",
+      "type": "string"
+    },
+    "kind": {
+      "const": "group",
+      "default": "group",
+      "title": "Kind",
+      "type": "string"
+    },
+    "route_id": {
+      "format": "uuid",
+      "title": "Route Id",
+      "type": "string"
+    },
+    "route_revision": {
+      "minimum": 1,
+      "title": "Route Revision",
+      "type": "integer"
+    },
+    "scene_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Scene Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "connection_id",
+    "account_key",
+    "group_id",
+    "route_id",
+    "route_revision",
+    "channel_turn_id",
+    "scene_id",
+    "audience_fingerprint"
+  ],
+  "title": "ChannelGroupDeliveryTarget",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

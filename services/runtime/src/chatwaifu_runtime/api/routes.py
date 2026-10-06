@@ -806,7 +806,7 @@ async def read_character_state(request: Request, session_id: UUID) -> dict[str, 
     if session is None:
         raise HTTPException(status_code=404, detail="session not found")
     snapshot = await container.character_kernel.snapshot(
-        session.character_id, user_scope=session.user_scope
+        session.character_id, user_scope=session.state_scope
     )
     return snapshot.model_dump(mode="json")
 

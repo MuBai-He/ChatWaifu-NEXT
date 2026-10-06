@@ -1,3 +1,22 @@
+import {
+  channelGroupAudienceRequestSchema,
+  channelGroupAudienceSnapshotSchema,
+  channelGroupDeliveryTargetSchema,
+  channelParticipantLinkCreateSchema,
+  channelParticipantLinkUpdateSchema,
+  channelParticipantLinkSnapshotSchema,
+  channelParticipantLinkPageSchema,
+  channelGroupRouteCreateSchema,
+  channelGroupRouteUpdateSchema,
+  channelGroupRouteMemberSnapshotSchema,
+  channelGroupRouteSnapshotSchema,
+  channelGroupRoutePageSchema,
+  channelGroupTurnCancelRequestSchema,
+  channelGroupTurnSnapshotSchema,
+  channelGroupTurnPageSchema,
+  channelGroupPauseReasonSchema,
+} from "../../parsers/channelGroups";
+
 /**
  * Internal testing registry and recursive enum path collectors for contract parity testing.
  * Not exported from the root `@chatwaifu/protocol` package.
@@ -167,6 +186,22 @@ export {
  * Registry of all root model schemas that back public parsers.
  */
 export const protocolModelSchemas = {
+  ChannelGroupAudienceRequest: channelGroupAudienceRequestSchema,
+  ChannelGroupAudienceSnapshot: channelGroupAudienceSnapshotSchema,
+  ChannelGroupDeliveryTarget: channelGroupDeliveryTargetSchema,
+  ChannelParticipantLinkCreate: channelParticipantLinkCreateSchema,
+  ChannelParticipantLinkUpdate: channelParticipantLinkUpdateSchema,
+  ChannelParticipantLinkSnapshot: channelParticipantLinkSnapshotSchema,
+  ChannelParticipantLinkPage: channelParticipantLinkPageSchema,
+  ChannelGroupRouteCreate: channelGroupRouteCreateSchema,
+  ChannelGroupRouteUpdate: channelGroupRouteUpdateSchema,
+  ChannelGroupRouteMemberSnapshot: channelGroupRouteMemberSnapshotSchema,
+  ChannelGroupRouteSnapshot: channelGroupRouteSnapshotSchema,
+  ChannelGroupRoutePage: channelGroupRoutePageSchema,
+  ChannelGroupTurnCancelRequest: channelGroupTurnCancelRequestSchema,
+  ChannelGroupTurnSnapshot: channelGroupTurnSnapshotSchema,
+  ChannelGroupTurnPage: channelGroupTurnPageSchema,
+
   ChannelProactivePolicy: channelProactivePolicySchema,
   ChannelProactivePolicyUpdate: channelProactivePolicyUpdateSchema,
   ChannelProactivePolicySnapshot: channelProactivePolicySnapshotSchema,
@@ -233,6 +268,7 @@ export const protocolModelSchemas = {
  * Registry of standalone protocol enum schemas.
  */
 export const protocolEnumSchemas = {
+  ChannelGroupPauseReason: channelGroupPauseReasonSchema,
   ChannelProactiveReason: channelProactiveReasonSchema,
   ChannelOutboundIntentStatus: channelOutboundIntentStatusSchema,
   ChannelPresentationProfile: channelPresentationProfileSchema,
@@ -252,6 +288,21 @@ export const parserRootRegistry: Record<
   string,
   keyof typeof protocolModelSchemas
 > = {
+  parseChannelGroupAudienceRequest: "ChannelGroupAudienceRequest",
+  parseChannelGroupAudienceSnapshot: "ChannelGroupAudienceSnapshot",
+  parseChannelGroupDeliveryTarget: "ChannelGroupDeliveryTarget",
+  parseChannelParticipantLinkCreate: "ChannelParticipantLinkCreate",
+  parseChannelParticipantLinkUpdate: "ChannelParticipantLinkUpdate",
+  parseChannelParticipantLinkSnapshot: "ChannelParticipantLinkSnapshot",
+  parseChannelParticipantLinkPage: "ChannelParticipantLinkPage",
+  parseChannelGroupRouteCreate: "ChannelGroupRouteCreate",
+  parseChannelGroupRouteUpdate: "ChannelGroupRouteUpdate",
+  parseChannelGroupRouteMemberSnapshot: "ChannelGroupRouteMemberSnapshot",
+  parseChannelGroupRouteSnapshot: "ChannelGroupRouteSnapshot",
+  parseChannelGroupRoutePage: "ChannelGroupRoutePage",
+  parseChannelGroupTurnCancelRequest: "ChannelGroupTurnCancelRequest",
+  parseChannelGroupTurnSnapshot: "ChannelGroupTurnSnapshot",
+  parseChannelGroupTurnPage: "ChannelGroupTurnPage",
   parseChannelProactivePolicy: "ChannelProactivePolicy",
   parseChannelProactivePolicyUpdate: "ChannelProactivePolicyUpdate",
   parseChannelProactivePolicySnapshot: "ChannelProactivePolicySnapshot",

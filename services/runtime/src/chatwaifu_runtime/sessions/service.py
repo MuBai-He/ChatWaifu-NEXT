@@ -18,6 +18,7 @@ from chatwaifu_runtime.conversation.models import ConversationSourceContext
 from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
+from chatwaifu_runtime.sessions.identity import TrustedConversationIdentity
 
 ALLOWED_TRANSITIONS: dict[SessionState, frozenset[SessionState]] = {
     SessionState.CREATED: frozenset(
@@ -49,6 +50,18 @@ class SessionService:
         self._database = database
         self._event_store = event_store
         self._event_hub = event_hub
+
+    async def conversation_identity(self, session_id: UUID) -> TrustedConversationIdentity:
+        session = await self.get_session(session_id)
+        if session is None:
+            raise KeyError("session not found")
+        return TrustedConversationIdentity(
+            participant_id=session.participant_id,
+            scene_id=session.scene_id,
+            audience_ids=tuple(session.audience_ids),
+            memory_scope=session.user_scope,
+            state_scope=session.state_scope,
+        )
 
     async def source_context(self, session_id: UUID) -> ConversationSourceContext | None:
         session = await self.get_session(session_id)
@@ -141,6 +154,7 @@ class SessionService:
             audience = scene.participant_ids
             scope = f"scene:{scene_id}"
             kind = "shared"
+        state_scope = f"scene_member:{scene_id}:{participant_id}" if scene_id else scope
         session_id = uuid4()
         now = datetime.now(UTC)
         async with self._database.transaction() as connection:
@@ -149,8 +163,8 @@ class SessionService:
                 INSERT INTO sessions(
                     session_id, character_id, state, conversation_state,
                     revision, next_sequence, created_at, updated_at,
-                    participant_id, scene_id, scene_kind, audience_json, user_scope
-                ) VALUES (?, ?, ?, ?, 0, 1, ?, ?, ?, ?, ?, ?, ?)
+                    participant_id, scene_id, scene_kind, audience_json, user_scope, state_scope
+                ) VALUES (?, ?, ?, ?, 0, 1, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(session_id),
@@ -164,6 +178,7 @@ class SessionService:
                     kind,
                     json.dumps(audience),
                     scope,
+                    state_scope,
                 ),
             )
             event = await self._event_store.append_in_transaction(
@@ -184,6 +199,7 @@ class SessionService:
             scene_kind="shared" if scene_id else "private",
             audience_ids=audience,
             user_scope=scope,
+            state_scope=state_scope,
             session_id=session_id,
             character_id=character_id,
             state=SessionState.READY,

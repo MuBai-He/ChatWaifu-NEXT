@@ -96,6 +96,7 @@ class MemoryProposal(ProtocolModel):
 
 class MemoryExcerpt(ProtocolModel):
     memory_id: UUID
+    subject_id: str | None = None
     text: str
     source_event_ids: list[UUID] = Field(min_length=1)
     relevance: float = Field(ge=0, le=1)

@@ -14,6 +14,7 @@ import * as qqClient from "../chat/runtime-client/qqClient";
 import type { QQPairingSnapshot } from "../chat/runtime-client/qqClient";
 import { RuntimeRequestError } from "../chat/runtime-client/http";
 import { QQChannelPanel } from "./QQChannelPanel";
+import { setRemoteRuntimeConnection } from "../chat/runtimeEndpoint";
 
 vi.mock("../chat/runtimeClient", () => ({
   getChannelConnections: vi.fn(),
@@ -45,7 +46,304 @@ describe("QQChannelPanel", () => {
   });
   afterEach(() => {
     cleanup();
+    setRemoteRuntimeConnection(null);
     vi.resetAllMocks();
+  });
+
+  it.each([
+    { baseUrl: "https://runtime-b.example", token: "private-b" },
+    { baseUrl: "https://runtime-a.example", token: "private-b" },
+    {
+      baseUrl: "https://runtime-a.example",
+      token: "private-a",
+      restartCount: 1,
+    },
+  ])(
+    "discards Runtime A's late confirmation after context changes to %j",
+    async (nextContext) => {
+      setRemoteRuntimeConnection({
+        baseUrl: "https://runtime-a.example",
+        token: "private-a",
+      });
+      let finish!: (value: QQPairingSnapshot) => void;
+      vi.mocked(qqClient.getQQPairing).mockReturnValueOnce(
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+      );
+      render(<QQChannelPanel characterId="default" runtimeOnline />);
+      await openSetup();
+      fireEvent.click(screen.getByRole("button", { name: "开始 QQ 配对" }));
+      await screen.findByText("CW2 PAIR1234");
+      await waitFor(() =>
+        expect(qqClient.getQQPairing).toHaveBeenCalledTimes(1),
+      );
+      const b = {
+        ...connection(),
+        configuration: { ...connection().configuration, name: "Runtime B QQ" },
+      };
+      vi.mocked(runtimeClient.getChannelConnections).mockResolvedValue([b]);
+      act(() => setRemoteRuntimeConnection(nextContext));
+      await screen.findByText("Runtime B QQ");
+      await act(() =>
+        Promise.resolve(
+          finish({
+            ...pairing(),
+            status: "confirmed",
+            pairing_code: null,
+            connection: {
+              ...connection(),
+              configuration: {
+                ...connection().configuration,
+                name: "Runtime A QQ",
+              },
+            },
+          }),
+        ),
+      );
+      expect(screen.getByText("Runtime B QQ")).toBeTruthy();
+      expect(screen.queryByText("Runtime A QQ")).toBeNull();
+      expect(screen.queryByText("CW2 PAIR1234")).toBeNull();
+      expect(qqClient.getQQPairing).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(qqClient.getQQPairing).mock.calls[0]?.[2]?.aborted).toBe(
+        true,
+      );
+    },
+  );
+
+  it("discards a late Runtime A pairing start without installing it in Runtime B", async () => {
+    setRemoteRuntimeConnection({
+      baseUrl: "https://runtime-a.example",
+      token: "private-a",
+    });
+    let finish!: (value: QQPairingSnapshot) => void;
+    vi.mocked(qqClient.startQQPairing).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    render(<QQChannelPanel characterId="default" runtimeOnline />);
+    await openSetup();
+    fireEvent.click(screen.getByRole("button", { name: "开始 QQ 配对" }));
+    const b = {
+      ...connection(),
+      configuration: { ...connection().configuration, name: "Runtime B QQ" },
+    };
+    vi.mocked(runtimeClient.getChannelConnections).mockResolvedValue([b]);
+    act(() =>
+      setRemoteRuntimeConnection({
+        baseUrl: "https://runtime-b.example",
+        token: "private-b",
+      }),
+    );
+    await screen.findByText("Runtime B QQ");
+    await act(() =>
+      Promise.resolve(
+        finish({
+          ...pairing(),
+          status: "confirmed",
+          pairing_code: null,
+          connection: {
+            ...connection(),
+            configuration: {
+              ...connection().configuration,
+              name: "Runtime A QQ",
+            },
+          },
+        }),
+      ),
+    );
+    expect(screen.getByText("Runtime B QQ")).toBeTruthy();
+    expect(screen.queryByText("Runtime A QQ")).toBeNull();
+    expect(qqClient.getQQPairing).not.toHaveBeenCalled();
+  });
+
+  it("discards old connection health after an online Runtime switch", async () => {
+    setRemoteRuntimeConnection({
+      baseUrl: "https://runtime-a.example",
+      token: "private-a",
+    });
+    vi.mocked(runtimeClient.getChannelConnections).mockResolvedValue([
+      connection(),
+    ]);
+    let finish!: (value: ChannelConnectionSnapshot) => void;
+    vi.mocked(qqClient.testQQChannelConnection).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    render(<QQChannelPanel characterId="default" runtimeOnline />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "检查 QQ 连接" }),
+    );
+    const b = {
+      ...connection(),
+      configuration: { ...connection().configuration, name: "Runtime B QQ" },
+    };
+    vi.mocked(runtimeClient.getChannelConnections).mockResolvedValue([b]);
+    act(() =>
+      setRemoteRuntimeConnection({
+        baseUrl: "https://runtime-b.example",
+        token: "private-b",
+      }),
+    );
+    await screen.findByText("Runtime B QQ");
+    await act(() =>
+      Promise.resolve(
+        finish({
+          ...connection(),
+          status: "error",
+          configuration: {
+            ...connection().configuration,
+            name: "Runtime A QQ",
+          },
+        }),
+      ),
+    );
+    expect(screen.getByText("Runtime B QQ")).toBeTruthy();
+    expect(screen.queryByText("Runtime A QQ")).toBeNull();
+    expect(screen.getByText("QQ 连接正常")).toBeTruthy();
+  });
+
+  it("does not follow an old cancellation by reading its pairing ID on Runtime B", async () => {
+    setRemoteRuntimeConnection({
+      baseUrl: "https://runtime-a.example",
+      token: "private-a",
+    });
+    let finish!: () => void;
+    vi.mocked(qqClient.cancelQQPairing).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    render(<QQChannelPanel characterId="default" runtimeOnline />);
+    await openSetup();
+    fireEvent.click(screen.getByRole("button", { name: "开始 QQ 配对" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "取消 QQ 配对" }),
+    );
+    const b = {
+      ...connection(),
+      configuration: { ...connection().configuration, name: "Runtime B QQ" },
+    };
+    vi.mocked(runtimeClient.getChannelConnections).mockResolvedValue([b]);
+    act(() =>
+      setRemoteRuntimeConnection({
+        baseUrl: "https://runtime-b.example",
+        token: "private-b",
+      }),
+    );
+    await screen.findByText("Runtime B QQ");
+    await act(() => Promise.resolve(finish()));
+    expect(
+      vi
+        .mocked(qqClient.getQQPairing)
+        .mock.calls.filter(([, wait]) => wait === 0),
+    ).toHaveLength(0);
+    expect(screen.getByText("Runtime B QQ")).toBeTruthy();
+  });
+
+  it.each(["toggle", "stickers", "disconnect"] as const)(
+    "discards an old %s mutation result after a fresh Runtime B read",
+    async (action) => {
+      setRemoteRuntimeConnection({ baseUrl: "https://runtime-a.example" });
+      const a: ChannelConnectionSnapshot = {
+        ...connection(),
+        capabilities: { outbound_message_kinds: ["text", "audio", "image"] },
+      };
+      vi.mocked(runtimeClient.getChannelConnections).mockResolvedValue([a]);
+      let finishUpdate!: (value: ChannelConnectionSnapshot) => void;
+      let finishDelete!: () => void;
+      if (action === "disconnect") {
+        vi.mocked(runtimeClient.deleteChannelConnection).mockReturnValueOnce(
+          new Promise((resolve) => {
+            finishDelete = resolve;
+          }),
+        );
+      } else {
+        vi.mocked(runtimeClient.updateChannelConnection).mockReturnValueOnce(
+          new Promise((resolve) => {
+            finishUpdate = resolve;
+          }),
+        );
+      }
+      render(<QQChannelPanel characterId="default" runtimeOnline />);
+      await screen.findByText("QQ 连接正常");
+      fireEvent.click(
+        action === "disconnect"
+          ? screen.getByRole("button", { name: "断开 QQ 连接" })
+          : screen.getByRole("switch", {
+              name:
+                action === "toggle" ? "启用 QQ 私聊" : "允许角色发送表情图片",
+            }),
+      );
+      const mutationSignal =
+        action === "disconnect"
+          ? vi.mocked(runtimeClient.deleteChannelConnection).mock.calls[0]?.[1]
+              ?.signal
+          : vi.mocked(runtimeClient.updateChannelConnection).mock.calls[0]?.[3];
+      const b = {
+        ...a,
+        configuration: { ...a.configuration, name: "Runtime B QQ" },
+      };
+      vi.mocked(runtimeClient.getChannelConnections).mockResolvedValue([b]);
+      act(() =>
+        setRemoteRuntimeConnection({ baseUrl: "https://runtime-b.example" }),
+      );
+      await screen.findByText("Runtime B QQ");
+      expect(mutationSignal?.aborted).toBe(true);
+      await act(() => {
+        if (action === "disconnect") finishDelete();
+        else
+          finishUpdate({
+            ...a,
+            configuration: { ...a.configuration, name: "Runtime A QQ" },
+          });
+        return Promise.resolve();
+      });
+      expect(screen.getByText("Runtime B QQ")).toBeTruthy();
+      expect(screen.getByText("QQ 连接正常")).toBeTruthy();
+      expect(screen.queryByText("Runtime A QQ")).toBeNull();
+      expect(screen.queryByRole("button", { name: "设置 QQ 连接" })).toBeNull();
+    },
+  );
+
+  it("discards an old Runtime A connection list after Runtime B is verified", async () => {
+    setRemoteRuntimeConnection({ baseUrl: "https://runtime-a.example" });
+    let finish!: (value: ChannelConnectionSnapshot[]) => void;
+    vi.mocked(runtimeClient.getChannelConnections).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    render(<QQChannelPanel characterId="default" runtimeOnline />);
+    await waitFor(() =>
+      expect(runtimeClient.getChannelConnections).toHaveBeenCalledOnce(),
+    );
+    const b = {
+      ...connection(),
+      configuration: { ...connection().configuration, name: "Runtime B QQ" },
+    };
+    vi.mocked(runtimeClient.getChannelConnections).mockResolvedValue([b]);
+    act(() =>
+      setRemoteRuntimeConnection({ baseUrl: "https://runtime-b.example" }),
+    );
+    await screen.findByText("Runtime B QQ");
+    await act(() =>
+      Promise.resolve(
+        finish([
+          {
+            ...connection(),
+            configuration: {
+              ...connection().configuration,
+              name: "Runtime A QQ",
+            },
+          },
+        ]),
+      ),
+    );
+    expect(screen.getByText("Runtime B QQ")).toBeTruthy();
+    expect(screen.queryByText("Runtime A QQ")).toBeNull();
   });
 
   it("persists sticker opt-in while keeping owner routing and voice request behavior", async () => {
@@ -83,6 +381,8 @@ describe("QQChannelPanel", () => {
         },
       },
       original.revision,
+      expect.any(AbortSignal),
+      guardedRequestOptions(),
     );
     expect(screen.queryByRole("switch", { name: /语音/u })).toBeNull();
     view.rerender(
@@ -110,6 +410,7 @@ describe("QQChannelPanel", () => {
       "ws://127.0.0.1:3001",
       "test-token-123456789",
       "default",
+      guardedRequestOptions(),
     );
     act(() => resolveStart(pairing()));
     expect(await screen.findByText("CW2 PAIR1234")).toBeTruthy();
@@ -119,6 +420,9 @@ describe("QQChannelPanel", () => {
     await waitFor(() =>
       expect(qqClient.cancelQQPairing).toHaveBeenCalledWith(
         pairing().pairing_id,
+        expect.objectContaining({
+          expectedContext: expect.any(Object) as unknown,
+        }),
       ),
     );
   });
@@ -138,6 +442,9 @@ describe("QQChannelPanel", () => {
     await waitFor(() =>
       expect(qqClient.cancelQQPairing).toHaveBeenCalledWith(
         pairing().pairing_id,
+        expect.objectContaining({
+          expectedContext: expect.any(Object) as unknown,
+        }),
       ),
     );
   });
@@ -214,6 +521,8 @@ describe("QQChannelPanel", () => {
     await waitFor(() =>
       expect(qqClient.testQQChannelConnection).toHaveBeenCalledWith(
         disabled.configuration.connection_id,
+        expect.any(AbortSignal),
+        guardedRequestOptions(),
       ),
     );
     await waitFor(() =>
@@ -228,6 +537,8 @@ describe("QQChannelPanel", () => {
         disabled.configuration.connection_id,
         { ...disabled.configuration, enabled: true },
         disabled.revision,
+        expect.any(AbortSignal),
+        guardedRequestOptions(),
       ),
     );
     expect(await screen.findByText("QQ 连接正常")).toBeTruthy();
@@ -237,6 +548,7 @@ describe("QQChannelPanel", () => {
     ).toBeTruthy();
     expect(runtimeClient.deleteChannelConnection).toHaveBeenCalledWith(
       disabled.configuration.connection_id,
+      guardedRequestOptions(),
     );
   });
 
@@ -250,6 +562,9 @@ describe("QQChannelPanel", () => {
       )
       .mockResolvedValueOnce([{ ...connection(), status: "degraded" }]);
     const view = render(<QQChannelPanel characterId="default" runtimeOnline />);
+    await waitFor(() =>
+      expect(runtimeClient.getChannelConnections).toHaveBeenCalledTimes(1),
+    );
     view.rerender(
       <QQChannelPanel characterId="default" runtimeOnline={false} />,
     );
@@ -327,7 +642,12 @@ describe("QQChannelPanel", () => {
       await screen.findByRole("button", { name: "取消 QQ 配对" }),
     );
     expect(await screen.findByText("QQ 连接正常")).toBeTruthy();
-    expect(qqClient.getQQPairing).toHaveBeenCalledWith(pairing().pairing_id, 0);
+    expect(qqClient.getQQPairing).toHaveBeenCalledWith(
+      pairing().pairing_id,
+      0,
+      expect.any(AbortSignal),
+      guardedRequestOptions(),
+    );
     expect(screen.queryByRole("button", { name: "开始 QQ 配对" })).toBeNull();
     view.unmount();
     expect(qqClient.cancelQQPairing).toHaveBeenCalledTimes(1);
@@ -400,6 +720,18 @@ async function openSetup() {
   fireEvent.click(await screen.findByRole("button", { name: "设置 QQ 连接" }));
   fireEvent.change(screen.getByLabelText("NapCat 访问令牌"), {
     target: { value: "test-token-123456789" },
+  });
+}
+
+function guardedRequestOptions(): unknown {
+  return expect.objectContaining({
+    expectedContext: expect.objectContaining({
+      revision: expect.any(Number) as unknown,
+      connection: expect.objectContaining({
+        baseUrl: expect.any(String) as unknown,
+      }) as unknown,
+    }) as unknown,
+    signal: expect.any(AbortSignal) as unknown,
   });
 }
 

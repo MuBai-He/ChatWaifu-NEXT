@@ -8,6 +8,23 @@ from pydantic import BaseModel, TypeAdapter
 
 from chatwaifu_protocol.avatar import AvatarCapabilityManifest, AvatarCue, AvatarInteractionEvent
 from chatwaifu_protocol.base import ProtocolModel
+from chatwaifu_protocol.channel_groups import (
+    ChannelGroupAudienceRequest,
+    ChannelGroupAudienceSnapshot,
+    ChannelGroupDeliveryTarget,
+    ChannelGroupRouteCreate,
+    ChannelGroupRouteMemberSnapshot,
+    ChannelGroupRoutePage,
+    ChannelGroupRouteSnapshot,
+    ChannelGroupRouteUpdate,
+    ChannelGroupTurnCancelRequest,
+    ChannelGroupTurnPage,
+    ChannelGroupTurnSnapshot,
+    ChannelParticipantLinkCreate,
+    ChannelParticipantLinkPage,
+    ChannelParticipantLinkSnapshot,
+    ChannelParticipantLinkUpdate,
+)
 from chatwaifu_protocol.channel_proactive import (
     ChannelOutboundIntentCancelRequest,
     ChannelOutboundIntentPage,
@@ -135,6 +152,21 @@ class ProtocolCatalog(ProtocolModel):
     channel_connection_configuration: ChannelConnectionConfiguration
     channel_connection: ChannelConnectionSnapshot
     channel_gateway_status: ChannelGatewayStatusSnapshot
+    channel_group_audience_request: ChannelGroupAudienceRequest
+    channel_group_audience_snapshot: ChannelGroupAudienceSnapshot
+    channel_group_turn_snapshot: ChannelGroupTurnSnapshot
+    channel_group_turn_page: ChannelGroupTurnPage
+    channel_group_delivery_target: ChannelGroupDeliveryTarget
+    channel_group_route_create: ChannelGroupRouteCreate
+    channel_group_route_member_snapshot: ChannelGroupRouteMemberSnapshot
+    channel_group_route_page: ChannelGroupRoutePage
+    channel_group_route_snapshot: ChannelGroupRouteSnapshot
+    channel_group_route_update: ChannelGroupRouteUpdate
+    channel_group_turn_cancel_request: ChannelGroupTurnCancelRequest
+    channel_participant_link_create: ChannelParticipantLinkCreate
+    channel_participant_link_page: ChannelParticipantLinkPage
+    channel_participant_link_snapshot: ChannelParticipantLinkSnapshot
+    channel_participant_link_update: ChannelParticipantLinkUpdate
     channel_proactive_policy: ChannelProactivePolicy
     channel_proactive_policy_update: ChannelProactivePolicyUpdate
     channel_proactive_policy_snapshot: ChannelProactivePolicySnapshot
@@ -190,6 +222,21 @@ class ProtocolCatalog(ProtocolModel):
 
 
 SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
+    "channel-group-turn-snapshot": ChannelGroupTurnSnapshot,
+    "channel-group-turn-page": ChannelGroupTurnPage,
+    "channel-group-audience-request": ChannelGroupAudienceRequest,
+    "channel-group-audience-snapshot": ChannelGroupAudienceSnapshot,
+    "channel-group-delivery-target": ChannelGroupDeliveryTarget,
+    "channel-group-route-create": ChannelGroupRouteCreate,
+    "channel-group-route-member-snapshot": ChannelGroupRouteMemberSnapshot,
+    "channel-group-route-page": ChannelGroupRoutePage,
+    "channel-group-route-snapshot": ChannelGroupRouteSnapshot,
+    "channel-group-route-update": ChannelGroupRouteUpdate,
+    "channel-group-turn-cancel-request": ChannelGroupTurnCancelRequest,
+    "channel-participant-link-create": ChannelParticipantLinkCreate,
+    "channel-participant-link-page": ChannelParticipantLinkPage,
+    "channel-participant-link-snapshot": ChannelParticipantLinkSnapshot,
+    "channel-participant-link-update": ChannelParticipantLinkUpdate,
     "audio-frame-header": AudioFrameHeader,
     "avatar-capability-manifest": AvatarCapabilityManifest,
     "avatar-cue": AvatarCue,

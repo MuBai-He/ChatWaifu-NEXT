@@ -1,0 +1,37 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-group-route-member-snapshot.schema.json",
+  "properties": {
+    "can_speak": {
+      "title": "Can Speak",
+      "type": "boolean"
+    },
+    "link_id": {
+      "format": "uuid",
+      "title": "Link Id",
+      "type": "string"
+    },
+    "participant_id": {
+      "title": "Participant Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "sender_key": {
+      "title": "Sender Key",
+      "type": "string"
+    }
+  },
+  "required": [
+    "link_id",
+    "sender_key",
+    "participant_id",
+    "can_speak"
+  ],
+  "title": "ChannelGroupRouteMemberSnapshot",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

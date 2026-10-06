@@ -1,0 +1,50 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-group-route-update.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "enabled": {
+      "title": "Enabled",
+      "type": "boolean"
+    },
+    "expected_revision": {
+      "minimum": 1,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "observation_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Observation Id"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "speaker_sender_keys": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 32,
+      "title": "Speaker Sender Keys",
+      "type": "array"
+    }
+  },
+  "required": [
+    "enabled",
+    "expected_revision",
+    "speaker_sender_keys"
+  ],
+  "title": "ChannelGroupRouteUpdate",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

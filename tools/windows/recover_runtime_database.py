@@ -1201,6 +1201,7 @@ def _recover_sessions(
             "scene_kind": "private",
             "audience_json": '["local"]',
             "user_scope": "local",
+            "state_scope": "local",
         }
         output.append(tuple(values[column] for column in columns))
         reconstructed += 1

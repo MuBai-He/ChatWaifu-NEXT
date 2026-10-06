@@ -1,0 +1,75 @@
+.qq-group-routes-panel {
+  display: grid;
+  gap: 12px;
+  padding-top: 20px;
+  border-top: 1px solid var(--settings-line);
+  overflow-wrap: anywhere;
+}
+.qq-group-routes-panel :is(h3, h4, p) {
+  margin: 0;
+}
+.qq-group-routes-panel h4 {
+  font-size: 0.8rem;
+}
+.qq-group-risk {
+  padding: 12px;
+  border: 1px solid #b9813e;
+  border-radius: 9px;
+}
+.qq-group-fields {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--settings-line);
+  border-radius: 9px;
+}
+.qq-group-fields label {
+  display: grid;
+  gap: 6px;
+}
+.qq-group-fields :is(input:not([type="checkbox"]), select) {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--settings-line);
+  border-radius: 7px;
+  color: var(--settings-text);
+  background: rgb(255 255 255 / 70%);
+  font: inherit;
+}
+.qq-group-fields .qq-group-check {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+}
+.qq-group-check input {
+  flex-shrink: 0;
+}
+.qq-group-list {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.qq-group-list li,
+.qq-group-editor {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--settings-line);
+  border-radius: 9px;
+}
+.qq-group-routes-panel button {
+  justify-self: start;
+}
+.qq-group-reply {
+  white-space: pre-wrap;
+}
+.qq-group-routes-panel :is(button, input, select):focus-visible {
+  outline: 2px solid #8d527d;
+  outline-offset: 3px;
+}

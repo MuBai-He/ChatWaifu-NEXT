@@ -1,10 +1,10 @@
 """Session, turn, and assistant generation state snapshots."""
 
 from enum import StrEnum
-from typing import Literal
+from typing import Literal, cast
 from uuid import UUID
 
-from pydantic import AwareDatetime, Field
+from pydantic import AwareDatetime, Field, model_validator
 
 from chatwaifu_protocol.base import ProtocolModel
 
@@ -47,11 +47,21 @@ class SessionSnapshot(ProtocolModel):
     scene_kind: Literal["private", "shared"] = "private"
     audience_ids: list[str] = Field(default_factory=lambda: ["local"])
     user_scope: str = "local"
+    state_scope: str = "local"
     state: SessionState
     conversation_state: ConversationState
     revision: int = Field(ge=0)
     created_at: AwareDatetime
     updated_at: AwareDatetime
+
+    @model_validator(mode="before")
+    @classmethod
+    def preserve_legacy_state_scope(cls, value: object) -> object:
+        if isinstance(value, dict):
+            payload = cast(dict[str, object], value)
+            if "state_scope" not in payload:
+                return {**payload, "state_scope": payload.get("user_scope", "local")}
+        return cast(object, value)
 
 
 class TurnSnapshot(ProtocolModel):

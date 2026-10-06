@@ -11,6 +11,10 @@ import {
   resolveRuntimeUrl,
   runtimeFetchWithConnection,
   runtimeWebSocketUrlFromConnection,
+  getRuntimeContextRevision,
+  readRuntimeRequestContext,
+  assertRuntimeRequestContext,
+  subscribeRuntimeContext,
   type DesktopRuntimeStatus,
   type RuntimeConnection,
 } from "./runtimeEndpoint";
@@ -83,6 +87,35 @@ describe("desktop Runtime endpoint", () => {
     await expect(restartDesktopRuntime()).rejects.toThrow("远程服务");
     expect(nativeMocks.invoke).not.toHaveBeenCalled();
     expect(nativeMocks.listen).not.toHaveBeenCalled();
+  });
+
+  it("invalidates pinned operations on native credentials and restart without invalidating identical observations", async () => {
+    const ready: DesktopRuntimeStatus = {
+      ...starting,
+      state: "ready",
+      runtime_url: "http://127.0.0.1:2222",
+      token: "private-native",
+      restart_count: 1,
+    };
+    nativeMocks.invoke.mockResolvedValue(ready);
+    const controller = new AbortController();
+    await observeDesktopRuntime(() => undefined, controller.signal);
+    const context = await readRuntimeRequestContext();
+    const listener = vi.fn();
+    const unsubscribe = subscribeRuntimeContext(listener);
+    const revision = getRuntimeContextRevision();
+    nativeMocks.statusListener?.({ payload: ready });
+    await resolveRuntimeConnection();
+    expect(getRuntimeContextRevision()).toBe(revision);
+    nativeMocks.statusListener?.({
+      payload: { ...ready, token: "private-rotated" },
+    });
+    expect(listener).toHaveBeenCalledOnce();
+    expect(() => assertRuntimeRequestContext(context)).toThrow("上下文已变化");
+    await restartDesktopRuntime();
+    expect(listener).toHaveBeenCalledTimes(2);
+    controller.abort();
+    unsubscribe();
   });
 
   it("keeps a newer event when the initial native snapshot arrives late", async () => {

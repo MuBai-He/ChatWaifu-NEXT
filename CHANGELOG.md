@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Preserve the positive meaning of the Chinese intensifier `特别`, and plan a
+  current positive user signal as a happy celebration after higher-priority
+  distress, boundary, interaction and question handling. Opted-in private stickers
+  can now match that durable plan; background happiness on a generic answer stays
+  undecorated. QQ regression checks use actual Character planning instead of a
+  supplied fixture plan. Voice tool selection and group text policy are unchanged.
+
 - Configure input limits, output reserve/cap, estimation margin and upstream
   section/history/memory/tool budgets per selected model route. Freeze budgets
   at admission, retain legacy configurations, and expose shared settings;

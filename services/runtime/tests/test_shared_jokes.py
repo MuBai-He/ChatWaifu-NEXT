@@ -1358,12 +1358,12 @@ async def test_repeated_same_cue_dedupes_not_supersede(
         draft=draft,
         explicit=False,
         rationale="重复成梗",
-        evidence_event_ids=(uuid4(), uuid4()),
+        evidence_event_ids=(e1,),
         auto_commit=True,
     )
 
     proposal = await service._process_candidate(  # pyright: ignore[reportPrivateUsage]
-        session_id, None, uuid4(), candidate
+        session_id, None, e1, candidate
     )
     assert proposal.operation == "ignore"
     assert proposal.status == "ignored"

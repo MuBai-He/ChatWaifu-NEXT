@@ -5,7 +5,17 @@ import {
   type ChannelPairingSnapshot,
 } from "@chatwaifu/protocol";
 
-import { mutationReceiptSchema, requestRuntime, runtimeParser } from "./http";
+import {
+  mutationReceiptSchema,
+  requestRuntime,
+  runtimeParser,
+  type RuntimeRequestInit,
+} from "./http";
+
+export type QQRequestOptions = Pick<
+  RuntimeRequestInit,
+  "expectedContext" | "signal"
+>;
 
 const pairingSnapshotParser = runtimeParser(parseChannelPairingSnapshot);
 
@@ -15,6 +25,7 @@ export function startQQPairing(
   endpoint: string,
   accessToken: string,
   characterId: string,
+  options: QQRequestOptions = {},
 ): Promise<QQPairingSnapshot> {
   return requestRuntime("/v1/channel-pairing-sessions", pairingSnapshotParser, {
     method: "POST",
@@ -25,6 +36,7 @@ export function startQQPairing(
       access_token: accessToken,
       character_id: characterId,
     }),
+    ...options,
   });
 }
 
@@ -32,6 +44,7 @@ export function getQQPairing(
   pairingId: string,
   waitSeconds = 20,
   signal?: AbortSignal,
+  options: QQRequestOptions = {},
 ): Promise<QQPairingSnapshot> {
   const boundedWait = Number.isFinite(waitSeconds)
     ? Math.max(0, Math.min(25, Math.floor(waitSeconds)))
@@ -39,25 +52,33 @@ export function getQQPairing(
   return requestRuntime(
     `/v1/channel-pairing-sessions/${encodeURIComponent(pairingId)}?wait_seconds=${boundedWait}`,
     pairingSnapshotParser,
-    { signal, timeoutMs: (boundedWait + 8) * 1_000 },
+    {
+      ...options,
+      signal: signal ?? options.signal,
+      timeoutMs: (boundedWait + 8) * 1_000,
+    },
   );
 }
 
-export async function cancelQQPairing(pairingId: string): Promise<void> {
+export async function cancelQQPairing(
+  pairingId: string,
+  options: QQRequestOptions = {},
+): Promise<void> {
   await requestRuntime(
     `/v1/channel-pairing-sessions/${encodeURIComponent(pairingId)}`,
     mutationReceiptSchema,
-    { method: "DELETE" },
+    { method: "DELETE", ...options },
   );
 }
 
 export function testQQChannelConnection(
   connectionId: string,
   signal?: AbortSignal,
+  options: QQRequestOptions = {},
 ): Promise<ChannelConnectionSnapshot> {
   return requestRuntime(
     `/v1/channel-connections/${encodeURIComponent(connectionId)}/test`,
     runtimeParser(parseChannelConnectionSnapshot),
-    { method: "POST", signal },
+    { method: "POST", ...options, signal: signal ?? options.signal },
   );
 }
