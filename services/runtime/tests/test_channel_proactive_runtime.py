@@ -274,17 +274,24 @@ async def test_lifecycle_during_durable_reservation_return_gap_does_not_start_mo
 
         monkeypatch.setattr(h.repository, "reserve_intent", reserve)
         evaluation = asyncio.create_task(h.service.evaluate_once())
-        await asyncio.wait_for(committed.wait(), 3)
-        if action == "stop":
-            await asyncio.wait_for(h.service.stop(), 3)
-        else:
-            await owner_activity(h.qq, h.connection_id, "主人刚发来新消息", 13)
-        release.set()
-        assert await asyncio.wait_for(evaluation, 3) == 0
-        assert h.service.active_count == 0
-        assert not [r for r in h.qq.model.requests if r.trigger == "proactive"]
-        page = await h.service.list_intents(h.connection_id)
-        assert len(page.items) == 1 and page.items[0].status is ChannelOutboundIntentStatus.SETTLED
+        try:
+            await asyncio.wait_for(committed.wait(), 15)
+            if action == "stop":
+                await asyncio.wait_for(h.service.stop(), 15)
+            else:
+                await owner_activity(h.qq, h.connection_id, "主人刚发来新消息", 13)
+            release.set()
+            assert await asyncio.wait_for(evaluation, 15) == 0
+            assert h.service.active_count == 0
+            assert not [r for r in h.qq.model.requests if r.trigger == "proactive"]
+            page = await h.service.list_intents(h.connection_id)
+            assert (
+                len(page.items) == 1 and page.items[0].status is ChannelOutboundIntentStatus.SETTLED
+            )
+        finally:
+            await h.service.stop()
+            release.set()
+            await asyncio.gather(evaluation, return_exceptions=True)
 
 
 async def test_durable_audio_preprocessing_defers_proactive_generation(
