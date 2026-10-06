@@ -1,6 +1,8 @@
 """Generation-scoped streaming conversation pipeline with hard cancellation."""
 
 import asyncio
+import hashlib
+import json
 import logging
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
@@ -9,7 +11,12 @@ from uuid import UUID, uuid4
 
 from chatwaifu_protocol.avatar import AvatarCue
 from chatwaifu_protocol.base import PrivacyLevel
-from chatwaifu_protocol.character import ResponsePlan
+from chatwaifu_protocol.character import (
+    PROMPT_TEMPLATE_VERSION,
+    CharacterPromptCompiledPayload,
+    PromptContextIdentity,
+    ResponsePlan,
+)
 from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_protocol.events import (
     AssistantGenerationStartedEvent,
@@ -26,7 +33,10 @@ from chatwaifu_protocol.events import (
 from chatwaifu_protocol.memory import MemoryContextPacket
 from chatwaifu_protocol.session import GenerationState, SessionState
 
-from chatwaifu_runtime.agent.tool_calling import AgentTurnOrchestrator
+from chatwaifu_runtime.agent.tool_calling import (
+    AgentTurnOrchestrator,
+    compute_tools_digest,
+)
 from chatwaifu_runtime.audio.store import AudioAssetStore
 from chatwaifu_runtime.audio.streaming import AudioStreamHub
 from chatwaifu_runtime.avatar.planner import SemanticAvatarCuePlanner
@@ -42,6 +52,7 @@ from chatwaifu_runtime.conversation.models import (
     ConversationSourceContext,
     ConversationTurnOptions,
     GenerationAccepted,
+    GenerationContextSnapshot,
     SessionDataReset,
 )
 from chatwaifu_runtime.conversation.repository import (
@@ -56,8 +67,13 @@ from chatwaifu_runtime.memory.service import MemoryService, UserTurnMemoryObserv
 from chatwaifu_runtime.photo_memory.annotations import PhotoAnnotationService
 from chatwaifu_runtime.photo_memory.recall import PhotoRecall, PhotoRecallService
 from chatwaifu_runtime.playback.service import PlaybackService
-from chatwaifu_runtime.providers.contracts import LlmInputImage, LlmRequest
+from chatwaifu_runtime.providers.contracts import LlmInputImage, LlmProvider, LlmRequest
 from chatwaifu_runtime.providers.factory import ProviderSet
+from chatwaifu_runtime.providers.model_config import (
+    ModelConfigurationService,
+    ModelRoleConfig,
+    extract_nonsecret_route,
+)
 from chatwaifu_runtime.sessions.service import SessionService
 
 _PROACTIVE_PROMPT = (
@@ -94,6 +110,7 @@ class ConversationService:
         character_kernel: CharacterKernelService,
         prompt_compiler: PromptCompiler,
         agent: AgentTurnOrchestrator,
+        models: ModelConfigurationService,
         photo_recall: PhotoRecallService | None = None,
         photo_annotations: PhotoAnnotationService | None = None,
     ) -> None:
@@ -112,8 +129,60 @@ class ConversationService:
         self._photo_annotations = photo_annotations
         self._photo_recall = photo_recall
         self._avatar_planner = SemanticAvatarCuePlanner()
+        self._models = models
         self._active: dict[UUID, _ActiveGeneration] = {}
         self._start_lock = asyncio.Lock()
+
+    def _capture_generation_snapshot(
+        self,
+        *,
+        character: CharacterProfile,
+        user_text: str,
+        options: ConversationTurnOptions,
+        trigger: Literal["user", "proactive"],
+        chat_config: ModelRoleConfig,
+        summary_config: ModelRoleConfig,
+        chat_provider: LlmProvider,
+        routing_previous_user_text: str | None = None,
+    ) -> GenerationContextSnapshot:
+        allow_tools = trigger == "user" and options.allow_tools
+        visible_tools = self._agent.select_tools(
+            user_text,
+            routing_previous_user_text=routing_previous_user_text,
+            allow_tools=allow_tools,
+            supports_tool_calling=chat_provider.supports_tool_calling,
+        )
+
+        tools_digest = compute_tools_digest(visible_tools)
+        chat_route = extract_nonsecret_route(chat_config)
+        summary_route = extract_nonsecret_route(summary_config)
+        package_hash = (
+            character.package_hash
+            or hashlib.sha256(
+                json.dumps(
+                    character.model_dump(mode="json"),
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            ).hexdigest()
+        )
+        identity = PromptContextIdentity.create(
+            character_id=character.character_id,
+            character_package_hash=package_hash,
+            prompt_template_version=PROMPT_TEMPLATE_VERSION,
+            chat_route=chat_route,
+            memory_summary_route=summary_route,
+            tools_digest=tools_digest,
+            presentation_profile=options.presentation_profile,
+        )
+        return GenerationContextSnapshot(
+            chat_config=chat_config,
+            memory_summary_config=summary_config,
+            chat_provider=chat_provider,
+            visible_tools=visible_tools,
+            identity=identity,
+        )
 
     @property
     def active_count(self) -> int:
@@ -515,12 +584,17 @@ class ConversationService:
                 raise KeyError(f"unknown session {session_id}")
             if session.state is not SessionState.READY:
                 raise RuntimeError(f"session is not ready: {session.state}")
-            accepted, events = await self._commit_proactive_turn(session_id, reason)
-            for event in events:
-                await self._publisher.publish_persisted(event)
             character = self._characters.get(session.character_id)
             if character is None:
                 raise RuntimeError(f"character is not installed: {session.character_id}")
+            chat_config = self._models.get("chat")
+            summary_config = self._models.get("memory_summary")
+            chat_provider = self._models.create_chat_provider(chat_config)
+            accepted, events = await self._commit_proactive_turn(
+                session_id, reason, backend_kind=chat_provider.kind
+            )
+            for event in events:
+                await self._publisher.publish_persisted(event)
             memory_context = await self._memory.retrieve_context(
                 session_id,
                 accepted.turn_id,
@@ -534,6 +608,16 @@ class ConversationService:
                 generation_id=accepted.generation_id,
                 character_id=character.character_id,
             )
+            options = ConversationTurnOptions(origin="proactive", allow_tools=False)
+            snapshot = self._capture_generation_snapshot(
+                character=character,
+                user_text=_PROACTIVE_PROMPT,
+                options=options,
+                trigger="proactive",
+                chat_config=chat_config,
+                summary_config=summary_config,
+                chat_provider=chat_provider,
+            )
             task = asyncio.create_task(
                 self._run_generation(
                     accepted,
@@ -543,10 +627,8 @@ class ConversationService:
                     memory_context,
                     history,
                     trigger="proactive",
-                    options=ConversationTurnOptions(
-                        origin="proactive",
-                        allow_tools=False,
-                    ),
+                    options=options,
+                    snapshot=snapshot,
                 ),
                 name=f"proactive-generation-{accepted.generation_id}",
             )
@@ -583,19 +665,23 @@ class ConversationService:
                     source_context=await self._sessions.source_context(session_id),
                     allow_tools=False,
                 )
+            character = self._characters.get(session.character_id)
+            if character is None:
+                raise RuntimeError(f"character is not installed: {session.character_id}")
+            chat_config = self._models.get("chat")
+            summary_config = self._models.get("memory_summary")
+            chat_provider = self._models.create_chat_provider(chat_config)
             accepted, events = await self._commit_user_turn(
                 session_id,
                 normalized,
                 turn_id=turn_id,
                 generation_id=generation_id,
                 options=options,
+                backend_kind=chat_provider.kind,
             )
             try:
                 for event in events:
                     await self._publisher.publish_persisted(event)
-                character = self._characters.get(session.character_id)
-                if character is None:
-                    raise RuntimeError(f"character is not installed: {session.character_id}")
                 memory_observation: UserTurnMemoryObservation | None = None
                 if self._memory.parse_explicit_command(normalized) is not None:
                     await self._memory.observe_user_turn(
@@ -627,6 +713,18 @@ class ConversationService:
                     character_id=character.character_id,
                     text=normalized,
                 )
+                snapshot = self._capture_generation_snapshot(
+                    character=character,
+                    user_text=normalized,
+                    options=options,
+                    trigger="user",
+                    chat_config=chat_config,
+                    summary_config=summary_config,
+                    chat_provider=chat_provider,
+                    routing_previous_user_text=_previous_local_user_text(
+                        history, options.source_context
+                    ),
+                )
                 task = asyncio.create_task(
                     self._run_generation(
                         accepted,
@@ -637,6 +735,7 @@ class ConversationService:
                         history,
                         memory_observation=memory_observation,
                         options=options,
+                        snapshot=snapshot,
                     ),
                     name=f"generation-{accepted.generation_id}",
                 )
@@ -864,6 +963,7 @@ class ConversationService:
         turn_id: UUID,
         generation_id: UUID,
         options: ConversationTurnOptions,
+        backend_kind: str,
     ) -> tuple[GenerationAccepted, tuple[UserTurnCommittedEvent, AssistantGenerationStartedEvent]]:
         now = datetime.now(UTC)
         audio_stream_id = uuid4()
@@ -885,7 +985,7 @@ class ConversationService:
             occurred_at=now,
             source="runtime.conversation",
             privacy=PrivacyLevel.LOCAL,
-            payload=AssistantGenerationStartedPayload(backend_kind=self._providers.llm.kind),
+            payload=AssistantGenerationStartedPayload(backend_kind=backend_kind),
         )
         events = await self._repository.commit_user_generation(
             session_id=session_id,
@@ -893,7 +993,7 @@ class ConversationService:
             generation_id=generation_id,
             audio_stream_id=audio_stream_id,
             text=text,
-            backend_kind=self._providers.llm.kind,
+            backend_kind=backend_kind,
             source_context=options.source_context,
             occurred_at=now,
             user_event=user_event,
@@ -911,7 +1011,7 @@ class ConversationService:
         )
 
     async def _commit_proactive_turn(
-        self, session_id: UUID, reason: str
+        self, session_id: UUID, reason: str, *, backend_kind: str
     ) -> tuple[GenerationAccepted, tuple[GenericCoreEvent, AssistantGenerationStartedEvent]]:
         now = datetime.now(UTC)
         turn_id = uuid4()
@@ -938,7 +1038,7 @@ class ConversationService:
             occurred_at=now,
             source="runtime.conversation",
             privacy=PrivacyLevel.LOCAL,
-            payload=AssistantGenerationStartedPayload(backend_kind=self._providers.llm.kind),
+            payload=AssistantGenerationStartedPayload(backend_kind=backend_kind),
         )
         events = await self._repository.commit_proactive_generation(
             session_id=session_id,
@@ -946,7 +1046,7 @@ class ConversationService:
             generation_id=generation_id,
             audio_stream_id=audio_stream_id,
             prompt=_PROACTIVE_PROMPT,
-            backend_kind=self._providers.llm.kind,
+            backend_kind=backend_kind,
             occurred_at=now,
             proactive_event=proactive_event,
             generation_event=generation_event,
@@ -974,6 +1074,7 @@ class ConversationService:
         trigger: Literal["user", "proactive"] = "user",
         memory_observation: UserTurnMemoryObservation | None = None,
         options: ConversationTurnOptions,
+        snapshot: GenerationContextSnapshot,
     ) -> None:
         output = ""
         segmenter = StreamingTextSegmenter() if options.emits("audio") else None
@@ -1046,11 +1147,16 @@ class ConversationService:
                 source_context=options.source_context,
                 presentation_profile=options.presentation_profile,
                 photo_evidence=photo_recall.evidence,
+                snapshot=snapshot,
             )
             await self._emit_generic(
                 accepted,
                 "character.prompt_compiled",
-                {"report": compilation.report.model_dump(mode="json")},
+                CharacterPromptCompiledPayload(
+                    report=compilation.report,
+                    identity=compilation.identity,
+                    selected_memory_ids=list(compilation.selected_memory_ids),
+                ).model_dump(mode="json"),
             )
             loaded_images: tuple[LlmInputImage, ...] = ()
             if options.image_loader is not None:
@@ -1107,6 +1213,8 @@ class ConversationService:
                 turn_id=accepted.turn_id,
                 ensure_current=lambda: self._ensure_current(accepted),
                 allow_tools=trigger == "user" and options.allow_tools,
+                llm=snapshot.chat_provider,
+                tools=snapshot.visible_tools,
             ):
                 self._ensure_current(accepted)
                 output += delta

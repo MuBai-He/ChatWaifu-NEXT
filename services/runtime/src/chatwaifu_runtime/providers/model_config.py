@@ -10,9 +10,11 @@ from collections.abc import AsyncIterator, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal, cast
+from urllib.parse import urlsplit
 from uuid import uuid4
 
 import httpx2
+from chatwaifu_protocol.character import NonsecretModelRoute
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from chatwaifu_runtime.config.settings import Settings
@@ -238,27 +240,34 @@ class ModelConfigurationService:
         return self.get(config.role)
 
     async def complete(
-        self, role: Literal["memory_extraction", "memory_summary"], system: str, user: str
+        self,
+        role: Literal["memory_extraction", "memory_summary"],
+        system: str,
+        user: str,
+        *,
+        config: ModelRoleConfig | None = None,
     ) -> str:
-        config = self.get(role)
-        if not config.enabled or config.provider == "disabled":
+        effective_config = config if config is not None else self.get(role)
+        if not effective_config.enabled or effective_config.provider == "disabled":
             return ""
-        if config.provider == "demo":
+        if effective_config.provider == "demo":
             if role == "memory_extraction":
                 return '{"memories": []}'
             compact = " ".join(user.split())
             return compact[-1200:]
-        if config.provider != "openai_compatible":
-            raise RuntimeError(f"unsupported completion provider for {role}: {config.provider}")
+        if effective_config.provider != "openai_compatible":
+            raise RuntimeError(
+                f"unsupported completion provider for {role}: {effective_config.provider}"
+            )
         headers = {"Content-Type": "application/json"}
         if key := self._secrets.get(role):
             headers["Authorization"] = f"Bearer {key}"
-        async with httpx2.AsyncClient(timeout=config.timeout_seconds) as client:
+        async with httpx2.AsyncClient(timeout=effective_config.timeout_seconds) as client:
             response = await client.post(
-                openai_compatible_endpoint(config.base_url, "chat/completions"),
+                openai_compatible_endpoint(effective_config.base_url, "chat/completions"),
                 headers=headers,
                 json={
-                    "model": config.model,
+                    "model": effective_config.model,
                     "messages": [
                         {"role": "system", "content": system},
                         {"role": "user", "content": user},
@@ -429,8 +438,7 @@ class ModelConfigurationService:
                 break
         return {"status": "ok", "characters": sum(len(item) for item in chunks)}
 
-    def chat_provider(self) -> LlmProvider:
-        config = self.get("chat")
+    def create_chat_provider(self, config: ModelRoleConfig) -> LlmProvider:
         if not config.enabled or config.provider in {"disabled", "local_hash"}:
             return DemoLlmProvider(self._settings.llm.demo_chunk_delay_ms)
         if config.provider == "demo":
@@ -438,9 +446,12 @@ class ModelConfigurationService:
         return OpenAiCompatibleLlmProvider(
             base_url=config.base_url,
             model=config.model,
-            api_key=self._secrets.get("chat"),
+            api_key=lambda: self._secrets.get("chat"),
             timeout_seconds=config.timeout_seconds,
         )
+
+    def chat_provider(self) -> LlmProvider:
+        return self.create_chat_provider(self.get("chat"))
 
     def _defaults(self, now: datetime) -> dict[ModelRole, ModelRoleConfig]:
         llm = self._settings.llm
@@ -520,3 +531,25 @@ def _hash_embedding(text: str, dimensions: int = 64) -> list[float]:
         vector[slot] += -1.0 if digest[4] & 1 else 1.0
     norm = math.sqrt(sum(value * value for value in vector)) or 1.0
     return [value / norm for value in vector]
+
+
+def extract_nonsecret_route(config: ModelRoleConfig) -> NonsecretModelRoute:
+    endpoint_digest: str | None = None
+    if config.base_url:
+        split = urlsplit(config.base_url)
+        if split.hostname:
+            try:
+                port = split.port
+            except ValueError:
+                port = None
+            route_identity = (
+                f"{split.scheme}://{split.hostname.lower()}:{port or ''}{split.path.rstrip('/')}"
+            )
+            endpoint_digest = hashlib.sha256(route_identity.encode("utf-8")).hexdigest()
+    return NonsecretModelRoute(
+        role=config.role,
+        provider=config.provider,
+        model=config.model,
+        endpoint_digest=endpoint_digest,
+        context_window=config.context_window,
+    )

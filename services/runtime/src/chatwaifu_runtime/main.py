@@ -11,6 +11,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from chatwaifu_runtime.api.guard import LocalClientGuardMiddleware
+from chatwaifu_runtime.api.interaction_diagnostics_routes import (
+    router as interaction_diagnostics_router,
+)
 from chatwaifu_runtime.api.personal_assistant_routes import router as personal_assistant_router
 from chatwaifu_runtime.api.photo_memory_routes import router as photo_memory_router
 from chatwaifu_runtime.api.routes import router
@@ -124,6 +127,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ticket_store=container.ws_ticket_store,
     )
     app.include_router(router)
+    app.include_router(interaction_diagnostics_router)
     app.include_router(personal_assistant_router)
     app.include_router(sticker_library_router)
     app.include_router(photo_memory_router)

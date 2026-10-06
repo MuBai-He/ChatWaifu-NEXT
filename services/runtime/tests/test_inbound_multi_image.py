@@ -53,6 +53,7 @@ from chatwaifu_runtime.providers.openai_compatible import build_messages
 from chatwaifu_runtime.sticker_library.classifier import StickerClassification
 from chatwaifu_runtime.sticker_library.models import StickerSaveCandidate
 from PIL import ExifTags, Image
+from provider_test_support import use_recording_provider
 from test_inbound_image_lifecycle import VisionRecorder, connect, message
 from test_photo_memory_repository import _seed_source_chain
 
@@ -104,7 +105,7 @@ async def test_multi_image_fingerprint_computation_and_duplicate_or_conflict(
     container = RuntimeContainer(runtime_settings)
     await container.start()
     recorder = VisionRecorder()
-    monkeypatch.setattr(container.agent, "_llm", recorder)
+    use_recording_provider(monkeypatch, container.model_configurations, recorder)
 
     conn_id, token = await connect(container)
     msg = message(conn_id, "multi-img-msg")
@@ -158,7 +159,7 @@ async def test_multi_image_provider_dispatch_order_and_vision_prompt(
     container = RuntimeContainer(runtime_settings)
     await container.start()
     recorder = VisionRecorder()
-    monkeypatch.setattr(container.agent, "_llm", recorder)
+    use_recording_provider(monkeypatch, container.model_configurations, recorder)
     conn_id, token = await connect(container)
     msg = message(conn_id, "batch-3-msg", text="按顺序看这三张图")
 
@@ -255,7 +256,7 @@ async def test_multi_image_partial_download_failure_aborts_all_or_nothing(
     container = RuntimeContainer(runtime_settings)
     await container.start()
     recorder = VisionRecorder()
-    monkeypatch.setattr(container.agent, "_llm", recorder)
+    use_recording_provider(monkeypatch, container.model_configurations, recorder)
     conn_id, token = await connect(container)
     msg = message(conn_id, "fail-batch-msg")
 
@@ -362,7 +363,7 @@ async def test_multi_image_cancellation_during_batch_download(
     container = RuntimeContainer(runtime_settings)
     await container.start()
     recorder = VisionRecorder()
-    monkeypatch.setattr(container.agent, "_llm", recorder)
+    use_recording_provider(monkeypatch, container.model_configurations, recorder)
 
     valid_png = _make_test_image(color="red", format="PNG")
     w1 = WeixinInboundImage(encrypt_query_param="enc1")
@@ -448,7 +449,7 @@ async def test_multi_image_photo_observer_saves_all_photos_same_generation(
     container = RuntimeContainer(runtime_settings)
     await container.start()
     recorder = VisionRecorder()
-    monkeypatch.setattr(container.agent, "_llm", recorder)
+    use_recording_provider(monkeypatch, container.model_configurations, recorder)
 
     saved_photos: list[PhotoSaveCandidate] = []
     original_save = container.photo_repository.save
@@ -537,7 +538,7 @@ async def test_multi_image_photo_observer_classification_error_isolation(
     container = RuntimeContainer(runtime_settings)
     await container.start()
     recorder = VisionRecorder()
-    monkeypatch.setattr(container.agent, "_llm", recorder)
+    use_recording_provider(monkeypatch, container.model_configurations, recorder)
 
     saved_photos: list[PhotoSaveCandidate] = []
     original_save = container.photo_repository.save
@@ -615,7 +616,7 @@ async def test_multi_image_sticker_learning_saves_all_qualifying_stickers(
     container = RuntimeContainer(runtime_settings)
     await container.start()
     recorder = VisionRecorder()
-    monkeypatch.setattr(container.agent, "_llm", recorder)
+    use_recording_provider(monkeypatch, container.model_configurations, recorder)
 
     await container.sticker_repository.update_settings(
         "local", "default", learning_enabled=True, expected_revision=0
@@ -693,7 +694,7 @@ async def test_multi_image_observer_batch_cancellation_and_stop_fence(
     container = RuntimeContainer(runtime_settings)
     await container.start()
     recorder = VisionRecorder()
-    monkeypatch.setattr(container.agent, "_llm", recorder)
+    use_recording_provider(monkeypatch, container.model_configurations, recorder)
 
     await container.photo_repository.update_settings(
         "local", "default", retention_enabled=True, expected_revision=0
@@ -969,7 +970,7 @@ async def test_multi_image_photo_observer_annotation_scheduling_batch_boundary(
     container = RuntimeContainer(runtime_settings)
     await container.start()
     recorder = VisionRecorder()
-    monkeypatch.setattr(container.agent, "_llm", recorder)
+    use_recording_provider(monkeypatch, container.model_configurations, recorder)
 
     await container.photo_repository.update_settings(
         "local", "default", retention_enabled=True, expected_revision=0
@@ -1149,7 +1150,7 @@ async def test_multi_image_photo_observer_batch_metadata(
     container = RuntimeContainer(runtime_settings)
     await container.start()
     recorder = VisionRecorder()
-    monkeypatch.setattr(container.agent, "_llm", recorder)
+    use_recording_provider(monkeypatch, container.model_configurations, recorder)
 
     await container.photo_repository.update_settings(
         "local", "default", retention_enabled=True, expected_revision=0

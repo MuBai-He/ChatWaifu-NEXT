@@ -1,6 +1,11 @@
 """Provider- and renderer-independent Character Kernel contracts."""
 
+from __future__ import annotations
+
+import hashlib
+import json
 from typing import Literal
+from uuid import UUID
 
 from pydantic import AwareDatetime, Field
 
@@ -58,3 +63,106 @@ class PromptBudgetReport(ProtocolModel):
     scene_tokens: int = Field(ge=0)
     conversation_tokens: int = Field(ge=0)
     dropped_history_turns: int = Field(ge=0)
+
+
+PROMPT_TEMPLATE_VERSION: str = "v2"
+
+
+class NonsecretModelRoute(ProtocolModel):
+    role: str = Field(min_length=1, max_length=64)
+    provider: str = Field(min_length=1, max_length=64)
+    model: str = Field(min_length=1, max_length=256)
+    endpoint_digest: str | None = Field(default=None, min_length=64, max_length=64)
+    context_window: int = Field(default=8192, ge=1024, le=2_000_000)
+
+
+def compute_prompt_context_identity_hash(
+    *,
+    character_id: str,
+    character_package_hash: str,
+    prompt_template_version: str,
+    presentation_profile: str,
+    chat_route: NonsecretModelRoute,
+    memory_summary_route: NonsecretModelRoute,
+    tools_digest: str,
+) -> str:
+    canonical = json.dumps(
+        {
+            "character_id": character_id,
+            "character_package_hash": character_package_hash,
+            "prompt_template_version": prompt_template_version,
+            "presentation_profile": presentation_profile,
+            "chat_route": {
+                "role": chat_route.role,
+                "provider": chat_route.provider,
+                "model": chat_route.model,
+                "endpoint_digest": chat_route.endpoint_digest,
+                "context_window": chat_route.context_window,
+            },
+            "memory_summary_route": {
+                "role": memory_summary_route.role,
+                "provider": memory_summary_route.provider,
+                "model": memory_summary_route.model,
+                "endpoint_digest": memory_summary_route.endpoint_digest,
+                "context_window": memory_summary_route.context_window,
+            },
+            "tools_digest": tools_digest,
+        },
+        sort_keys=True,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+class PromptContextIdentity(ProtocolModel):
+    schema_version: Literal["1.0"] = "1.0"
+    identity_hash: str = Field(min_length=16, max_length=64)
+    character_id: str = Field(min_length=1, max_length=128)
+    character_package_hash: str = Field(min_length=16, max_length=64)
+    prompt_template_version: str = Field(min_length=1, max_length=64)
+    presentation_profile: str = Field(default="default", max_length=64)
+    chat_route: NonsecretModelRoute
+    memory_summary_route: NonsecretModelRoute
+    tools_digest: str = Field(min_length=16, max_length=64)
+
+    @classmethod
+    def create(
+        cls,
+        *,
+        character_id: str,
+        character_package_hash: str,
+        prompt_template_version: str = PROMPT_TEMPLATE_VERSION,
+        presentation_profile: str | None = None,
+        chat_route: NonsecretModelRoute,
+        memory_summary_route: NonsecretModelRoute,
+        tools_digest: str,
+    ) -> PromptContextIdentity:
+        profile = presentation_profile or "default"
+        identity_hash = compute_prompt_context_identity_hash(
+            character_id=character_id,
+            character_package_hash=character_package_hash,
+            prompt_template_version=prompt_template_version,
+            presentation_profile=profile,
+            chat_route=chat_route,
+            memory_summary_route=memory_summary_route,
+            tools_digest=tools_digest,
+        )
+        return cls(
+            schema_version="1.0",
+            identity_hash=identity_hash,
+            character_id=character_id,
+            character_package_hash=character_package_hash,
+            prompt_template_version=prompt_template_version,
+            presentation_profile=profile,
+            chat_route=chat_route,
+            memory_summary_route=memory_summary_route,
+            tools_digest=tools_digest,
+        )
+
+
+class CharacterPromptCompiledPayload(ProtocolModel):
+    schema_version: Literal["1.0"] = "1.0"
+    report: PromptBudgetReport
+    identity: PromptContextIdentity | None = None
+    selected_memory_ids: list[UUID] | None = None

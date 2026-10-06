@@ -227,6 +227,53 @@ async def test_prompt_compiler_budgets_durable_memory_source_and_drops_oversized
 
 
 @pytest.mark.asyncio
+async def test_prompt_compiler_reports_only_memory_ids_injected_under_budget() -> None:
+    models = _PromptModels()
+    compiler = PromptCompiler(cast(ModelConfigurationService, models))
+    characters = CharacterService(CHARACTERS_ROOT)
+    characters.start()
+    character = characters.get("default")
+    assert character is not None
+    now = datetime.now(UTC)
+    short_id, dropped_id = uuid4(), uuid4()
+    packet = MemoryContextPacket(
+        relevant_memories=[
+            MemoryExcerpt(
+                memory_id=short_id,
+                text="喜欢蓝色",
+                source_event_ids=[uuid4()],
+                relevance=0.9,
+            ),
+            MemoryExcerpt(
+                memory_id=dropped_id,
+                text="过长事实" * 2_000,
+                source_event_ids=[uuid4()],
+                relevance=0.8,
+            ),
+        ],
+        token_budget_used=100,
+    )
+    result = await compiler.compile(
+        character=character,
+        kernel=CharacterKernelSnapshot(
+            character_id="default",
+            user_scope="local",
+            revision=0,
+            affect=AffectState(updated_at=now),
+            relationship=RelationshipState(updated_at=now),
+        ),
+        plan=ResponsePlan(
+            intent="answer", tone="gentle", expression="neutral", rationale="budget check"
+        ),
+        memory=packet,
+        history=(),
+        user_text="我喜欢什么颜色？",
+    )
+    assert result.selected_memory_ids == (short_id,)
+    assert result.recalled_memory_texts == ("喜欢蓝色",)
+
+
+@pytest.mark.asyncio
 async def test_character_kernel_service_negation_handling(runtime_settings: Settings) -> None:
     from chatwaifu_runtime.character_kernel.service import _classify
 
@@ -288,3 +335,159 @@ async def test_character_kernel_service_revision_cas(runtime_settings: Settings)
         assert current.affect.valence > 0.2  # did not get overwritten by old_affect (0.1)
     finally:
         await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_default_persona_package_budget_retains_critical_scene_rules() -> None:
+    characters = CharacterService(CHARACTERS_ROOT)
+    characters.start()
+    nene = characters.get("default")
+    assert nene is not None
+
+    # Verify critical rules exist in persona
+    assert "规则冲突时，严格遵循以下优先级" in nene.system_prompt
+    assert "真实安全与来源事实" in nene.system_prompt
+    assert "用户明确边界与当前任务" in nene.system_prompt
+    assert "关系阶段约束" in nene.system_prompt
+    assert "角色个性表达" in nene.system_prompt
+    assert "通用短消息风格" in nene.system_prompt
+    assert "停止玩笑" in nene.system_prompt
+    assert "绝不能赌气沉默" in nene.system_prompt
+    assert "认真技术求助" in nene.system_prompt
+    assert "绝不使用粗鲁损友式的攻击性言语" in nene.system_prompt
+    assert "不猜测本地、云端或具体供应商" in nene.system_prompt
+    assert "由本地模型驱动" not in nene.system_prompt
+    assert "サノバウィッチ" in nene.system_prompt
+    assert "ゆずソフト作品" in nene.system_prompt
+
+    # Verify original scene examples are present
+    assert "场景回复参考示例" in nene.system_prompt
+    assert "被调侃与害羞反应" in nene.system_prompt
+    assert "停止玩笑与衔接正事" in nene.system_prompt
+    assert "认真求助与代码任务" in nene.system_prompt
+    assert "共同经历记忆不足" in nene.system_prompt
+    assert "明确道别与收口" in nene.system_prompt
+    assert "诚实身份边界" in nene.system_prompt
+
+    # Verify source boundary, preference expression, and explicit question answering rules
+    assert "通用知识不受 Memory Context 限制" in nene.system_prompt
+    assert "用户陈述归属于用户，不等于角色经历过" in nene.system_prompt
+    assert "互动自然表达符合人设的偏好与兴趣" in nene.system_prompt
+    assert "无需机械声明缺乏物理实体" in nene.system_prompt
+    assert "绝不扣留对当前明确问题的解答" in nene.system_prompt
+    assert "不反问是否需要回答" in nene.system_prompt
+    assert "缺乏依据或时效性事实承认不确定" in nene.system_prompt
+
+    # Verify tokens fit well within the minimum persona budget (700 tokens)
+    from chatwaifu_runtime.character_kernel.prompt import _tokens
+
+    persona_tokens = _tokens(nene.system_prompt)
+    assert persona_tokens <= 700, f"Persona tokens {persona_tokens} exceed minimum budget of 700"
+
+    # Compile with minimal context window (1024) to ensure no truncation occurs
+    models = _PromptModels()
+    compiler = PromptCompiler(cast(ModelConfigurationService, models))
+    now = datetime.now(UTC)
+    kernel = CharacterKernelSnapshot(
+        character_id="default",
+        user_scope="local",
+        revision=1,
+        affect=AffectState(updated_at=now),
+        relationship=RelationshipState(updated_at=now),
+    )
+
+    result = await compiler.compile(
+        character=nene,
+        kernel=kernel,
+        plan=ResponsePlan(
+            intent="answer",
+            tone="gentle",
+            expression="neutral",
+            rationale="budget test",
+        ),
+        memory=MemoryContextPacket(token_budget_used=0),
+        history=(),
+        user_text="你好",
+    )
+
+    assert result.report.persona_tokens == persona_tokens
+    # Verify persona is not truncated by ellipsis
+    assert not result.system_prompt.endswith("…")
+    assert "[CHARACTER CANON]\n" + nene.system_prompt in result.system_prompt
+
+
+@pytest.mark.asyncio
+async def test_prompt_compiler_presentation_profiles_im_single_text_and_voice() -> None:
+    characters = CharacterService(CHARACTERS_ROOT)
+    characters.start()
+    nene = characters.get("default")
+    assert nene is not None
+
+    models = _PromptModels()
+    compiler = PromptCompiler(cast(ModelConfigurationService, models))
+    now = datetime.now(UTC)
+    kernel = CharacterKernelSnapshot(
+        character_id="default",
+        user_scope="local",
+        revision=1,
+        affect=AffectState(updated_at=now),
+        relationship=RelationshipState(updated_at=now),
+    )
+    plan = ResponsePlan(
+        intent="answer",
+        tone="gentle",
+        expression="neutral",
+        rationale="profile test",
+    )
+    memory = MemoryContextPacket(token_budget_used=0)
+
+    # 1. Instant message profile: contains IM brevity, conflict priority, and stop-joke rules
+    comp_im = await compiler.compile(
+        character=nene,
+        kernel=kernel,
+        plan=plan,
+        memory=memory,
+        history=(),
+        user_text="你好",
+        presentation_profile="instant_message",
+    )
+    assert "You are messaging in an instant chat" in comp_im.system_prompt
+    assert "Resolve rule conflicts in priority order" in comp_im.system_prompt
+    assert "When the user explicitly asks to stop joking" in comp_im.system_prompt
+    assert "without going globally silent or refusing" in comp_im.system_prompt
+    assert "对方要求停止玩笑或说正事时，立即停止玩笑并认真配合" in comp_im.system_prompt
+    assert "认真技术求助与明确要求详尽的任务必须完整严谨回答" in comp_im.system_prompt
+    assert "[CHARACTER CANON]\n" + nene.system_prompt in comp_im.system_prompt
+    assert "通用知识不受 Memory Context 限制" in comp_im.system_prompt
+    assert "无需机械声明缺乏物理实体" in comp_im.system_prompt
+    assert "绝不扣留对当前明确问题的解答" in comp_im.system_prompt
+
+    # 2. Single text profile: standard output contract without IM chat contract
+    comp_st = await compiler.compile(
+        character=nene,
+        kernel=kernel,
+        plan=plan,
+        memory=memory,
+        history=(),
+        user_text="你好",
+        presentation_profile="single_text",
+    )
+    assert "You are messaging in an instant chat" not in comp_st.system_prompt
+    assert "Stay in character, answer the current user turn" in comp_st.system_prompt
+    assert "[CHARACTER CANON]\n" + nene.system_prompt in comp_st.system_prompt
+    assert "通用知识不受 Memory Context 限制" in comp_st.system_prompt
+
+    # 3. None profile (Voice / default desktop presentation)
+    comp_none = await compiler.compile(
+        character=nene,
+        kernel=kernel,
+        plan=plan,
+        memory=memory,
+        history=(),
+        user_text="你好",
+        presentation_profile=None,
+    )
+    assert "You are messaging in an instant chat" not in comp_none.system_prompt
+    assert "Stay in character, answer the current user turn" in comp_none.system_prompt
+    assert "[CHARACTER CANON]\n" + nene.system_prompt in comp_none.system_prompt
+    assert "通用知识不受 Memory Context 限制" in comp_none.system_prompt

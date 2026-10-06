@@ -44,6 +44,7 @@ from chatwaifu_runtime.providers.contracts import (
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 from fastapi.testclient import TestClient
 from PIL import Image
+from provider_test_support import use_recording_provider
 from test_inbound_image_lifecycle import connect, message
 
 _VISIBLE = "远处的红色灯塔，前景有两只蓝色小船"
@@ -150,7 +151,7 @@ async def test_photo_restart_cross_surface_recall_and_transitive_deletion(
 ) -> None:
     initial = RuntimeContainer(runtime_settings)
     await initial.start()
-    monkeypatch.setattr(initial.agent, "_llm", PhotoRecorder())
+    use_recording_provider(monkeypatch, initial.model_configurations, PhotoRecorder())
     try:
         retained = await _retain(initial, monkeypatch)
         assert retained.photo.caption == "今天发给你看看"
@@ -163,7 +164,7 @@ async def test_photo_restart_cross_surface_recall_and_transitive_deletion(
     restarted = RuntimeContainer(runtime_settings)
     await restarted.start()
     recorder = PhotoRecorder()
-    monkeypatch.setattr(restarted.agent, "_llm", recorder)
+    use_recording_provider(monkeypatch, restarted.model_configurations, recorder)
     try:
         await restarted.photo_repository.update_settings(
             "local", "default", retention_enabled=False, expected_revision=1
@@ -212,7 +213,7 @@ async def test_photo_restart_cross_surface_recall_and_transitive_deletion(
     after_delete = RuntimeContainer(runtime_settings)
     await after_delete.start()
     after_recorder = PhotoRecorder()
-    monkeypatch.setattr(after_delete.agent, "_llm", after_recorder)
+    use_recording_provider(monkeypatch, after_delete.model_configurations, after_recorder)
     try:
         await _submit(after_delete, desktop.session_id, "之前那张海边照片里有什么？")
         request = after_recorder.requests[-1]
@@ -234,7 +235,7 @@ def test_photo_api_auth_preview_delete_cancels_exact_active_recall(
     assert client.delete(route + "/not-a-uuid").status_code == 422
     container = cast(RuntimeContainer, client.app.state.container)  # type: ignore[union-attr]
     recorder = PhotoRecorder()
-    monkeypatch.setattr(container.agent, "_llm", recorder)
+    use_recording_provider(monkeypatch, container.model_configurations, recorder)
     assert client.portal is not None
     retained = client.portal.call(_retain, container, monkeypatch)
     photo_route = route + "/" + str(retained.photo.photo_id)
@@ -287,7 +288,7 @@ async def test_experience_reset_removes_photos_and_fences_pending_save(
 ) -> None:
     container = RuntimeContainer(runtime_settings)
     await container.start()
-    monkeypatch.setattr(container.agent, "_llm", PhotoRecorder())
+    use_recording_provider(monkeypatch, container.model_configurations, PhotoRecorder())
     try:
         retained = await _retain(container, monkeypatch)
         desktop = await container.sessions.create_session("default")
@@ -312,7 +313,7 @@ async def test_photo_deletion_preserves_role_boundaries_and_focus(
     initial = RuntimeContainer(runtime_settings)
     await initial.start()
     initial_recorder = PhotoRecorder()
-    monkeypatch.setattr(initial.agent, "_llm", initial_recorder)
+    use_recording_provider(monkeypatch, initial.model_configurations, initial_recorder)
     try:
         retained = await _retain(initial, monkeypatch)
         assert retained.photo.caption == "今天发给你看看"
@@ -330,7 +331,7 @@ async def test_photo_deletion_preserves_role_boundaries_and_focus(
     restarted = RuntimeContainer(runtime_settings)
     await restarted.start()
     recorder = PhotoRecorder()
-    monkeypatch.setattr(restarted.agent, "_llm", recorder)
+    use_recording_provider(monkeypatch, restarted.model_configurations, recorder)
     try:
         desktop = await restarted.sessions.create_session("default")
         # Recall the photo on desktop
@@ -392,7 +393,7 @@ async def test_photo_deletion_preserves_role_boundaries_and_focus(
     after_delete = RuntimeContainer(runtime_settings)
     await after_delete.start()
     after_recorder = PhotoRecorder()
-    monkeypatch.setattr(after_delete.agent, "_llm", after_recorder)
+    use_recording_provider(monkeypatch, after_delete.model_configurations, after_recorder)
     try:
         photo_question_gen_id = await _submit(
             after_delete, desktop.session_id, "那张照片里的屋顶是什么颜色的？"

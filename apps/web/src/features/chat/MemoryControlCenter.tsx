@@ -3,7 +3,7 @@ import type {
   MemoryRecord,
   MemorySource,
 } from "@chatwaifu/protocol";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ProductIcon } from "../../components/ProductIcon";
 import { ModalPortal } from "./ModalPortal";
 import "./memory-control-center.css";
@@ -38,22 +38,31 @@ export function MemoryControlCenter({
   const [sources, setSources] = useState<Record<string, MemorySource[]>>({});
   const [kind, setKind] = useState("");
   const [sensitivity, setSensitivity] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
   const [editing, setEditing] = useState<EditState | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const requestSequence = useRef(0);
 
   const refresh = async (
-    filters: { kind?: string; sensitivity?: string } = {},
+    filters: {
+      kind?: string;
+      sensitivity?: string;
+      includeTombstoned?: boolean;
+    } = {},
   ) => {
     if (!sessionId) return;
+    const sequence = ++requestSequence.current;
     const [nextRecords, nextProposals] = await Promise.all([
       getMemoryRecords({
         sessionId,
+        includeTombstoned: filters.includeTombstoned ?? showHistory,
         kind: (filters.kind ?? kind) || undefined,
         sensitivity: (filters.sensitivity ?? sensitivity) || undefined,
       }),
       getMemoryProposals("pending", sessionId),
     ]);
+    if (sequence !== requestSequence.current) return;
     setRecords(nextRecords);
     setProposals(nextProposals);
   };
@@ -264,18 +273,36 @@ export function MemoryControlCenter({
                       <option value="sensitive">敏感</option>
                     </select>
                   </label>
-                  <small>{records.length} 条有效记忆</small>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={showHistory}
+                      onChange={(event) => {
+                        const next = event.target.checked;
+                        setShowHistory(next);
+                        void refresh({ includeTombstoned: next }).catch(
+                          (error: unknown) => setNotice(errorMessage(error)),
+                        );
+                      }}
+                    />
+                    显示修订与遗忘历史
+                  </label>
+                  <small>{records.length} 条记忆</small>
                 </div>
 
                 {records.map((record) => (
                   <article
                     className="memory-record-card"
                     key={record.memory_id}
+                    id={`memory-${record.memory_id}`}
                   >
                     <div className="memory-record-heading">
                       <div>
                         <span>{record.pinned ? "核心" : record.kind}</span>
                         <code>{record.sensitivity}</code>
+                        {record.state !== "active" ? (
+                          <code>{record.state}</code>
+                        ) : null}
                       </div>
                       <small>{Math.round(record.importance * 100)}%</small>
                     </div>
@@ -302,12 +329,29 @@ export function MemoryControlCenter({
                           取消
                         </button>
                       </div>
+                    ) : record.state === "tombstoned" ? (
+                      <p>已忘记的记忆不显示正文</p>
                     ) : (
                       <p>{record.text}</p>
                     )}
+                    {record.supersedes ? (
+                      <small>
+                        修订自：
+                        {records.some(
+                          (item) => item.memory_id === record.supersedes,
+                        ) ? (
+                          <a href={`#memory-${record.supersedes}`}>
+                            {record.supersedes.slice(0, 8)}
+                          </a>
+                        ) : (
+                          record.supersedes.slice(0, 8)
+                        )}
+                      </small>
+                    ) : null}
                     <div className="memory-card-actions">
                       <button
                         type="button"
+                        disabled={record.state !== "active"}
                         onClick={() =>
                           setEditing({
                             memoryId: record.memory_id,
@@ -319,6 +363,7 @@ export function MemoryControlCenter({
                       </button>
                       <button
                         type="button"
+                        disabled={record.state !== "active"}
                         onClick={() => void togglePinned(record)}
                       >
                         {record.pinned ? "取消核心" : "设为核心"}
@@ -332,6 +377,7 @@ export function MemoryControlCenter({
                       <button
                         className="danger"
                         type="button"
+                        disabled={record.state !== "active"}
                         onClick={() => void remove(record)}
                       >
                         忘记

@@ -8,6 +8,8 @@ allowBuilds:
   # unless it is reviewed and added here explicitly.
   esbuild: true
 overrides:
+  # GHSA-68fv-2mgg-jv7q: indexed source-map section offsets can stall the event loop.
+  source-map-js: 1.2.2
   # VitePress 1.6 pins Vite 5, which is affected by GHSA-fx2h-pf6j-xcff.
   # Plugin Vue 5 supports Vite 6; keep the docs graph on the first patched line.
   "vitepress@1.6.4>vite": 6.4.3

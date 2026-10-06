@@ -1,0 +1,26 @@
+{
+  "delivery_parts": [],
+  "delivery_status": null,
+  "memory_candidates": [],
+  "next_cursor": null,
+  "playback_segments": [],
+  "prompt_budget": null,
+  "prompt_identity": null,
+  "response_plan": null,
+  "schema_version": "1.0",
+  "selected_memory_ids": null,
+  "summary": {
+    "generation_id": "00000000-0000-4000-8000-000000000901",
+    "generation_state": "completed",
+    "interaction_id": "00000000-0000-4000-8000-000000000901",
+    "occurred_at": "2026-08-23T08:00:00Z",
+    "reason": null,
+    "schema_version": "1.0",
+    "session_id": "00000000-0000-4000-8000-000000000201",
+    "trigger": "user",
+    "turn_id": "00000000-0000-4000-8000-000000000902"
+  },
+  "timeline": [],
+  "tool_calls": [],
+  "truncated": false
+}

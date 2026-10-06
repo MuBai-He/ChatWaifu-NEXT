@@ -74,6 +74,7 @@ from chatwaifu_runtime.providers.contracts import (
     LlmTextDelta,
 )
 from PIL import Image
+from provider_test_support import use_recording_provider
 
 
 def _make_test_image_bytes(color: str = "red", width: int = 16, height: int = 16) -> bytes:
@@ -366,6 +367,58 @@ async def _wait_condition(
     raise TimeoutError(f"Condition not met within {wait_seconds}s")
 
 
+def _bind_channel_dependencies(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    store: InMemoryChannelCredentialStore | None = None,
+    transport: _FakeWeixin | None = None,
+    host_keyring_calls: list[str] | None = None,
+) -> tuple[InMemoryChannelCredentialStore, _FakeWeixin]:
+    effective_store = store if store is not None else InMemoryChannelCredentialStore()
+    effective_transport = transport if transport is not None else _FakeWeixin()
+
+    def _create_store(*_args: object, **_kwargs: object) -> InMemoryChannelCredentialStore:
+        return effective_store
+
+    def _create_transport(*_args: object, **_kwargs: object) -> _FakeWeixin:
+        return effective_transport
+
+    monkeypatch.setattr(
+        "chatwaifu_runtime.bootstrap.container.KeyringChannelCredentialStore",
+        _create_store,
+    )
+    monkeypatch.setattr(
+        "chatwaifu_runtime.bootstrap.container.EncryptedFileChannelCredentialStore",
+        _create_store,
+    )
+    monkeypatch.setattr(
+        "chatwaifu_runtime.bootstrap.container.WeixinILinkClient",
+        _create_transport,
+    )
+
+    def _guard_host_keyring(*_args: object, **_kwargs: object) -> None:
+        if host_keyring_calls is not None:
+            host_keyring_calls.append("unexpected host keyring call")
+        raise AssertionError("Host keyring was unexpectedly invoked during isolated burst test")
+
+    try:
+        import keyring
+
+        monkeypatch.setattr(keyring, "get_password", _guard_host_keyring)
+        monkeypatch.setattr(keyring, "set_password", _guard_host_keyring)
+        monkeypatch.setattr(keyring, "delete_password", _guard_host_keyring)
+        monkeypatch.setattr(keyring, "get_keyring", _guard_host_keyring)
+    except ImportError:
+        pass
+
+    monkeypatch.setattr(
+        "chatwaifu_runtime.external_channels.credentials.KeyringChannelCredentialStore._available_sync",
+        _guard_host_keyring,
+    )
+
+    return effective_store, effective_transport
+
+
 async def _setup_burst_environment(
     runtime_settings: Settings,
     monkeypatch: pytest.MonkeyPatch,
@@ -373,6 +426,7 @@ async def _setup_burst_environment(
     initial_time: float = 1000.0,
     user_id: str = "owner-1",
     bot_id: str = "bot-1",
+    host_keyring_calls: list[str] | None = None,
 ) -> tuple[
     RuntimeContainer,
     ChannelManagementService,
@@ -382,27 +436,20 @@ async def _setup_burst_environment(
     ManualBurstScheduler,
     UUID,
 ]:
+    store, transport = _bind_channel_dependencies(
+        monkeypatch, host_keyring_calls=host_keyring_calls
+    )
+
     container = RuntimeContainer(runtime_settings)
     await container.start()
 
     recorder = VisionRecorder()
-    monkeypatch.setattr(container.agent, "_llm", recorder)
+    use_recording_provider(monkeypatch, container.model_configurations, recorder)
 
     scheduler = ManualBurstScheduler(initial_time)
     container.external_channels.burst_coordinator._scheduler = scheduler
 
-    store = InMemoryChannelCredentialStore()
-    transport = _FakeWeixin()
-
-    management = ChannelManagementService(
-        container.external_channels,
-        container.external_channel_repository,
-        store,
-        transport,
-        event_hub=container.event_hub,
-        event_publisher=container.event_publisher,
-    )
-    container.channel_management = management
+    management = container.channel_management
     original_checkpoint = container.external_channel_repository.set_adapter_cursor
 
     async def checkpoint(connection_id: UUID, *, cursor: str, updated_at: datetime) -> None:
@@ -1307,8 +1354,8 @@ async def test_restart_during_intake_dispatch_leaves_no_orphans_or_duplicate_rep
         container,
         _management,
         transport,
-        _store,
-        _recorder,
+        store,
+        recorder,
         scheduler,
         connection_id,
     ) = await _setup_burst_environment(runtime_settings, monkeypatch)
@@ -1356,10 +1403,13 @@ async def test_restart_during_intake_dispatch_leaves_no_orphans_or_duplicate_rep
         )
         assert t1 is not None and t1.status is ChannelTurnStatus.COMPLETED
     finally:
-        await container.stop()
+        await asyncio.wait_for(container.stop(), timeout=10.0)
 
-    # Now restart container on the same database
+    # Recreate the transport while retaining the controlled credential store.
+    request_count = len(recorder.requests)
+    _, restored_transport = _bind_channel_dependencies(monkeypatch, store=store)
     new_container = RuntimeContainer(runtime_settings)
+    use_recording_provider(monkeypatch, new_container.model_configurations, recorder)
     await new_container.start()
     try:
         # Inflight turns list should have 0 leftover inflight turns
@@ -1368,7 +1418,11 @@ async def test_restart_during_intake_dispatch_leaves_no_orphans_or_duplicate_rep
         )
         assert len(inflight) == 0
     finally:
-        await new_container.stop()
+        await asyncio.wait_for(new_container.stop(), timeout=10.0)
+
+    assert restored_transport.download_count == 0
+    assert not restored_transport.sent_messages
+    assert len(recorder.requests) == request_count
 
 
 @pytest.mark.asyncio
@@ -1461,17 +1515,23 @@ async def test_crash_restart_interrupted_intake_recovery(
     Live ownership is absent on restart, leader turn is durably closed with friendly
     recovery notice once without redownloading images, followers mirror FAILED state.
     """
+    initial_tasks = set(asyncio.all_tasks())
+    host_keyring_calls: list[str] = []
+
     (
         container,
         _management,
         transport,
-        _store,
+        store,
         recorder,
         _scheduler,
         connection_id,
-    ) = await _setup_burst_environment(runtime_settings, monkeypatch)
+    ) = await _setup_burst_environment(
+        runtime_settings, monkeypatch, host_keyring_calls=host_keyring_calls
+    )
     t0 = datetime.now(UTC)
 
+    c1_running_tasks: set[asyncio.Task[object]] = set()
     try:
         img1 = _make_inbound_image(transport, "aes-crash-1", _IMG_RED)
         img2 = _make_inbound_image(transport, "aes-crash-2", _IMG_BLUE)
@@ -1505,6 +1565,9 @@ async def test_crash_restart_interrupted_intake_recovery(
         await _wait_for_turn(container, connection_id, "crash-lead-msg")
         await _wait_for_turn(container, connection_id, "crash-follow-msg")
 
+        # Capture references to tasks running while container 1 is active
+        c1_running_tasks = set(asyncio.all_tasks()) - initial_tasks
+
         # Turns are admitted in SQLite before generation ever started
         lead = await container.external_channels.repository.find_turn_by_external_message(
             connection_id, "crash-lead-msg"
@@ -1518,14 +1581,20 @@ async def test_crash_restart_interrupted_intake_recovery(
             with sqlite3.connect(snapshot_path) as dst:
                 src.backup(dst)
     finally:
-        # Simulate abrupt process termination while collecting
-        await container.stop()
+        # Simulate abrupt process termination while collecting with bounded shutdown
+        await asyncio.wait_for(container.stop(), timeout=10.0)
 
-    # Reset transport state for new container
-    transport.download_count = 0
-    transport.sent_messages.clear()
-    transport.sent.clear()
+    # Prove all fixture/container tasks completed upon container stop
+    c1_leaked = [t for t in c1_running_tasks if not t.done()]
+    assert not c1_leaked, (
+        f"Container 1 tasks leaked after stop: {[t.get_name() for t in c1_leaked]}"
+    )
 
+    _, restored_transport = _bind_channel_dependencies(
+        monkeypatch, store=store, host_keyring_calls=host_keyring_calls
+    )
+
+    before_c2_tasks = set(asyncio.all_tasks())
     # Restart container with snapshot DB simulating state right before crash
     new_container = RuntimeContainer(
         runtime_settings.model_copy(
@@ -1536,8 +1605,12 @@ async def test_crash_restart_interrupted_intake_recovery(
             }
         )
     )
+    use_recording_provider(monkeypatch, new_container.model_configurations, recorder)
     await new_container.start()
+    c2_running_tasks: set[asyncio.Task[object]] = set()
     try:
+        c2_running_tasks = set(asyncio.all_tasks()) - before_c2_tasks
+
         # Live burst coordinator ownership is absent in new_container
         assert not new_container.external_channels.burst_coordinator.is_live_burst_turn(lead_id)
 
@@ -1564,10 +1637,19 @@ async def test_crash_restart_interrupted_intake_recovery(
         assert follower.delivery_id is None
 
         # Zero redownloads occurred
-        assert transport.download_count == 0
+        assert restored_transport.download_count == 0
         assert len(recorder.requests) == 0
     finally:
-        await new_container.stop()
+        await asyncio.wait_for(new_container.stop(), timeout=10.0)
+
+    # Prove all restored container tasks completed upon container stop
+    c2_leaked = [t for t in c2_running_tasks if not t.done()]
+    assert not c2_leaked, (
+        f"Restored container tasks leaked after stop: {[t.get_name() for t in c2_leaked]}"
+    )
+    assert not host_keyring_calls
+    assert restored_transport.download_count == 0
+    assert len(recorder.requests) == 0
 
 
 @pytest.mark.asyncio
@@ -1664,11 +1746,14 @@ async def test_whole_burst_download_deadline_timeout(
 
 
 @pytest.mark.asyncio
-async def test_photo_memory_origin_validation(runtime_settings: Settings) -> None:
+async def test_photo_memory_origin_validation(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Scenario 14: Photo memory origin validation in persistence adapter.
 
     Valid origin preserves exact member turn received_at timestamp; invalid origin fails closed.
     """
+    _bind_channel_dependencies(monkeypatch)
     container = RuntimeContainer(runtime_settings)
     await container.start()
     try:
@@ -1850,7 +1935,7 @@ async def test_photo_memory_origin_validation(runtime_settings: Settings) -> Non
         )
         assert saved_invalid is None
     finally:
-        await container.stop()
+        await asyncio.wait_for(container.stop(), timeout=10.0)
 
 
 @pytest.mark.asyncio
