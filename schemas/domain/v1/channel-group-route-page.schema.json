@@ -57,6 +57,11 @@
           "title": "Account Key",
           "type": "string"
         },
+        "allow_requested_voice": {
+          "default": false,
+          "title": "Allow Requested Voice",
+          "type": "boolean"
+        },
         "audience_fingerprint": {
           "pattern": "^[0-9a-f]{64}$",
           "title": "Audience Fingerprint",

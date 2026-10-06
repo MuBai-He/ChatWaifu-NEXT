@@ -5,7 +5,7 @@ from typing import Protocol
 from uuid import UUID
 
 from chatwaifu_protocol.channel_groups import ChannelGroupPauseReason
-from chatwaifu_protocol.channels import ChannelDeliveryPartDraft
+from chatwaifu_protocol.channels import ChannelAudioDeliveryPartPayload, ChannelDeliveryPartDraft
 
 from chatwaifu_runtime.external_channels.group_models import (
     ChannelGroupAdmission,
@@ -67,6 +67,7 @@ class ChannelGroupRepository(Protocol):
         members: tuple[ChannelGroupRouteMember, ...],
         scene_id: str,
         updated_at: datetime,
+        allow_requested_voice: bool | None = None,
     ) -> ChannelGroupTransition: ...
 
     async def pause_routes(
@@ -118,6 +119,15 @@ class ChannelGroupRepository(Protocol):
         delivery_id: UUID,
         completed_at: datetime,
         parts: tuple[ChannelDeliveryPartDraft, ...] | None = None,
+    ) -> ChannelGroupPlanResult: ...
+
+    async def create_group_voice_plan(
+        self,
+        lineage: ChannelGroupRouteLineage,
+        *,
+        payload: ChannelAudioDeliveryPartPayload,
+        delivery_id: UUID,
+        created_at: datetime,
     ) -> ChannelGroupPlanResult: ...
 
     async def cancel_group_turn(

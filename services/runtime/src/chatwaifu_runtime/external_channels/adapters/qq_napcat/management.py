@@ -32,7 +32,10 @@ from chatwaifu_runtime.characters.service import CharacterService
 from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.external_channels.credentials import ChannelCredentialStore
-from chatwaifu_runtime.external_channels.group_models import ChannelGroupInboundDescriptor
+from chatwaifu_runtime.external_channels.group_models import (
+    GROUP_MENTION_ONLY_TEXT,
+    ChannelGroupInboundDescriptor,
+)
 from chatwaifu_runtime.external_channels.models import (
     ChannelDeliveryPlanRecord,
     ChannelInboundImageInput,
@@ -115,6 +118,7 @@ class NapCatManagement:
         self._journal_cursor: UUID | None = None
         self._journal_task: asyncio.Task[None] | None = None
         self._group_ingress_tasks: dict[asyncio.Task[None], UUID] = {}
+        self._group_observation_tasks: dict[asyncio.Task[None], tuple[UUID, str, str]] = {}
         self._group_ingress_order: dict[tuple[UUID, str], asyncio.Task[None]] = {}
         self._group_notice_pending: set[UUID] = set()
         self._group_stop_reasons: dict[UUID, ChannelGroupPauseReason] = {}
@@ -189,11 +193,20 @@ class NapCatManagement:
             group_id=group_id,
             allowed_senders=None,
             allow_unmentioned_images=True,
+            allow_unmentioned_text=True,
         )
         if message is None:
             return
         if len(self._group_ingress_tasks) >= 32:
             logger.info("QQ group admission capacity exceeded")
+            return
+        observation_key = (connection_id, group_id, message.sender_key)
+        if not message.bot_mentioned and (
+            len(self._group_observation_tasks) >= 24
+            or sum(key == observation_key for key in self._group_observation_tasks.values()) >= 3
+        ):
+            # Reserve admission slots for mentions and other members; these
+            # transport bounds do not grant authority to an unresolved sender.
             return
         client = self._clients.get(connection_id)
         favorite = self._favorites.get(connection_id)
@@ -212,9 +225,10 @@ class NapCatManagement:
             message.group_id,
             message.sender_key,
             message.external_message_id,
-            message.text,
+            GROUP_MENTION_ONLY_TEXT if message.mention_only else message.text,
             message.received_at,
             incoming_image.source_fingerprint if incoming_image is not None else None,
+            mention_only=message.mention_only,
         )
         key = (connection_id, group_id)
         predecessor = self._group_ingress_order.get(key)
@@ -229,9 +243,12 @@ class NapCatManagement:
         task = asyncio.create_task(ordered_admission(), name="qq-group-admission")
         self._group_ingress_order[key] = task
         self._group_ingress_tasks[task] = connection_id
+        if not message.bot_mentioned:
+            self._group_observation_tasks[task] = observation_key
 
         def finished_admission(finished: asyncio.Task[None]) -> None:
             self._group_ingress_tasks.pop(finished, None)
+            self._group_observation_tasks.pop(finished, None)
             if self._group_ingress_order.get(key) is finished:
                 self._group_ingress_order.pop(key, None)
 
@@ -255,6 +272,8 @@ class NapCatManagement:
                 await self._groups.observe_group_image_reference(
                     descriptor, access_token=access_token, image_input=incoming_image
                 )
+            else:
+                await self._groups.observe_group_text(descriptor, access_token=access_token)
         except asyncio.CancelledError:
             raise
         except ExternalChannelError as error:

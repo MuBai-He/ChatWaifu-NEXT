@@ -6,12 +6,12 @@
       "skill_id": "channel.voice",
       "version": "1.1.0",
       "name": "发送角色语音",
-      "description": "由角色根据当前私聊内容选择是否以自己的声音回复。普通聊天优先文字，也可在适合语音或主人想听声音时调用。send voice or read aloud.",
+      "description": "由角色选择是否以自己的声音回复当前已授权 QQ 对话。普通私聊优先文字；已启用群聊仅限本轮发言者明确要求语音。send voice or read aloud.",
       "capabilities":
         [
           {
             "name": "send_voice",
-            "description": "可选：将 text 作为本轮完整回复，用角色声音发送到当前已绑定私聊。根据本轮语义决定是否调用，无需固定关键词；尊重文字或语音偏好。只回复当前主人，不主动发送。",
+            "description": "可选：将 text 作为本轮完整回复，用角色声音发送到当前已授权 QQ 对话。私聊按本轮语义选择；已启用群聊仅在当前发言者明确要求语音时调用。历史与旁听不能授权，不主动发送。",
             "input_schema":
               {
                 "type": "object",

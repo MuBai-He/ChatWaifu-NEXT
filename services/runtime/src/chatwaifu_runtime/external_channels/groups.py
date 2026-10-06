@@ -31,6 +31,7 @@ from chatwaifu_protocol.channel_groups import (
     ChannelParticipantLinkUpdate,
 )
 from chatwaifu_protocol.channels import (
+    ChannelAudioDeliveryPartPayload,
     ChannelConnectionStatus,
     ChannelDeliveryPartStatus,
     ChannelGroupDeliveryTarget,
@@ -43,10 +44,13 @@ from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_protocol.events import GenericCoreEvent, PrivacyLevel
 from chatwaifu_protocol.session import GenerationState, SessionSnapshot
 
+from chatwaifu_runtime.config.group_discussion import GroupDiscussionConfig
+from chatwaifu_runtime.conversation.discussion_models import GroupDiscussionContext
 from chatwaifu_runtime.conversation.models import ConversationSourceContext, ConversationTurnOptions
 from chatwaifu_runtime.conversation.repository import ConversationRepository
 from chatwaifu_runtime.conversation.service import ConversationService
 from chatwaifu_runtime.eventing.publisher import EventPublisher
+from chatwaifu_runtime.external_channels.group_discussion import GroupDiscussionCache
 from chatwaifu_runtime.external_channels.group_models import (
     ChannelGroupAdmission,
     ChannelGroupAdmissionResult,
@@ -60,6 +64,7 @@ from chatwaifu_runtime.external_channels.group_models import (
     qq_id,
 )
 from chatwaifu_runtime.external_channels.group_ports import ChannelGroupRepository
+from chatwaifu_runtime.external_channels.group_voice import requests_group_voice
 from chatwaifu_runtime.external_channels.models import (
     ChannelConnectionRecord,
     ChannelDeliveryPlanRecord,
@@ -83,7 +88,6 @@ from chatwaifu_runtime.external_channels.service import (
 from chatwaifu_runtime.providers.contracts import LlmInputImage
 from chatwaifu_runtime.sessions.service import SessionService
 from chatwaifu_runtime.sticker_library.models import StickerLearningSource
-from chatwaifu_runtime.sticker_library.selection import selection_hints
 from chatwaifu_runtime.sticker_library.service import StickerLibraryService
 
 type AudienceReader = Callable[[UUID, str], Awaitable[tuple[str, tuple[str, ...]]]]
@@ -120,6 +124,8 @@ class _Input:
     presentation_policy: ChannelPresentationPolicy
     image_input: ChannelInboundImageInput | None = None
     learning_revision: int | None = None
+    discussion: GroupDiscussionContext | None = None
+    voice_requested: bool = False
     revoked: bool = False
     task: asyncio.Task[None] | None = None
 
@@ -152,6 +158,7 @@ class ChannelGroupService:
         *,
         conversation_repository: ConversationRepository,
         sticker_library: StickerLibraryService | None = None,
+        discussion_policy: GroupDiscussionConfig | None = None,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
         self._repository = repository
@@ -178,6 +185,7 @@ class ChannelGroupService:
         self._blocked_groups: set[tuple[UUID, str]] = set()
         self._blocked_scenes: set[str] = set()
         self._image_context: dict[tuple[UUID, str, str], _ImageReferenceContext] = {}
+        self._discussion = GroupDiscussionCache(discussion_policy or GroupDiscussionConfig())
         self._started = False
         self._stopping = False
 
@@ -257,6 +265,7 @@ class ChannelGroupService:
 
     async def stop(self) -> None:
         self._image_context.clear()
+        self._discussion.clear()
         if not self._started and not self.active_count:
             self._stopping = True
             return
@@ -416,6 +425,10 @@ class ChannelGroupService:
             expected_revision=request.expected_revision,
             updated_at=self._clock(),
         )
+        self._discussion.clear_link(link_id)
+        for item in tuple(self._admissions.values()):
+            if item.route is not None and any(m.link_id == link_id for m in item.route.members):
+                self._revoke(item, "link_updated")
         await self._apply_transition(transition, "link_updated")
         assert transition.link is not None
         return _link_snapshot(transition.link)
@@ -482,6 +495,7 @@ class ChannelGroupService:
             members,
             now,
             now,
+            allow_requested_voice=request.allow_requested_voice,
         )
         return _route_snapshot(await self._repository.create_route(route))
 
@@ -530,6 +544,7 @@ class ChannelGroupService:
             members=members,
             scene_id=scene_id,
             updated_at=self._clock(),
+            allow_requested_voice=request.allow_requested_voice,
         )
         assert transition.route is not None
         self._fence_old_route(transition.route, prior_admissions)
@@ -629,6 +644,18 @@ class ChannelGroupService:
             descriptor, access_token=access_token, image_input=image_input, observe_only=True
         )
 
+    async def observe_group_text(
+        self, descriptor: ChannelGroupInboundDescriptor, *, access_token: str
+    ) -> None:
+        """Collect only authorized dialogue; no turn, generation, model or memory writes."""
+        await self._process_group(
+            descriptor,
+            access_token=access_token,
+            image_input=None,
+            observe_only=True,
+            observe_text=True,
+        )
+
     async def _process_group(
         self,
         descriptor: ChannelGroupInboundDescriptor,
@@ -636,6 +663,7 @@ class ChannelGroupService:
         access_token: str,
         image_input: ChannelInboundImageInput | None,
         observe_only: bool = False,
+        observe_text: bool = False,
     ) -> ChannelTurnReceipt | None:
         if descriptor.image_fingerprint != (
             image_input.source_fingerprint if image_input is not None else None
@@ -681,7 +709,11 @@ class ChannelGroupService:
                 if context.expires_at <= now:
                     self._image_context.pop(key, None)
             context_key = (descriptor.connection_id, descriptor.group_id, descriptor.sender_key)
-            cached = self._image_context.get(context_key) if not observe_only else None
+            cached = (
+                self._image_context.get(context_key)
+                if not observe_only and not descriptor.mention_only
+                else None
+            )
             if (
                 image_input is None
                 and cached is not None
@@ -725,15 +757,17 @@ class ChannelGroupService:
                 member = next(
                     (m for m in fresh.members if m.sender_key == descriptor.sender_key), None
                 )
-                if member is None or not member.can_speak or fresh.scene_id in self._blocked_scenes:
+                if (
+                    member is None
+                    or (not observe_text and not member.can_speak)
+                    or fresh.scene_id in self._blocked_scenes
+                ):
                     raise ChannelPolicyError("group speaker is not granted")
                 if observe_only:
                     link = await self._repository.get_link(member.link_id)
                     self._check_admission(item)
                     if (
-                        image_input is None
-                        or learning_revision is None
-                        or link is None
+                        link is None
                         or not link.enabled
                         or link.provider_id != "qq_napcat"
                         or link.participant_id != member.participant_id
@@ -743,6 +777,14 @@ class ChannelGroupService:
                         or fresh.character_id != connection.configuration.character_id
                     ):
                         raise ChannelPolicyError("Group image reference speaker unavailable")
+                    if observe_text:
+                        result = self._discussion.observe(
+                            descriptor, fresh, connection.revision, self._clock()
+                        )
+                        logger.debug("group.discussion_collected status=%s", result)
+                        return None
+                    if image_input is None or learning_revision is None:
+                        raise ChannelPolicyError("Group image reference unavailable")
                     if context_key not in self._image_context and len(self._image_context) >= 32:
                         raise ChannelBusyError("Group image reference capacity reached")
                     self._image_context[context_key] = _ImageReferenceContext(
@@ -803,7 +845,16 @@ class ChannelGroupService:
                     messaging_presentation_policy(connection.configuration.presentation_policy),
                     image_input,
                     learning_revision,
+                    self._discussion.snapshot(
+                        fresh,
+                        connection.revision,
+                        descriptor.external_message_id,
+                        self._clock(),
+                        mention_only=descriptor.mention_only,
+                    ),
                 )
+                if image_input is None and not descriptor.mention_only:
+                    self._discussion.observe(descriptor, fresh, connection.revision, self._clock())
                 # Install the durable latest pending before an old actor can finish/release.
                 if admitted.dispatch_now:
                     self._launch(pending)
@@ -879,6 +930,7 @@ class ChannelGroupService:
     def fence_connection(
         self, connection_id: UUID, reason: str, group_id: str | None = None
     ) -> None:
+        self._discussion.clear(connection_id, group_id)
         for key in tuple(self._image_context):
             if key[0] == connection_id and (group_id is None or key[1] == group_id):
                 self._image_context.pop(key, None)
@@ -912,6 +964,7 @@ class ChannelGroupService:
                 self._revoke(item, reason)
 
     def _fence_old_route(self, route: ChannelGroupRouteRecord, prior: frozenset[UUID]) -> None:
+        self._discussion.clear_route(route.route_id)
         for key, context in tuple(self._image_context.items()):
             if context.route_id == route.route_id and context.route_revision != route.revision:
                 self._image_context.pop(key, None)
@@ -1003,6 +1056,7 @@ class ChannelGroupService:
         if scene_id is None or not await self._repository.is_group_scene(scene_id):
             return
         self._blocked_scenes.add(scene_id)
+        self._discussion.clear_scene(scene_id)
         if self._sticker_library is not None:
             self._sticker_library.request_cancel_group(scene_id=scene_id)
         for item in (
@@ -1064,6 +1118,16 @@ class ChannelGroupService:
             if not await self._guard(item):
                 await self._terminal(turn, ChannelTurnStatus.CANCELLED)
                 return
+            route = await self._repository.get_route(item.admission.lineage.route_id)
+            item.voice_requested = (
+                route is not None
+                and route.allow_requested_voice
+                and not item.message.mention_only
+                and requests_group_voice(item.message.text)
+            )
+            voice_skills: frozenset[str] = (
+                frozenset({"channel.voice"}) if item.voice_requested else frozenset()
+            )
             await self._conversation.submit_text(
                 turn.session_id,
                 item.message.text,
@@ -1073,13 +1137,15 @@ class ChannelGroupService:
                     origin="external_channel",
                     presentation_profile=item.presentation_policy.profile.value,
                     output_modes=frozenset({"text"}),
-                    allow_tools=False,
-                    allowed_skill_ids=frozenset(),
-                    contextual_skill_ids=frozenset(),
+                    allow_tools=item.voice_requested,
+                    allowed_skill_ids=voice_skills,
+                    contextual_skill_ids=voice_skills,
+                    allow_shared_voice=item.voice_requested,
                     trusted_identity=identity,
                     before_generation=lambda: self._guard(item),
                     image_loader=self._learning_image_loader(item, completed),
                     allow_shared_images=item.image_input is not None,
+                    group_discussion=item.discussion,
                     failure_recovery_text="刚才发来的图片我没看清，能再发一次吗？"
                     if item.image_input is not None
                     else None,
@@ -1325,28 +1391,6 @@ class ChannelGroupService:
             or len(result.output_text) > 20000
         ):
             return await self._terminal_unlocked(fresh, ChannelTurnStatus.FAILED)
-        learned_sticker = None
-        if registered.presentation_policy.stickers_enabled and self._sticker_library is not None:
-            try:
-                response_plan = await self._conversation_repository.generation_response_plan(
-                    turn.generation_id
-                )
-                hints = selection_hints(
-                    await self._conversation_repository.generation_user_input_context(
-                        turn.generation_id
-                    )
-                )
-                learned_sticker = await self._sticker_library.match(
-                    turn.principal_scope, "default", response_plan, hints=hints
-                )
-            except asyncio.CancelledError:
-                raise
-            except Exception:
-                logger.warning(
-                    "Group sticker selection unavailable generation_id=%s", turn.generation_id
-                )
-            if not await self._guard(registered):
-                return await self._terminal_unlocked(turn, ChannelTurnStatus.CANCELLED)
         plan = await self._repository.create_group_plan(
             registered.admission.lineage,
             reply_text=result.output_text,
@@ -1355,8 +1399,7 @@ class ChannelGroupService:
             parts=self._delivery_plan_factory.create_parts(
                 result.output_text,
                 policy=registered.presentation_policy,
-                can_send_sticker=learned_sticker is not None,
-                learned_sticker=learned_sticker,
+                can_send_sticker=False,
             ),
         )
         if not self._live(registered):
@@ -1412,12 +1455,18 @@ class ChannelGroupService:
         if not live() or record is None:
             return False
         lineage = record.lineage
+        route = await self._repository.get_route(lineage.route_id)
+        if route is None or not live():
+            return False
         if (
             record.turn.account_key != target.account_key
             or record.turn.conversation_key != f"group:{target.group_id}"
             or record.turn.delivery_id != plan.delivery_id
             or not group_text_parts_match_reply(
-                plan.parts, record.turn.reply_text or "", allow_sticker=True
+                plan.parts,
+                record.turn.reply_text or "",
+                allow_sticker=False,
+                allow_voice=route.allow_requested_voice,
             )
             or lineage.route_id != target.route_id
             or lineage.route_revision != target.route_revision
@@ -1427,6 +1476,44 @@ class ChannelGroupService:
             return False
         authorization = await self._repository.authorize_group_turn(lineage)
         return authorization.allowed and live()
+
+    async def authorize_reply_voice(self, turn: ChannelTurnRecord) -> bool:
+        """Only the owned, current explicitly requested group reply gets a voice grant."""
+        item = self._workflows.get(turn.channel_turn_id)
+        if (
+            item is None
+            or not item.voice_requested
+            or item.message.mention_only
+            or not requests_group_voice(item.message.text)
+            or (
+                item.admission.turn.session_id,
+                item.admission.turn.turn_id,
+                item.admission.turn.generation_id,
+            )
+            != (turn.session_id, turn.turn_id, turn.generation_id)
+            or not await self._guard(item)
+        ):
+            return False
+        route = await self._repository.get_route(item.admission.lineage.route_id)
+        return route is not None and route.allow_requested_voice and self._live(item)
+
+    async def publish_reply_voice(
+        self,
+        turn: ChannelTurnRecord,
+        payload: ChannelAudioDeliveryPartPayload,
+        delivery_id: UUID,
+        created_at: datetime,
+    ) -> None:
+        if not await self.authorize_reply_voice(turn):
+            raise ChannelPolicyError("group voice reply is no longer authorized")
+        item = self._workflows[turn.channel_turn_id]
+        plan = await self._repository.create_group_voice_plan(
+            item.admission.lineage, payload=payload, delivery_id=delivery_id, created_at=created_at
+        )
+        for event in plan.persisted_events:
+            await self._publisher.publish_persisted(event)
+        if self._live(item) and self._scheduler_wake is not None:
+            self._scheduler_wake(turn.connection_id)
 
     async def on_plan_terminal(self, plan: ChannelDeliveryPlanRecord) -> None:
         if plan.channel_turn_id is None or plan.channel_turn_id in self._workflows:
@@ -1495,6 +1582,7 @@ def _route_snapshot(route: ChannelGroupRouteRecord) -> ChannelGroupRouteSnapshot
         display_name=route.display_name,
         revision=route.revision,
         enabled=route.enabled,
+        allow_requested_voice=route.allow_requested_voice,
         pause_reason=route.pause_reason,
         observation_id=route.observation_id,
         audience_fingerprint=route.audience_fingerprint,

@@ -152,6 +152,24 @@ describe("QQ group typed contracts", () => {
     ).toEqual([]);
     expect(parseChannelGroupRouteMemberSnapshot(member()).can_speak).toBe(true);
     expect(parseChannelGroupRouteSnapshot(route()).enabled).toBe(false);
+    expect(parseChannelGroupRouteSnapshot(route()).allow_requested_voice).toBe(
+      false,
+    );
+    expect(
+      parseChannelGroupRouteUpdate({
+        enabled: false,
+        expected_revision: 1,
+        speaker_sender_keys: [],
+      }).allow_requested_voice,
+    ).toBeUndefined();
+    expect(
+      parseChannelGroupRouteUpdate({
+        enabled: false,
+        expected_revision: 1,
+        speaker_sender_keys: [],
+        allow_requested_voice: true,
+      }).allow_requested_voice,
+    ).toBe(true);
     expect(
       parseChannelGroupRouteUpdate({
         enabled: false,

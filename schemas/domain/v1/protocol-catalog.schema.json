@@ -2857,6 +2857,11 @@
     "ChannelGroupRouteCreate": {
       "additionalProperties": false,
       "properties": {
+        "allow_requested_voice": {
+          "default": false,
+          "title": "Allow Requested Voice",
+          "type": "boolean"
+        },
         "display_name": {
           "maxLength": 80,
           "minLength": 1,
@@ -2964,6 +2969,11 @@
         "account_key": {
           "title": "Account Key",
           "type": "string"
+        },
+        "allow_requested_voice": {
+          "default": false,
+          "title": "Allow Requested Voice",
+          "type": "boolean"
         },
         "audience_fingerprint": {
           "pattern": "^[0-9a-f]{64}$",
@@ -3082,6 +3092,18 @@
     "ChannelGroupRouteUpdate": {
       "additionalProperties": false,
       "properties": {
+        "allow_requested_voice": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Allow Requested Voice"
+        },
         "enabled": {
           "title": "Enabled",
           "type": "boolean"

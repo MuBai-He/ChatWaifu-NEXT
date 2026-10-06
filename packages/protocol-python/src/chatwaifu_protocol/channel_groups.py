@@ -93,6 +93,7 @@ class ChannelGroupRouteCreate(ChannelGroupInput):
     observation_id: UUID
     display_name: str = Field(min_length=1, max_length=80)
     speaker_sender_keys: list[str] = Field(default_factory=list[str], max_length=32)
+    allow_requested_voice: bool = Field(default=False, strict=True)
 
     @field_validator("speaker_sender_keys")
     @classmethod
@@ -105,6 +106,7 @@ class ChannelGroupRouteUpdate(ChannelGroupInput):
     expected_revision: int = Field(strict=True, ge=1)
     observation_id: UUID | None = None
     speaker_sender_keys: list[str] = Field(max_length=32)
+    allow_requested_voice: bool | None = Field(default=None, strict=True)
 
     @field_validator("speaker_sender_keys")
     @classmethod
@@ -135,6 +137,7 @@ class ChannelGroupRouteSnapshot(ChannelVersionedModel):
     display_name: str
     revision: int = Field(ge=1)
     enabled: bool = False
+    allow_requested_voice: bool = False
     pause_reason: ChannelGroupPauseReason | None = None
     observation_id: UUID
     audience_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
