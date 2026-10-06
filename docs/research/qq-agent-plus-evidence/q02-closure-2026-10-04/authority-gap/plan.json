@@ -1,0 +1,31 @@
+{
+  "code_version": "v44",
+  "category": "S1",
+  "model_http_limit": 0,
+  "search_call_limit": 2,
+  "read_call_limit": 2,
+  "read_only": true,
+  "queries": [
+    {
+      "query": "民航局 充电宝 3C 召回",
+      "domains": []
+    },
+    {
+      "query": "旅客 充电宝 3C 标识 召回",
+      "domains": [
+        "caac.gov.cn"
+      ]
+    }
+  ],
+  "search_endpoint": "http://127.0.0.1:18080",
+  "reader_endpoint": "http://127.0.0.1:11235",
+  "reader_provider": "crawl4ai",
+  "dns_resolver": "cloudflare",
+  "builtin_fallback": false,
+  "purpose": "Resolve actual official-body coverage gap, distinguish search strategy/result, read output and model answer; no new prompt rule or hidden query supplement",
+  "no_duplicate_read": "skip all successful v41/v43 READ URLs",
+  "scope": "direct public search/read adapters; not native model discovery or production Conversation",
+  "production_changed": false,
+  "agy_used": false,
+  "quality_approval": false
+}

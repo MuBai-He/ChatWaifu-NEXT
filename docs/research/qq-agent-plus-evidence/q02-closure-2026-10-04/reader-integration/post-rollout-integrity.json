@@ -1,0 +1,27 @@
+{
+  "components": [
+    {
+      "image_id": "sha256:76646f4e6d20c9514828b15e68487aafbb0fd15b52d2666a76891ee7d4b40c17",
+      "image_reference": "unclecode/crawl4ai@sha256:84751dab794259db05d5bd4e5c766a8041a65f0554326e4516e620abdf2fa18b",
+      "name": "cw2-public-web-crawl4ai-1",
+      "running": true,
+      "started_at": "2026-10-04T05:38:16.622233201Z"
+    },
+    {
+      "image_id": "sha256:85b1794aa5c7ba4d5f382d101426d2af32da2728dd1d17228b9172f444ab7a7b",
+      "image_reference": "ghcr.io/searxng/searxng:latest",
+      "name": "cw2-public-web-searxng-1",
+      "running": true,
+      "started_at": "2026-10-03T04:45:34.589376209Z"
+    }
+  ],
+  "credential_leaks": 0,
+  "credential_values_checked": 2,
+  "files_scanned": 14,
+  "new_model_calls": 0,
+  "new_source_sha256": "9095b832c38f799b90eb1243c06f0690694e78fc9b2535604e5780047e51cf37",
+  "production_python_changed": [
+    "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web_providers.py"
+  ],
+  "production_python_files_baselined": 208
+}

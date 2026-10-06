@@ -1,0 +1,173 @@
+{
+  "requests": 12,
+  "quality_approved": false,
+  "items": [
+    {
+      "query_index": 0,
+      "requested_engine": "baidu",
+      "active": true,
+      "returned_engines": [],
+      "attribution_valid": true,
+      "result_count": 0,
+      "errors": [
+        [
+          "baidu",
+          "CAPTCHA"
+        ]
+      ]
+    },
+    {
+      "query_index": 0,
+      "requested_engine": "yahoo",
+      "active": true,
+      "returned_engines": [
+        "yahoo"
+      ],
+      "attribution_valid": true,
+      "result_count": 7,
+      "errors": []
+    },
+    {
+      "query_index": 0,
+      "requested_engine": "qwant",
+      "active": true,
+      "returned_engines": [],
+      "attribution_valid": true,
+      "result_count": 0,
+      "errors": [
+        [
+          "qwant",
+          "CAPTCHA"
+        ]
+      ]
+    },
+    {
+      "query_index": 0,
+      "requested_engine": "mojeek",
+      "active": false,
+      "returned_engines": [
+        "yahoo"
+      ],
+      "attribution_valid": false,
+      "result_count": 7,
+      "errors": [
+        [
+          "baidu",
+          "Suspended: CAPTCHA"
+        ],
+        [
+          "qwant",
+          "CAPTCHA"
+        ]
+      ]
+    },
+    {
+      "query_index": 0,
+      "requested_engine": "startpage",
+      "active": false,
+      "returned_engines": [
+        "yahoo"
+      ],
+      "attribution_valid": false,
+      "result_count": 7,
+      "errors": [
+        [
+          "baidu",
+          "Suspended: CAPTCHA"
+        ],
+        [
+          "qwant",
+          "CAPTCHA"
+        ]
+      ]
+    },
+    {
+      "query_index": 0,
+      "requested_engine": "bing news",
+      "active": true,
+      "returned_engines": [
+        "bing news"
+      ],
+      "attribution_valid": true,
+      "result_count": 7,
+      "errors": []
+    },
+    {
+      "query_index": 1,
+      "requested_engine": "yahoo",
+      "active": true,
+      "returned_engines": [
+        "yahoo"
+      ],
+      "attribution_valid": true,
+      "result_count": 7,
+      "errors": []
+    },
+    {
+      "query_index": 1,
+      "requested_engine": "bing news",
+      "active": true,
+      "returned_engines": [],
+      "attribution_valid": true,
+      "result_count": 0,
+      "errors": [
+        [
+          "bing news",
+          "parsing error"
+        ]
+      ]
+    },
+    {
+      "query_index": 2,
+      "requested_engine": "yahoo",
+      "active": true,
+      "returned_engines": [
+        "yahoo"
+      ],
+      "attribution_valid": true,
+      "result_count": 7,
+      "errors": []
+    },
+    {
+      "query_index": 2,
+      "requested_engine": "bing news",
+      "active": true,
+      "returned_engines": [
+        "bing news"
+      ],
+      "attribution_valid": true,
+      "result_count": 1,
+      "errors": []
+    },
+    {
+      "query_index": 3,
+      "requested_engine": "yahoo",
+      "active": true,
+      "returned_engines": [],
+      "attribution_valid": true,
+      "result_count": 0,
+      "errors": []
+    },
+    {
+      "query_index": 3,
+      "requested_engine": "bing news",
+      "active": true,
+      "returned_engines": [],
+      "attribution_valid": true,
+      "result_count": 0,
+      "errors": [
+        [
+          "bing news",
+          "parsing error"
+        ]
+      ]
+    }
+  ],
+  "limitation": "Two inactive-engine requests fell back to mixed search and repeated blocked engines unintentionally. Those rows are invalid as individual-engine evidence. New candidate setup must check /config before queries. No challenge bypass or proxy rotation.",
+  "observations": [
+    "Baidu and Qwant challenge on first direct query.",
+    "Yahoo returned newer secondary reports and the Raft official homepage, but the diagnostic dated operator query was empty; current original-source coverage is not established.",
+    "Bing news returned old/mixed-jurisdiction news; two of four queries had parsing errors.",
+    "Mojeek and Startpage are inactive in deployed image defaults, despite module files being present."
+  ]
+}

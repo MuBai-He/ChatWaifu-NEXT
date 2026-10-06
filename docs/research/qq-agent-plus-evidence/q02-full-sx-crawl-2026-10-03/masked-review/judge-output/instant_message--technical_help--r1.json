@@ -1,0 +1,63 @@
+{
+  "review_group_id": "instant_message:technical_help:r1",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "219880a1a47adcfe24e6763e74fe7b31234d0010629526219e52ab0b17915c0a",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 563,
+    "total_tokens": 5905,
+    "prompt_tokens": 5342
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"instant_message:technical_help:r1\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"两者均准确指明默认冒泡且其余任务不自动取消。候选1额外指出TaskGroup替代方案，严谨度略高；候选2的反问略显多余。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均准确给出了 return_exceptions=True 及其作用机制与代码调用方式，回答完整清晰。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"两者均给出可运行完整代码并使用 isinstance 判断。候选2在打印时输出了类型名和索引，结构更清晰。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"两者均准确确认直接返回实例。候选2补充的 CancelledError 继承自 BaseException 对异常捕获更具实用参考价值。\",\n      \"factual_checks_needed\": [\n        \"Python 3.8+ 中 asyncio.CancelledError 是否继承自 BaseException\"\n      ]\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "instant_message:technical_help:r1",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "两者均准确指明默认冒泡且其余任务不自动取消。候选1额外指出TaskGroup替代方案，严谨度略高；候选2的反问略显多余。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均准确给出了 return_exceptions=True 及其作用机制与代码调用方式，回答完整清晰。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "两者均给出可运行完整代码并使用 isinstance 判断。候选2在打印时输出了类型名和索引，结构更清晰。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "两者均准确确认直接返回实例。候选2补充的 CancelledError 继承自 BaseException 对异常捕获更具实用参考价值。",
+        "factual_checks_needed": [
+          "Python 3.8+ 中 asyncio.CancelledError 是否继承自 BaseException"
+        ]
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 4336
+}

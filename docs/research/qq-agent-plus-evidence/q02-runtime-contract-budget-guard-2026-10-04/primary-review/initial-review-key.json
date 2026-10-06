@@ -1,0 +1,86 @@
+{
+  "detailed_answer:r0:t1:candidate:A": {
+    "position": "pre_user",
+    "key": "detailed_answer:r0:t1:candidate"
+  },
+  "detailed_answer:r0:t1:candidate:B": {
+    "position": "system",
+    "key": "detailed_answer:r0:t1:candidate"
+  },
+  "detailed_answer:r0:t2:candidate:A": {
+    "position": "system",
+    "key": "detailed_answer:r0:t2:candidate"
+  },
+  "detailed_answer:r0:t3:candidate:A": {
+    "position": "system",
+    "key": "detailed_answer:r0:t3:candidate"
+  },
+  "detailed_answer:r0:t4:candidate:A": {
+    "position": "system",
+    "key": "detailed_answer:r0:t4:candidate"
+  },
+  "greeting:r0:t1:candidate:A": {
+    "position": "system",
+    "key": "greeting:r0:t1:candidate"
+  },
+  "greeting:r0:t1:candidate:B": {
+    "position": "pre_user",
+    "key": "greeting:r0:t1:candidate"
+  },
+  "greeting:r0:t2:candidate:A": {
+    "position": "system",
+    "key": "greeting:r0:t2:candidate"
+  },
+  "greeting:r0:t2:candidate:B": {
+    "position": "pre_user",
+    "key": "greeting:r0:t2:candidate"
+  },
+  "greeting:r0:t3:candidate:A": {
+    "position": "system",
+    "key": "greeting:r0:t3:candidate"
+  },
+  "greeting:r0:t3:candidate:B": {
+    "position": "pre_user",
+    "key": "greeting:r0:t3:candidate"
+  },
+  "greeting:r0:t4:candidate:A": {
+    "position": "system",
+    "key": "greeting:r0:t4:candidate"
+  },
+  "greeting:r0:t4:candidate:B": {
+    "position": "pre_user",
+    "key": "greeting:r0:t4:candidate"
+  },
+  "identity:r0:t1:candidate:A": {
+    "position": "pre_user",
+    "key": "identity:r0:t1:candidate"
+  },
+  "identity:r0:t1:candidate:B": {
+    "position": "system",
+    "key": "identity:r0:t1:candidate"
+  },
+  "identity:r0:t2:candidate:A": {
+    "position": "system",
+    "key": "identity:r0:t2:candidate"
+  },
+  "identity:r0:t2:candidate:B": {
+    "position": "pre_user",
+    "key": "identity:r0:t2:candidate"
+  },
+  "identity:r0:t3:candidate:A": {
+    "position": "pre_user",
+    "key": "identity:r0:t3:candidate"
+  },
+  "identity:r0:t3:candidate:B": {
+    "position": "system",
+    "key": "identity:r0:t3:candidate"
+  },
+  "identity:r0:t4:candidate:A": {
+    "position": "system",
+    "key": "identity:r0:t4:candidate"
+  },
+  "identity:r0:t4:candidate:B": {
+    "position": "pre_user",
+    "key": "identity:r0:t4:candidate"
+  }
+}

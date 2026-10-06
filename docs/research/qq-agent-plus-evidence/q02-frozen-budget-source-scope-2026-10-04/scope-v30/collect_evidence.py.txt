@@ -1,0 +1,42 @@
+"""Scan credentials in process, verify immutable overlays, then archive text evidence."""
+import difflib,hashlib,json,tarfile
+from pathlib import Path
+secrets=[json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']]
+for line in Path('/home/mubai/.local/share/chatwaifu-server/config/public-web.env').read_text().splitlines():
+ if line.startswith('CHATWAIFU_PUBLIC_WEB__') and '=' in line:
+  name,value=line.split('=',1)
+  if 'KEY' in name or 'TOKEN' in name:
+   value=value.strip().strip(chr(34)).strip(chr(39))
+   if value:secrets.append(value)
+specs=[('v29','/tmp/cw2-q02-v29-builtin-recovery-20261004','/tmp/cw2-q02-builtin-recovery-v29-eval','overlay-integrity.json'),('v30','/tmp/cw2-q02-v30-scope-receipts-20261004','/tmp/cw2-q02-scope-receipts-v30-eval','scope-overlay-integrity.json')]
+baseline=Path('/tmp/cw2-q02-budget-guard-v27-eval')
+all_names=set()
+for _label,stage_path,_snapshot,manifest_name in specs:
+ all_names.update(json.loads((Path(stage_path)/manifest_name).read_text()))
+for label,stage_path,snapshot_path,manifest_name in specs:
+ stage=Path(stage_path);snapshot=Path(snapshot_path)
+ manifest=json.loads((stage/manifest_name).read_text())
+ assert all(hashlib.sha256((snapshot/name).read_bytes()).hexdigest()==digest for name,digest in manifest.items()),'Frozen overlay mismatch'
+ source_manifest={name:hashlib.sha256((snapshot/name).read_bytes()).hexdigest() for name in sorted(all_names) if (snapshot/name).exists()}
+ (stage/'frozen-source-sha256.json').write_text(json.dumps(source_manifest,indent=2)+'\n')
+ patch=[]
+ for name in sorted(source_manifest):
+  before=(baseline/name).read_text().splitlines(keepends=True) if (baseline/name).exists() else []
+  after=(snapshot/name).read_text().splitlines(keepends=True)
+  patch.extend(difflib.unified_diff(before,after,fromfile='a/'+name,tofile='b/'+name))
+ (stage/'code-changes-from-v27.patch').write_text(''.join(patch))
+ selected=[]
+ for directory in [stage,stage/'runtime-pilot',stage/'failed-stream-control']:
+  if not directory.is_dir():continue
+  selected.extend(p for p in directory.iterdir() if p.is_file() and p.suffix in {'.json','.jsonl','.md','.log','.py','.patch'} and p.name!='artifact-integrity.json')
+ hashes={}
+ for path in sorted(selected):
+  data=path.read_bytes()
+  assert all(secret.encode() not in data for secret in secrets),'Configured credential in evidence'
+  hashes[str(path.relative_to(stage))]=hashlib.sha256(data).hexdigest()
+ integrity={'configured_credentials_absent':True,'frozen_overlay_verified':True,'source_snapshot_post_run_hashes':True,'files':hashes,'database_excluded':True,'hidden_reasoning_not_captured':True}
+ (stage/'artifact-integrity.json').write_text(json.dumps(integrity,indent=2)+'\n')
+ with tarfile.open(stage/'public-evidence.tar.gz','w:gz') as archive:
+  for path in sorted(selected):archive.add(path,arcname=str(path.relative_to(stage)))
+  archive.add(stage/'artifact-integrity.json',arcname='artifact-integrity.json')
+ print(json.dumps({'stage':label,'verified_files':len(hashes),'configured_credentials_absent':True,'source_overlay_verified':True}))

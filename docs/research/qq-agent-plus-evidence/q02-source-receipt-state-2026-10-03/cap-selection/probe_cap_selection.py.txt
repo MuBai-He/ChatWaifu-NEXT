@@ -1,0 +1,42 @@
+"""Frozen native next-action selection with 5/20 results from one real response."""
+import copy,hashlib,json,sys,time
+from pathlib import Path
+import requests
+snapshot=Path('/tmp/cw2-q02-source-decision-v24-eval')
+sys.path[:0]=[str(snapshot/'services/runtime/src'),str(snapshot/'packages/protocol-python/src'),str(snapshot/'packages/model-worker-sdk-python/src'),'/tmp/cw2-q02-eval-deps']
+from chatwaifu_runtime.runtime_skills.public_web_search import _result_url
+from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
+wire=[json.loads(s)['payload'] for s in Path('/tmp/cw2-q02-v24-source-smoke-20261003/results/actual-provider-payloads.jsonl').read_text().splitlines()]
+base=wire[10];assert base['tools'][0]['function']['name']=='cw2_source_decision_v4'
+row=next(r for r in map(json.loads,Path('/tmp/cw2-q02-search-cap-probe-20261003/results.jsonl').read_text().splitlines()) if r['index']==1)
+seen=set();candidates=[];filtered=0
+for raw in row['response']['results'][:20]:
+ try:url=_result_url(raw['url'],'http://127.0.0.1:18081/search')
+ except (ValueError,SkillExecutionError):filtered+=1;continue
+ if url in seen:filtered+=1;continue
+ seen.add(url);candidates.append({'url':url,'title':raw.get('title','')[:240],'snippet':raw.get('content','')[:480]})
+root=Path('/tmp/cw2-q02-cap-selection-probe-20261003');root.mkdir(mode=0o700,exist_ok=True)
+assert not (root/'attempts.jsonl').exists(),'Existing attempts; inspect before resuming'
+(root/'plan.json').write_text(json.dumps({'requests_max':6,'repeats':3,'limits':[5,20],'controlled_source':'same real SearXNG response from search-cap probe index 1','source_body_sha256':row['body_sha256'],'source_query':row['query'],'candidate_count':len(candidates),'tool_execution':False,'synthetic_receipt_projection':True,'purpose':'Only next-action selection under result-cap variation; not an actual Runtime skill execution or answer-quality pass'},ensure_ascii=False,indent=2)+'\n')
+key=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+s=requests.Session();s.trust_env=False
+for repeat in range(3):
+ for limit in [5,20]:
+  p=copy.deepcopy(base);p['stream']=False;p.pop('stream_options',None)
+  tool=next(m for m in p['messages'] if m['role']=='tool')
+  content=json.loads(tool['content']);data=content['data'];assert data['query']==row['query']
+  data.update(results=candidates[:limit],total_matched=len(candidates),filtered_count=filtered,truncated=len(candidates)>limit,body_sha256=row['body_sha256'],provider_queries=[{'query':row['query'],'body_sha256':row['body_sha256']}],retrieved_at=None)
+  # Hold metadata identical across arms; only result list and truncation differ.
+  data['retrieved_at']=None
+  data['evaluation_provenance']='Controlled projection of an actual direct SearXNG response; retrieval timestamp was not recorded.'
+  tool['content']=json.dumps(content,ensure_ascii=False,separators=(',',':'))
+  sample=f'{repeat}:{limit}';digest=hashlib.sha256(json.dumps(p,ensure_ascii=False,sort_keys=True).encode()).hexdigest()
+  with (root/'attempts.jsonl').open('a') as f:f.write(json.dumps({'key':sample,'request_sha256':digest})+'\n')
+  begin=time.monotonic();response=s.post('https://mubai.website:8318/v1/chat/completions',json=p,headers={'Authorization':'Bearer '+key},timeout=180);result=response.json()
+  for c in result.get('choices',[]):
+   for k in ['reasoning','reasoning_content','thinking']:c.get('message',{}).pop(k,None)
+  record={'key':sample,'limit':limit,'repeat':repeat,'request':p,'request_sha256':digest,'http_status':response.status_code,'latency_ms':round((time.monotonic()-begin)*1000),'response':result,'tool_execution':False,'synthetic_receipt_projection':True}
+  assert key not in json.dumps(record)
+  with (root/'results.jsonl').open('a') as f:f.write(json.dumps(record,ensure_ascii=False)+'\n')
+  print(json.dumps({k:record[k] for k in ['key','http_status','latency_ms']}),flush=True)
+(root/'exit-code.json').write_text('{"exit_code":0}\n')

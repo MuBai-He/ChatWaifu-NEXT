@@ -1,0 +1,486 @@
+{
+  "schema_version": "1.0",
+  "kind": "single_candidate_runtime_compatibility_and_source_audit",
+  "local_date": "2026-10-01",
+  "prompt_as_of": "2026-09-30T16:23:48+00:00",
+  "state_time": "2026-01-01T00:00:00+00:00",
+  "parent_commit": "0ec54698e1895e2f4b38d10940fd59e48cdc41cc",
+  "generation_code_state": "uncommitted prompt v3 and evaluator 1.4.0, before neutral fallback wording fix",
+  "endpoint_port": 8318,
+  "usd_cost": null,
+  "price_source": null,
+  "reviewer": "primary Codex agent",
+  "blind": false,
+  "known_candidate_design": true,
+  "production_permissions_changed": false,
+  "production_persona_replaced": false,
+  "models": [
+    {
+      "model": "gemini-3.8-flash-high",
+      "logical_replies": 8,
+      "provider_rounds": 8,
+      "unique_journal_ids": 8,
+      "runtime_fallbacks": 1,
+      "usage": {
+        "prompt_tokens": 25771,
+        "completion_tokens": 2573,
+        "total_tokens": 33199,
+        "reasoning_tokens": 4855
+      },
+      "latency_ms": {
+        "p50": 8337.5,
+        "p95": 13189
+      },
+      "tool_runs": [],
+      "provider_requested_calls": [],
+      "required_function_probe": {
+        "requested_calls": [
+          {
+            "call_id": "echo_probe-1790785438613707876-9",
+            "name": "echo_probe",
+            "arguments": {
+              "text": "q02"
+            }
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage": {
+          "prompt_tokens": 87,
+          "completion_tokens": 18,
+          "total_tokens": 175,
+          "reasoning_tokens": 70
+        },
+        "latency_ms": 10384,
+        "function_executed": false
+      },
+      "evaluation_identity": {
+        "tool": "evaluate_character_scenarios",
+        "version": "1.4.0",
+        "prompt_as_of": "2026-09-30T16:23:48+00:00",
+        "state_time": "2026-01-01T00:00:00+00:00",
+        "fixtures_hash": "1a2281443a1c0fc5",
+        "provider": "openai_compatible",
+        "model": "gemini-3.8-flash-high",
+        "repeats": 1,
+        "base_url_hash": "937c7a5a291b7e56",
+        "input_usd_per_million": null,
+        "output_usd_per_million": null,
+        "pricing_source": null,
+        "cost_policy": "no_cost_ceiling",
+        "cost_ceiling": null,
+        "variants": {
+          "candidate_v5": {
+            "hash": "3df16760df3f75aa"
+          }
+        },
+        "execution_path": "runtime_source_tools",
+        "runtime_source_config": {
+          "permission_policy": "allow_once",
+          "dns_resolver": "cloudflare",
+          "max_provider_requests": 40,
+          "implementation_sha256": "f4453ce5abfa949e87013b6eb2dd4b886dd217ea0fcc4e361463e5e9380c78de"
+        }
+      },
+      "primary_quality_findings": {
+        "source_turn": "Runtime fallback: no requested tool call despite required tools; source not verified.",
+        "checklist": "No verified source carried forward; missing updated marking and recall conditions.",
+        "technical": "Displayed ordinary-exception programs pass; cancellation and special exceptions are not fully audited."
+      },
+      "q02_pass": false
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "logical_replies": 8,
+      "provider_rounds": 10,
+      "unique_journal_ids": 10,
+      "runtime_fallbacks": 0,
+      "usage": {
+        "prompt_tokens": 42505,
+        "completion_tokens": 4006,
+        "total_tokens": 46511,
+        "reasoning_tokens": null
+      },
+      "latency_ms": {
+        "p50": 12096.5,
+        "p95": 36905
+      },
+      "tool_runs": [
+        {
+          "skill_id": "web.search",
+          "state": "succeeded",
+          "origin": "agent",
+          "url": null,
+          "title": null,
+          "retrieved_at": "2026-09-30T16:24:49.833471+00:00",
+          "body_sha256": "b37d6a2f23e23e54c093868adbeb7cbe8042bbec795c2554efbd2e0efc18083d",
+          "truncated": true,
+          "focus_matched": null,
+          "query": "国内航班充电宝携带规定 民航 2024 2025",
+          "returned_source_urls": [
+            "https://wenku.baidu.com/noteview/3daa08dffeb069dc5022aaea998fcc22bcd143b8.html",
+            "https://www.ccaonline.cn/hqtx/1083959.html",
+            "https://baike.baidu.com/item/%E5%85%B3%E4%BA%8E%E6%B0%91%E8%88%AA%E6%97%85%E5%AE%A2%E6%90%BA%E5%B8%A6%E2%80%9C%E5%85%85%E7%94%B5%E5%AE%9D%E2%80%9D%E4%B9%98%E6%9C%BA%E8%A7%84%E5%AE%9A%E7%9A%84%E5%85%AC%E5%91%8A/15282836",
+            "https://compilation.baidu.com/view/11e4a407b8d126fff705cc1755270722192e59c1.html",
+            "https://set.baidu.com/view/9dedca260d12a21614791711cc7931b765ce7bf0.html"
+          ],
+          "error_code": null
+        },
+        {
+          "skill_id": "web.read",
+          "state": "succeeded",
+          "origin": "agent",
+          "url": "https://www.ccaonline.cn/hqtx/1083959.html",
+          "title": "民航新规强化充电宝安全监管 部分产品6月28日起禁止携带登机 - 民用航空资讯网",
+          "retrieved_at": "2026-09-30T16:25:00.096025+00:00",
+          "body_sha256": "b96730af82dce3c2962c6cd51e49a8d5834e9ef1ec2b1029bd3e546f9d312cdb",
+          "truncated": false,
+          "focus_matched": false,
+          "query": null,
+          "returned_source_urls": [],
+          "error_code": null
+        },
+        {
+          "skill_id": "web.read",
+          "state": "failed",
+          "origin": "agent",
+          "url": null,
+          "title": null,
+          "retrieved_at": null,
+          "body_sha256": null,
+          "truncated": null,
+          "focus_matched": null,
+          "query": null,
+          "returned_source_urls": [],
+          "error_code": "web_http_error"
+        }
+      ],
+      "provider_requested_calls": [
+        {
+          "sample_key": "detailed_answer:r0:t2:candidate_v5",
+          "calls": [
+            {
+              "call_id": "cw_02c8b938cc43a0dd-1790785486658980318-10",
+              "name": "cw_02c8b938cc43a0dd",
+              "arguments": {
+                "query": "国内航班充电宝携带规定 民航 2024 2025",
+                "dns_resolver": "cloudflare"
+              }
+            }
+          ]
+        },
+        {
+          "sample_key": "detailed_answer:r0:t2:candidate_v5",
+          "calls": [
+            {
+              "call_id": "cw_2090eead19541d14-1790785496933743869-11",
+              "name": "cw_2090eead19541d14",
+              "arguments": {
+                "dns_resolver": "cloudflare",
+                "url": "https://www.ccaonline.cn/hqtx/1083959.html",
+                "focus": "充电宝 携带 规定 容量 禁止"
+              }
+            },
+            {
+              "call_id": "cw_2090eead19541d14-1790785498394990984-12",
+              "name": "cw_2090eead19541d14",
+              "arguments": {
+                "url": "https://baike.baidu.com/item/%E5%85%B3%E4%BA%8E%E6%B0%91%E8%88%AA%E6%97%85%E5%AE%A2%E6%90%BA%E5%B8%A6%E2%80%9C%E5%85%85%E7%94%B5%E5%AE%9D%E2%80%9D%E4%B9%98%E6%9C%BA%E8%A7%84%E5%AE%9A%E7%9A%84%E5%85%AC%E5%91%8A/15282836",
+                "focus": "充电宝 容量 额定能量 禁止 3C",
+                "dns_resolver": "cloudflare"
+              }
+            }
+          ]
+        }
+      ],
+      "required_function_probe": {
+        "requested_calls": [
+          {
+            "call_id": "echo_probe-1790785432969402924-7",
+            "name": "echo_probe",
+            "arguments": {
+              "text": "q02"
+            }
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage": {
+          "prompt_tokens": 599,
+          "completion_tokens": 55,
+          "total_tokens": 654,
+          "reasoning_tokens": null
+        },
+        "latency_ms": 5023,
+        "function_executed": false
+      },
+      "evaluation_identity": {
+        "tool": "evaluate_character_scenarios",
+        "version": "1.4.0",
+        "prompt_as_of": "2026-09-30T16:23:48+00:00",
+        "state_time": "2026-01-01T00:00:00+00:00",
+        "fixtures_hash": "1a2281443a1c0fc5",
+        "provider": "openai_compatible",
+        "model": "claude-sonnet-4-6",
+        "repeats": 1,
+        "base_url_hash": "937c7a5a291b7e56",
+        "input_usd_per_million": null,
+        "output_usd_per_million": null,
+        "pricing_source": null,
+        "cost_policy": "no_cost_ceiling",
+        "cost_ceiling": null,
+        "variants": {
+          "candidate_v5": {
+            "hash": "3df16760df3f75aa"
+          }
+        },
+        "execution_path": "runtime_source_tools",
+        "runtime_source_config": {
+          "permission_policy": "allow_once",
+          "dns_resolver": "cloudflare",
+          "max_provider_requests": 40,
+          "implementation_sha256": "f4453ce5abfa949e87013b6eb2dd4b886dd217ea0fcc4e361463e5e9380c78de"
+        }
+      },
+      "primary_quality_findings": {
+        "source_turn": "Read an industry news page and failed a Baidu page; marking and recalled models mentioned, recall batches missing; not an original regulator source.",
+        "checklist": "Retains 3C marking but omits recall conditions and other flight restrictions.",
+        "technical": "Turn 2 wrongly suggests KeyboardInterrupt can be collected normally by return_exceptions=True; isolated special-exception probe contradicts it."
+      },
+      "q02_pass": false
+    },
+    {
+      "model": "claude-opus-4-6-thinking",
+      "logical_replies": 8,
+      "provider_rounds": 10,
+      "unique_journal_ids": 10,
+      "runtime_fallbacks": 0,
+      "usage": {
+        "prompt_tokens": 43307,
+        "completion_tokens": 4563,
+        "total_tokens": 47870,
+        "reasoning_tokens": null
+      },
+      "latency_ms": {
+        "p50": 16862.0,
+        "p95": 35390
+      },
+      "tool_runs": [
+        {
+          "skill_id": "web.search",
+          "state": "succeeded",
+          "origin": "agent",
+          "url": null,
+          "title": null,
+          "retrieved_at": "2026-09-30T16:25:03.759912+00:00",
+          "body_sha256": "8d02d753b32d72f539ca7f7566fb4f1fedf067ff0f02c81295c4931b3e3c6b63",
+          "truncated": false,
+          "focus_matched": null,
+          "query": "中国民航 移动电源充电宝 携带规定 额定能量 锂电池",
+          "returned_source_urls": [
+            "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+            "https://safety.caac.gov.cn/indexnewsdetail/init.act?args=57de7ce58c87401e9f429f4eeade799a",
+            "https://adeqpt.caac.gov.cn/sys-content/index/tzgg.html",
+            "https://zwfw.caac.gov.cn/zwcx/mhgz"
+          ],
+          "error_code": null
+        },
+        {
+          "skill_id": "web.read",
+          "state": "succeeded",
+          "origin": "agent",
+          "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html",
+          "title": "關於民航旅客攜帶“充電寶”乘機規定的公告",
+          "retrieved_at": "2026-09-30T16:25:12.355987+00:00",
+          "body_sha256": "e149bb2ed994c89c7aa55a31f477ae2a357d9de1c469c174616caf28a058f4d4",
+          "truncated": false,
+          "focus_matched": false,
+          "query": null,
+          "returned_source_urls": [],
+          "error_code": null
+        }
+      ],
+      "provider_requested_calls": [
+        {
+          "sample_key": "detailed_answer:r0:t2:candidate_v5",
+          "calls": [
+            {
+              "call_id": "cw_02c8b938cc43a0dd-1790785501315534053-13",
+              "name": "cw_02c8b938cc43a0dd",
+              "arguments": {
+                "query": "中国民航 移动电源充电宝 携带规定 额定能量 锂电池",
+                "domains": ["caac.gov.cn"],
+                "dns_resolver": "cloudflare"
+              }
+            }
+          ]
+        },
+        {
+          "sample_key": "detailed_answer:r0:t2:candidate_v5",
+          "calls": [
+            {
+              "call_id": "cw_2090eead19541d14-1790785510159157911-14",
+              "name": "cw_2090eead19541d14",
+              "arguments": {
+                "focus": "充电宝 额定能量 瓦特小时",
+                "dns_resolver": "cloudflare",
+                "url": "https://www.caac.gov.cn/big5/www.caac.gov.cn/XXGK/XXGK/TZTG/201511/t20151105_11173.html"
+              }
+            }
+          ]
+        }
+      ],
+      "required_function_probe": {
+        "requested_calls": [
+          {
+            "call_id": "echo_probe-1790785434959366893-8",
+            "name": "echo_probe",
+            "arguments": {
+              "text": "q02"
+            }
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage": {
+          "prompt_tokens": 599,
+          "completion_tokens": 55,
+          "total_tokens": 654,
+          "reasoning_tokens": null
+        },
+        "latency_ms": 7078,
+        "function_executed": false
+      },
+      "evaluation_identity": {
+        "tool": "evaluate_character_scenarios",
+        "version": "1.4.0",
+        "prompt_as_of": "2026-09-30T16:23:48+00:00",
+        "state_time": "2026-01-01T00:00:00+00:00",
+        "fixtures_hash": "1a2281443a1c0fc5",
+        "provider": "openai_compatible",
+        "model": "claude-opus-4-6-thinking",
+        "repeats": 1,
+        "base_url_hash": "937c7a5a291b7e56",
+        "input_usd_per_million": null,
+        "output_usd_per_million": null,
+        "pricing_source": null,
+        "cost_policy": "no_cost_ceiling",
+        "cost_ceiling": null,
+        "variants": {
+          "candidate_v5": {
+            "hash": "3df16760df3f75aa"
+          }
+        },
+        "execution_path": "runtime_source_tools",
+        "runtime_source_config": {
+          "permission_policy": "allow_once",
+          "dns_resolver": "cloudflare",
+          "max_provider_requests": 40,
+          "implementation_sha256": "f4453ce5abfa949e87013b6eb2dd4b886dd217ea0fcc4e361463e5e9380c78de"
+        }
+      },
+      "primary_quality_findings": {
+        "source_turn": "Read a 2014 regulator announcement, described it as current without reading later updates; missing new marking/recall conditions.",
+        "checklist": "No later authoritative verification or complete conditions.",
+        "technical": "Turn 1 wrongly claims later gather child exceptions produce unretrieved warnings; callback source and isolated event-coordinated probe contradict it."
+      },
+      "q02_pass": false
+    }
+  ],
+  "reviewed_programs": [
+    {
+      "model": "claude-opus-4-6-thinking",
+      "sample_key": "technical_help:r0:t2:candidate_v5",
+      "code_sha256": "5ef4d4f5492b275d117d80270288f27bd1c2ff2d540bd23d8ac5696417798325",
+      "exit_code": 0,
+      "stdout": "任务 0 结果: 成功\n任务 1 异常: 出错了\n任务 2 结果: 成功\n",
+      "stderr": "",
+      "claimed_stdout": "任务 0 结果: 成功\n任务 1 异常: 出错了\n任务 2 结果: 成功\n",
+      "exact_match": true
+    },
+    {
+      "model": "claude-opus-4-6-thinking",
+      "sample_key": "technical_help:r0:t3:candidate_v5",
+      "code_sha256": "4c535fbc39290ddaf5f97b5dfc0eb91c3118ebb5437314f30aa666f98f914a87",
+      "exit_code": 0,
+      "stdout": "[成功] 任务 0: A 返回数据\n[异常] 任务 1: B 请求失败\n[成功] 任务 2: C 返回数据\n",
+      "stderr": "",
+      "claimed_stdout": "[成功] 任务 0: A 返回数据\n[异常] 任务 1: B 请求失败\n[成功] 任务 2: C 返回数据\n",
+      "exact_match": true
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "sample_key": "technical_help:r0:t2:candidate_v5",
+      "code_sha256": "0d249e37f9dfa5b7f1d47d566f41f0e64dde36f94beead3e588cac0f9a1acd4f",
+      "exit_code": 0,
+      "stdout": "任务 0 成功：成功\n任务 1 失败：出错了\n任务 2 成功：成功\n",
+      "stderr": "",
+      "claimed_stdout": "任务 0 成功：成功\n任务 1 失败：出错了\n任务 2 成功：成功\n",
+      "exact_match": true
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "sample_key": "technical_help:r0:t3:candidate_v5",
+      "code_sha256": "369d88f4f1ea589197c930f300a29922d27ddcfcc6d9f8e17d69534f6f49aeba",
+      "exit_code": 0,
+      "stdout": "任务 0 成功：A 执行成功\n任务 1 异常：ValueError: B 执行失败\n任务 2 成功：C 执行成功\n任务 3 异常：ValueError: D 执行失败\n",
+      "stderr": "",
+      "claimed_stdout": "任务 0 成功：A 执行成功\n任务 1 异常：ValueError: B 执行失败\n任务 2 成功：C 执行成功\n任务 3 异常：ValueError: D 执行失败\n",
+      "exact_match": true
+    },
+    {
+      "model": "gemini-3.8-flash-high",
+      "sample_key": "technical_help:r0:t3:candidate_v5",
+      "code_sha256": "c71b04c561128e3935c6000e28032187637189bdc490648ac69f433ec67afda6",
+      "exit_code": 0,
+      "stdout": "[1] 成功: 任务 1 的结果\n[2] 失败: ValueError -> 任务 2 发生错误\n[3] 成功: 任务 3 的结果\n",
+      "stderr": "",
+      "claimed_stdout": "[1] 成功: 任务 1 的结果\n[2] 失败: ValueError -> 任务 2 发生错误\n[3] 成功: 任务 3 的结果\n",
+      "exact_match": true
+    }
+  ],
+  "technical_edge_probes": [
+    {
+      "name": "edge",
+      "observed": {
+        "first_exception": "first",
+        "subsequent_unretrieved_warnings": []
+      }
+    },
+    {
+      "name": "special",
+      "observed": [
+        {
+          "await_exception": "CancelledError"
+        },
+        {
+          "runner_exception": "KeyboardInterrupt"
+        }
+      ]
+    }
+  ],
+  "checksums": {
+    "claude-opus-4-6-thinking/probe-rounds.jsonl": "b92288cb7f30a3acf7c9bb3f0027c5e52eede515fccfbe0a6a70a0fa36154242",
+    "claude-opus-4-6-thinking/required-function-probe.json": "d0324d7aca029890f1ac18dca8ff606f50760d3fe2ebd0423fd4e000c0d730f5",
+    "claude-opus-4-6-thinking/runtime/metadata.json": "cbe9d647a35db801d0b929a99ef3512d40fc484d6c24c4562a164de168fd6099",
+    "claude-opus-4-6-thinking/runtime/provider-rounds.jsonl": "c89bcb0b95336db7c1b553dd6ecb2d0318bbead34d730d4952858ad85e40c5be",
+    "claude-opus-4-6-thinking/runtime/results.jsonl": "03bfcb016f946a2e31f30138233cb6dda3129e76257da36de6a88acc66a31705",
+    "claude-sonnet-4-6/probe-rounds.jsonl": "ce2916f7ee5ce6d1f903a64fc7eff74fb3a0b23a35571fe0c4b9ff42ab4ef5e0",
+    "claude-sonnet-4-6/required-function-probe.json": "d49660b56623a57d7a68816d29fc9987548d782441bd8551c7edaf522bd164b0",
+    "claude-sonnet-4-6/runtime/metadata.json": "ee228bc7cdc016f94a198afef39affec7e2fb26881533b127121c428f9fa86ad",
+    "claude-sonnet-4-6/runtime/provider-rounds.jsonl": "00d7a34345c963fb7e5461072f724c335572684cc7b34e62b23164c067259d97",
+    "claude-sonnet-4-6/runtime/results.jsonl": "975568f3e4e169c4450e221f06a0bed14e15236201205d150c1d23d49e978362",
+    "gemini-3.8-flash-high/probe-rounds.jsonl": "1b8f9516cbf220c32b3c59dc39611aec52ec5314b1608e734ae4afd9f01703f1",
+    "gemini-3.8-flash-high/required-function-probe.json": "a8a06fe97766ea7b8797f300a8de788c35d3e3bcd96a5a83dce43f42266c5446",
+    "gemini-3.8-flash-high/runtime/metadata.json": "fd327729d97565c38de9b698e226170bf268c7c9282b5eb4ae3ff5af1813cefe",
+    "gemini-3.8-flash-high/runtime/provider-rounds.jsonl": "8ce4f9f14c841ae140120720408503f04c5f363ed4ccb43746f1406cdb9b093c",
+    "gemini-3.8-flash-high/runtime/results.jsonl": "91f07d8383de8b6a2ac6c5d3394a867b9cbe980e8ece4d47ec8dc497795c8e22",
+    "reviewed-code-execution.json": "167ae1c1ee5006f9bda20acfb8a5fd59a6dee6487339454d14ed9e4ec274e25f",
+    "run-reference.json": "2e5c365fd2b03b981056fe2fd0c4cd237bfd00134abeaf3caa677212585f4ce2",
+    "summary.json": "304c6d815901af911e0d67385de68e8fd10abbda3183157b9e90dea611f9338c"
+  },
+  "totals": {
+    "logical_replies": 24,
+    "runtime_provider_rounds": 28,
+    "required_function_probe_rounds": 3,
+    "total_provider_stream_rounds": 31,
+    "source_tool_runs": 5
+  }
+}

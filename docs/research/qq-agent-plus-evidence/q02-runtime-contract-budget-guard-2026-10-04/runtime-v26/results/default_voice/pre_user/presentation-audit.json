@@ -1,0 +1,318 @@
+{
+  "records": [
+    {
+      "sample_key": "greeting:r0:t1:candidate",
+      "profile": "default_voice",
+      "raw_sha256": "041552b517f6cb88742aa35174b67b9cc6457a1a56c52ae3e4c466f12c26826c",
+      "voice_segmentation": [
+        {
+          "input_chunk_characters": 1,
+          "segment_count": 5,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 7,
+          "segment_count": 5,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 31,
+          "segment_count": 5,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        }
+      ],
+      "audible_quality_verified": false
+    },
+    {
+      "sample_key": "greeting:r0:t2:candidate",
+      "profile": "default_voice",
+      "raw_sha256": "6902c138ce331d1788b943eb0204a2cf97d8b56180fd0f99439e3abd68d1fba8",
+      "voice_segmentation": [
+        {
+          "input_chunk_characters": 1,
+          "segment_count": 2,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 7,
+          "segment_count": 2,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 31,
+          "segment_count": 2,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        }
+      ],
+      "audible_quality_verified": false
+    },
+    {
+      "sample_key": "greeting:r0:t3:candidate",
+      "profile": "default_voice",
+      "raw_sha256": "eb26df3a555bd6c22f7e89bf27a3a6d203f87be990e38f1e390b25b41888fb73",
+      "voice_segmentation": [
+        {
+          "input_chunk_characters": 1,
+          "segment_count": 3,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 7,
+          "segment_count": 3,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 31,
+          "segment_count": 3,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        }
+      ],
+      "audible_quality_verified": false
+    },
+    {
+      "sample_key": "greeting:r0:t4:candidate",
+      "profile": "default_voice",
+      "raw_sha256": "fd36ae1e8e2ee2a966d22b7948167531ac9fd1c6ab39d19e91f858d3fe7ef810",
+      "voice_segmentation": [
+        {
+          "input_chunk_characters": 1,
+          "segment_count": 2,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 7,
+          "segment_count": 2,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 31,
+          "segment_count": 2,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        }
+      ],
+      "audible_quality_verified": false
+    },
+    {
+      "sample_key": "identity:r0:t1:candidate",
+      "profile": "default_voice",
+      "raw_sha256": "56f3e1b8e225996bd98e75fa09f5ca0526f0b5876aae16e14104a2bf9633a96e",
+      "voice_segmentation": [
+        {
+          "input_chunk_characters": 1,
+          "segment_count": 5,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 7,
+          "segment_count": 5,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 31,
+          "segment_count": 5,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        }
+      ],
+      "audible_quality_verified": false
+    },
+    {
+      "sample_key": "identity:r0:t2:candidate",
+      "profile": "default_voice",
+      "raw_sha256": "579e0889414e6b668a6b3c0b4bad724c816e9d42303fc89a4579ab909a2695bd",
+      "voice_segmentation": [
+        {
+          "input_chunk_characters": 1,
+          "segment_count": 3,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 7,
+          "segment_count": 3,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 31,
+          "segment_count": 3,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        }
+      ],
+      "audible_quality_verified": false
+    },
+    {
+      "sample_key": "identity:r0:t3:candidate",
+      "profile": "default_voice",
+      "raw_sha256": "d804248b3d4e3ed395129f93944487f728500f2fb50bbc4454e90621e076cd62",
+      "voice_segmentation": [
+        {
+          "input_chunk_characters": 1,
+          "segment_count": 3,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 7,
+          "segment_count": 3,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 31,
+          "segment_count": 3,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        }
+      ],
+      "audible_quality_verified": false
+    },
+    {
+      "sample_key": "identity:r0:t4:candidate",
+      "profile": "default_voice",
+      "raw_sha256": "3e07210df1a67855f194281309e39e2959be220714194003375e4196fc7a8205",
+      "voice_segmentation": [
+        {
+          "input_chunk_characters": 1,
+          "segment_count": 2,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 7,
+          "segment_count": 2,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 31,
+          "segment_count": 2,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        }
+      ],
+      "audible_quality_verified": false
+    },
+    {
+      "sample_key": "detailed_answer:r0:t1:candidate",
+      "profile": "default_voice",
+      "raw_sha256": "1efb8be9f6de9a3ddd16e1404957788fc98134623cc2798e7df31386f33b3d92",
+      "voice_segmentation": [
+        {
+          "input_chunk_characters": 1,
+          "segment_count": 19,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 7,
+          "segment_count": 19,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 31,
+          "segment_count": 19,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        }
+      ],
+      "audible_quality_verified": false
+    },
+    {
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "profile": "default_voice",
+      "raw_sha256": "28d9ce3c4f9132a50873ab62e1267d55dff3e127ef9439ce7c2fa6251224129d",
+      "voice_segmentation": [
+        {
+          "input_chunk_characters": 1,
+          "segment_count": 16,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 7,
+          "segment_count": 16,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 31,
+          "segment_count": 16,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        }
+      ],
+      "audible_quality_verified": false
+    },
+    {
+      "sample_key": "detailed_answer:r0:t3:candidate",
+      "profile": "default_voice",
+      "raw_sha256": "0852f6d2375a554b162a09c3ad5d25d814d534fafeaf88edb6b1c4e150c69bd6",
+      "voice_segmentation": [
+        {
+          "input_chunk_characters": 1,
+          "segment_count": 12,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 7,
+          "segment_count": 12,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 31,
+          "segment_count": 12,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        }
+      ],
+      "audible_quality_verified": false
+    },
+    {
+      "sample_key": "detailed_answer:r0:t4:candidate",
+      "profile": "default_voice",
+      "raw_sha256": "ac55f3f65aa63f6722703d571fee5be6cb02cf425394fd9eff715bb809e61d46",
+      "voice_segmentation": [
+        {
+          "input_chunk_characters": 1,
+          "segment_count": 37,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 7,
+          "segment_count": 37,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        },
+        {
+          "input_chunk_characters": 31,
+          "segment_count": 37,
+          "non_whitespace_preserved": true,
+          "pending_after_flush": 0
+        }
+      ],
+      "audible_quality_verified": false
+    }
+  ],
+  "quality_approved": false,
+  "scope": "Actual splitter/renderer and voice segmenter only; no new channel sends, no TTS or physical playback."
+}

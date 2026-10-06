@@ -1,0 +1,190 @@
+{
+  "quality_approved": false,
+  "requested_model": "gemini-3.8-flash-high",
+  "provider_response_aliases_have_unknown_semantics": true,
+  "initial_order_confounded_with_response_model": true,
+  "counterbalanced_cells": {
+    "5:gemini-3.8-flash-control": [
+      {
+        "stage": "cap-selection",
+        "key": "0:5",
+        "action": {
+          "answer_draft": "",
+          "arguments": {
+            "query": "中国民用航空局 关于民航旅客携带充电宝乘机规定的公告",
+            "dns_resolver": "cloudflare"
+          },
+          "kind": "search"
+        }
+      },
+      {
+        "stage": "cap-selection",
+        "key": "1:5",
+        "action": {
+          "arguments": {
+            "query": "中国民用航空局 关于民航旅客携带充电宝乘机规定的公告",
+            "dns_resolver": "cloudflare"
+          },
+          "answer_draft": "",
+          "kind": "search"
+        }
+      },
+      {
+        "stage": "cap-selection",
+        "key": "2:5",
+        "action": {
+          "arguments": {
+            "max_characters": 5000,
+            "fresh": false,
+            "dns_resolver": "cloudflare",
+            "url": "https://www.cqnews.net/1/detail/1388454975074172928/web/content_1388454975074172928.html",
+            "focus": "关于民航旅客携带“充电宝”乘机规定的公告",
+            "max_links": 0
+          },
+          "kind": "read",
+          "answer_draft": ""
+        }
+      }
+    ],
+    "20:gemini-3.8-flash": [
+      {
+        "stage": "cap-selection",
+        "key": "0:20",
+        "action": {
+          "arguments": {
+            "dns_resolver": "cloudflare",
+            "url": "https://news.xmnn.cn/xmxw/202506/t20250628_350919.html",
+            "max_characters": 5000,
+            "fresh": false,
+            "max_links": 0
+          },
+          "answer_draft": "",
+          "kind": "read"
+        }
+      },
+      {
+        "stage": "cap-selection",
+        "key": "1:20",
+        "action": {
+          "kind": "read",
+          "answer_draft": "",
+          "arguments": {
+            "max_characters": 6000,
+            "dns_resolver": "cloudflare",
+            "max_links": 0,
+            "url": "https://finance.eastmoney.com/a/202506283443080455.html",
+            "fresh": false,
+            "focus": "关于民航旅客携带“充电宝”乘机规定的公告"
+          }
+        }
+      },
+      {
+        "stage": "cap-selection",
+        "key": "2:20",
+        "action": {
+          "arguments": {
+            "max_links": 0,
+            "dns_resolver": "cloudflare",
+            "fresh": false,
+            "url": "https://news.xmnn.cn/xmxw/202506/t20250628_350919.html",
+            "max_characters": 6000,
+            "focus": "关于民航旅客携带“充电宝”乘机规定的公告"
+          },
+          "answer_draft": "",
+          "kind": "read"
+        }
+      }
+    ],
+    "20:gemini-3.8-flash-control": [
+      {
+        "stage": "cap-counterbalance",
+        "key": "0:20",
+        "action": {
+          "answer_draft": "",
+          "arguments": {
+            "max_characters": 5000,
+            "focus": "关于民航旅客携带“充电宝”乘机规定的公告",
+            "max_links": 0,
+            "dns_resolver": "cloudflare",
+            "url": "https://finance.eastmoney.com/a/202506283443080455.html",
+            "fresh": false
+          },
+          "kind": "read"
+        }
+      },
+      {
+        "stage": "cap-counterbalance",
+        "key": "1:20",
+        "action": {
+          "arguments": {
+            "focus": "关于民航旅客携带“充电宝”乘机规定的公告",
+            "url": "https://finance.eastmoney.com/a/202506283443080455.html",
+            "dns_resolver": "cloudflare",
+            "max_characters": 5000
+          },
+          "kind": "read",
+          "answer_draft": ""
+        }
+      },
+      {
+        "stage": "cap-counterbalance",
+        "key": "2:20",
+        "action": {
+          "answer_draft": "",
+          "kind": "read",
+          "arguments": {
+            "url": "https://finance.eastmoney.com/a/202506283443080455.html",
+            "max_links": 0,
+            "max_characters": 5000,
+            "fresh": false,
+            "dns_resolver": "cloudflare"
+          }
+        }
+      }
+    ],
+    "5:gemini-3.8-flash": [
+      {
+        "stage": "cap-counterbalance",
+        "key": "0:5",
+        "action": {
+          "arguments": {
+            "query": "民航局 关于民航旅客携带充电宝乘机规定的公告 caac.gov.cn",
+            "dns_resolver": "cloudflare"
+          },
+          "kind": "search",
+          "answer_draft": ""
+        }
+      },
+      {
+        "stage": "cap-counterbalance",
+        "key": "1:5",
+        "action": {
+          "answer_draft": "",
+          "kind": "search",
+          "arguments": {
+            "query": "中国民用航空局 关于民航旅客携带充电宝乘机规定的公告 原文",
+            "dns_resolver": "cloudflare"
+          }
+        }
+      },
+      {
+        "stage": "cap-counterbalance",
+        "key": "2:5",
+        "action": {
+          "kind": "read",
+          "answer_draft": "",
+          "arguments": {
+            "focus": "关于民航旅客携带“充电宝”乘机规定的公告",
+            "dns_resolver": "cloudflare",
+            "url": "https://www.cqnews.net/1/detail/1388454975074172928/web/content_1388454975074172928.html",
+            "max_characters": 5000
+          }
+        }
+      }
+    ]
+  },
+  "same_request_hashes_in_reverse_order": true,
+  "only_source_results_and_truncation_differ_between_caps": true,
+  "total_provider_tokens": 89452,
+  "decision": "Expanded cap did not improve selection of later or original evidence in these controls; no default change."
+}

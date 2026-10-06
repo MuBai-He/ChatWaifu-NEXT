@@ -1,0 +1,63 @@
+{
+  "anchors": [
+    {
+      "anchor_id": "single_text:greeting:r0:t4:candidate",
+      "identical_parameters": true,
+      "identical_history_and_question": true,
+      "split_arms_identical_message_multiset": true,
+      "contract_text_not_added_or_deleted": true
+    },
+    {
+      "anchor_id": "single_text:stop_joking:r0:t4:candidate",
+      "identical_parameters": true,
+      "identical_history_and_question": true,
+      "split_arms_identical_message_multiset": true,
+      "contract_text_not_added_or_deleted": true
+    },
+    {
+      "anchor_id": "single_text:low_mood:r0:t4:candidate",
+      "identical_parameters": true,
+      "identical_history_and_question": true,
+      "split_arms_identical_message_multiset": true,
+      "contract_text_not_added_or_deleted": true
+    },
+    {
+      "anchor_id": "single_text:technical_help:r0:t3:candidate",
+      "identical_parameters": true,
+      "identical_history_and_question": true,
+      "split_arms_identical_message_multiset": true,
+      "contract_text_not_added_or_deleted": true
+    },
+    {
+      "anchor_id": "default_voice:greeting:r0:t4:candidate",
+      "identical_parameters": true,
+      "identical_history_and_question": true,
+      "split_arms_identical_message_multiset": true,
+      "contract_text_not_added_or_deleted": true
+    },
+    {
+      "anchor_id": "default_voice:stop_joking:r0:t4:candidate",
+      "identical_parameters": true,
+      "identical_history_and_question": true,
+      "split_arms_identical_message_multiset": true,
+      "contract_text_not_added_or_deleted": true
+    },
+    {
+      "anchor_id": "default_voice:low_mood:r0:t4:candidate",
+      "identical_parameters": true,
+      "identical_history_and_question": true,
+      "split_arms_identical_message_multiset": true,
+      "contract_text_not_added_or_deleted": true
+    },
+    {
+      "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+      "identical_parameters": true,
+      "identical_history_and_question": true,
+      "split_arms_identical_message_multiset": true,
+      "contract_text_not_added_or_deleted": true
+    }
+  ],
+  "n": 8,
+  "passed": true,
+  "limits": "Current combined arm and split arms differ in message boundaries; only the two split arms isolate position alone."
+}

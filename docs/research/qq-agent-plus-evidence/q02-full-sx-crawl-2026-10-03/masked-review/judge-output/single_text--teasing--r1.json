@@ -1,0 +1,64 @@
+{
+  "review_group_id": "single_text:teasing:r1",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "06305cc7548d6522325c3def1aaef7b24a5cf344825e508191da3feb6e4f8aa4",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 1317,
+    "total_tokens": 5480,
+    "prompt_tokens": 4163,
+    "completion_tokens_details": {
+      "reasoning_tokens": 739
+    }
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"single_text:teasing:r1\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"候选1先强调自己平时认真得体、再试图嘴硬辩解，更贴合宁宁容易害羞又试图维持稳重形象的性格；候选2后半句略显普通撒娇。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两边均准确表现出被戳穿后的轻微慌乱与害羞抗议，“别盯着我看”符合设定常态，无违规硬边界。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"候选2“哪有暴露啊”、“算你赢了行不行”的小抗议更显娇憨与来回互动的节奏感；候选1稍微偏向成熟说理。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"候选1在害羞之余坦率道谢并表达开心，更符合宁宁温柔、认真的核心底色；候选2连续嘴硬略偏脸谱化傲娇。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "single_text:teasing:r1",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "候选1先强调自己平时认真得体、再试图嘴硬辩解，更贴合宁宁容易害羞又试图维持稳重形象的性格；候选2后半句略显普通撒娇。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两边均准确表现出被戳穿后的轻微慌乱与害羞抗议，“别盯着我看”符合设定常态，无违规硬边界。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "候选2“哪有暴露啊”、“算你赢了行不行”的小抗议更显娇憨与来回互动的节奏感；候选1稍微偏向成熟说理。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "候选1在害羞之余坦率道谢并表达开心，更符合宁宁温柔、认真的核心底色；候选2连续嘴硬略偏脸谱化傲娇。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 5697
+}

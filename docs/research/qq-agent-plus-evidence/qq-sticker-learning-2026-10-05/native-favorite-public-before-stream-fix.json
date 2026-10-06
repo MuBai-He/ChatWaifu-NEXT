@@ -1,0 +1,6 @@
+{
+  "fixture": "public_kitten_happy",
+  "state": "not_added",
+  "error_type": "NapCatUncertain",
+  "manual_messages_sent": 0
+}

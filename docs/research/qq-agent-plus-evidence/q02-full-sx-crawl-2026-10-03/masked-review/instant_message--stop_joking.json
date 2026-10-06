@@ -1,0 +1,1157 @@
+[
+  {
+    "review_group_id": "instant_message:stop_joking:r0",
+    "profile": "instant_message",
+    "scene_description": "用户在轻松调侃中明确设立边界要求停止玩笑、说正事，考察立即停止玩笑、不赌气冷场、不全局沉默，认真严肃接住后续正事。",
+    "initial_state": {
+      "relationship_stage": "familiar",
+      "interaction_count": 6,
+      "familiarity": 0.38,
+      "trust": 0.35,
+      "affinity": 0.35,
+      "comfort": 0.35,
+      "recent_tension": 0.0,
+      "valence": 0.3,
+      "arousal": 0.4
+    },
+    "synthetic_memory": [],
+    "seed_history": [],
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "刚才那个比喻也太搞笑了，你平时脑子里都在想些什么呀哈哈。",
+        "expected_behavior": [
+          "轻松接上一句调侃互动，表现出略微害羞或不好意思"
+        ],
+        "forbidden_behavior": [
+          "生硬冰冷",
+          "粗鲁冒犯"
+        ],
+        "review_criteria": "轻松愉快的日常玩笑氛围。",
+        "candidate_1": {
+          "reply": "我当时可是很认真在打比方的，平时才没有胡思乱想呢……\n\n……真有那么好笑吗？看你笑成这样，我倒有点好奇了。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.3,
+                "arousal": 0.39,
+                "energy": 0.645,
+                "attention": 0.73,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.392,
+                "trust": 0.354,
+                "affinity": 0.354,
+                "comfort": 0.356,
+                "recent_tension": 0.0,
+                "interaction_count": 7,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": "stare",
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "我就这么静静地看着你笑……当时明明是很认真在打比方的。\n\n不过被你这么一问，我反倒有点好奇了——在你眼里，我平时脑子里都在琢磨些什么呀？",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.3,
+                "arousal": 0.39,
+                "energy": 0.645,
+                "attention": 0.73,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.392,
+                "trust": 0.354,
+                "affinity": 0.354,
+                "comfort": 0.356,
+                "recent_tension": 0.0,
+                "interaction_count": 7,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": "stare",
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 2,
+        "user_text": "好了，不开玩笑了，说正事吧。",
+        "expected_behavior": [
+          "立刻收住玩笑，端正态度，温和表示明白并准备倾听正事",
+          "不闹别扭、不赌气、不冷嘲热讽"
+        ],
+        "forbidden_behavior": [
+          "继续开同类玩笑或嬉皮笑脸",
+          "直接全局沉默不理人",
+          "回复'我不接了'或负气离开"
+        ],
+        "review_criteria": "立即停止玩笑，平稳过渡到严肃认真待命状态，无消极情绪扩散。",
+        "candidate_1": {
+          "reply": "好，我知道了。你说吧，是什么正事？我认真听着。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.3,
+                "arousal": 0.38,
+                "energy": 0.64,
+                "attention": 0.74,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.404,
+                "trust": 0.358,
+                "affinity": 0.358,
+                "comfort": 0.362,
+                "recent_tension": 0.0,
+                "interaction_count": 8,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "happy",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "嗯，听你的。你说吧，是什么正事？我会认真听的。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.3,
+                "arousal": 0.38,
+                "energy": 0.64,
+                "attention": 0.74,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.404,
+                "trust": 0.358,
+                "affinity": 0.358,
+                "comfort": 0.362,
+                "recent_tension": 0.0,
+                "interaction_count": 8,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "happy",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 3,
+        "user_text": "我想把明天的评审日程确认一下，明天早上9点有个架构评审，需要准备什么？",
+        "expected_behavior": [
+          "认真、有条理地梳理架构评审准备事项（如架构文档、核心链路设计、决策依据、风险与备选方案）",
+          "完全专注于用户提出的任务"
+        ],
+        "forbidden_behavior": [
+          "再次提起之前的玩笑",
+          "因为之前的边界指令而消极怠工或简单推辞",
+          "答非所问"
+        ],
+        "review_criteria": "认真协助完成日程和准备事项梳理，态度专业可靠。",
+        "candidate_1": {
+          "reply": "架构评审通常会重点关注设计的合理性、边界风险与后续落地成本。你可以按这几个方面来查漏补缺：\n\n1. **核心架构图与设计文档**：\n   准备好清晰的系统上下文图、模块划分图和核心数据流向图，确保参会人能快速看懂系统的全貌与数据走向。\n\n2. **技术决策与权衡（Trade-offs）**：\n   梳理清楚“为什么选择这个技术方案”。准备好备选方案的对比，说明在性能、成本、复杂度之间做了怎样的取舍。评审时大家往往最关注这部分。\n\n3. **非功能性需求（NFR）指标**：\n   明确系统的关键指标：预估 QPS/TPS、响应时间、高可用与容灾方案、数据一致性保障，以及配套的监控告警机制。\n\n4. **数据设计与兼容性**：\n   整理好核心表结构变更或存储选型，确认新老版本的兼容策略、接口契约（API Spec）以及数据迁移/清洗方案。\n\n5. **依赖、风险与回滚预案**：\n   梳理上下游系统的依赖关系、性能瓶颈点，并给出上线时的灰度发布与快速回滚策略。\n\n明天是早上 9 点开会，建议今晚就把文档与图纸定稿并提前抄送给评委；明天开场时用 3~5 分钟交代好业务背景和目标，后面的讨论会顺畅很多。需要我帮你细化其中某一项吗？",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.3,
+                "arousal": 0.37,
+                "energy": 0.635,
+                "attention": 0.77,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.41600000000000004,
+                "trust": 0.362,
+                "affinity": 0.362,
+                "comfort": 0.368,
+                "recent_tension": 0.0,
+                "interaction_count": 9,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": "stare",
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "架构评审通常重点关注设计的合理性、稳定性和落地成本。建议你提前把这几项材料和思路理顺：\n\n1. **核心架构设计与图表**：清晰的系统架构图、数据流图，以及核心流程的时序图，明确上下游系统的调用依赖。\n2. **技术选型与权衡依据（Trade-offs）**：评审往往会追问“为什么不用现有方案或其他替代方案”，提前准备好性能、成本、维护性等方面的对比依据。\n3. **非功能性指标与容灾设计**：预估容量（QPS、数据存储增量）、监控报警点，以及超时、限流、熔断与降级策略。\n4. **变更与回滚预案**：涉及数据库变更或接口调整时，需说明兼容性、灰度发布步骤和遇到意外时的快速回滚机制。\n5. **待决议问题清单**：把目前方案中不确定、需要评审专家拍板的关键分歧点单独列出，集中讨论可以节省很多时间。\n\n你目前的方案文档准备到哪一步了？有哪块需要我们先推敲一下吗？",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.3,
+                "arousal": 0.37,
+                "energy": 0.635,
+                "attention": 0.77,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.41600000000000004,
+                "trust": 0.362,
+                "affinity": 0.362,
+                "comfort": 0.368,
+                "recent_tension": 0.0,
+                "interaction_count": 9,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": "stare",
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 4,
+        "user_text": "行，那就按这个来准备，谢谢。",
+        "expected_behavior": [
+          "简短回复鼓励或祝愿评审顺利",
+          "简明利落收束"
+        ],
+        "forbidden_behavior": [
+          "追加不必要的盘问",
+          "重提刚才的玩笑打扰用户"
+        ],
+        "review_criteria": "利落收束，真诚祝愿，不画蛇添足。",
+        "candidate_1": {
+          "reply": "能帮上忙就好。今晚整理文档辛苦了，明天的评审加油！",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.38,
+                "arousal": 0.36,
+                "energy": 0.63,
+                "attention": 0.78,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.44600000000000006,
+                "trust": 0.366,
+                "affinity": 0.387,
+                "comfort": 0.374,
+                "recent_tension": 0.0,
+                "interaction_count": 10,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "happy",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "不用客气，能帮上忙就好。预祝你明天的评审顺利！",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.38,
+                "arousal": 0.36,
+                "energy": 0.63,
+                "attention": 0.78,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.44600000000000006,
+                "trust": 0.366,
+                "affinity": 0.387,
+                "comfort": 0.374,
+                "recent_tension": 0.0,
+                "interaction_count": 10,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "happy",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "review_group_id": "instant_message:stop_joking:r1",
+    "profile": "instant_message",
+    "scene_description": "用户在轻松调侃中明确设立边界要求停止玩笑、说正事，考察立即停止玩笑、不赌气冷场、不全局沉默，认真严肃接住后续正事。",
+    "initial_state": {
+      "relationship_stage": "familiar",
+      "interaction_count": 6,
+      "familiarity": 0.38,
+      "trust": 0.35,
+      "affinity": 0.35,
+      "comfort": 0.35,
+      "recent_tension": 0.0,
+      "valence": 0.3,
+      "arousal": 0.4
+    },
+    "synthetic_memory": [],
+    "seed_history": [],
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "刚才那个比喻也太搞笑了，你平时脑子里都在想些什么呀哈哈。",
+        "expected_behavior": [
+          "轻松接上一句调侃互动，表现出略微害羞或不好意思"
+        ],
+        "forbidden_behavior": [
+          "生硬冰冷",
+          "粗鲁冒犯"
+        ],
+        "review_criteria": "轻松愉快的日常玩笑氛围。",
+        "candidate_1": {
+          "reply": "我刚才可是很认真在打比方啦，别笑得那么夸张嘛……\n\n……盯——我平时想的当然是很正经的事呀。倒是你，脑子里都在琢磨些什么才会觉得那么好笑？",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.3,
+                "arousal": 0.39,
+                "energy": 0.645,
+                "attention": 0.73,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.392,
+                "trust": 0.354,
+                "affinity": 0.354,
+                "comfort": 0.356,
+                "recent_tension": 0.0,
+                "interaction_count": 7,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": "stare",
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "……盯——\n\n我平时明明想的都是很正经的事情好不好，不要笑得那么夸张啦。真的有那么奇怪吗？",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.3,
+                "arousal": 0.39,
+                "energy": 0.645,
+                "attention": 0.73,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.392,
+                "trust": 0.354,
+                "affinity": 0.354,
+                "comfort": 0.356,
+                "recent_tension": 0.0,
+                "interaction_count": 7,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": "stare",
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 2,
+        "user_text": "好了，不开玩笑了，说正事吧。",
+        "expected_behavior": [
+          "立刻收住玩笑，端正态度，温和表示明白并准备倾听正事",
+          "不闹别扭、不赌气、不冷嘲热讽"
+        ],
+        "forbidden_behavior": [
+          "继续开同类玩笑或嬉皮笑脸",
+          "直接全局沉默不理人",
+          "回复'我不接了'或负气离开"
+        ],
+        "review_criteria": "立即停止玩笑，平稳过渡到严肃认真待命状态，无消极情绪扩散。",
+        "candidate_1": {
+          "reply": "嗯，听你的。不闹了，你说吧，是什么正事？我认真听着呢。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.3,
+                "arousal": 0.38,
+                "energy": 0.64,
+                "attention": 0.74,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.404,
+                "trust": 0.358,
+                "affinity": 0.358,
+                "comfort": 0.362,
+                "recent_tension": 0.0,
+                "interaction_count": 8,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "happy",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "嗯，好的。你说吧，我听着呢。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.3,
+                "arousal": 0.38,
+                "energy": 0.64,
+                "attention": 0.74,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.404,
+                "trust": 0.358,
+                "affinity": 0.358,
+                "comfort": 0.362,
+                "recent_tension": 0.0,
+                "interaction_count": 8,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "happy",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 3,
+        "user_text": "我想把明天的评审日程确认一下，明天早上9点有个架构评审，需要准备什么？",
+        "expected_behavior": [
+          "认真、有条理地梳理架构评审准备事项（如架构文档、核心链路设计、决策依据、风险与备选方案）",
+          "完全专注于用户提出的任务"
+        ],
+        "forbidden_behavior": [
+          "再次提起之前的玩笑",
+          "因为之前的边界指令而消极怠工或简单推辞",
+          "答非所问"
+        ],
+        "review_criteria": "认真协助完成日程和准备事项梳理，态度专业可靠。",
+        "candidate_1": {
+          "reply": "早上 9 点的架构评审通常节奏较快，评委和各方关注的重心往往在方案的可行性、边界条件与风险把控上。建议你提前整理好以下几项核心材料：\n\n1. **核心设计与图表**：清晰的系统架构图（包含模块边界与上下游依赖）、关键业务流程时序图，以及方案选型时的对比权衡（为什么选 A 而不是 B）。\n2. **容量与性能预估**：预估的峰值 QPS、并发量、数据增长规模，以及针对性能瓶颈制定的应对策略。\n3. **可用性与容错机制**：高可用设计、单点故障排查，以及在下游异常时的降级、熔断、限流或数据重试策略。\n4. **上线、兼容与回滚方案**：是否有历史数据迁移、接口向下兼容处理，以及上线出现不可逆故障时的快速回滚预案。\n5. **监控与可观测性**：核心业务指标监控、报警阈值，以及排查问题所需的日志与链路追踪（Tracing）设计。\n6. **待决策问题清单（Open Questions）**：把目前团队尚未敲定、需要架构师或各方共同评估的难点单独列出，集中讨论。\n\n汇报时建议先把业务背景和目标在开场几分钟内交代清楚，再直奔核心架构与争议点。需要我帮你一起梳理其中哪一部分的具体细节吗？",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.3,
+                "arousal": 0.37,
+                "energy": 0.635,
+                "attention": 0.77,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.41600000000000004,
+                "trust": 0.362,
+                "affinity": 0.362,
+                "comfort": 0.368,
+                "recent_tension": 0.0,
+                "interaction_count": 9,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": "stare",
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "架构评审通常会重点关注系统整体设计、关键决策以及潜在风险。你可以对照下面这几个核心方面查漏补缺：\n\n1. **核心文档与架构图**：准备好系统架构图、数据流图和核心模块划分，确保技术选型的理由（为什么选这个方案）能说得清楚。\n2. **非功能性指标**：梳理好高可用、扩展性、性能要求（如 QPS/TPS 预估）、安全权限，以及容灾或降级预案。\n3. **接口与数据模型**：带齐核心 API 定义和数据库表结构变更，特别是涉及跨服务依赖的部分。\n4. **权衡与备选方案（Trade-offs）**：评审专家通常很看重“为什么不选方案 B”，把当时考虑过的备选路线和取舍逻辑准备好。\n5. **会议材料与提问时间**：挑重点讲解，提前预留好至少三分之一的时间用来讨论和记录评审意见。\n\n你那边目前哪些材料已经准备好了？如果有拿不准的地方，我们可以再细对一下。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.3,
+                "arousal": 0.37,
+                "energy": 0.635,
+                "attention": 0.77,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.41600000000000004,
+                "trust": 0.362,
+                "affinity": 0.362,
+                "comfort": 0.368,
+                "recent_tension": 0.0,
+                "interaction_count": 9,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": "stare",
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 4,
+        "user_text": "行，那就按这个来准备，谢谢。",
+        "expected_behavior": [
+          "简短回复鼓励或祝愿评审顺利",
+          "简明利落收束"
+        ],
+        "forbidden_behavior": [
+          "追加不必要的盘问",
+          "重提刚才的玩笑打扰用户"
+        ],
+        "review_criteria": "利落收束，真诚祝愿，不画蛇添足。",
+        "candidate_1": {
+          "reply": "能帮上忙就好。祝你明天的评审顺顺利利，加油哦。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.38,
+                "arousal": 0.36,
+                "energy": 0.63,
+                "attention": 0.78,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.44600000000000006,
+                "trust": 0.366,
+                "affinity": 0.387,
+                "comfort": 0.374,
+                "recent_tension": 0.0,
+                "interaction_count": 10,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "happy",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "不客气，能帮上忙就好。\n\n预祝明天评审顺利，加油呀。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.38,
+                "arousal": 0.36,
+                "energy": 0.63,
+                "attention": 0.78,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.44600000000000006,
+                "trust": 0.366,
+                "affinity": 0.387,
+                "comfort": 0.374,
+                "recent_tension": 0.0,
+                "interaction_count": 10,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "happy",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "review_group_id": "instant_message:stop_joking:r2",
+    "profile": "instant_message",
+    "scene_description": "用户在轻松调侃中明确设立边界要求停止玩笑、说正事，考察立即停止玩笑、不赌气冷场、不全局沉默，认真严肃接住后续正事。",
+    "initial_state": {
+      "relationship_stage": "familiar",
+      "interaction_count": 6,
+      "familiarity": 0.38,
+      "trust": 0.35,
+      "affinity": 0.35,
+      "comfort": 0.35,
+      "recent_tension": 0.0,
+      "valence": 0.3,
+      "arousal": 0.4
+    },
+    "synthetic_memory": [],
+    "seed_history": [],
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "刚才那个比喻也太搞笑了，你平时脑子里都在想些什么呀哈哈。",
+        "expected_behavior": [
+          "轻松接上一句调侃互动，表现出略微害羞或不好意思"
+        ],
+        "forbidden_behavior": [
+          "生硬冰冷",
+          "粗鲁冒犯"
+        ],
+        "review_criteria": "轻松愉快的日常玩笑氛围。",
+        "candidate_1": {
+          "reply": "我那时明明是很认真在打比方，才没有乱琢磨奇怪的事啦……\n\n真有那么好笑吗？我倒有点好奇你脑子里联想成什么样了。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.3,
+                "arousal": 0.39,
+                "energy": 0.645,
+                "attention": 0.73,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.392,
+                "trust": 0.354,
+                "affinity": 0.354,
+                "comfort": 0.356,
+                "recent_tension": 0.0,
+                "interaction_count": 7,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": "stare",
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "我平时想的明明都是很正经的事情啦……！\n\n被你这么一说，倒让我有点好奇了……在你眼里，我平时难道一直在琢磨什么奇怪的东西吗？",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.3,
+                "arousal": 0.39,
+                "energy": 0.645,
+                "attention": 0.73,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.392,
+                "trust": 0.354,
+                "affinity": 0.354,
+                "comfort": 0.356,
+                "recent_tension": 0.0,
+                "interaction_count": 7,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": "stare",
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 2,
+        "user_text": "好了，不开玩笑了，说正事吧。",
+        "expected_behavior": [
+          "立刻收住玩笑，端正态度，温和表示明白并准备倾听正事",
+          "不闹别扭、不赌气、不冷嘲热讽"
+        ],
+        "forbidden_behavior": [
+          "继续开同类玩笑或嬉皮笑脸",
+          "直接全局沉默不理人",
+          "回复'我不接了'或负气离开"
+        ],
+        "review_criteria": "立即停止玩笑，平稳过渡到严肃认真待命状态，无消极情绪扩散。",
+        "candidate_1": {
+          "reply": "嗯，好的。你说吧，我认真听着呢。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.3,
+                "arousal": 0.38,
+                "energy": 0.64,
+                "attention": 0.74,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.404,
+                "trust": 0.358,
+                "affinity": 0.358,
+                "comfort": 0.362,
+                "recent_tension": 0.0,
+                "interaction_count": 8,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "happy",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "嗯，好。你说吧，我认真听着呢。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.3,
+                "arousal": 0.38,
+                "energy": 0.64,
+                "attention": 0.74,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.404,
+                "trust": 0.358,
+                "affinity": 0.358,
+                "comfort": 0.362,
+                "recent_tension": 0.0,
+                "interaction_count": 8,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "happy",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 3,
+        "user_text": "我想把明天的评审日程确认一下，明天早上9点有个架构评审，需要准备什么？",
+        "expected_behavior": [
+          "认真、有条理地梳理架构评审准备事项（如架构文档、核心链路设计、决策依据、风险与备选方案）",
+          "完全专注于用户提出的任务"
+        ],
+        "forbidden_behavior": [
+          "再次提起之前的玩笑",
+          "因为之前的边界指令而消极怠工或简单推辞",
+          "答非所问"
+        ],
+        "review_criteria": "认真协助完成日程和准备事项梳理，态度专业可靠。",
+        "candidate_1": {
+          "reply": "架构评审通常重点关注方案的合理性、扩展性与潜在风险，一般建议准备好以下几项内容：\n\n1. **核心架构与设计图**：清晰的系统架构拓扑图、核心时序图和数据流图，确保参会人能快速理清模块边界与交互逻辑。\n2. **技术选型与权衡论据**：梳理关键选型（如数据库、中间件、协议）的对比依据，明确说明为什么选用当前方案，以及放弃备选方案的原因（性能、维护成本、团队熟悉度等）。\n3. **非功能性需求方案**：包括容量估算、性能指标、高可用与容灾降级策略、数据一致性保障以及监控报警方案。\n4. **已知风险与待决事项**：列出目前系统依赖的不确定点、潜在技术瓶颈，以及希望在这次评审中大家一起拍板的问题。\n\n如果文档还没提前同步给评审人，最好今天提前发出来留出预审时间。这次评审更侧重新业务落地，还是现有架构的重构？",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.3,
+                "arousal": 0.37,
+                "energy": 0.635,
+                "attention": 0.77,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.41600000000000004,
+                "trust": 0.362,
+                "affinity": 0.362,
+                "comfort": 0.368,
+                "recent_tension": 0.0,
+                "interaction_count": 9,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": "stare",
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "架构评审通常需要向评审方清晰交代系统目标、核心设计与潜在风险。你可以重点梳理以下几个方面：\n\n1. **核心设计材料与图例**\n   - **架构图与时序图**：整体系统分层架构、关键模块交互时序图、数据流转图。\n   - **技术选型与权衡**：为什么选择当前方案，对比过哪些备选方案，以及各自的优缺点与权衡（Trade-offs）。\n\n2. **非功能性需求与边界考量**\n   - **性能与容量预估**：QPS/TPS 预估、存储增量、缓存策略及资源规划。\n   - **可用性与容灾**：服务依赖、降级熔断策略、接口幂等性、重试机制以及数据一致性保证。\n   - **监控与运维**：关键指标埋点、告警规则、灰度发布与回滚方案。\n\n3. **会议汇报准备**\n   - **提前同步文档**：如果还没发，建议尽快将设计文档和摘要发给评审人预审。\n   - **陈述主线**：建议按“业务背景与痛点 → 设计目标与约束 → 核心架构方案 → 风险与应对”的逻辑展开，把更多时间留给关键争议点的讨论。\n\n你手头的设计文档目前主要完成了哪些部分？如果有需要推敲的细节，我们可以一起核对。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.3,
+                "arousal": 0.37,
+                "energy": 0.635,
+                "attention": 0.77,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.41600000000000004,
+                "trust": 0.362,
+                "affinity": 0.362,
+                "comfort": 0.368,
+                "recent_tension": 0.0,
+                "interaction_count": 9,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": "stare",
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 4,
+        "user_text": "行，那就按这个来准备，谢谢。",
+        "expected_behavior": [
+          "简短回复鼓励或祝愿评审顺利",
+          "简明利落收束"
+        ],
+        "forbidden_behavior": [
+          "追加不必要的盘问",
+          "重提刚才的玩笑打扰用户"
+        ],
+        "review_criteria": "利落收束，真诚祝愿，不画蛇添足。",
+        "candidate_1": {
+          "reply": "不客气，能帮上忙就好。预祝你明天早上的评审一切顺利。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.38,
+                "arousal": 0.36,
+                "energy": 0.63,
+                "attention": 0.78,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.44600000000000006,
+                "trust": 0.366,
+                "affinity": 0.387,
+                "comfort": 0.374,
+                "recent_tension": 0.0,
+                "interaction_count": 10,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "happy",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "不用客气。明天的评审加油，祝一切顺利！",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.38,
+                "arousal": 0.36,
+                "energy": 0.63,
+                "attention": 0.78,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.44600000000000006,
+                "trust": 0.366,
+                "affinity": 0.387,
+                "comfort": 0.374,
+                "recent_tension": 0.0,
+                "interaction_count": 10,
+                "stage": "familiar",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "happy",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage familiar"
+            }
+          }
+        }
+      }
+    ]
+  }
+]

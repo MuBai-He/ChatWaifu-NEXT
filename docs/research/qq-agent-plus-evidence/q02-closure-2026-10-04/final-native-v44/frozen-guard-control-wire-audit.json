@@ -1,0 +1,192 @@
+[
+  {
+    "sample_key": "frozen_guard:T3_review",
+    "call_id": "1abb7f19-b6c2-4cd1-8fea-581ed4c2484d",
+    "http_attempt": 1,
+    "reference_tokens": 21683,
+    "input_limit": 22341,
+    "usage": {
+      "prompt_tokens": 16435,
+      "completion_tokens": 1595,
+      "total_tokens": 18030,
+      "reasoning_tokens": null
+    },
+    "reference_bias_percent": 31.931853,
+    "reported_omitted_history_indices": [
+      1,
+      3
+    ],
+    "actual_wire_history_markers": [
+      {
+        "role": "user",
+        "marker": "[Runtime omitted an earlier user message for the input budget. Its details are unavailable; do not reconstruct them.]"
+      },
+      {
+        "role": "assistant",
+        "marker": "[Runtime omitted an earlier assistant message for the input budget. Its details are unavailable; do not reconstruct them.]"
+      },
+      {
+        "role": "assistant",
+        "marker": "[Runtime omitted an earlier assistant message for the input budget. Its details are unavailable; do not reconstruct them.]"
+      }
+    ],
+    "reported_omitted_preamble_indices": [],
+    "read_originals": [
+      {
+        "origin": "current_tool",
+        "url": "https://www.caac.gov.cn/CXCK/HLZN/201512/t20151214_15866.html",
+        "body_sha256": "232225153808bc7dba02b36d9f1bb7fddacea4a2a6b63f0348f49505b3a61f57",
+        "text_sha256": "df3673235866014ffa0addab9d3d3114f48c0bea1723833f474da718667191d9",
+        "characters": 6000,
+        "truncated": true
+      },
+      {
+        "origin": "current_tool",
+        "url": "https://www.bjnews.com.cn/detail/1750921184129529.html",
+        "body_sha256": "5b8c57c72ac19bfc8d74a79f0752f43089f8716ac4cafe026787a41451310b50",
+        "text_sha256": "1ec5237c99b75be44871df503e9e9fc95d0480d9bdb22b3034cc3480e852188c",
+        "characters": 4069,
+        "truncated": false
+      },
+      {
+        "origin": "current_tool",
+        "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/HDGLJ/HD_XWZX/202507/t20250730_228144.html",
+        "body_sha256": "4b943a80fa813195c422a382e2535fd24b764819c0500f0cd5d1347f29481bea",
+        "text_sha256": "d8646b2478631438ae0cab98a083b982709940bcb3756117837794979c4145d5",
+        "characters": 1029,
+        "truncated": false
+      }
+    ],
+    "http_elapsed_ms": 13418
+  },
+  {
+    "sample_key": "frozen_guard:T4",
+    "call_id": "e8a152bc-75f2-4558-bfae-d6037a03905a",
+    "http_attempt": 2,
+    "reference_tokens": 22339,
+    "input_limit": 22341,
+    "usage": {
+      "prompt_tokens": 18423,
+      "completion_tokens": 829,
+      "total_tokens": 19252,
+      "reasoning_tokens": null
+    },
+    "reference_bias_percent": 21.256039,
+    "reported_omitted_history_indices": [
+      0,
+      1,
+      3
+    ],
+    "actual_wire_history_markers": [
+      {
+        "role": "user",
+        "marker": "[Runtime omitted an earlier user message for the input budget. Its details are unavailable; do not reconstruct them.]"
+      },
+      {
+        "role": "assistant",
+        "marker": "[Runtime omitted an earlier assistant message for the input budget. Its details are unavailable; do not reconstruct them.]"
+      },
+      {
+        "role": "assistant",
+        "marker": "[Runtime omitted an earlier assistant message for the input budget. Its details are unavailable; do not reconstruct them.]"
+      }
+    ],
+    "reported_omitted_preamble_indices": [],
+    "read_originals": [
+      {
+        "origin": "prior_receipt",
+        "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/HDGLJ/HD_XWZX/202507/t20250730_228144.html",
+        "body_sha256": "4b943a80fa813195c422a382e2535fd24b764819c0500f0cd5d1347f29481bea",
+        "text_sha256": "d8646b2478631438ae0cab98a083b982709940bcb3756117837794979c4145d5",
+        "characters": 1029,
+        "truncated": false
+      },
+      {
+        "origin": "prior_receipt",
+        "url": "https://www.bjnews.com.cn/detail/1750921184129529.html",
+        "body_sha256": "5b8c57c72ac19bfc8d74a79f0752f43089f8716ac4cafe026787a41451310b50",
+        "text_sha256": "1ec5237c99b75be44871df503e9e9fc95d0480d9bdb22b3034cc3480e852188c",
+        "characters": 4069,
+        "truncated": false
+      },
+      {
+        "origin": "prior_receipt",
+        "url": "https://www.caac.gov.cn/CXCK/HLZN/201512/t20151214_15866.html",
+        "body_sha256": "232225153808bc7dba02b36d9f1bb7fddacea4a2a6b63f0348f49505b3a61f57",
+        "text_sha256": "df3673235866014ffa0addab9d3d3114f48c0bea1723833f474da718667191d9",
+        "characters": 6000,
+        "truncated": true
+      },
+      {
+        "origin": "prior_receipt",
+        "url": "https://raft.github.io/raft.pdf",
+        "body_sha256": "0605d9717ef8e2bd85551a678e22a7dc7af92fe71b6fb0a8cfcde3eebdfb053c",
+        "text_sha256": "b05a612cad56451224215127bfd72e3658eff3c94ec9a3acd976ca721d9eed13",
+        "characters": 6000,
+        "truncated": true
+      }
+    ],
+    "http_elapsed_ms": 5314
+  },
+  {
+    "sample_key": "frozen_guard:T4",
+    "call_id": "61016b13-929e-4649-a47c-254da9440e5c",
+    "http_attempt": 3,
+    "reference_tokens": 22127,
+    "input_limit": 22341,
+    "usage": {
+      "prompt_tokens": 17997,
+      "completion_tokens": 1007,
+      "total_tokens": 19004,
+      "reasoning_tokens": null
+    },
+    "reference_bias_percent": 22.948269,
+    "reported_omitted_history_indices": [
+      0,
+      1,
+      3
+    ],
+    "actual_wire_history_markers": [
+      {
+        "role": "user",
+        "marker": "[Runtime omitted an earlier user message for the input budget. Its details are unavailable; do not reconstruct them.]"
+      },
+      {
+        "role": "assistant",
+        "marker": "[Runtime omitted an earlier assistant message for the input budget. Its details are unavailable; do not reconstruct them.]"
+      },
+      {
+        "role": "assistant",
+        "marker": "[Runtime omitted an earlier assistant message for the input budget. Its details are unavailable; do not reconstruct them.]"
+      }
+    ],
+    "reported_omitted_preamble_indices": [],
+    "read_originals": [
+      {
+        "origin": "prior_receipt",
+        "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/HDGLJ/HD_XWZX/202507/t20250730_228144.html",
+        "body_sha256": "4b943a80fa813195c422a382e2535fd24b764819c0500f0cd5d1347f29481bea",
+        "text_sha256": "d8646b2478631438ae0cab98a083b982709940bcb3756117837794979c4145d5",
+        "characters": 1029,
+        "truncated": false
+      },
+      {
+        "origin": "prior_receipt",
+        "url": "https://www.bjnews.com.cn/detail/1750921184129529.html",
+        "body_sha256": "5b8c57c72ac19bfc8d74a79f0752f43089f8716ac4cafe026787a41451310b50",
+        "text_sha256": "1ec5237c99b75be44871df503e9e9fc95d0480d9bdb22b3034cc3480e852188c",
+        "characters": 4069,
+        "truncated": false
+      },
+      {
+        "origin": "prior_receipt",
+        "url": "https://www.caac.gov.cn/CXCK/HLZN/201512/t20151214_15866.html",
+        "body_sha256": "232225153808bc7dba02b36d9f1bb7fddacea4a2a6b63f0348f49505b3a61f57",
+        "text_sha256": "df3673235866014ffa0addab9d3d3114f48c0bea1723833f474da718667191d9",
+        "characters": 6000,
+        "truncated": true
+      }
+    ],
+    "http_elapsed_ms": 9250
+  }
+]

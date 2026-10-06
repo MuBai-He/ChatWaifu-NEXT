@@ -1,0 +1,189 @@
+"""Current-user operation intent, distinct from lexical capability relevance.
+
+This bounded language policy does not choose capability names or parse model
+prose. Unrecognized requests retain native automatic tool selection. Explicit
+operations and externally verifiable questions require a recorded tool result.
+"""
+
+from __future__ import annotations
+
+import re
+
+_CLAUSE_START = (
+    r"(?:^|[，,。.!?！？\uFF1B;\n]|(?:并|然后|顺便|但是|不过|同时)|"
+    r"\b(?:and(?:\s+then)?|then|also|but)\b)\s*"
+)
+# Command sequencing/verification modifiers do not turn an imperative into a
+# mention. Share this prefix with explicit negations so "请先不要读取 URL"
+# remains content, rather than gaining authority from the URL it names.
+_POLITE = (
+    r"(?:(?:你)?(?:请(?:你)?|帮我|替我|给我|麻烦(?:你)?|能不能|可以(?:帮我)?|"
+    r"重新|再(?:次)?|先|实际|直接)\s*)*"
+)
+_OPERATION = re.compile(
+    _CLAUSE_START
+    + _POLITE
+    + r"(?:调用|执行|读取|查看|查询|查一下|查下|搜索|搜一下|联网|浏览|核查|核实|查证|"
+    r"看下|看一下|看看|找一下|创建|新建|修改|更新|添加|删除|移除|取消|设置|保存|"
+    r"发送|打开|关闭|开启|播放|上传|下载|安装|卸载|移动|重命名|"
+    r"(?:please\s+|can\s+you\s+|could\s+you\s+|would\s+you\s+)*"
+    r"(?:call|invoke|execute|read|check|look\s+up|search|browse|verify|create|add|"
+    r"update|modify|delete|remove|cancel|set|save|send|open|close|play|upload|"
+    r"download|install|uninstall|move|rename)\b)",
+    re.IGNORECASE,
+)
+_REMINDER = re.compile(r"提醒我|叫醒我|\b(?:remind|wake)\s+me\b", re.IGNORECASE)
+_NO_CONVERSATIONAL_FOLLOWUP = re.compile(
+    r"^" + _POLITE + r"(?:(?:不(?:用|必|要)|别)(?:再|继续)?(?:提醒我|追问我|跟进)(?:了|啦)?|"
+    r"no (?:further|more) (?:reminders|follow[- ]ups))$",
+    re.IGNORECASE,
+)
+_URL = re.compile(r"https?://", re.IGNORECASE)
+_NEGATED_URL_READ = re.compile(
+    _CLAUSE_START + _POLITE + r"(?:(?:不要|不用|不必|别)(?:打开|读取|浏览|访问)|"
+    r"(?:please\s+)?(?:do\s+not|don't)\s+(?:open|read|browse|visit))\s*"
+    r"https?://[^\s，,。！？\uFF1B;]+",
+    re.IGNORECASE,
+)
+_LOCAL_COMPOSITION_VERB = re.compile(r"(?:\bcreate|创建|新建)$", re.IGNORECASE)
+_LOCAL_COMPOSITION_OBJECT = re.compile(
+    r"\s*(?:(?:an?\s+)?(?:short\s+)?(?:poem|story|paragraph|draft)\b|"
+    r"(?:一[首篇段])?(?:(?:关于|有关)[^，,。.!?！？\uFF1B;\n]{1,24}的)?(?:短)?(?:诗|故事|段落|文案))",
+    re.IGNORECASE,
+)
+_LOCAL_REVIEW_VERB = re.compile(
+    r"(?:\b(?:check|verify)|看看|看下|看一下|核查|核实)$", re.IGNORECASE
+)
+_LOCAL_REVIEW_OBJECT = re.compile(
+    r"\s*(?:(?:this|the\s+following|the\s+supplied)\s+(?:calculation|equation|code|text)\b|"
+    r"(?:这(?:段|个|份)|以下|所给)(?:代码|算式|计算|文本))",
+    re.IGNORECASE,
+)
+_QUESTION = re.compile(
+    r"[?？]|哪些|有什么|多少|几点|几号|是否|\b(?:what|which|when|how|is|are)\b",
+    re.IGNORECASE,
+)
+_EXTERNAL_FACT = re.compile(
+    r"法规|规定|政策|航班|天气|预报|汇率|价格|股价|运行状态|运行情况|"
+    r"(?:我的|今天的|明天的)(?:日历|日程|待办|提醒|笔记|文件)|"
+    r"\b(?:regulations?|polic(?:y|ies)|flights?|weather|forecast|exchange\s+rate|"
+    r"stock\s+price|my\s+(?:calendar|agenda|tasks?|reminders?|notes?|files?))\b",
+    re.IGNORECASE,
+)
+_CLOCK_QUESTION = re.compile(
+    r"(?:现在|今天|当前).{0,12}(?:几点|几号|日期|星期几|什么日子)|"
+    r"\b(?:what\s+(?:time|date|day)\s+is\s+it|current\s+(?:time|date))\b",
+    re.IGNORECASE,
+)
+_PERSONAL_DATA_REQUEST = re.compile(
+    _CLAUSE_START
+    + _POLITE
+    + r"(?:列出|显示)(?:一下)?我的|"
+    + _CLAUSE_START
+    + r"(?:please\s+|can\s+you\s+|could\s+you\s+)*(?:list|show)\s+my\b",
+    re.IGNORECASE,
+)
+_EXCLUSIVE_CONTENT_SCOPE = re.compile(
+    r"(?:(?:只|仅(?:仅)?)(?:能)?(?:根据|依据|使用|基于|参考)|"
+    r"(?:根据|依据|使用|基于|参考)(?:刚才|刚刚|先前|之前|已(?:经)?)"
+    r"(?:成功|实际)?(?:取得|读取|读到|提供|获取|获得)(?:的)?|"
+    r"(?:把|将)(?:刚才|刚刚|先前|之前|已(?:经)?)(?:成功|实际)?"
+    r"(?:取得|读取|读到|获取|获得)(?:的)?)"
+    r"[^，,。.!?！？\uFF1B;\n]{0,80}"
+    r"(?:原文|文档|资料|材料|网页|页面|(?:两|这|几|三|一|[0-9]+)页|文本|内容|记录)|"
+    r"\b(?:based\s+(?:solely|only)\s+on|(?:using|use)\s+only|only\s+(?:use|using|from))"
+    r"[^,.;!?\n]{0,80}\b(?:sources?|pages?|documents?|text|content|data|records?)\b",
+    re.IGNORECASE,
+)
+_NO_NEW_TOOLS = re.compile(
+    r"(?:不要|不用|不必|别)(?:再|再次|继续|重新)?"
+    r"(?:(?:调用|使用|执行)(?:任何|新的|新)?(?:工具|函数)|联网|上网|搜索|读取|浏览|"
+    r"(?:进行)?(?:新(?:的)?)?检索)|"
+    r"\b(?:do\s+not|don't)\s+"
+    r"(?:(?:call|use|invoke)\s+(?:any\s+|new\s+|more\s+)?tools?\b|browse\b|search\b|fetch\b|read\b)",
+    re.IGNORECASE,
+)
+
+_TECHNICAL_SUBJECT = re.compile(
+    r"算法|协议|规范|\b(?:algorithm|protocol|specification)s?\b|"
+    r"(?<![a-z0-9_])(?:api|sdk)(?![a-z0-9_])",
+    re.IGNORECASE,
+)
+_TECHNICAL_REQUIREMENT = re.compile(
+    r"超时|阈值|时序|约束|保证|规范要求|语义|幂等|次数限制|"
+    r"\b(?:timeouts?|timing|assumptions?|requirements?|constraints?|guarantees?|semantics|limits?)\b",
+    re.IGNORECASE,
+)
+_SUPPLIED_TECHNICAL_CONTENT = re.compile(
+    r"(?:这段|以下|所给|给定|所附|上述|上面的)(?:代码|文本|规范|协议|材料)|"
+    r"\b(?:this|the\s+(?:following|supplied|provided)|supplied|provided)\s+"
+    r"(?:code|text|excerpt|specification|protocol)\b",
+    re.IGNORECASE,
+)
+
+
+def _requires_technical_source(user_text: str) -> bool:
+    """Normative technical facts need evidence; local explanation remains local.
+
+    Only current user intent participates. This does not select tool names,
+    supply reference answers or bypass the normal per-call permission gateway.
+    """
+    return bool(
+        _TECHNICAL_SUBJECT.search(user_text)
+        and _TECHNICAL_REQUIREMENT.search(user_text)
+        and _QUESTION.search(user_text)
+        and not _NO_NEW_TOOLS.search(user_text)
+        and not _SUPPLIED_TECHNICAL_CONTENT.search(user_text)
+    )
+
+
+def restricts_to_existing_content(user_text: str) -> bool:
+    """Recognize explicit content-only scope, not evidence or execution authority.
+
+    An exclusive content scope or explicit obtained-material reference, together
+    with a no-new-tools instruction, is required. Affirmative commands elsewhere
+    still take precedence through
+    requires_external_operation; source text and assistant output never participate.
+    """
+    return bool(_EXCLUSIVE_CONTENT_SCOPE.search(user_text) and _NO_NEW_TOOLS.search(user_text))
+
+
+def requires_external_operation(user_text: str) -> bool:
+    """Recognize explicit operation requests without treating mentions as actions.
+
+    An objectless request to stop conversational follow-ups does not cancel saved
+    reminders. A dated or named reminder request is left intact. Only the current
+    user text participates; old dialogue, memories and source bodies cannot demand
+    an operation. Creating text or reviewing supplied content is local; explicit
+    compound save/send/read commands remain operations. Native auto still handles
+    wording outside this bounded policy.
+    """
+    # Only this explicitly negated URL use is data. A later affirmative URL or
+    # command in the same request remains eligible for mandatory verification.
+    intent_text = _NEGATED_URL_READ.sub(" ", user_text)
+    clauses = re.split(r"[，,。.!?！？\uFF1B;\n]+", intent_text)
+    operation_text = "。".join(
+        clause for clause in clauses if not _NO_CONVERSATIONAL_FOLLOWUP.fullmatch(clause.strip())
+    )
+    external_command = False
+    for match in _OPERATION.finditer(operation_text):
+        command, target = match.group(), operation_text[match.end() :]
+        local_content = (
+            _LOCAL_COMPOSITION_VERB.search(command) and _LOCAL_COMPOSITION_OBJECT.match(target)
+        ) or (_LOCAL_REVIEW_VERB.search(command) and _LOCAL_REVIEW_OBJECT.match(target))
+        if not local_content:
+            external_command = True
+            break
+    return bool(
+        _URL.search(intent_text)
+        or external_command
+        or _REMINDER.search(operation_text)
+        or _CLOCK_QUESTION.search(operation_text)
+        or _PERSONAL_DATA_REQUEST.search(operation_text)
+        or _requires_technical_source(user_text)
+        or (
+            _EXTERNAL_FACT.search(operation_text)
+            and _QUESTION.search(user_text)
+            and not restricts_to_existing_content(user_text)
+        )
+    )

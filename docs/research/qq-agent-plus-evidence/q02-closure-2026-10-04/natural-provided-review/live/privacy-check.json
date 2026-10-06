@@ -1,0 +1,8 @@
+{
+  "checked_nonempty_model_credentials": 1,
+  "credential_leaks": 0,
+  "files_scanned": 15,
+  "new_live_public_read_calls": 0,
+  "new_live_search_calls": 0,
+  "production_mutations_requested": 0
+}

@@ -1,0 +1,31 @@
+{
+  "samples": [
+    {
+      "sample_key": "technical_help:r0:t3:baseline",
+      "exit_code": 0,
+      "stdout": "[成功] 结果 1: 任务 1 成功\n[失败] 结果 2: 捕获到异常 -> ValueError: 任务 2 发生错误\n[成功] 结果 3: 任务 3 成功\n",
+      "stderr": "",
+      "stated_output_matches": null
+    },
+    {
+      "sample_key": "technical_help:r1:t3:baseline",
+      "exit_code": 0,
+      "stdout": "[1] 执行成功: 任务 1 成功\n[2] 捕获到异常: ValueError - 任务 2 发生错误\n[3] 执行成功: 任务 3 成功\n",
+      "stderr": "",
+      "stated_output_matches": true
+    },
+    {
+      "sample_key": "technical_help:r2:t3:baseline",
+      "exit_code": 0,
+      "stdout": "[成功] 任务 1 结果: 任务 1 成功完成\n[失败] 任务 2 异常: ValueError - 任务 2 发生错误\n[成功] 任务 3 结果: 任务 3 成功完成\n",
+      "stderr": "",
+      "stated_output_matches": true
+    }
+  ],
+  "later_exception_control": {
+    "exit_code": 0,
+    "stdout": "{\"unretrieved_warning_count\": 0, \"observed\": []}\n",
+    "stderr": ""
+  },
+  "scope": "Reviewed complete asyncio examples and explicit later-sibling-exception claim, not all BaseException or shutdown semantics"
+}

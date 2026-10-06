@@ -1,0 +1,40 @@
+{
+  "arguments": {
+    "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XWZX/XB_DQYW/202507/t20250710_227953.html",
+    "max_characters": 6000,
+    "dns_resolver": "cloudflare",
+    "fresh": true
+  },
+  "discovery": {
+    "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XWZX/XB_DQYW/202507/t20250710_227953.html",
+    "query_index": 1,
+    "rank": 1,
+    "title": "caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XWZX/XB_DQYW...",
+    "snippet": "辖区各机场广泛动员，通过广播、电子屏、公告牌、乘机短信等多渠道向旅客传达充电宝新规内容，设置充电宝暂存与自弃点，开设快递服务台，提升旅客处置. 效率。 安排专人现场引导旅客识别充电宝是否合规，提高出行效率。"
+  },
+  "ok": true,
+  "result": {
+    "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XWZX/XB_DQYW/202507/t20250710_227953.html",
+    "provider": "crawl4ai",
+    "title": "",
+    "text": "西北地区管理局 - 地区新闻\n菜单\n\n**西北局扎实推进充电宝乘机新规落地**\n来源：地区管理局 2025-07-10 16:59\n按照民航局统一部署，自2025年6月28日起，旅客携带未标注3C认证、3C标识不清晰或已被召回型号的充电宝禁止登机。西北局迅速响应，全面部署，扎实推进辖区机场充电宝乘机安全管理工作，切实守牢航空安全底线。\n为推动政策迅速落地，西北局第一时间下发通知，对辖区机场及航空公司提出具体工作要求，明确责任分工，压实工作任务，要求各单位以航空器为中心，由外向内依次开展宣传工作。各监管局同步制定落实进度计划，围绕信息告知、人员培训、查验流程、应急处置等方面开展重点监督。\n辖区各机场广泛动员，通过广播、电子屏、公告牌、乘机短信等多渠道向旅客传达充电宝新规内容，设置充电宝暂存与自弃点，开设快递服务台，提升旅客处置效率。安排专人现场引导旅客识别充电宝是否合规，提高出行效率。\n西北局石麟副局长带领运输处、公安局及监管局相关处室组成检查组，在新政实施首日赴现场开展专项检查。重点检查旅客宣传知晓度、现场查验有效性、员工培训覆盖率、自弃寄存操作流程及应急响应准备等关键环节，对发现的问题及时通报整改，压紧压实各方主体责任。\n6月28日至30日，西北四个省会机场共保障旅客36.9万人次，累计查验充电宝超10万个，自弃充电宝3.3万余个，寄存近900个，邮寄4800余个。\n下一步，西北局将持续强化对辖区单位的督导检查，推动各机场完善查验机制与服务保障体系，加大科技赋能力度，推动新规执行落实落细，保障旅客安全顺畅出行，全力护航西北地区民航安全稳定运行。\n[首页](https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/)丨[导航](https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XWZX/XB_DQYW/202507/t20250710_227953.html)丨[电脑版](http://xb.caac.gov.cn/index.html)\n版权所有：中国民用航空局",
+    "retrieved_at": "2026-10-04T11:09:16.990174+00:00",
+    "content_type": "text/plain",
+    "body_sha256": "60e0fe8147e861ac5f59dab06654c8912996ae997c34a7370cd5abc7d6102596",
+    "total_characters": 887,
+    "text_offset": 0,
+    "truncated": false,
+    "focus_matched": null,
+    "dns_resolver": "cloudflare",
+    "extraction_method": "plain_text",
+    "document_characters": 887,
+    "links": [],
+    "links_requested": false,
+    "links_truncated": false,
+    "links_scope": "selected_source",
+    "read_url_schemes": [
+      "https"
+    ]
+  },
+  "elapsed_ms": 2370
+}

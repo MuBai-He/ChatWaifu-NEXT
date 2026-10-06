@@ -1,0 +1,61 @@
+{
+  "review_group_id": "single_text:goodbye:r0",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "efd72aa239f0415e5943e299dc05766b55203a3067e9191a06b3ed0633a128c6",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 510,
+    "total_tokens": 4091,
+    "prompt_tokens": 3581
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"single_text:goodbye:r0\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两候选均利落接受道别，语气温和简短，无挽留追问与硬边界违规。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均给出简洁温暖的晚安，未提供养生清单或虚假现实动作，符合要求。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"候选2回应了用户的关心（'谢谢关心'）并利落收口，更符合角色温柔认真的性格。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均以极短词句对应告别并完成终态闭环，表现相当。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "single_text:goodbye:r0",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两候选均利落接受道别，语气温和简短，无挽留追问与硬边界违规。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均给出简洁温暖的晚安，未提供养生清单或虚假现实动作，符合要求。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "候选2回应了用户的关心（'谢谢关心'）并利落收口，更符合角色温柔认真的性格。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均以极短词句对应告别并完成终态闭环，表现相当。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 2926
+}

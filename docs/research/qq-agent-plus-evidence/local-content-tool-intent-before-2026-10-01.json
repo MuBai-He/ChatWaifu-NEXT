@@ -1,0 +1,47 @@
+{
+  "source_commit": "4a80465810516a623c2e64b7d3d72333186c1b4d",
+  "scope": "Actual isolated full-catalog Conversation with scripted normal text; zero network calls and operations",
+  "cases": [
+    {
+      "user_text": "不要打开 https://example.org/guide，只解释这个 URL 的组成。",
+      "expected_mode": "auto",
+      "observed_modes": ["required", "required"],
+      "schema_counts": [3, 3],
+      "provider_rounds": 2,
+      "output_text": "这次没有拿到可执行的工具调用，所以我没有执行外部操作。可以重试这次请求。",
+      "tool_runs": 0,
+      "live_endpoint_calls": 0
+    },
+    {
+      "user_text": "Create a short poem about rain.",
+      "expected_mode": "auto",
+      "observed_modes": ["required", "required"],
+      "schema_counts": [1, 1],
+      "provider_rounds": 2,
+      "output_text": "这次没有拿到可执行的工具调用，所以我没有执行外部操作。可以重试这次请求。",
+      "tool_runs": 0,
+      "live_endpoint_calls": 0
+    },
+    {
+      "user_text": "Please check this calculation: 17 * 23 = 391.",
+      "expected_mode": "auto",
+      "observed_modes": ["required", "required"],
+      "schema_counts": [1, 1],
+      "provider_rounds": 2,
+      "output_text": "这次没有拿到可执行的工具调用，所以我没有执行外部操作。可以重试这次请求。",
+      "tool_runs": 0,
+      "live_endpoint_calls": 0
+    },
+    {
+      "user_text": "请看看这段代码有没有语法错误：print(\"hello\")",
+      "expected_mode": "auto",
+      "observed_modes": ["required", "required"],
+      "schema_counts": [1, 1],
+      "provider_rounds": 2,
+      "output_text": "这次没有拿到可执行的工具调用，所以我没有执行外部操作。可以重试这次请求。",
+      "tool_runs": 0,
+      "live_endpoint_calls": 0
+    }
+  ],
+  "original_sha256": "03e27fb64d6cb24eb6b7aea78254ae2064f7237dc3cbc76375bcb2fe0dfb7c96"
+}

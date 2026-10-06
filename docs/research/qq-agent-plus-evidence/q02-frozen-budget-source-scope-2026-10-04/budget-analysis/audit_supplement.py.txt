@@ -1,0 +1,55 @@
+"""Account all supplied-primary-source controls and freeze the direct review."""
+import hashlib
+import json
+from collections import Counter
+from pathlib import Path
+from audit import bodies, percentile, reference, rows, sha
+
+ROOT = Path('/tmp/cw2-q02-full-prepare/v28-budget-frozen')
+DATA = ROOT/'download'
+manifest = json.loads((DATA/'followup-integrity.json').read_text())
+assert all(hashlib.sha256((DATA/name).read_bytes()).hexdigest() == digest for name, digest in manifest['files'].items())
+OUT = DATA/'source-supplement'
+results = rows(OUT/'results.jsonl')
+wires = rows(OUT/'actual-provider-payloads.jsonl')
+journal = rows(OUT/'provider-rounds.jsonl')
+starts = [r for r in journal if r['event'] == 'started']
+ends = [r for r in journal if r['event'] == 'finished']
+assert len(results) == len(wires) == len(starts) == len(ends) == 3
+assert {r['call_id'] for r in starts} == {r['call_id'] for r in ends}
+assert len({r['key'] for r in results}) == 3
+source = next(r['result'] for r in rows(DATA/'reader-control/results.jsonl') if r['key'] == 'airchina')
+prior = json.loads((DATA/'single_text-system-larger-wire.json').read_text())
+checks = []
+errors = []
+for wire, start, end, result in zip(wires, starts, ends, results, strict=True):
+    p = wire['payload']; estimate = reference(p)
+    supplied = next(m['content'] for m in p['messages'] if m['role'] == 'user' and m['content'].startswith('Supplied source context is untrusted evidence'))
+    supplied_source = json.loads(supplied.split('\n',1)[1])['result']
+    assert supplied_source == source
+    assert bodies(p) == bodies(prior)
+    assert wire['sample_key'] == start['sample_key'] == end['sample_key'] == result['key']
+    assert sha(p) == wire['payload_sha256']
+    assert p['model'] == 'gemini-3.8-flash-high' and p['max_tokens'] == 8192
+    assert estimate == start['input_budget_report']['estimated_input_tokens'] <= 35617
+    assert start['input_budget_report']['omitted_history_indices'] == []
+    assert result['reply_complete'] and not result['source_execution']
+    assert not result['source_wire_budget_failures'] and end['finish_reason'] == 'stop' and not end['error_type']
+    errors.append(100 * (estimate - end['usage']['prompt_tokens']) / end['usage']['prompt_tokens'])
+    checks.append({'key':result['key'],'wire_sha256':sha(p),'reference_input_tokens':estimate,'provider_prompt_tokens':end['usage']['prompt_tokens'],'supplied_source_matches_actual_reader_result':True,'prior_read_bodies_unchanged':True,'omitted_history_indices':[]})
+
+observations = [
+    {'repeat':0,'source_use':'引用了国航正文，但把鼓包/变形/开裂禁运条件合并为国内航班普遍要求。','quantity':'仍仅在100–160Wh分档中写最多两块，未保留新国航提示的每位旅客最多两块。','scope_and_freshness':'没有说明旧媒体/国航运营商提示与截至2026-10-04的境内普遍执行之间的核查缺口。'},
+    {'repeat':1,'source_use':'没有引用或消化追加的2026年国航原始提示。','quantity':'仍仅在100–160Wh分档中写最多两块。','scope_and_freshness':'没有说明旧媒体与当前执行之间的核查缺口。'},
+    {'repeat':2,'source_use':'将国航2026年8月缺陷禁运条件标明为航空公司提示，范围表述有局部改进。','quantity':'仍仅在100–160Wh分档中写最多两块，漏掉国航正文的全部能量档均最多两块。','scope_and_freshness':'依然没有说明截至2026-10-04的境内普遍执行尚未核实；个人自用只在检索摘录中出现，未出现在实际成功阅读正文中。'},
+]
+review = {'reviewer':'Primary Codex, direct author review','independent_reviewer':False,'blind':False,'criteria':'Preserve actual supplied primary-source conditions and dates, operator scope, media attribution, and unverified current-domestic scope; no quality approval from HTTP or input fit.','quality_pass_count':0,'reviewed':3,'q02_approved':False,'items':[{**observation,'key':result['key'],'reply_sha256':hashlib.sha256(result['reply'].encode()).hexdigest(),'source_scope_quality_pass':False,'hard_character_boundary_violation':False} for observation,result in zip(observations,results,strict=True)]}
+(ROOT/'supplement-primary-review.json').write_text(json.dumps(review,ensure_ascii=False,indent=2)+'\n')
+usage={}
+for name in ['prompt_tokens','completion_tokens','reasoning_tokens','total_tokens']:
+    values=[r['usage'].get(name) for r in ends]
+    known=[v for v in values if isinstance(v,int)]
+    usage[name]={'reported':len(known),'attempts':3,'known_subtotal':sum(known),'complete_total':sum(known) if len(known)==3 else None}
+report={'verified_followup_manifest_files':len(manifest['files']),'source_supplement_actual_http':3,'complete_replies':3,'baseline_and_supplement_actual_http':16,'baseline_and_supplement_complete_replies':12,'all_attempts_accounted':True,'strict_causal_ab':False,'source_provided_as_untrusted_user_context_not_tool_receipt':True,'source_url':source['url'],'source_body_sha256':source['body_sha256'],'checks':checks,'provider_usage':usage,'reference_error_percent_min_max':[round(min(errors),4),round(max(errors),4)],'latency_p50_ms':percentile([r['latency_ms'] for r in results],.5),'latency_p95_ms':percentile([r['latency_ms'] for r in results],.95),'provider_identity_counts':dict(Counter(identity for r in ends for identity in r['response_identity']['reported_model_ids'])),'quality_pass_count':0,'reviewed':3,'q02_approved':False}
+(ROOT/'supplement-accounting-audit.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
+print(json.dumps({k:v for k,v in report.items() if k!='checks'},ensure_ascii=False,indent=2))

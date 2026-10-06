@@ -1,0 +1,70 @@
+"""Read the specified HTML and discovered PDF through deployed source, no LLM."""
+
+import asyncio
+import hashlib
+import json
+import sys
+import time
+from pathlib import Path
+
+ROOT = Path('/home/mubai/chatwaifu-server/source')
+OUT = Path('/tmp/cw2-q02-reader-integration-20261004')
+sys.path[:0] = [str(ROOT / rel) for rel in (
+    'services/runtime/src', 'packages/protocol-python/src', 'packages/model-worker-sdk-python/src')]
+from pydantic import SecretStr
+from chatwaifu_runtime.config.settings import PublicWebConfig
+from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
+from chatwaifu_runtime.runtime_skills.public_web import PublicWebReader
+import chatwaifu_runtime.runtime_skills.public_web_providers as providers
+
+assert not (OUT / 'deployed-reader-results.json').exists(), 'Do not repeat completed reads'
+module = ROOT / 'services/runtime/src/chatwaifu_runtime/runtime_skills/public_web_providers.py'
+assert Path(providers.__file__).resolve() == module.resolve()
+config_values = {}
+for line in Path('/home/mubai/.local/share/chatwaifu-server/config/public-web.env').read_text().splitlines():
+    if line.startswith('CHATWAIFU_PUBLIC_WEB__') and '=' in line:
+        name, value = line.split('=', 1)
+        config_values[name] = value.strip().strip(chr(34)).strip(chr(39))
+token = config_values.get('CHATWAIFU_PUBLIC_WEB__CRAWL4AI_API_TOKEN')
+assert token
+reader = PublicWebReader(provider_config=PublicWebConfig(
+    search_provider='searxng', reader_provider='crawl4ai',
+    searxng_endpoint='http://127.0.0.1:18080', crawl4ai_endpoint='http://127.0.0.1:11235',
+    crawl4ai_api_token=SecretStr(token), timeout_seconds=30))
+
+
+async def main():
+    rows = []
+    samples = [
+        ('html', 'https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml', '充电宝'),
+        ('pdf', 'https://raft.github.io/raft.pdf', 'randomized election timeouts')]
+    for kind, url, focus in samples:
+        args = {'url': url, 'focus': focus, 'max_characters': 6000,
+                'dns_resolver': 'cloudflare', 'fresh': True}
+        row = {'kind': kind, 'arguments': args, 'origin': 'specified_html' if kind == 'html'
+               else 'previous_production_search_rank4', 'model_calls': 0}
+        start = time.monotonic()
+        try:
+            result = await reader.read(args)
+            row.update(ok=True, result=result)
+            assert result['provider'] == 'crawl4ai' and result['url'] == url
+            assert result['text'].strip() and len(result['text']) <= 6000
+            assert 'provider_fallback' not in result
+        except SkillExecutionError as error:
+            row.update(ok=False, error_code=error.structured.code, retryable=error.structured.retryable)
+        except Exception as error:
+            row.update(ok=False, error_type=type(error).__name__)
+        row['elapsed_ms'] = round((time.monotonic() - start) * 1000)
+        rows.append(row)
+        print(json.dumps({k: v for k, v in row.items() if k != 'result'}), flush=True)
+    report = {'actual_reader_operations': len(rows), 'model_calls': 0,
+              'source_module_sha256': hashlib.sha256(module.read_bytes()).hexdigest(),
+              'runtime_source_origin_verified': True, 'new_persona_or_model_config': False,
+              'results': rows, 'q02_approval': False}
+    encoded = json.dumps(report, ensure_ascii=False, indent=2)
+    assert token not in encoded
+    (OUT / 'deployed-reader-results.json').write_text(encoded + '\n')
+    return all(row['ok'] for row in rows)
+
+
+sys.exit(0 if asyncio.run(main()) else 1)

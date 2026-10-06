@@ -1,0 +1,59 @@
+{
+  "reviewer": "implementation author, direct full-text review; not independent/blind",
+  "scope": "actual native Runtime four-turn conversation repeated twice, detailed_answer; same frozen closure-c1 persona; real current source read not fixed-source causal AB",
+  "complete": 5,
+  "partial": 3,
+  "failure": 0,
+  "full_q02_approved": false,
+  "candidate_adopted": false,
+  "items": [
+    {
+      "sample_key": "airchina_native_deictic:r0:t1:closure_c1",
+      "grade": "complete",
+      "reason": "已读全文、日期及各携带条件完整，来源限定国航而非全行业。",
+      "reply_sha256": "17b1c165d613a2ceffc67d8d539046bca2b1bb2d7d59a2a0a5e05bfa9b0f6dbe"
+    },
+    {
+      "sample_key": "airchina_native_deictic:r0:t2:closure_c1",
+      "grade": "complete",
+      "reason": "正确保留100Wh以下总数2块、超过100Wh至160Wh批准及其他共同条件。",
+      "reply_sha256": "471f37598a92c34bafc3941c94426cdbc9105722797b82821c15be0143dab148"
+    },
+    {
+      "sample_key": "airchina_native_deictic:r0:t3:closure_c1",
+      "grade": "partial",
+      "reason": "结论“不足以证明全行业截至10月4日完全相同”及未核实时间范围明确。 对国航条件的旁述写成“100Wh至160Wh须批准”，丢掉超过100Wh的开区间，不与上一轮准确表述等价。",
+      "reply_sha256": "db25573362a903de127a96ecfb0dfd992f7f194aacb5a1dd174cc10c0a6157de"
+    },
+    {
+      "sample_key": "airchina_native_deictic:r0:t4:closure_c1",
+      "grade": "partial",
+      "reason": "日期/链接、国航范围、携带条件完整，但最终修订仍遗漏前轮截至10月4日后续变化未核实的状态。",
+      "reply_sha256": "92180c1565e88bc55fb16283e75b18fe28ff9508ff2234e415de2198dc4d3c9f"
+    },
+    {
+      "sample_key": "airchina_native_deictic:r1:t1:closure_c1",
+      "grade": "complete",
+      "reason": "已读全文、日期及各携带条件完整，来源限定国航而非全行业。",
+      "reply_sha256": "b5b41fafe4cc78a394b3f8a5e296115553499295771a0ef6dbb4ca3c08d7e55c"
+    },
+    {
+      "sample_key": "airchina_native_deictic:r1:t2:closure_c1",
+      "grade": "complete",
+      "reason": "正确保留100Wh以下总数2块、超过100Wh至160Wh批准及其他共同条件。",
+      "reply_sha256": "ea717fc3c3ba1f840b9dd3c7b56d2c9b288769efb4bb0f05d469266179ac1509"
+    },
+    {
+      "sample_key": "airchina_native_deictic:r1:t3:closure_c1",
+      "grade": "complete",
+      "reason": "结论“不足以证明全行业截至10月4日完全相同”及未核实时间范围明确。",
+      "reply_sha256": "2caa91e3f16cfea9e665f7ef45e862a20f1a82a6862cc95cfc6d52620433c8a7"
+    },
+    {
+      "sample_key": "airchina_native_deictic:r1:t4:closure_c1",
+      "grade": "partial",
+      "reason": "日期/链接、国航范围、携带条件完整，但最终修订仍遗漏前轮截至10月4日后续变化未核实的状态。",
+      "reply_sha256": "52fcd2678a4e9df23e29a7bb0f080a7146d250b0ceb345f4d8fcc61875687bc5"
+    }
+  ]
+}

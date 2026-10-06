@@ -1,0 +1,8 @@
+{
+  "credential_values_checked": 1,
+  "files_scanned": 14,
+  "credential_leaks": 0,
+  "exported_database": false,
+  "source_tree_unchanged": true,
+  "production_mutations": 0
+}

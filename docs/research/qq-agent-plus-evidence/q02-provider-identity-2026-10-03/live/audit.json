@@ -1,0 +1,27 @@
+{
+  "requests": 4,
+  "all_identity_matches_observed_sse": true,
+  "usage_reported": 2,
+  "known_usage_subtotal": {
+    "prompt_tokens": 40,
+    "completion_tokens": 50,
+    "reasoning_tokens": 843,
+    "total_tokens": 933
+  },
+  "whole_batch_usage_known": false,
+  "quality_approved": false,
+  "all_requested_models": [
+    "gemini-3.8-flash-high"
+  ],
+  "reported_models": [
+    "gemini-3.8-flash",
+    "gemini-3.8-flash-control"
+  ],
+  "latency_ms": [
+    3806,
+    3806,
+    3500,
+    3621
+  ],
+  "scope": "SSE metadata smoke only, not Q02 answer evaluation"
+}

@@ -1,0 +1,107 @@
+"""Private replay through actual production compiler and streaming adapter."""
+import asyncio, contextvars, hashlib, json, random, subprocess, sys, time
+from dataclasses import asdict
+from datetime import UTC, datetime
+from pathlib import Path
+from types import SimpleNamespace
+from uuid import UUID, uuid4
+ROOT=Path(__file__).resolve().parent
+sys.path.insert(0,str(ROOT))
+import study
+from study import (PromptCompiler, CharacterService, CharacterKernelSnapshot, AffectState, RelationshipState, ResponsePlan, MemoryExcerpt, MemoryContextPacket, bounded_tool_result_payload, LlmRequest, LlmInputBudget, LlmToolCall, LlmToolExchange, LlmToolResult, fit_input_budget, estimate_reference_input_tokens, build_chat_completions_payload, build_messages, OpenAiCompatibleLlmProvider, LlmTextDelta, LlmResponseCompleted, httpx2)
+from chatwaifu_protocol.character import ModelContextBudget
+from chatwaifu_runtime.providers.context_budget import resolve_context_budget
+OUT=ROOT/'post-implementation';OUT.mkdir(exist_ok=True)
+BUDGET=ModelContextBudget(output_reserve_tokens=8192,max_output_tokens=8192,estimate_margin_ratio=.15,section_policy='scaled',history_turn_limit=32,memory_candidate_limit=24,tool_result_max_bytes=131072)
+MODELS=['gemini-3.1-flash-lite','gemini-3.8-flash-high']
+def write(name,value): (OUT/name).write_text(json.dumps(value,ensure_ascii=False,indent=2,default=str)+'\n')
+def append(name,value):
+ with (OUT/name).open('a') as f:f.write(json.dumps(value,ensure_ascii=False,default=str)+'\n')
+def source_hashes():
+ paths=subprocess.check_output(['git','ls-files','services/runtime/src','packages/protocol-python/src','characters/default'],text=True).splitlines()+['services/runtime/src/chatwaifu_runtime/providers/context_budget.py']
+ return [{'path':p,'sha256':study.sha(Path(p).read_bytes())} for p in sorted(set(paths))]
+class Models(study.Models):
+ def get(self,role):return SimpleNamespace(context_window=self.window,budget=BUDGET)
+async def prepare():
+ chars=CharacterService(Path.cwd()/'characters');chars.start();character=chars.get('default')
+ now=datetime(2026,10,1,15,30,tzinfo=UTC)
+ kernel=CharacterKernelSnapshot(character_id='default',user_scope='local',revision=1,affect=AffectState(updated_at=now),relationship=RelationshipState(updated_at=now))
+ rp=ResponsePlan(intent='answer',tone='serious',expression='neutral',rationale='同一合成资料的预算调查')
+ instruction='只依据本轮已提供资料回答；没有资料时填 null，勿推测。只输出 JSON 对象，字段为 fact 和 reason。fact 填精确编号字符串或 null，reason 简述依据。'
+ records=[];typed=[];limits=resolve_context_budget(32768,BUDGET)
+ for case in json.loads((ROOT/'materials.json').read_text()):
+  models=Models(32768);compiler=PromptCompiler(models);selected=[];used=0
+  for i,t in enumerate(case.get('memory',[])):
+   if used+len(t)>limits.retrieval_characters:continue
+   used+=len(t);selected.append(MemoryExcerpt(memory_id=UUID(int=i+1),text=t,source_event_ids=[UUID(int=100+i)],relevance=1))
+  memory=MemoryContextPacket(token_budget_used=used,relevant_memories=selected)
+  user=case['question']+'\n'+instruction
+  compiled=await compiler.compile(character=character.model_copy(update={'system_prompt':case.get('persona',character.system_prompt)}),kernel=kernel,plan=rp,memory=memory,history=tuple(case.get('history',[])),user_text=user,presentation_profile='instant_message',as_of=now)
+  exchanges=()
+  if 'tool' in case:
+   result=bounded_tool_result_payload(case['tool'],max_bytes=BUDGET.tool_result_max_bytes)
+   call=LlmToolCall('budget-study-call','study_read',{})
+   exchanges=(LlmToolExchange('',(call,),(LlmToolResult(call.call_id,call.name,result),)),)
+  raw=LlmRequest(generation_id=uuid4(),user_text=user,system_prompt=compiled.system_prompt,character_name=character.display_name,context=compiled.context,history=compiled.history,recalled_memory_texts=compiled.recalled_memory_texts,tool_exchanges=exchanges,input_budget=LlmInputBudget(compiled.report.budget),max_output_tokens=BUDGET.max_output_tokens,tool_result_max_bytes=BUDGET.tool_result_max_bytes)
+  fitted=fit_input_budget(raw)
+  payload=build_chat_completions_payload('unset',fitted,build_messages(fitted),request_usage=True)
+  rec={'case':case['id'],'variant':'configured_production','gold':case['gold'],'fact_available':case['gold'] in json.dumps(payload,ensure_ascii=False),'payload':payload,'reference_tokens':estimate_reference_input_tokens(fitted),'compiler_report':compiled.report.model_dump(mode='json'),'retrieval_selected':[str(x.memory_id) for x in selected],'retrieval_omitted':[str(UUID(int=i+1)) for i in range(len(case.get('memory',[]))) if UUID(int=i+1) not in {x.memory_id for x in selected}],'summary_calls':models.summary_inputs,'request':asdict(fitted)}
+  records.append(rec);typed.append((rec,fitted))
+  assert rec['fact_available'] and rec['reference_tokens']<=limits.input_tokens
+ return records,typed
+class CaptureStream(httpx2.AsyncByteStream):
+ def __init__(self,original,owner):self.original=original;self.owner=owner
+ async def __aiter__(self):
+  async for block in self.original:self.owner.blocks.append(block);yield block
+ async def aclose(self):await self.original.aclose()
+class CaptureTransport(httpx2.AsyncBaseTransport):
+ def __init__(self,identity):self.identity=identity;self.inner=httpx2.AsyncHTTPTransport();self.blocks=[];self.attempts=0;self.status=None
+ async def handle_async_request(self,request):
+  self.attempts+=1
+  if self.attempts>1:raise RuntimeError('controlled_replay_disallows_second_HTTP_attempt')
+  append('http-attempts.jsonl',{'key':self.identity,'payload':json.loads(request.content),'started_at':datetime.now(UTC).isoformat()})
+  response=await self.inner.handle_async_request(request);self.status=response.status_code
+  if response.status_code==200:response.stream=CaptureStream(response.stream,self)
+  return response
+ async def aclose(self):await self.inner.aclose()
+async def main(mode):
+ records,typed=await prepare()
+ if mode=='prepare':
+  assert not (OUT/'plan.json').exists()
+  write('requests.json',records)
+  write('plan.json',{'parent_commit':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'working_tree_snapshot':True,'source_hashes':source_hashes(),'driver_sha256':study.sha(Path(__file__).read_bytes()),'materials_sha256':study.sha((ROOT/'materials.json').read_bytes()),'models':MODELS,'repeats':3,'maximum_generation_requests':36,'window':32768,'budget':BUDGET.model_dump(mode='json'),'resolved':asdict(resolve_context_budget(32768,BUDGET)),'scope':'Production compiler + final input fitter + real streaming provider, same synthetic materials/questions/time. Controlled summary and supplied ordered retrieval candidates; not full ConversationService, real summarizer, or human/blind Q02 acceptance.'})
+  print(json.dumps([{'case':x['case'],'reference_tokens':x['reference_tokens'],'fact_available':x['fact_available']} for x in records]));return
+ plan=json.loads((OUT/'plan.json').read_text());assert source_hashes()==plan['source_hashes'];assert study.sha(Path(__file__).read_bytes())==plan['driver_sha256'];assert study.sha((ROOT/'materials.json').read_bytes())==plan['materials_sha256']
+ saved=json.loads((OUT/'requests.json').read_text())
+ for new,old in zip(records,saved):assert new['payload']==old['payload']
+ assert not (OUT/'http-attempts.jsonl').exists(),'No implicit reruns'
+ url,key=study.owner_route();sem=asyncio.Semaphore(3)
+ jobs=[(m,rec,req,i) for m in MODELS for rec,req in typed for i in range(3)];random.Random(20261002).shuffle(jobs)
+ async def one(model,rec,req,i):
+  async with sem:
+   identity=f"{model}:{rec['case']}:configured_production:{i}";transport=CaptureTransport(identity)
+   provider=OpenAiCompatibleLlmProvider(base_url=url,model=model,api_key=key,timeout_seconds=180,transport=transport,request_usage=True,backoff_delays=())
+   start=time.perf_counter();first=None;parts=[];terminal=None;error=None
+   try:
+    async for event in provider.stream(req):
+     if isinstance(event,LlmTextDelta):
+      if first is None:first=round((time.perf_counter()-start)*1000)
+      parts.append(event.text)
+     elif isinstance(event,LlmResponseCompleted):terminal=event
+   except Exception as exc:error=type(exc).__name__
+   elapsed=round((time.perf_counter()-start)*1000);events=[]
+   for line in b''.join(transport.blocks).decode().splitlines():
+    if line.startswith('data:') and line[5:].strip()!='[DONE]':
+     e=json.loads(line[5:].strip());events.append(e);append('stream-events.jsonl',{'key':identity,'data':e})
+   usage=next((x['usage'] for x in reversed(events) if x.get('usage')),None)
+   response_model=next((x['model'] for x in reversed(events) if x.get('model')),None)
+   reply=''.join(parts);normalized=reply.strip()
+   if normalized.startswith('```'):normalized=normalized.split('\n',1)[-1].rsplit('```',1)[0].strip()
+   try:parsed=json.loads(normalized)
+   except Exception:parsed=None
+   fact=parsed.get('fact') if isinstance(parsed,dict) else None
+   item={'key':identity,'model':model,'case':rec['case'],'variant':'configured_production','repetition':i,'status':transport.status,'error':error,'reply':reply,'parsed':parsed,'fact_available':rec['fact_available'],'fact_covered':fact==rec['gold'],'available_fact_error':fact!=rec['gold'],'reference_input_tokens':rec['reference_tokens'],'usage':usage,'typed_terminal':asdict(terminal) if terminal else None,'response_model':response_model,'finish_reason':terminal.finish_reason if terminal else None,'ttft_ms':first,'elapsed_ms':elapsed,'http_attempts':transport.attempts}
+   append('replies.jsonl',item);print(json.dumps({k:item[k] for k in ['key','status','error','fact_covered','elapsed_ms']}),flush=True)
+ await asyncio.gather(*(one(*x) for x in jobs))
+ assert source_hashes()==plan['source_hashes']
+if __name__=='__main__':asyncio.run(main(sys.argv[1]))

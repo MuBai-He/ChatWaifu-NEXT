@@ -1,0 +1,30 @@
+[
+  {
+    "label": "baseline-replay-final",
+    "exit_code": 0,
+    "argv": [
+      "/home/mubai/chatwaifu-server/source/.venv/bin/python",
+      "/tmp/cw2-q02-history-priority-v44-20261004/replay_inputs-final.py.txt",
+      "--root",
+      "/tmp/cw2-q02-history-baseline-v44-eval",
+      "--evidence",
+      "/tmp/cw2-q02-history-priority-v44-20261004/inputs",
+      "--out",
+      "/tmp/cw2-q02-history-priority-v44-20261004/baseline-replay-final"
+    ]
+  },
+  {
+    "label": "candidate-replay-final",
+    "exit_code": 0,
+    "argv": [
+      "/home/mubai/chatwaifu-server/source/.venv/bin/python",
+      "/tmp/cw2-q02-history-priority-v44-20261004/replay_inputs-final.py.txt",
+      "--root",
+      "/tmp/cw2-q02-history-candidate-v44-eval",
+      "--evidence",
+      "/tmp/cw2-q02-history-priority-v44-20261004/inputs",
+      "--out",
+      "/tmp/cw2-q02-history-priority-v44-20261004/candidate-replay-final"
+    ]
+  }
+]

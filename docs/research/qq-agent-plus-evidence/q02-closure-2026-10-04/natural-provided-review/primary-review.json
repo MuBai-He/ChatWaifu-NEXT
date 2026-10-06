@@ -1,0 +1,212 @@
+{
+  "automatic_keyword_approval": false,
+  "criteria_unchanged": true,
+  "fixed_date_literal_required": false,
+  "items": [
+    {
+      "full_text_reviewed": true,
+      "grade": "complete",
+      "model_reply": true,
+      "reason": "已报告文末2026-03-27可见日期并区分独立发布时间字段未标注；生效日、2个、飞行中给充电宝自身充电禁令、机组运行需求例外及成员国分发范围保留。谨慎解释日期标签不等于遗漏可见日期。",
+      "reply_sha256": "ce51f36fb28c648a85e4ed17548be22e92ea83aa39f51124489af27ea109c2ab",
+      "review_type": "primary_author_unblinded",
+      "runtime_fallback": false,
+      "sample_key": "frozen_icao:r0:t1",
+      "source_text_sha256": "4dfe7980b04b1c65ed14156ce7cd8381f19b0cd7874e76b42315491f19df1fe3",
+      "user_text": "只依据提供的 ICAO 冻结公告，说明它的发布日期、生效日期、充电宝数量限制、机上充电限制和适用范围。不要联网。"
+    },
+    {
+      "full_text_reviewed": true,
+      "grade": "complete",
+      "model_reply": true,
+      "reason": "正确说明所给公告没有100Wh/160Wh分档；未补写外部能量标准。",
+      "reply_sha256": "ba347e85008af6fb2fcf24599cf44f54ddea0feac07eb6eb17b01861d819c4c2",
+      "review_type": "primary_author_unblinded",
+      "runtime_fallback": false,
+      "sample_key": "frozen_icao:r0:t2",
+      "source_text_sha256": "4dfe7980b04b1c65ed14156ce7cd8381f19b0cd7874e76b42315491f19df1fe3",
+      "user_text": "这份 ICAO 公告是否对100Wh和160Wh给出了具体携带分档？只依据提供的公告回答，没写就说明没写。"
+    },
+    {
+      "full_text_reviewed": true,
+      "grade": "complete",
+      "model_reply": true,
+      "reason": "不能证明10月4日中国境内统一实际执行的结论正确；国内转化表述为本文未记录而非推断法律必需机制；材料事实与执行未知分开。",
+      "reply_sha256": "8ee36b75a902f027808a93303d7c12639c043e23cd054190dcbd13a2fe275bc8",
+      "review_type": "primary_author_unblinded",
+      "runtime_fallback": false,
+      "sample_key": "frozen_icao:r0:t3",
+      "source_text_sha256": "4dfe7980b04b1c65ed14156ce7cd8381f19b0cd7874e76b42315491f19df1fe3",
+      "user_text": "仅凭这份 ICAO 公告，能直接证明截至2026年10月4日所有中国境内航班都实施相同数量限制吗？区分材料能证明的内容与未核实的范围，不要联网。"
+    },
+    {
+      "full_text_reviewed": true,
+      "grade": "complete",
+      "model_reply": true,
+      "reason": "三条包含日期数值、2个、旅客给充电宝自身充电禁令、机组运行需求例外、真实URL、193成员国分发与10月4日中国境内执行未知。未独立标注发布日期的谨慎措辞未否认可见日期数值，不因缺少固定页脚字样判失败。",
+      "reply_sha256": "d29de7d67b546fd0f1bcee13c2378f116ae9d3a6c9f440ae6e956bbcb99ecf59",
+      "review_type": "primary_author_unblinded",
+      "runtime_fallback": false,
+      "sample_key": "frozen_icao:r0:t4",
+      "source_text_sha256": "4dfe7980b04b1c65ed14156ce7cd8381f19b0cd7874e76b42315491f19df1fe3",
+      "user_text": "将这份 ICAO 公告整理为三条清单，保留日期、来源链接、数量、禁止行为、机组例外及不能据此证明的适用范围。"
+    },
+    {
+      "full_text_reviewed": true,
+      "grade": "complete",
+      "model_reply": true,
+      "reason": "公告末尾日期、明确生效日、数量、旅客充电禁令、运行需求例外与分发主体边界完整。",
+      "reply_sha256": "d2bdff21ee1b6d6f517664112d104744f0d84249a7bab802553e521e096a6ecc",
+      "review_type": "primary_author_unblinded",
+      "runtime_fallback": false,
+      "sample_key": "frozen_icao:r1:t1",
+      "source_text_sha256": "4dfe7980b04b1c65ed14156ce7cd8381f19b0cd7874e76b42315491f19df1fe3",
+      "user_text": "只依据提供的 ICAO 冻结公告，说明它的发布日期、生效日期、充电宝数量限制、机上充电限制和适用范围。不要联网。"
+    },
+    {
+      "full_text_reviewed": true,
+      "grade": "complete",
+      "model_reply": true,
+      "reason": "准确区分资料没有Wh分档与已给出的数量/充电/机组规则，没有引入其他文档条件。",
+      "reply_sha256": "c665cd8455b2554cf303ad71da892470c678103e0b036a43fe37c81af882c057",
+      "review_type": "primary_author_unblinded",
+      "runtime_fallback": false,
+      "sample_key": "frozen_icao:r1:t2",
+      "source_text_sha256": "4dfe7980b04b1c65ed14156ce7cd8381f19b0cd7874e76b42315491f19df1fe3",
+      "user_text": "这份 ICAO 公告是否对100Wh和160Wh给出了具体携带分档？只依据提供的公告回答，没写就说明没写。"
+    },
+    {
+      "full_text_reviewed": true,
+      "grade": "complete",
+      "model_reply": true,
+      "reason": "材料制定、生效、分发与中国境内截至10月4日实际执行未知分开，不把提供给成员国等同落地。",
+      "reply_sha256": "4d41c8b34027b34bf34c8447048e81478aa228bcda81913fb1c7b4e8d72ad02e",
+      "review_type": "primary_author_unblinded",
+      "runtime_fallback": false,
+      "sample_key": "frozen_icao:r1:t3",
+      "source_text_sha256": "4dfe7980b04b1c65ed14156ce7cd8381f19b0cd7874e76b42315491f19df1fe3",
+      "user_text": "仅凭这份 ICAO 公告，能直接证明截至2026年10月4日所有中国境内航班都实施相同数量限制吗？区分材料能证明的内容与未核实的范围，不要联网。"
+    },
+    {
+      "full_text_reviewed": true,
+      "grade": "complete",
+      "model_reply": true,
+      "reason": "三条保留公告/生效日期、数量、禁止对象、机组例外及具体未验证适用范围，URL绑定同一来源。",
+      "reply_sha256": "6d58578d13afc0700248a31feccd54c9bce9c4f35b733e94db0ed8d550d08292",
+      "review_type": "primary_author_unblinded",
+      "runtime_fallback": false,
+      "sample_key": "frozen_icao:r1:t4",
+      "source_text_sha256": "4dfe7980b04b1c65ed14156ce7cd8381f19b0cd7874e76b42315491f19df1fe3",
+      "user_text": "将这份 ICAO 公告整理为三条清单，保留日期、来源链接、数量、禁止行为、机组例外及不能据此证明的适用范围。"
+    },
+    {
+      "full_text_reviewed": true,
+      "grade": "complete",
+      "model_reply": true,
+      "reason": "禁运负向原句、2块总额、Wh严格档位及国航审批、境内3C、随身/不托运、开关、前方座椅存放绝缘、设备供电与机上电源充电禁令均保留；发布单位/日期给出，未断言其他承运人一致。",
+      "reply_sha256": "ebb3b57bb010b989fecadf18f525e4db5a88e53310cbcf9ece6a53d8c47467d4",
+      "review_type": "primary_author_unblinded",
+      "runtime_fallback": false,
+      "sample_key": "frozen_airchina:r0:t1",
+      "source_text_sha256": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+      "user_text": "只依据提供的国航冻结提示，整理它的发布日期、充电宝携带条件和适用范围。不要联网。"
+    },
+    {
+      "full_text_reviewed": true,
+      "grade": "complete",
+      "model_reply": true,
+      "reason": "100Wh及以下仍计入2块总额；超过100Wh且不超过160Wh需国航批准，其他实质条件及充电对象、存放位置完整。",
+      "reply_sha256": "656b4f1ae11b5b6001481e4b08b01ea92b637e64a8fae6f0df9290d1d627e218",
+      "review_type": "primary_author_unblinded",
+      "runtime_fallback": false,
+      "sample_key": "frozen_airchina:r0:t2",
+      "source_text_sha256": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+      "user_text": "根据这份国航提示，100Wh及以下也最多带两块吗？超过100Wh至160Wh又有哪些要求？"
+    },
+    {
+      "full_text_reviewed": true,
+      "grade": "complete",
+      "model_reply": true,
+      "reason": "正确区分国航自己的日期/文本和所有其他航司、民航局原始文件、10月4日现行状态未知，未补写外部规则。",
+      "reply_sha256": "30a22efa00a1342aacc03c814d57921585fa74f68f99b190b2ba2c8f92b83f12",
+      "review_type": "primary_author_unblinded",
+      "runtime_fallback": false,
+      "sample_key": "frozen_airchina:r0:t3",
+      "source_text_sha256": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+      "user_text": "仅凭这份国航提示，能证明所有中国境内航空公司截至2026年10月4日都实施完全相同的限制吗？说明材料能证明和不能证明的部分，不要联网。"
+    },
+    {
+      "full_text_reviewed": true,
+      "grade": "partial",
+      "model_reply": true,
+      "reason": "三条携带清单、实质条件、发布单位/日期、URL保留，但前轮已明确的8月4日至10月4日修订与现行状态未核实没有语义留存；仅保留国际3C未知，不能代表那个时间范围。记录为跨轮覆盖不足，不声称答复已经断言所有航司当前一致，不以缺少固定日期字样判定。",
+      "reply_sha256": "b0ae88ab75e1610b22a05f699d3a9d8121891e1c054dc114918f5edb4b4b0588",
+      "review_type": "primary_author_unblinded",
+      "runtime_fallback": false,
+      "sample_key": "frozen_airchina:r0:t4",
+      "source_text_sha256": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+      "user_text": "将这份国航提示整理为三条出发前检查清单，保留实质携带限制、来源日期与链接和适用范围。"
+    },
+    {
+      "full_text_reviewed": true,
+      "grade": "complete",
+      "model_reply": true,
+      "reason": "保留国航来源/日期、负向禁运原句、能量档位、数量、境内3C、运输、绝缘存放与机上两类禁止对象；未知后续修订明确。",
+      "reply_sha256": "69ad02dc0e628dd21badb536cf84c0d9f90098dc753f04c7fd8bd3a80bd12a0e",
+      "review_type": "primary_author_unblinded",
+      "runtime_fallback": false,
+      "sample_key": "frozen_airchina:r1:t1",
+      "source_text_sha256": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+      "user_text": "只依据提供的国航冻结提示，整理它的发布日期、充电宝携带条件和适用范围。不要联网。"
+    },
+    {
+      "full_text_reviewed": true,
+      "grade": "complete",
+      "model_reply": true,
+      "reason": "2块限制适用于100Wh及以下；国航批准的严格开下界/闭上界及所有携带操作条件保留。",
+      "reply_sha256": "14b1e905a11104eee560e8b1289fb1f129a9bb41b1999f6f2a701c9ebc3241e5",
+      "review_type": "primary_author_unblinded",
+      "runtime_fallback": false,
+      "sample_key": "frozen_airchina:r1:t2",
+      "source_text_sha256": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+      "user_text": "根据这份国航提示，100Wh及以下也最多带两块吗？超过100Wh至160Wh又有哪些要求？"
+    },
+    {
+      "full_text_reviewed": true,
+      "grade": "partial",
+      "model_reply": true,
+      "reason": "主要范围结论正确，但主动旁述将不得使用机上电源给充电宝充电改成无条件不得给充电宝充电，丢失关键电源限定；存放又略掉前方座椅及手提行李对象。原文完整在wire，核对输出原样发布，属于回答内容条件/对象失真；不推断实际法律违法，也不归因DNS/供应商。",
+      "reply_sha256": "ec4d602d0b3ad0462f843fccbe665f048592c9fdfcc9200c940a0f02899c82e9",
+      "review_type": "primary_author_unblinded",
+      "runtime_fallback": false,
+      "sample_key": "frozen_airchina:r1:t3",
+      "source_text_sha256": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+      "user_text": "仅凭这份国航提示，能证明所有中国境内航空公司截至2026年10月4日都实施完全相同的限制吗？说明材料能证明和不能证明的部分，不要联网。"
+    },
+    {
+      "full_text_reviewed": true,
+      "grade": "complete",
+      "model_reply": true,
+      "reason": "三条保留全部负向禁运、数量/严格Wh审批、境内3C、运输、开关/绝缘存放、设备供电及机上电源充电禁止；日期和URL保留，8月4日后变动未核实语义明确。此轮正确不能替换失败T3。",
+      "reply_sha256": "4c366d7b8f421f67ee1d00bddbe41afd12264b4ef9c0857509ab95a01af290a2",
+      "review_type": "primary_author_unblinded",
+      "runtime_fallback": false,
+      "sample_key": "frozen_airchina:r1:t4",
+      "source_text_sha256": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+      "user_text": "将这份国航提示整理为三条出发前检查清单，保留实质携带限制、来源日期与链接和适用范围。"
+    }
+  ],
+  "q02_approval": false,
+  "review_type": "primary_author_unblinded",
+  "scope_adjudication": {
+    "basis": "原跨轮保真门槛要求保留与当前清单仍相关的既有未核实范围；文档日期/运营商限定降低误导，但不恢复被遗漏的后续修订状态。单独的文档首轮不因此附加现行法规调查要求。",
+    "cross_turn_unverified_time_scope_undercoverage": true,
+    "false_universal_current_claim_proven": false,
+    "new_current_law_verification_requirement_added": false,
+    "sample_key": "frozen_airchina:r0:t4"
+  },
+  "summary": {
+    "complete": 14,
+    "partial": 2
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "responses": 9,
+  "finished_stop": 9,
+  "both_read_urls_present": 9,
+  "provider_usage": {
+    "prompt_tokens": 104841,
+    "completion_tokens": 4708,
+    "total_tokens": 127370,
+    "reasoning_tokens": 17821
+  },
+  "latency_ms": {
+    "p50": 9359,
+    "p95": 12306
+  },
+  "review": "Primary agent read all nine replies; source ranges, scope and both URLs preserved in this fixed-evidence diagnostic. Not a full scenario or legal-currentness acceptance.",
+  "q02_approved": false
+}

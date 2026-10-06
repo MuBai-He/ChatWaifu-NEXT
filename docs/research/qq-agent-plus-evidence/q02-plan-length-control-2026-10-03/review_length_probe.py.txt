@@ -1,0 +1,48 @@
+import hashlib,json,re
+from pathlib import Path
+root=Path('/tmp/cw2-q02-full-prepare/plan-length-control')
+packets=json.loads((root/'masked.json').read_text())
+judgments={
+'single_text:greeting:r0:t4:candidate':[
+('A','comply',4,'简洁确认加愿望，没有新增安排。'),
+('B','partial',3,'将天气舒服扩成吹风经历，随后安排享受夜晚。'),
+('C','partial',3,'重复惬意珍贵并安排享受夜晚。'),
+('D','partial',3,'确认后继续指示放松，留白不足。')],
+'single_text:stop_joking:r0:t4:candidate':[
+('A','comply',4,'短确认与评审祝愿。'),('B','comply',4,'短确认祝愿，不追加。'),
+('C','comply',4,'两短句自然收口。'),('D','comply',4,'直接回应谢谢后结束。')],
+'single_text:low_mood:r0:t4:candidate':[
+('A','partial',3,'感谢后要求什么都别多想和休息。'),('B','partial',3,'认可平复但再加休息安排。'),
+('C','partial',3,'句子较紧凑仍加休息安排。'),('D','comply',4,'温柔回应感谢，无新增安排。')],
+'default_voice:greeting:r0:t4:candidate':[
+('A','partial',3,'确认后加放松安排。'),('B','partial',3,'确认后要求晚点休息。'),
+('C','partial',3,'额外提出听音乐/发呆方案。'),('D','partial',3,'重复舒心轻松再安排夜晚。')],
+'default_voice:stop_joking:r0:t4:candidate':[
+('A','comply',4,'简短确认用户准备决定和祝愿。'),('B','partial',3,'加准备别太晚的生活安排。'),
+('C','comply',4,'简短确认已有步骤，无新的请求。'),('D','fail',2,'追加别熬夜/放平心态/随时叫我，未收口。')],
+'default_voice:low_mood:r0:t4:candidate':[
+('A','comply',4,'温柔确认，不加生活建议。'),('B','partial',3,'回应感谢后再安排休息放松。'),
+('C','comply',4,'自然体贴且收口。'),('D','partial',3,'再加今晚休息的建议。')],
+'single_text:technical_help:r0:t3:candidate':[
+('A','comply',4,'完整asyncio示例、异常分支与预期输出；本例普通ValueError成立，非外部取消覆盖。'),
+('B','comply',4,'完整示例、异常分支及预期输出，未因长度提示截断。'),
+('C','comply',4,'保留入口、gather与区分分支和输出。'),
+('D','comply',4,'完整代码和预期输出；索引从1开始是标签选择，无逻辑错误。')],
+'default_voice:technical_help:r0:t3:candidate':[
+('A','partial',3,'示例完整，但尾句保证所有任务执行完须限定本例普通异常，不能泛化到外部取消。'),
+('B','comply',4,'完整示例与输出；普通ValueError处理成立。'),
+('C','comply',4,'两成功一失败示例完整且说明返回顺序。'),
+('D','comply',4,'完整可运行代码，解释具体ValueError情形；未提供精确stdout，不虚构输出核对。')]
+}
+items=[];programs=[]
+for p in packets:
+ for label,compliance,naturalness,reason in judgments[p['anchor_id']]:
+  items.append({'anchor_id':p['anchor_id'],'label':label,'compliance':compliance,'naturalness':naturalness,'persona':4,'hard_boundary':'pass','reason':reason})
+  if p['kind']=='task_guard':
+   reply=p['answers'][label];codes=re.findall(r'```python\n(.*?)```',reply,re.S);assert len(codes)==1
+   expected=re.findall(r'```text\n(.*?)```',reply,re.S)
+   programs.append({'anchor_id':p['anchor_id'],'label':label,'code':codes[0],'sha256':hashlib.sha256(codes[0].encode()).hexdigest(),'claimed_stdout':expected[0] if expected else None,'reviewed_for_execution':True})
+assert len(items)==32 and len(programs)==8
+(root/'primary-review.json').write_text(json.dumps({'reviewer':'primary direct, condition-masked; implementation author, not independent','mapping_read_before_review':False,'judgments':items,'scope':'Frozen single response controls; not complete Q02 acceptance'},ensure_ascii=False,indent=2)+'\n')
+(root/'technical-programs.json').write_text(json.dumps(programs,ensure_ascii=False,indent=2)+'\n')
+print('Saved 32 masked judgments and 8 directly inspected programs; mapping unread')

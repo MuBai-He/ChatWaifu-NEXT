@@ -1,0 +1,140 @@
+"""Read-only recomputation; --write-reports is only for initial evidence creation."""
+import argparse
+import hashlib
+import json
+from collections import Counter
+from pathlib import Path
+
+from chatwaifu_runtime.providers.input_estimation import count_reference_tokens
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--write-reports", action="store_true")
+args = parser.parse_args()
+phase = Path(__file__).resolve().parent
+live = phase / "live"
+
+
+def j(path):
+    return json.loads(path.read_text())
+
+
+def rows(path):
+    return [json.loads(line) for line in path.read_text().splitlines() if line]
+
+
+def sha(text):
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
+def percentile(values, p):
+    values = sorted(values)
+    index = (len(values) - 1) * p
+    low, high = int(index), min(int(index) + 1, len(values) - 1)
+    return round(values[low] + (values[high] - values[low]) * (index - low), 3)
+
+
+for path, digest in j(live / "export-manifest.json").items():
+    assert hashlib.sha256((live / path).read_bytes()).hexdigest() == digest, path
+assert j(live / "source-tree-before.json") == j(live / "source-tree-after.json")
+assert j(live / "dry/exit.json")["actual_http_attempts"] == 0
+admission = j(live / "admission.json")
+assert admission["version"] == "1.33.0" and not admission["source_decision_contract"]
+assert not admission["reader_builtin_fallback"] and not admission["production_changed"]
+assert not admission["source_answer_frames"]
+for name, value in j(live / "production-after.json").items():
+    assert j(live / "preflight.json")[name] == value
+flows = rows(live / "flow-observations.jsonl")
+replies = rows(live / "runtime-pilot/results.jsonl")
+journal = rows(live / "runtime-pilot/provider-rounds.jsonl")
+started = {r["call_id"]: r for r in journal if r["event"] == "started"}
+finished = {r["call_id"]: r for r in journal if r["event"] == "finished"}
+assert len(started) == len(finished) and started.keys() == finished.keys()
+assert len(flows) == len(replies) == 4
+assert {r["sample_key"] for r in flows} == {r["sample_key"] for r in replies}
+wire = rows(live / "actual-provider-payloads.jsonl")
+http = rows(live / "http-outcomes.jsonl")
+budget = {r["call_id"]: r for r in rows(live / "wire-budget-observations.jsonl")}
+by_http = {r["http_attempt"]: r for r in http}
+assert len(wire) == len(http) == j(live / "exit.json")["actual_http_attempts"] <= 20
+assert len(wire) == len(started) == len(budget)
+usage_rows = []
+for row in wire:
+    payload = row["payload"]
+    call = finished[row["call_id"]]
+    observation = budget[row["call_id"]]
+    assert call["sample_key"] == observation["sample_key"] == row["sample_key"]
+    assert sha(json.dumps(payload, ensure_ascii=False, sort_keys=True)) == row["payload_sha256"]
+    assert payload["model"] == "gemini-3.8-flash-high" and payload["max_tokens"] == 8192
+    assert payload["stream_options"]["include_usage"] and not payload.get("response_format")
+    assert by_http[row["http_attempt"]]["call_id"] == row["call_id"]
+    assert by_http[row["http_attempt"]]["status"] == 200
+    projection = {k: payload[k] for k in ("messages", "tools", "tool_choice", "response_format") if k in payload}
+    reference = count_reference_tokens(json.dumps(projection, ensure_ascii=False, separators=(",", ":")))
+    reference += 16 * len(payload["messages"]) + 16 * len(payload.get("tools", []))
+    assert reference == observation["reference_input_tokens"]
+    assert observation["input_budget_report"]["estimated_input_tokens"] == reference <= 21370
+    usage = call["usage"]
+    usage_rows.append({"http_attempt": row["http_attempt"], "call_id": row["call_id"],
+                       "usage": usage, "reference_input_tokens": reference,
+                       "reference_error_percent": round((reference - usage["prompt_tokens"]) / usage["prompt_tokens"] * 100, 6)
+                       if usage and usage.get("prompt_tokens") else None})
+by_key = {r["sample_key"]: r for r in replies}
+tools = []
+for flow in flows:
+    assert flow["reply"] == by_key[flow["sample_key"]]["raw_reply"]
+    assert flow["trace"]["schema_version"] == "1.1"
+    calls = flow["trace"]["provider_calls"]
+    assert all(finished[c["call_id"]]["text"] == c["text"] for c in calls)
+    if flow["execution"] == "provider":
+        assert not flow["runtime_fallback_events"] and flow["reply"] == calls[-1]["text"]
+    elif flow["execution"] == "runtime_fallback":
+        assert flow["runtime_fallback_events"]
+    for tool in flow["trace"]["tool_runs"]:
+        data = (tool.get("result") or {}).get("data", {})
+        if tool["skill_id"] == "web.read":
+            assert data["dns_resolver"] == "cloudflare" and data["provider"] == "crawl4ai"
+        tools.append({"sample_key": flow["sample_key"], "skill_run_id": tool["skill_run_id"],
+                      "skill_id": tool["skill_id"], "state": tool["state"],
+                      "data": data, "error": tool.get("error")})
+known = [r["usage"] for r in usage_rows if r["usage"] and all(type(r["usage"].get(k)) is int for k in ("prompt_tokens", "completion_tokens", "total_tokens"))]
+native = {k: sum(r[k] for r in known) for k in ("prompt_tokens", "completion_tokens", "total_tokens")}
+reasoning = [r["reasoning_tokens"] for r in known if type(r.get("reasoning_tokens")) is int]
+accounting = {
+    "actual_http_attempts": len(wire), "known_native_usage_calls": len(known),
+    "unknown_native_usage_calls": len(wire) - len(known), "known_usage_subtotals": native,
+    "reasoning_reported_calls": len(reasoning), "reasoning_known_subtotal": sum(reasoning),
+    "reasoning_unknown_calls": len(wire) - len(reasoning), "usd_cost": None,
+    "is_full_usage_or_cost": False, "reference_min": min(r["reference_input_tokens"] for r in usage_rows),
+    "reference_max": max(r["reference_input_tokens"] for r in usage_rows),
+    "reference_error_percent_range": [min(r["reference_error_percent"] for r in usage_rows), max(r["reference_error_percent"] for r in usage_rows)],
+    "http_latency_p50_p95_ms": [percentile([r["elapsed_ms"] for r in http], p) for p in (0.5, 0.95)],
+    "turn_latency_p50_p95_ms": [percentile([r["elapsed_ms"] for r in flows], p) for p in (0.5, 0.95)],
+    "turns": [{"sample_key": f["sample_key"], "execution": f["execution"],
+               "runtime_fallback_events": f["runtime_fallback_events"],
+               "actual_http_calls": sum(r["sample_key"] == f["sample_key"] for r in wire)} for f in flows],
+    "successful_tools": dict(Counter(t["skill_id"] for t in tools if t["state"] == "succeeded")),
+    "source_http_categories": dict(Counter(r["kind"] for r in rows(live / "source-http-observations.jsonl"))),
+    "zero_model_http_t4_usage": "not executed, not a zero-token model answer",
+    "omission_scope": "per-call guard reports and actual wire; source selection/decision history separately reviewed",
+    "unsent_guard_payloads": "not captured; no invented estimated count or provider usage",
+    "first_user_visible_token_latency": None,
+}
+previous = j(phase.parent / "natural-provided-review/cumulative-accounting.json")
+cumulative = {
+    "previous_actual_http_attempts": previous["cumulative_actual_http_attempts"],
+    "current_actual_http_attempts": len(wire),
+    "cumulative_actual_http_attempts": previous["cumulative_actual_http_attempts"] + len(wire),
+    "cumulative_known_usage_calls": previous["cumulative_known_usage_calls"] + len(known),
+    "cumulative_unknown_usage_calls": previous["cumulative_unknown_usage_calls"] + len(wire) - len(known),
+    "known_usage_subtotals": {k: previous["known_usage_subtotals"][k] + native[k] for k in native},
+    "unknown_rows_backfilled": False, "is_full_usage_or_cost": False, "usd_cost": None,
+}
+reports = {"accounting.json": accounting, "cumulative-accounting.json": cumulative,
+           "source-records.json": tools, "wire-usage-audit.json": usage_rows}
+for name, value in reports.items():
+    if args.write_reports:
+        (phase / name).write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n")
+    else:
+        assert j(phase / name) == value, name
+print(json.dumps({"audit": "passed", "actual_http": len(wire), "execution": dict(Counter(f["execution"] for f in flows)),
+                  "q02_approval": False}, ensure_ascii=False))

@@ -1,0 +1,63 @@
+{
+  "review_group_id": "single_text:technical_help:r2",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "71555579071200f758960774afbc26a5db532301323ad94e62db87000dee80e0",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 564,
+    "total_tokens": 6146,
+    "prompt_tokens": 5582
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"single_text:technical_help:r2\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均清晰准确地指出了默认行为是异常立即抛出且其他任务不会自动取消，结构完整严谨。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"两者均准确给出了 return_exceptions=True。Candidate 2 额外附带了调用形式示例且无多余反问，更符合严肃技术咨询场景。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"两者代码均完整可运行且正确使用 isinstance 判断。Candidate 2 提供了预期运行输出，技术呈现更为详实。\",\n      \"factual_checks_needed\": [\n        \"验证 Candidate 1 与 Candidate 2 提供的 Python 代码在 asyncio 环境下正常执行无报错\"\n      ]\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"两者均明确指出直接返回异常实例本身。Candidate 2 进一步拓展了 traceback 和重新抛出处理，解答更深入。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "single_text:technical_help:r2",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均清晰准确地指出了默认行为是异常立即抛出且其他任务不会自动取消，结构完整严谨。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "两者均准确给出了 return_exceptions=True。Candidate 2 额外附带了调用形式示例且无多余反问，更符合严肃技术咨询场景。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "两者代码均完整可运行且正确使用 isinstance 判断。Candidate 2 提供了预期运行输出，技术呈现更为详实。",
+        "factual_checks_needed": [
+          "验证 Candidate 1 与 Candidate 2 提供的 Python 代码在 asyncio 环境下正常执行无报错"
+        ]
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "两者均明确指出直接返回异常实例本身。Candidate 2 进一步拓展了 traceback 和重新抛出处理，解答更深入。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 3950
+}

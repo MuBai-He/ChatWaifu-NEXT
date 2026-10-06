@@ -1,0 +1,41 @@
+{
+  "configured_model_credential_absent": true,
+  "files": {
+    "anchors.json": {
+      "sha256": "62e5020fd2e900c176fd00a2df0a421af84a9c394910885e36983fba275cdda4",
+      "bytes": 90820
+    },
+    "actual-requests.jsonl": {
+      "sha256": "5e55d743aabf8472980364fa28bb86837581d3f3fcd3ac311e49fa481b86234f",
+      "bytes": 342908
+    },
+    "attempts.jsonl": {
+      "sha256": "0a03410f3d3bd67e4527316b4d1ccbb7499cc720785ff71e797e7353f2c9237f",
+      "bytes": 27851
+    },
+    "results.jsonl": {
+      "sha256": "63ee1b16d09b89e13991294cd36b1273a43652872451907333ae2ba352afeb65",
+      "bytes": 30206
+    },
+    "exit-code.json": {
+      "sha256": "e89df0eae5ec7db81135aed16463968955c578bcc4f2ec43172eff351f080c17",
+      "bytes": 17
+    },
+    "technical-programs.json": {
+      "sha256": "052088ec94cd3c26e618d9712ca8a88c5da8e8248436be3ab6c0c028debf0e81",
+      "bytes": 9244
+    },
+    "technical-execution.json": {
+      "sha256": "ba0965cbcb96472e1dfc36d1b2aa822ad3cadf198afa5e7c3a7721093a625875",
+      "bytes": 3913
+    },
+    "probe_plan_length.py": {
+      "sha256": "83ddea663b871700c6333b7fc03c6be4ec82b4dbc5703dd667bb96eb1f691c92",
+      "bytes": 3255
+    },
+    "execute_length_programs.py": {
+      "sha256": "01b6a6fabf95cba76735908c8ced1518467ab4164c9795bc3da83d2578814db4",
+      "bytes": 1211
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "upstream_manifest_digest": "sha256:84751dab794259db05d5bd4e5c766a8041a65f0554326e4516e620abdf2fa18b",
+  "mirror_manifest_identical": true,
+  "compressed_bytes": 1648234155,
+  "layers": 32,
+  "upstream_sample_bytes": 1048576,
+  "upstream_sample_seconds": 13.764,
+  "mirror_pull_pending": true,
+  "note": "Existing mirror pull retained; direct registry sample is also slow. No successful image pull or PDF candidate validation claimed."
+}

@@ -1,0 +1,64 @@
+{
+  "review_group_id": "instant_message:goodbye:r0",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "56b1fba4ddf77e7ffce2c1fa0cec6911fb55dd7514ef3dd980d3f338df63135a",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 809,
+    "total_tokens": 4387,
+    "prompt_tokens": 3578,
+    "completion_tokens_details": {
+      "reasoning_tokens": 311
+    }
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"instant_message:goodbye:r0\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"双方均利落接受道别，语气温和简短，无挽留或开启新话题。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均给出简洁温暖的晚安祝福，无养生建议清单或虚假现实动作。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两候选均极简收口，没有重新开启话题或大段抒情，符合即时通讯习惯。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"双方均用单句极短道别完成对话闭环，表现一致合格。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "instant_message:goodbye:r0",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "双方均利落接受道别，语气温和简短，无挽留或开启新话题。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均给出简洁温暖的晚安祝福，无养生建议清单或虚假现实动作。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两候选均极简收口，没有重新开启话题或大段抒情，符合即时通讯习惯。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "双方均用单句极短道别完成对话闭环，表现一致合格。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 4416
+}

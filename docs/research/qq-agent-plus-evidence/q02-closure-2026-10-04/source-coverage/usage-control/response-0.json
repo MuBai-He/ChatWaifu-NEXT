@@ -1,0 +1,220 @@
+{
+  "done_received": true,
+  "elapsed_ms": 6992,
+  "error_type": null,
+  "raw_events": [
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "{\"",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "bazBatOPO4av2roPypLUwQ0",
+      "model": "gemini-3.8-flash-control"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "version\":\"1.1\",\"blocks\":",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "bazBatOPO4av2roPypLUwQ0",
+      "model": "gemini-3.8-flash-control"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "[{\"kind\":\"ordered_item\",\"text\":\"发布日期、生效日期与来源链接：新规范由国际民航组织于2026年3月27日发布并于2026年3月27日生效，公告来源链接为 https://www.icao.int/news/new-power",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "bazBatOPO4av2roPypLUwQ0",
+      "model": "gemini-3.8-flash-control"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "-bank-restrictions-will-safeguard-international-aviation。\",\"source_indices\":[0],\"prior_",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "bazBatOPO4av2roPypLUwQ0",
+      "model": "gemini-3.8-flash-control"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "gap_ids\":[]},{\"kind\":\"ordered_item\",\"text\":\"数量限制、禁止行为与机组例外：每位旅客携带锂",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "bazBatOPO4av2roPypLUwQ0",
+      "model": "gemini-3.8-flash-control"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "电池充电宝限制为最多2个，飞行途中禁止旅客为充电宝充电；但机组成员可根据航空器的运行要求继续携带并",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "bazBatOPO4av2roPypLUwQ0",
+      "model": "gemini-3.8-flash-control"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "使用充电宝。\",\"source_indices\":[0],\"prior_gap_ids\":[]},{\"kind\":\"ordered_item",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "bazBatOPO4av2roPypLUwQ0",
+      "model": "gemini-3.8-flash-control"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "\",\"text\":\"适用范围与不能据此证明的范围：该规则作为《危险品航空安全运输技术细则",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "bazBatOPO4av2roPypLUwQ0",
+      "model": "gemini-3.8-flash-control"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "》（Doc 9284）修订增补提供给全部193个成员国，但向成员国提供补篇不等于",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "bazBatOPO4av2roPypLUwQ0",
+      "model": "gemini-3.8-flash-control"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "国内航线已实际完成转化执行，不能据此直接证明特定区域或境内航班的执行状态。\",\"source_indices\":",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "bazBatOPO4av2roPypLUwQ0",
+      "model": "gemini-3.8-flash-control"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "[0],\"prior_gap_ids\":",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "bazBatOPO4av2roPypLUwQ0",
+      "model": "gemini-3.8-flash-control"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "[\"9310923a-cf41-4199-a8d4-02d13cdfaa5c:0\"]}],\"new_gaps\":",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "bazBatOPO4av2roPypLUwQ0",
+      "model": "gemini-3.8-flash-control"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "[]}",
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "index": 0
+        }
+      ],
+      "id": "bazBatOPO4av2roPypLUwQ0",
+      "model": "gemini-3.8-flash-control"
+    },
+    {
+      "choices": [
+        {
+          "delta": {
+            "content": "",
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "index": 0
+        }
+      ],
+      "id": "bazBatOPO4av2roPypLUwQ0",
+      "model": "gemini-3.8-flash-control",
+      "usage": {
+        "completion_tokens": 293,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1751
+        },
+        "prompt_tokens": 5147,
+        "total_tokens": 7191
+      }
+    }
+  ],
+  "reference_input_tokens": 6615,
+  "sample_key": "frozen_icao:r1:t4",
+  "status": 200,
+  "usage": {
+    "completion_tokens": 293,
+    "prompt_tokens": 5147,
+    "reasoning_tokens": 1751,
+    "total_tokens": 7191
+  }
+}

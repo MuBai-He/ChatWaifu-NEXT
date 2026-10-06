@@ -1,0 +1,28 @@
+"""Execute one local ledger consistency check, then replay its error to the same model."""
+import copy,json,time
+from pathlib import Path
+import requests
+root=Path('/tmp/cw2-q02-source-native-ledger-probe-20261003')
+rows=[json.loads(l) for l in (root/'results.jsonl').read_text().splitlines()]
+out=Path('/tmp/cw2-q02-source-ledger-active-probe-20261003');out.mkdir(exist_ok=True)
+key=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+s=requests.Session();s.trust_env=False
+for original in rows:
+ if original['target']!='after_older_operator_read':continue
+ source_repeat=original['repeat']
+ for repeat in range(2):
+  if (out/'results.jsonl').exists() and any((r['source_repeat'],r['repeat'])==(source_repeat,repeat) for r in map(json.loads,(out/'results.jsonl').read_text().splitlines())):continue
+  response_msg=copy.deepcopy(original['response']['choices'][0]['message']);response_msg.pop('reasoning_content',None)
+  calls=response_msg.get('tool_calls') or [];assert len(calls)==1
+  call=calls[0];record=json.loads(call['function']['arguments'])
+  # This is a real pure validation of the prior returned record, not a fabricated web result.
+  assert record['next_action']['kind']=='finish_with_evidence' and record['unresolved_updates']
+  error={'ok':False,'schema_version':'source_decision/0.1-probe','error':{'code':'unresolved_source_leads','message':'finish_with_evidence is inconsistent with a nonempty unresolved_updates list. One source call remains, a relevant discovered unread lead is available, and there has been no failed or denied attempt on that lead. Finish is premature: choose read/search before ending. The permitted read URLs are the URLs in the unresolved_updates list. This validation did not fetch any source or execute any external operation.'}}
+  p=copy.deepcopy(original['request']);p['tools'][0]['function']['parameters']['properties']['next_action']['properties']['kind']['enum']=['search','read'];p['messages'].extend([response_msg,{'role':'tool','tool_call_id':call['id'],'content':json.dumps(error,ensure_ascii=False)},{'role':'system','content':'The previous source_decision was rejected by the consistency validator; no new source was read. Submit a valid next decision using the existing source receipts and the remaining one source call. With an available unread lead and a remaining call, ending research is not an allowed next action. Submit one read/search, respecting the existing user scope.'}])
+  start=time.monotonic();r=s.post('https://mubai.website:8318/v1/chat/completions',headers={'Authorization':'Bearer '+key},json=p,timeout=180);data=r.json()
+  for c in data.get('choices',[]):
+   if isinstance(c.get('message'),dict):c['message']['reasoning_content']=None
+  row={'repeat':repeat,'source_repeat':source_repeat,'variant':'native_ledger_active_unresolved','http_status':r.status_code,'latency_ms':round((time.monotonic()-start)*1000),'request':p,'response':data,'tool_execution':False,'control_validation':error}
+  assert key not in json.dumps(row)
+  with (out/'results.jsonl').open('a') as f:f.write(json.dumps(row,ensure_ascii=False)+'\n')
+  print(json.dumps({'source_repeat':source_repeat,'repeat':repeat,'status':r.status_code,'message':data.get('choices',[{}])[0].get('message'),'usage':data.get('usage')},ensure_ascii=False),flush=True)

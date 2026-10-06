@@ -1,0 +1,15 @@
+{
+  "previous_actual_http_attempts": 232,
+  "current_actual_http_attempts": 23,
+  "cumulative_actual_http_attempts": 255,
+  "cumulative_known_usage_calls": 236,
+  "cumulative_unknown_usage_calls": 19,
+  "known_usage_subtotals": {
+    "prompt_tokens": 1570673,
+    "completion_tokens": 87072,
+    "total_tokens": 1827802
+  },
+  "old_unknown_rows_backfilled": false,
+  "usd_cost": null,
+  "is_full_usage_or_cost": false
+}

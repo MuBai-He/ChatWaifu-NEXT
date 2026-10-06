@@ -1,0 +1,15 @@
+{"http_attempt": 1, "call_id": "5d4ccfc1-ac08-4513-af7f-c268e97d5e42", "status": 200, "error_type": null, "elapsed_ms": 4904}
+{"http_attempt": 2, "call_id": "50016451-0d8b-455c-a6d9-f534820d2a41", "status": 200, "error_type": null, "elapsed_ms": 2637}
+{"http_attempt": 3, "call_id": "c9c15604-1513-42d9-b555-4dcac85b5eaf", "status": 200, "error_type": null, "elapsed_ms": 2759}
+{"http_attempt": 4, "call_id": "c8f9abd2-163c-4aee-b524-d361258bbe2e", "status": 200, "error_type": null, "elapsed_ms": 2968}
+{"http_attempt": 5, "call_id": "64a60bdb-8c3d-4ba1-8f55-378db0d7f502", "status": 200, "error_type": null, "elapsed_ms": 6873}
+{"http_attempt": 6, "call_id": "f9c8dfbf-530c-4f72-9301-a5809b38759c", "status": 200, "error_type": null, "elapsed_ms": 32390}
+{"http_attempt": 7, "call_id": "fcea00b7-701a-4c36-a108-4bd303819bf4", "status": 200, "error_type": null, "elapsed_ms": 34049}
+{"http_attempt": 8, "call_id": "0964e696-304a-4a48-ae0a-bf0796a875ed", "status": 200, "error_type": null, "elapsed_ms": 22792}
+{"http_attempt": 9, "call_id": "9c72ed81-a215-4cb2-a278-fc60f5565db0", "status": 200, "error_type": null, "elapsed_ms": 3675}
+{"http_attempt": 10, "call_id": "84b5a925-e3fb-4d99-a9f1-8675b69c8365", "status": 200, "error_type": null, "elapsed_ms": 4313}
+{"http_attempt": 11, "call_id": "724f840c-e1b8-4851-8160-effc6f2ced0f", "status": 200, "error_type": null, "elapsed_ms": 3104}
+{"http_attempt": 12, "call_id": "845afa75-b65e-4a2f-b0cf-e75e085cc2f1", "status": 200, "error_type": null, "elapsed_ms": 2834}
+{"http_attempt": 13, "call_id": "f18deb01-3285-4d5e-ac97-72a009cfd990", "status": 200, "error_type": null, "elapsed_ms": 2965}
+{"http_attempt": 14, "call_id": "6bd8008b-0869-4a1a-8f09-0770e84a6d65", "status": 200, "error_type": null, "elapsed_ms": 11809}
+{"http_attempt": 15, "call_id": "a2f93146-a4ca-4e2d-ae90-aaa724594eea", "status": 200, "error_type": null, "elapsed_ms": 9082}

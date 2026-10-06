@@ -1,0 +1,1 @@
+{"model": "gemini-3.8-flash-high", "endpoint": "https://mubai.website:8318/v1", "http_limit": 2, "scope": "json_schema wire capability only", "production_changed": false}

@@ -1,0 +1,28 @@
+{
+  "scope": "One real four-turn Runtime Agent + RuntimeSkillService flow after the confirmed budget reproject fix. Synthetic evaluator kernel/history; not production Conversation or Q02 adoption.",
+  "model": "gemini-3.8-flash-high",
+  "endpoint": "https://mubai.website:8318/v1",
+  "source_services": "Production SearXNG18080 + Crawl4AI11235; no builtin fallback; public READ Cloudflare",
+  "context_window": 32768,
+  "output_reserve": 8192,
+  "max_output_tokens": 8192,
+  "estimate_margin_ratio": 0.15,
+  "actual_http_limit": 20,
+  "logical_turn_limit": 4,
+  "repeats": 1,
+  "hidden_resume_or_replacement": false,
+  "persona": "Same frozen closure-c1 for process comparison; previous quality rejection remains valid",
+  "required_capture": [
+    "Actual full sent payload",
+    "Actual prefit and fitted guard requests, including unsent failures",
+    "Provider usage and identity, fixed error category, latency",
+    "Published model reply vs Runtime fallback vs rejected or unexecuted turn",
+    "Actual projected whole sources and omissions",
+    "Production before/after hashes"
+  ],
+  "new_prompts": false,
+  "production_deployment": false,
+  "channel_sends": false,
+  "agy": false,
+  "quality_acceptance": "Full-text primary review of each actual answer, conditions/scope and own follow-up history; no keywords or one successful replay approval"
+}

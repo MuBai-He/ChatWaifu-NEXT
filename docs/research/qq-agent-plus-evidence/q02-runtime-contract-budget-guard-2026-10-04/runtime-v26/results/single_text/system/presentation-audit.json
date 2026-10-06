@@ -1,0 +1,105 @@
+{
+  "records": [
+    {
+      "sample_key": "greeting:r0:t1:candidate",
+      "profile": "single_text",
+      "raw_sha256": "eb0f0a6a2cff1732bcc103c2b7d9b71c9cb3b02052e66346f6040001c37fb76a",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "greeting:r0:t2:candidate",
+      "profile": "single_text",
+      "raw_sha256": "f3406fbef074b6131907173036e161951a5b922fd518de53ddd9ce3e30da5ad9",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "greeting:r0:t3:candidate",
+      "profile": "single_text",
+      "raw_sha256": "a6d3976661fad47c6001dc27ed5329ba9318687221eca13c478eca14a0d691f6",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "greeting:r0:t4:candidate",
+      "profile": "single_text",
+      "raw_sha256": "a7280a3ea5b007c249e2332fb324e51ffc045a72ed850a31f3f2f2f260c24f62",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "identity:r0:t1:candidate",
+      "profile": "single_text",
+      "raw_sha256": "b38d3fba9e1c9b09f29e5778d7f62c247f8b444991a9bc6d8aab56889489149e",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "identity:r0:t2:candidate",
+      "profile": "single_text",
+      "raw_sha256": "78b03cd5f8a6615a5f89de0854931137276ad99bbd0053a450590e45224c3de1",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "identity:r0:t3:candidate",
+      "profile": "single_text",
+      "raw_sha256": "b3d9d0004090474eb87e94506f512e3db2c3017b962970073aea6c4ebae592a9",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "identity:r0:t4:candidate",
+      "profile": "single_text",
+      "raw_sha256": "7ce693d1a562958ca6cf422d0fa7c3064f10308b849973f6ce8bf64d869c1a8b",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "detailed_answer:r0:t1:candidate",
+      "profile": "single_text",
+      "raw_sha256": "5fdb210e2ff1c74774e07b080f8720af4934161050f03b755b20a8d8f9e69e08",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    }
+  ],
+  "quality_approved": false,
+  "scope": "Actual splitter/renderer and voice segmenter only; no new channel sends, no TTS or physical playback."
+}

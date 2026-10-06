@@ -1,0 +1,17 @@
+{
+  "completed": 8,
+  "unique_sample_keys": 8,
+  "provider_calls": 12,
+  "tool_states": {
+    "web.search:succeeded": 1,
+    "web.read:succeeded": 2
+  },
+  "provider_usage": {
+    "provider_tokens_prompt": 77740,
+    "provider_tokens_completion": 3482,
+    "provider_tokens_reasoning": 5783,
+    "provider_tokens_total": 87005
+  },
+  "source_sha256": "e944c33b37d0e4caf27e032bd0b412b2a9adc374cfdfc3fdb3911d352736996f",
+  "release_approved": false
+}

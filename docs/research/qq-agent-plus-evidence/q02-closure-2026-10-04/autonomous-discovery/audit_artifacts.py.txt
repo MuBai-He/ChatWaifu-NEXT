@@ -1,0 +1,26 @@
+"""Verify this immutable stage and its immediately preceding frozen stage."""
+import hashlib
+import json
+from pathlib import Path
+
+phase = Path(__file__).resolve().parent
+manifest = json.loads((phase / "manifest.json").read_text())
+for rel, digest in manifest.items():
+    assert hashlib.sha256((phase / rel).read_bytes()).hexdigest() == digest, rel
+actual = {str(p.relative_to(phase)) for p in phase.rglob("*")
+          if p.is_file() and p.name != "manifest.json"
+          and not any(part.startswith(".") or part == "__pycache__" for part in p.relative_to(phase).parts)}
+assert actual == manifest.keys()
+previous = phase.parent / "natural-provided-review"
+assert hashlib.sha256((previous / "manifest.json").read_bytes()).hexdigest() == (
+    "2e735ee47f8ff5e4b33cf21aa8a552e383b9e748ebf3a862e0e99244cc87312d")
+prior_manifest = json.loads((previous / "manifest.json").read_text())
+entries = prior_manifest.get("files", prior_manifest)
+for rel, value in entries.items():
+    digest = value["sha256"] if isinstance(value, dict) else value
+    assert hashlib.sha256((previous / rel).read_bytes()).hexdigest() == digest, rel
+for rel, digest in json.loads((phase / "code-sha256.json").read_text()).items():
+    saved = phase / "candidate-code" / (rel.replace("/", "__") + ".txt")
+    assert hashlib.sha256(saved.read_bytes()).hexdigest() == digest, rel
+print(json.dumps({"manifest": "passed", "entries": len(manifest), "previous_v40": "unchanged",
+                  "q02_approval": False}))

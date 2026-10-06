@@ -1,0 +1,9 @@
+{
+  "source_overlay_paths_matched": 116,
+  "unrelated_source_files_unchanged": true,
+  "source_inventory_files": 1279,
+  "server_deployment_documents_preserved": [
+    "docs/architecture/external-channels.md",
+    "docs/implementation-status.yaml"
+  ]
+}

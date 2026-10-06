@@ -1,0 +1,42 @@
+--- v37/services/runtime/tests/test_source_answer_state.py
++++ v38/services/runtime/tests/test_source_answer_state.py
+@@ -110,10 +110,11 @@
+     ]
+     assert reply == ["A natural reply.\nLater changes are unverified."]
+     assert len(frames) == 1 and frames[0].gaps == (GAP,)
+-    assert provider.requests[0].response_schema is not None and provider.closed
+-    assert GAP.statement not in (provider.requests[0].continuation_system_prompt or "")
++    assert provider.requests[0].response_schema is None
++    assert provider.requests[1].response_schema is not None and provider.closed
++    assert GAP.statement not in (provider.requests[1].continuation_system_prompt or "")
+     assert any(
+-        GAP.statement in text for role, text in provider.requests[0].context if role == "user"
++        GAP.statement in text for role, text in provider.requests[1].context if role == "user"
+     )
+ 
+ 
+@@ -189,12 +190,9 @@
+ 
+ async def test_cancelled_frame_closes_provider_and_never_becomes_provisional_state():
+     provider = Provider()
+-    checks = 0
+ 
+     def check():
+-        nonlocal checks
+-        checks += 1
+-        if checks >= 5:
++        if provider.requests and provider.requests[-1].response_schema is not None:
+             raise asyncio.CancelledError()
+ 
+     frames: list[SourceAnswerFrame] = []
+@@ -253,6 +251,10 @@
+     class LateProvider(Provider):
+         async def stream(self, current: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+             try:
++                if current.response_schema is None:
++                    yield LlmTextDelta("Unpublished draft")
++                    yield LlmResponseCompleted("stop")
++                    return
+                 yield LlmTextDelta(payload())
+                 yield LlmResponseCompleted("stop")
+                 yield LlmTextDelta("late data")

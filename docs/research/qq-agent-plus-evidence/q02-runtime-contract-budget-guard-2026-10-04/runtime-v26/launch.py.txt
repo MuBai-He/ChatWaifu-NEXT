@@ -1,0 +1,30 @@
+import hashlib, json, os, runpy, sys
+from datetime import datetime, timezone
+from pathlib import Path
+root=Path('/tmp/cw2-q02-contract-position-v26-eval')
+for line in Path('/home/mubai/.local/share/chatwaifu-server/config/public-web.env').read_text().splitlines():
+    if line.startswith('CHATWAIFU_PUBLIC_WEB__') and '=' in line:
+        name,value=line.split('=',1)
+        os.environ[name]=value.strip().strip(chr(34)).strip(chr(39))
+key=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+if not isinstance(key,str) or not key:raise RuntimeError('Configured chat credential unavailable')
+os.environ['OPENAI_API_KEY']=key
+os.environ['CHATWAIFU_PUBLIC_WEB__SEARXNG_ENDPOINT']='http://127.0.0.1:18081'
+os.environ['CHATWAIFU_PUBLIC_WEB__CRAWL4AI_ENDPOINT']='http://127.0.0.1:11236'
+sys.path[:0]=[str(root/'services/runtime/src'),str(root/'packages/protocol-python/src'),str(root/'packages/model-worker-sdk-python/src'),'/tmp/cw2-q02-eval-deps',str(root)]
+sys.argv=[str(root/'tools/evaluate_character_scenarios.py'),*sys.argv[1:]]
+os.chdir(root)
+import httpx2
+wire_path=Path(sys.argv[sys.argv.index('--output-dir')+1])/'actual-provider-payloads.jsonl'
+original=httpx2.AsyncClient.stream
+def capture(self,method,url,**kwargs):
+    payload=kwargs.get('json')
+    if method.upper()=='POST' and str(url).endswith('/chat/completions') and isinstance(payload,dict):
+        raw=json.dumps(payload,ensure_ascii=False,sort_keys=True)
+        if key in raw:raise RuntimeError('Credential in synthetic payload')
+        wire_path.parent.mkdir(parents=True,exist_ok=True)
+        with wire_path.open('a') as target:
+            target.write(json.dumps({'captured_at_utc':datetime.now(timezone.utc).isoformat(),'payload_sha256':hashlib.sha256(raw.encode()).hexdigest(),'payload':payload},ensure_ascii=False)+'\n')
+    return original(self,method,url,**kwargs)
+httpx2.AsyncClient.stream=capture
+runpy.run_path(sys.argv[0],run_name='__main__')

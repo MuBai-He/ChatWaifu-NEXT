@@ -1,0 +1,20 @@
+[
+  {
+    "call_id": "31657756-f4ed-4689-b1e8-093b473bcb84",
+    "wire_index": 18,
+    "initial_trip_answer_retained_as_history": true,
+    "initial_trip_answer_sha256": "47f590b143d5e3b4bf73550500d349ba75ad92236c3a5f25b10e0c7a5132596b",
+    "omitted_history_indices": [],
+    "source_final_revision": false
+  },
+  {
+    "call_id": "e754eec2-a373-4ca4-861c-fcaa6f09980d",
+    "wire_index": 19,
+    "initial_trip_answer_retained_as_history": false,
+    "initial_trip_answer_sha256": "47f590b143d5e3b4bf73550500d349ba75ad92236c3a5f25b10e0c7a5132596b",
+    "omitted_history_indices": [
+      1
+    ],
+    "source_final_revision": true
+  }
+]

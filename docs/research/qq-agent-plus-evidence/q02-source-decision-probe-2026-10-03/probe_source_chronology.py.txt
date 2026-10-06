@@ -1,0 +1,53 @@
+"""Replay frozen source decisions and revision; record no auth or private reasoning."""
+import copy
+import json
+import time
+from pathlib import Path
+
+import requests
+
+source = Path('/tmp/cw2-q02-v17-source-smoke-20261003/results/actual-provider-payloads.jsonl')
+payloads = [json.loads(line)['payload'] for line in source.read_text().splitlines()]
+out = Path('/tmp/cw2-q02-source-chronology-probe-20261003')
+out.mkdir(exist_ok=True)
+chronology = '''
+Compare substantive publication/effective dates of the relevant discovered sources
+with the originals actually read; page footers and "latest" labels are not dates
+of rule changes. A newer relevant amendment lead remains unresolved until its
+substance has been checked. Older official material does not settle that lead.
+Read the newer lead, including a secondary report when needed to trace its original,
+or search for the originating notice. Use the trusted Runtime year when it helps
+identify subsequent changes; do not replace it with a remembered older year.
+Do not stop just because one update search or one official read succeeded. If the
+remaining calls cannot resolve a newer lead, say which update is still unverified.
+A publisher's own operational requirements apply to that publisher's service;
+distinguish them from rules expressly attributed to a general authority.
+'''
+scope = '''
+6. 引用资料时区分发布者自己的服务要求与其引用的主管机构规定。属于某个机构、运营商、产品或实现的要求，明确写出其名称及适用范围，不因页面提到国家规定就把整页要求都当作全国或全行业规范。若搜索结果已有较晚的相关更新线索但没有读其原文，具体说明该更新仍未核实，不用旧公告自证现行性。
+'''
+(out/'candidate-policy.json').write_text(json.dumps({'chronology':chronology,'revision_scope':scope},ensure_ascii=False,indent=2)+'\n')
+key = json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+session=requests.Session();session.trust_env=False
+for repeat in range(3):
+ for target,index in [('after_update_search',14),('after_older_operator_read',15),('answer_revision',16)]:
+  for variant in ['original','date_and_scope']:
+   if (out/'results.jsonl').exists() and any((r['repeat'],r['target'],r['variant'])==(repeat,target,variant) for r in map(json.loads,(out/'results.jsonl').read_text().splitlines())):continue
+   p=copy.deepcopy(payloads[index]);assert p['model']=='gemini-3.8-flash-high'
+   p['stream']=False;p.pop('stream_options',None)
+   if variant=='date_and_scope':
+    if target=='answer_revision':
+     p['messages'][-1]['content']=p['messages'][-1]['content'].replace('只输出修订后的完整答复',scope+'只输出修订后的完整答复',1)
+    else:
+     assert '</source_coverage_checkpoint>' in p['messages'][-1]['content']
+     p['messages'][-1]['content']=p['messages'][-1]['content'].replace('</source_coverage_checkpoint>',chronology+'</source_coverage_checkpoint>')
+   start=time.monotonic()
+   response=session.post('https://mubai.website:8318/v1/chat/completions',headers={'Authorization':'Bearer '+key},json=p,timeout=180)
+   data=response.json()
+   for choice in data.get('choices',[]):
+    if isinstance(choice.get('message'),dict):choice['message']['reasoning_content']=None
+   row={'repeat':repeat,'target':target,'variant':variant,'http_status':response.status_code,'latency_ms':round((time.monotonic()-start)*1000),'source_payload_index':index,'request':p,'response':data,'tool_execution':False}
+   assert key not in json.dumps(row)
+   with (out/'results.jsonl').open('a') as f:f.write(json.dumps(row,ensure_ascii=False)+'\n')
+   msg=(data.get('choices',[{}])[0].get('message') or {})
+   print(json.dumps({'repeat':repeat,'target':target,'variant':variant,'status':response.status_code,'calls':msg.get('tool_calls'),'reply':(msg.get('content') or '')[-600:],'usage':data.get('usage')},ensure_ascii=False),flush=True)

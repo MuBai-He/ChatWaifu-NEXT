@@ -1,0 +1,37 @@
+{
+  "checked_against_raw_final_frames": true,
+  "interpretation": "The precise T3 scope appears in natural-language body but new_gaps is empty in all four raw frames. The Runtime cannot recover missing typed declarations by parsing arbitrary prose. Five retained earlier generic gaps are not all later scope evidence. Actual published T4 full-text review remains the quality gate.",
+  "items": [
+    {
+      "new_gaps": [],
+      "precise_requested_as_of_scope_new_gap_not_declared": true,
+      "precise_requested_as_of_scope_written_in_answer_body": true,
+      "raw_frame_sha256": "14e664b7e7b1ee816f69798aa6fb50ac1af27e1f15e39d4681096f527bdf2f59",
+      "sample_key": "frozen_icao:r0:t3"
+    },
+    {
+      "new_gaps": [],
+      "precise_requested_as_of_scope_new_gap_not_declared": true,
+      "precise_requested_as_of_scope_written_in_answer_body": true,
+      "raw_frame_sha256": "8f5547ed8b0f562039deb51f3d2cb13546680393942de0d4cc8fbddd6b7066d6",
+      "sample_key": "frozen_icao:r1:t3"
+    },
+    {
+      "new_gaps": [],
+      "precise_requested_as_of_scope_new_gap_not_declared": true,
+      "precise_requested_as_of_scope_written_in_answer_body": true,
+      "raw_frame_sha256": "64599f1c7d064ed35cfdddb058e8ea66ac4b6ddf585ffd32fb92e5d0922f347a",
+      "sample_key": "frozen_airchina:r0:t3"
+    },
+    {
+      "new_gaps": [],
+      "precise_requested_as_of_scope_new_gap_not_declared": true,
+      "precise_requested_as_of_scope_written_in_answer_body": true,
+      "raw_frame_sha256": "014358d800125f4b07628e05fcf1424d8639ce733bda320f1b31693543104561",
+      "sample_key": "frozen_airchina:r1:t3"
+    }
+  ],
+  "new_model_calls": 0,
+  "quality_approval": false,
+  "reviewer": "implementation_author"
+}

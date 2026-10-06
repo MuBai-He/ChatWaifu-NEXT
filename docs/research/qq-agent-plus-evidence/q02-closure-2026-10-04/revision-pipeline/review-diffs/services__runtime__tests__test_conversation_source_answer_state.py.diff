@@ -1,0 +1,54 @@
+--- v37/services/runtime/tests/test_conversation_source_answer_state.py
++++ v38/services/runtime/tests/test_conversation_source_answer_state.py
+@@ -48,6 +48,7 @@
+     def __init__(self) -> None:
+         self.requests: list[LlmRequest] = []
+         self.invalid = False
++        self.frames = 0
+ 
+     async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+         self.requests.append(request)
+@@ -56,6 +57,7 @@
+         elif self.invalid:
+             yield LlmTextDelta("{private broken output")
+         else:
++            self.frames += 1
+             yield LlmTextDelta(
+                 json.dumps(
+                     {
+@@ -70,7 +72,7 @@
+                         ],
+                         "new_gaps": (
+                             [{"statement": _GAP, "source_indices": [0], "block_index": 0}]
+-                            if len(self.requests) == 1
++                            if self.frames == 1
+                             else []
+                         ),
+                     }
+@@ -140,7 +142,7 @@
+             first.generation_id,
+         ) in container.conversation._source_answer_coverage._records
+         await _turn(container, session, _FOLLOWUP)
+-        assert _prior(provider.requests[1])[0]["statement"] == _GAP
++        assert _prior(provider.requests[3])[0]["statement"] == _GAP
+         messages = await container.conversation.list_messages(session)
+         assert _GAP in str(messages[-1]["committed_text"])
+         rows = await container.database.fetchall(
+@@ -281,7 +283,7 @@
+                 "stop_during_commit": GenerationState.COMPLETED,
+             }[mode]
+         )
+-        assert provider.requests[0].response_schema is not None
++        assert provider.requests[-1].response_schema is not None
+     finally:
+         release.set()
+         await container.stop()
+@@ -310,7 +312,7 @@
+         )
+         assert "private broken output" not in str(rows)
+         assert container.conversation._source_answer_coverage._records == {}
+-        assert len(provider.requests) == (1 if mode == "invalid" else 0)
++        assert len(provider.requests) == (2 if mode == "invalid" else 0)
+     finally:
+         await container.stop()
+ 

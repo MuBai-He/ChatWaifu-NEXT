@@ -1,0 +1,15 @@
+{
+  "files": {
+    "README.md": "26c0d36430296e3e884c8cc81b40286fd46c3b17d47b65bdb7de6605fa367300",
+    "audit_artifacts.py.txt": "2388fbc627b951ed40c524da41666fff86bdd8c01dbdf5a5341cb61db6c0f587",
+    "document-sha256.json": "5cd2eea0d5ca169ffb7f169cf7c6f5abd8b690c4ecf392bc72f128066ecd4895",
+    "final-artifact-audit.json": "2809089a517276200813f726027d38a1db3dab41ed153874afdb691aeb67d54d",
+    "final-documents/docs__research__cw2-qq-agent-plus-adoption-plan.md.txt": "2ead2c1190368ceee580fc197d2591e2f436fac261a2bb4f157546c964558625",
+    "final-documents/docs__research__qq-agent-plus-evidence__implementation-status.md.txt": "e3d2b8106c3f22750426df7d6b661a2910316c45098a3987c9dd211ab3ae27ff",
+    "final-documents/docs__research__qq-agent-plus-evidence__q02-closure-2026-10-04__README.md.txt": "e4570936bdb378d99f389f4f91ae1d4808fdac411b69189d47c985d42989d2e9",
+    "final-documents/docs__research__qq-agent-plus-evidence__q02-closure-ledger-2026-10-04.md.txt": "cc37a0c1612c1c0d6e84633d338b55d8e60ee80f1414823085eb220e9e888e90",
+    "input-sha256.json": "3aed997a5e4f7aebcf03bdf09e21c54c254915755b6709f0691e31728e2d08c8",
+    "prior-versions.json": "ccdec5af77d79d8685e046e3c9d3a1c11951579a11be09842d5f027d5e720cf4",
+    "review.json": "db64b5166292e94db54ee9e5c6fe5a31388a030b4029edff06e418803ecd8e63"
+  }
+}

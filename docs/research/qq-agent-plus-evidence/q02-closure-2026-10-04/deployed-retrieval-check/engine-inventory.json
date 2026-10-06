@@ -1,0 +1,18 @@
+{
+  "settings_sha256": "e3ce12a176b2a1dfd976e7da24766738703e557c63364b2b4eea97fc604641bc",
+  "configured_engines": [
+    {
+      "name": "yandex",
+      "engine": null,
+      "disabled": false
+    }
+  ],
+  "default_engine_override": {
+    "engines": {
+      "keep_only": [
+        "yandex"
+      ]
+    }
+  },
+  "outgoing_timeout": null
+}

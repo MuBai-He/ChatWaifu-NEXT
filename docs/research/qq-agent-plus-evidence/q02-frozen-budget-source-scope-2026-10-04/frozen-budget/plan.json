@@ -1,0 +1,38 @@
+{
+  "model": "gemini-3.8-flash-high",
+  "repeats": 3,
+  "cases": [
+    "instant_message-pre_user",
+    "single_text-system"
+  ],
+  "single_text_arms": [
+    "omitted_history",
+    "original_history"
+  ],
+  "context_window_comparison": [
+    32768,
+    49152
+  ],
+  "output_reserve_tokens": 8192,
+  "max_output_tokens": 8192,
+  "estimate_margin_ratio": 0.15,
+  "reference_input_limits": [
+    21370,
+    35617
+  ],
+  "max_http_attempts": 18,
+  "source_tool_execution": false,
+  "production_changed": false,
+  "low_budget_blocked_not_model_response": true,
+  "current_requirements_not_fully_verified_by_frozen_2025_media": true,
+  "input_manifest": {
+    "instant_message-pre_user-blocked-wire.json": "7b3988ae8ea50adb13bc10cf73ec52c93f698aa653592280e41b74773a27bd2f",
+    "instant_message-pre_user-larger-wire.json": "7b3988ae8ea50adb13bc10cf73ec52c93f698aa653592280e41b74773a27bd2f",
+    "instant_message-pre_user-raw-request.json": "ec4fe9057baa02c1cb27590990570614ce6f0a3e313f5b76e884d3c8a1c5b734",
+    "reconstruction.json": "0f027dc60e993d258e715c468ef6110c2b559e1a95cad413c9297a4de64b1077",
+    "recorded-traces.json": "d8c69e9f5d7e12a12d7c6d2295f9a41b14a8d958638ee57349b77f34b756f1fa",
+    "single_text-system-blocked-wire.json": "8ddca8cebb0862dbda6ce6b39732a26e1f1393621c759256613a85c3024b62ae",
+    "single_text-system-larger-wire.json": "05cd2c1f34f6b81f99cf989417f2318099cbf6f50170768abf829ace65e3124d",
+    "single_text-system-raw-request.json": "e72265180de5692f2698964b124b17f121bcf4797ee3fe864294e0e012b111e4"
+  }
+}

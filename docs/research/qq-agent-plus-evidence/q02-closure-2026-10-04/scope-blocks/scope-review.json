@@ -1,0 +1,50 @@
+{
+  "classification_and_readability_not_proven_by_that_count": true,
+  "coverage_checks": [
+    {
+      "grade_based_on_full_text_not_date_regex": true,
+      "sample_key": "frozen_icao:r0:t4",
+      "t3_body_has_precise_requested_scope": true,
+      "t3_completed_scope_records": 5,
+      "t3_precise_scope_in_captured_block": true,
+      "t3_raw_frame_sha256": "6571f946a9dbfcee13c8dccc2485b9e31268999674ce700035bc84ea82dea2f5",
+      "t4_completed_scope_records": 8,
+      "t4_preserves_precise_requested_scope": true
+    },
+    {
+      "grade_based_on_full_text_not_date_regex": true,
+      "sample_key": "frozen_icao:r1:t4",
+      "t3_body_has_precise_requested_scope": true,
+      "t3_completed_scope_records": 3,
+      "t3_precise_scope_in_captured_block": true,
+      "t3_raw_frame_sha256": "e1010ed8a28cf09a5780dd440ddeb503f59e8d4f69fdbaf0f1b35a9222889f21",
+      "t4_completed_scope_records": 4,
+      "t4_preserves_precise_requested_scope": true
+    },
+    {
+      "grade_based_on_full_text_not_date_regex": true,
+      "sample_key": "frozen_airchina:r0:t4",
+      "t3_body_has_precise_requested_scope": true,
+      "t3_completed_scope_records": 5,
+      "t3_precise_scope_in_captured_block": true,
+      "t3_raw_frame_sha256": "5b8449d09c003578b36c4d0c3ffca83fa1a7e434e65478db9a8dd6768f918168",
+      "t4_completed_scope_records": 5,
+      "t4_preserves_precise_requested_scope": true
+    },
+    {
+      "grade_based_on_full_text_not_date_regex": true,
+      "sample_key": "frozen_airchina:r1:t4",
+      "t3_body_has_precise_requested_scope": true,
+      "t3_completed_scope_records": 3,
+      "t3_precise_scope_in_captured_block": false,
+      "t3_raw_frame_sha256": "921a18cbcc0096ceac8bddd110294680598220a1847fb48f9b761068d70377af",
+      "t4_completed_scope_records": 4,
+      "t4_preserves_precise_requested_scope": false
+    }
+  ],
+  "literal_scope_retention_controls_passed": 16,
+  "new_model_calls": 0,
+  "precise_scope_missing_flows": 1,
+  "precise_scope_preserved_flows": 3,
+  "previously_captured_literal_scopes_retained": 16
+}

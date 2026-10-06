@@ -1,0 +1,363 @@
+{
+  "schema_version": "1.0",
+  "date": "2026-10-01",
+  "q02_accepted": false,
+  "model": "gemini-3.8-flash-high",
+  "configured_cw2_endpoint_port": 8318,
+  "scope": "post-read decision and control probes; no function execution, no A/B quality acceptance",
+  "dollar_cost": null,
+  "probes": [
+    {
+      "raw_directory": "post-read-decision-probe-20261001",
+      "reference": {
+        "scope": "post-read decision contrast; same actual old/truncated source results, no tool execution or quality approval",
+        "model": "gemini-3.8-flash-high",
+        "source_sample_key": "detailed_answer:r0:t2:candidate_v5",
+        "source_artifact_sha256": "960a2a85bce9f6fbc2fff1043a0f1f7b851e43f7589848f600ab6efa368b4307",
+        "script_sha256": "80fa6b82c7028466a4abd80099a8f30d4ab9609a87c4feafa7df7455ae4f16b6",
+        "prompt_as_of": "2026-09-30T16:23:48+00:00",
+        "same_inputs": [
+          "user_text",
+          "generation_id",
+          "tools",
+          "tool_choice=auto",
+          "tool_exchanges"
+        ],
+        "conditions": {
+          "full": {
+            "system_sha256": "10ad17fde926bc05c283681b8e8197aa4717eed99d91c14d162ff6e8fca96490",
+            "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "history_sha256": "e6f8e3e4a489bdd06a0dec97c9fd5302083ec26af6d74d011f2642b3c804d4e7"
+          },
+          "lean_native_history": {
+            "system_sha256": "8c87f3041187efe669dcad29205beb566b33cec8e36b6c244527206b764d18bf",
+            "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "history_sha256": "e6f8e3e4a489bdd06a0dec97c9fd5302083ec26af6d74d011f2642b3c804d4e7"
+          },
+          "lean_quoted_history": {
+            "system_sha256": "8c87f3041187efe669dcad29205beb566b33cec8e36b6c244527206b764d18bf",
+            "context_sha256": "e97dad7f85f24e498d43f6a83413480229d3efffdeade68abf4b9ee6ca7359f9",
+            "history_sha256": "2d7619d0bd88a70cc903d4bc8679a1ddfdb6c7b362352f7aede1619c7d321f0e"
+          }
+        },
+        "dollar_cost": null
+      },
+      "conditions": {
+        "full": {
+          "attempts": 2,
+          "rounds_with_function_calls": 0,
+          "control_token_matches": null
+        },
+        "lean_native_history": {
+          "attempts": 2,
+          "rounds_with_function_calls": 0,
+          "control_token_matches": null
+        },
+        "lean_quoted_history": {
+          "attempts": 2,
+          "rounds_with_function_calls": 0,
+          "control_token_matches": null
+        }
+      },
+      "journal_exactly_once": true,
+      "all_calls_terminal_without_provider_error": true,
+      "usage": {
+        "prompt_tokens": {
+          "sum_known": 31344,
+          "known_rounds": 6,
+          "unknown_rounds": 0
+        },
+        "completion_tokens": {
+          "sum_known": 3360,
+          "known_rounds": 6,
+          "unknown_rounds": 0
+        },
+        "total_tokens": {
+          "sum_known": 34704,
+          "known_rounds": 6,
+          "unknown_rounds": 0
+        },
+        "reasoning_tokens": {
+          "sum_known": null,
+          "known_rounds": 0,
+          "unknown_rounds": 6
+        }
+      },
+      "artifacts_sha256": {
+        "run-reference.json": "7ecb314e6d72f8f0f38d1ce92f5ecb0d55458c2340eae5c5e5ac7e3d6f1d33be",
+        "provider-rounds.jsonl": "979e627a0fc39c3bd10810aa515e44f7887928352ad651d2d639534760dd2077"
+      }
+    },
+    {
+      "raw_directory": "post-tool-system-control-20261001",
+      "reference": {
+        "scope": "opaque system/current-user control before and after recorded tool exchanges; no function execution or quality approval",
+        "model": "gemini-3.8-flash-high",
+        "source_sample_key": "detailed_answer:r0:t2:candidate_v5",
+        "source_artifact_sha256": "960a2a85bce9f6fbc2fff1043a0f1f7b851e43f7589848f600ab6efa368b4307",
+        "script_sha256": "93377e84a9ec2f2a6a354eb79fd460979b52229afc760ee96081e6905c6a0a08",
+        "prompt_as_of": "2026-09-30T16:23:48+00:00",
+        "same_inputs": [
+          "system_prompt",
+          "user_text",
+          "context",
+          "history",
+          "generation_id",
+          "tools",
+          "tool_choice=auto"
+        ],
+        "conditions": {
+          "no_exchange": {
+            "system_sha256": "329de1d42a9deecd75f7c97680a205e93baf5f9d57ab85d12703d9e78178ebcb",
+            "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          "after_exchange": {
+            "system_sha256": "329de1d42a9deecd75f7c97680a205e93baf5f9d57ab85d12703d9e78178ebcb",
+            "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        },
+        "dollar_cost": null
+      },
+      "conditions": {
+        "after_exchange": {
+          "attempts": 2,
+          "rounds_with_function_calls": 0,
+          "control_token_matches": 2
+        },
+        "no_exchange": {
+          "attempts": 2,
+          "rounds_with_function_calls": 0,
+          "control_token_matches": 2
+        }
+      },
+      "journal_exactly_once": true,
+      "all_calls_terminal_without_provider_error": true,
+      "usage": {
+        "prompt_tokens": {
+          "sum_known": 7894,
+          "known_rounds": 4,
+          "unknown_rounds": 0
+        },
+        "completion_tokens": {
+          "sum_known": 20,
+          "known_rounds": 4,
+          "unknown_rounds": 0
+        },
+        "total_tokens": {
+          "sum_known": 8900,
+          "known_rounds": 4,
+          "unknown_rounds": 0
+        },
+        "reasoning_tokens": {
+          "sum_known": 986,
+          "known_rounds": 4,
+          "unknown_rounds": 0
+        }
+      },
+      "artifacts_sha256": {
+        "run-reference.json": "6becb3474e5ca88c5d4bd8fc30bf86ddd89e7842f999f81d6d76ba7c94772f6c",
+        "provider-rounds.jsonl": "a1154354d8426e0c55867922a58f59f29c90534508c9d5bb1036699ed57437d9"
+      }
+    },
+    {
+      "raw_directory": "post-tool-reminder-probe-20261001",
+      "reference": {
+        "scope": "same full request with or without a trailing trusted generic verification reminder after tool exchanges; no tool execution or quality approval",
+        "model": "gemini-3.8-flash-high",
+        "source_sample_key": "detailed_answer:r0:t2:candidate_v5",
+        "source_artifact_sha256": "960a2a85bce9f6fbc2fff1043a0f1f7b851e43f7589848f600ab6efa368b4307",
+        "script_sha256": "6343f0df7515ba5a1fa34a93d0cea5814f9bdb5dacaa34d9f247acbfd8671472",
+        "prompt_as_of": "2026-09-30T16:23:48+00:00",
+        "same_inputs": [
+          "user_text",
+          "generation_id",
+          "tools",
+          "tool_choice=auto",
+          "tool_exchanges"
+        ],
+        "wire_messages_sha256": {
+          "full": "362fab9aabf8e59b5ff1e469c46c9537d3b0d3994af5603d9f6c2ecd25093f90",
+          "full_tail_reminder": "8f853ef20f29443200cb890e8db3e236fdbc91605d4e20ede3781c292c2083be"
+        },
+        "conditions": {
+          "full": {
+            "system_sha256": "10ad17fde926bc05c283681b8e8197aa4717eed99d91c14d162ff6e8fca96490",
+            "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "history_sha256": "e6f8e3e4a489bdd06a0dec97c9fd5302083ec26af6d74d011f2642b3c804d4e7"
+          },
+          "full_tail_reminder": {
+            "system_sha256": "10ad17fde926bc05c283681b8e8197aa4717eed99d91c14d162ff6e8fca96490",
+            "context_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "history_sha256": "e6f8e3e4a489bdd06a0dec97c9fd5302083ec26af6d74d011f2642b3c804d4e7"
+          }
+        },
+        "dollar_cost": null
+      },
+      "conditions": {
+        "full": {
+          "attempts": 2,
+          "rounds_with_function_calls": 0,
+          "control_token_matches": null
+        },
+        "full_tail_reminder": {
+          "attempts": 2,
+          "rounds_with_function_calls": 1,
+          "control_token_matches": null
+        }
+      },
+      "journal_exactly_once": true,
+      "all_calls_terminal_without_provider_error": true,
+      "usage": {
+        "prompt_tokens": {
+          "sum_known": 24564,
+          "known_rounds": 4,
+          "unknown_rounds": 0
+        },
+        "completion_tokens": {
+          "sum_known": 1000,
+          "known_rounds": 4,
+          "unknown_rounds": 0
+        },
+        "total_tokens": {
+          "sum_known": 25564,
+          "known_rounds": 4,
+          "unknown_rounds": 0
+        },
+        "reasoning_tokens": {
+          "sum_known": null,
+          "known_rounds": 0,
+          "unknown_rounds": 4
+        }
+      },
+      "artifacts_sha256": {
+        "run-reference.json": "359b86607b644d1e6c2903396fa579a5edfebcf7c187849cbfd9f9553709b138",
+        "provider-rounds.jsonl": "273e47315164d17d3d15bc5aedf8e4232dd833fa12caba19bf4878f923ceaaf9"
+      }
+    }
+  ],
+  "findings": [
+    "All three post-read prompt/history conditions stopped without a further call in both repetitions. Quoted-history replies drifted to the prior travel-list request. Do not implement the lean follow-up stage from this evidence.",
+    "Opaque system/current-user controls returned CONTROL_F71 in all four rounds with and without the same recorded tool exchanges. This does not support an always-dropped-system explanation for the endpoint.",
+    "A trailing trusted generic verification reminder requested another broad search in only one of two rounds; the original prompt did so in neither round. No requested search was executed, and current-source coverage was not established.",
+    "Native httpcore cleanup warnings appeared after completed probe output; every recorded stream has a terminal event, no reported Provider error and actual usage. Warnings are retained rather than treated as a missing sample."
+  ],
+  "verified_ci": {
+    "head_ref_oid": "7302babe20a7c3446dc91b327253982c6c4be0c0",
+    "draft": true,
+    "success": 17,
+    "skipped": 1,
+    "checks": [
+      {
+        "name": "rust (ubuntu-latest)",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36768582877/job/110068890594"
+      },
+      {
+        "name": "build",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36768582903/job/110068890320"
+      },
+      {
+        "name": "contract",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36768582987/job/110068891258"
+      },
+      {
+        "name": "python (ubuntu-latest)",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36768582912/job/110068891924"
+      },
+      {
+        "name": "secrets",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36768582964/job/110068891151"
+      },
+      {
+        "name": "web-smoke",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36768582896/job/110068890796"
+      },
+      {
+        "name": "web (ubuntu-latest)",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36768582872/job/110068890998"
+      },
+      {
+        "name": "rust (windows-latest)",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36768582877/job/110068890467"
+      },
+      {
+        "name": "python (macos-latest)",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36768582912/job/110068891934"
+      },
+      {
+        "name": "web (windows-latest)",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36768582872/job/110068890832"
+      },
+      {
+        "name": "rust (macos-latest)",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36768582877/job/110068890167"
+      },
+      {
+        "name": "python (windows-latest)",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36768582912/job/110068891549"
+      },
+      {
+        "name": "deploy",
+        "status": "COMPLETED",
+        "conclusion": "SKIPPED",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36768582903/job/110069205030"
+      },
+      {
+        "name": "neural-worker (ubuntu-latest)",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36768582912/job/110068892051"
+      },
+      {
+        "name": "dependencies",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36768582964/job/110068891467"
+      },
+      {
+        "name": "architecture-boundaries",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36768582896/job/110068891145"
+      },
+      {
+        "name": "neural-worker (macos-latest)",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36768582912/job/110068891699"
+      },
+      {
+        "name": "neural-worker (windows-latest)",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36768582912/job/110068891743"
+      }
+    ]
+  },
+  "next_work": "Assess evidence scope and technical explanation precision without injecting fixture answers or treating more tool calls as verified facts."
+}

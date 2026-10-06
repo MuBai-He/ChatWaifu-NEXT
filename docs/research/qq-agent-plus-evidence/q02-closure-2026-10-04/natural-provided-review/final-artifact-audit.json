@@ -1,0 +1,30 @@
+{
+  "actual_model_http": 32,
+  "complete_flows": 4,
+  "cumulative_model_http": 217,
+  "cumulative_unknown_usage_calls": 19,
+  "current_checkout_check_optional": true,
+  "documents_snapshotted": 5,
+  "isolated_python_source_entries": 413,
+  "isolated_source_unchanged_after_run": true,
+  "live_search_read_tts_channel_calls": 0,
+  "pending_model_runners": 0,
+  "primary_grades": {
+    "complete": 14,
+    "partial": 2
+  },
+  "prior_frozen_entries_unchanged": {
+    "deployed-retrieval-check": 31,
+    "reader-integration": 35,
+    "revision-pipeline": 84,
+    "scope-blocks": 93,
+    "semantic-review": 11
+  },
+  "production_deployment": false,
+  "prompt_or_persona_rules_added": false,
+  "provider_published_replies": 16,
+  "q02_approval": false,
+  "raw_review_published_exactly": 16,
+  "semantic_quality_auto_approval": false,
+  "wire_payloads_bound": 32
+}

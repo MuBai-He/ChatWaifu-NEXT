@@ -1,0 +1,333 @@
+{
+  "actual_http_attempts": 10,
+  "wire_audit_passed": true,
+  "wire_checks": [
+    {
+      "http_attempt": 1,
+      "sample_key": "icao_provided_source_recovery:r0:t1:baseline",
+      "payload_sha256": "bbb48ddd8e141cd1f3a105bae4a2cfb7e408ba8cff69594846bcde7337878ba6",
+      "reference_tokens": 2366,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 2366,
+        "estimated_input_tokens": 2366,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 2147
+    },
+    {
+      "http_attempt": 2,
+      "sample_key": "icao_provided_source_recovery:r0:t1:baseline",
+      "payload_sha256": "b45852c6e335dd6130e1022c9ee4d757901bf936c465f66292267bf48b6e69e8",
+      "reference_tokens": 6692,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 6692,
+        "estimated_input_tokens": 6692,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 2992
+    },
+    {
+      "http_attempt": 3,
+      "sample_key": "icao_provided_source_recovery:r0:t1:baseline",
+      "payload_sha256": "dca56ca6f339bcd26d148f4db012c67f477209ae423a6298fa0fb1fa19c599b2",
+      "reference_tokens": 8846,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 8846,
+        "estimated_input_tokens": 8846,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 6555
+    },
+    {
+      "http_attempt": 4,
+      "sample_key": "icao_provided_source_recovery:r0:t1:baseline",
+      "payload_sha256": "ab7a07df042ba97ef2a5c1f8a5e6251f268b25aca62d729fc4507e2414affda1",
+      "reference_tokens": 8788,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 8846,
+        "estimated_input_tokens": 8788,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 3381
+    },
+    {
+      "http_attempt": 5,
+      "sample_key": "icao_provided_source_recovery:r0:t2:baseline",
+      "payload_sha256": "65a44b9f17f9f80c30b6d9f2569c56e6dfe6018cbdafc223dd674ec46ed36fc4",
+      "reference_tokens": 7701,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 7701,
+        "estimated_input_tokens": 7701,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 3855
+    },
+    {
+      "http_attempt": 6,
+      "sample_key": "icao_provided_source_recovery:r0:t3:baseline",
+      "payload_sha256": "2ea8e315468b9dc171ab0de0825613de1ddb139674405a49260eaa52296662d8",
+      "reference_tokens": 7864,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 9447,
+        "estimated_input_tokens": 7864,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 8708
+    },
+    {
+      "http_attempt": 7,
+      "sample_key": "icao_provided_source_recovery:r0:t3:baseline",
+      "payload_sha256": "c47fb0f4ee977b54e4764e9f91149c63e25f5c9921273fe9f7505be2f92f3080",
+      "reference_tokens": 7976,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 9447,
+        "estimated_input_tokens": 7976,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 3428
+    },
+    {
+      "http_attempt": 8,
+      "sample_key": "icao_provided_source_recovery:r0:t3:baseline",
+      "payload_sha256": "6ec6f063a02872b2e950cf90e3f2020e5dc49b013d01635f4525c0ab9639810c",
+      "reference_tokens": 11070,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 11070,
+        "estimated_input_tokens": 11070,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 7991
+    },
+    {
+      "http_attempt": 9,
+      "sample_key": "icao_provided_source_recovery:r0:t3:baseline",
+      "payload_sha256": "599257dfbc788926c8bd078fec731c931abadd61d3176536fca7dcecc3c09d2f",
+      "reference_tokens": 11214,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 11214,
+        "estimated_input_tokens": 11214,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 4647
+    },
+    {
+      "http_attempt": 10,
+      "sample_key": "icao_provided_source_recovery:r0:t4:baseline",
+      "payload_sha256": "bac1329785eba7d5e16451ed1caa4016d6398038ace5ce25eccf67102ea3c85f",
+      "reference_tokens": 11654,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 11654,
+        "estimated_input_tokens": 11654,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 19515
+    }
+  ],
+  "completed_model_answers": 4,
+  "runtime_fallback_answers": 0,
+  "historical_incomplete": [],
+  "still_incomplete": [],
+  "unexecuted": [],
+  "usage": {
+    "prompt_tokens": {
+      "reported": 10,
+      "attempts": 10,
+      "known_subtotal": 77089,
+      "complete_total": 77089
+    },
+    "completion_tokens": {
+      "reported": 10,
+      "attempts": 10,
+      "known_subtotal": 2927,
+      "complete_total": 2927
+    },
+    "total_tokens": {
+      "reported": 10,
+      "attempts": 10,
+      "known_subtotal": 85034,
+      "complete_total": 85034
+    },
+    "reasoning_tokens": {
+      "reported": 7,
+      "attempts": 10,
+      "known_subtotal": 5018,
+      "complete_total": null
+    }
+  },
+  "reference_error_percent_min_max": [
+    0.2118,
+    15.6316
+  ],
+  "response_identity_counts": {
+    "gemini-3.8-flash-control": 5,
+    "gemini-3.8-flash": 5
+  },
+  "identity_unknown_attempts": 0,
+  "logical_latency_p50_ms": 18558.0,
+  "logical_latency_p95_ms": 25031.8,
+  "actual_read_excerpts": [
+    {
+      "skill_run_id": "70b6ecf5-464d-40c3-b19c-9707adea495f",
+      "url": "https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation",
+      "provider": "builtin",
+      "fallback": {
+        "from_provider": "crawl4ai",
+        "reason": "web_provider_unavailable",
+        "http_status": 502
+      },
+      "body_sha256": "3ad89a3ee756148ac40f1440acf85c2d8f78fc16cd32a9350b7f566f16c4c29f",
+      "text_sha256": "ede51f6dddb289c9621694cb38b01d015bd12bf614094228eb5552170574a4f3",
+      "text_offset": 0,
+      "text_characters": 6000,
+      "total_characters": 7173,
+      "truncated": true,
+      "dns_resolver": "cloudflare",
+      "whole_excerpt_present_in_http_attempts": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "skill_run_id": "bc6bc103-15ed-4989-8f5c-28260e24ea57",
+      "url": "https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation",
+      "provider": "builtin",
+      "fallback": {
+        "from_provider": "crawl4ai",
+        "reason": "web_provider_unavailable",
+        "http_status": 502
+      },
+      "body_sha256": "3ad89a3ee756148ac40f1440acf85c2d8f78fc16cd32a9350b7f566f16c4c29f",
+      "text_sha256": "0537d6f4377569a800ac6a3633e0ad2d4ff0b511f43fe1ec8b0c68a99302f8f1",
+      "text_offset": 1173,
+      "text_characters": 6000,
+      "total_characters": 7173,
+      "truncated": true,
+      "dns_resolver": "cloudflare",
+      "whole_excerpt_present_in_http_attempts": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "skill_run_id": "41c41413-3aeb-4b2f-8476-81827de74a39",
+      "url": "https://www.icao.int/news/new-power-bank-restrictions-will-safeguard-international-aviation",
+      "provider": "builtin",
+      "fallback": {
+        "from_provider": "crawl4ai",
+        "reason": "web_provider_unavailable",
+        "http_status": 502
+      },
+      "body_sha256": "3ad89a3ee756148ac40f1440acf85c2d8f78fc16cd32a9350b7f566f16c4c29f",
+      "text_sha256": "829692c92f44a29670e88896f0ea93cdad28e97b06ccaed373ecc4b91fe6a0a8",
+      "text_offset": 4173,
+      "text_characters": 3000,
+      "total_characters": 7173,
+      "truncated": true,
+      "dns_resolver": "cloudflare",
+      "whole_excerpt_present_in_http_attempts": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    }
+  ],
+  "q02_approval": false
+}

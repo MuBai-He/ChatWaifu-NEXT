@@ -1,0 +1,1 @@
+{"model": "gemini-3.8-flash-high", "source_route": "searxng+crawl4ai with explicit builtin recovery", "dns_resolver": "cloudflare", "logical_limit": 4, "http_limit": 20, "production_changed": false, "live_channel_sends": false, "q02_approval": false, "fresh_four_turn_run": true, "prior_batch_not_resumed": true, "started_at_utc": "2026-10-03T20:12:41.358907+00:00"}

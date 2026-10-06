@@ -1,0 +1,20 @@
+{
+  "observed_at_utc": "2026-10-04T04:56:57.735172+00:00",
+  "container": "cw2-public-web-crawl4ai-1",
+  "selection": "last 5 minutes fixed error/HTTP patterns; no extra read",
+  "lines": [
+    "Traceback (most recent call last):",
+    "Traceback (most recent call last):",
+    "    self.pdf_processor = NaivePDFProcessorStrategy(",
+    "    raise ImportError(\"pypdf is required for PDF processing. Install with 'pip install crawl4ai[pdf]'\")",
+    "ImportError: pypdf is required for PDF processing. Install with 'pip install crawl4ai[pdf]'",
+    "[2026-10-04 04:55:33 +0000] [15] [ERROR] Exception in ASGI application",
+    "Traceback (most recent call last):",
+    "Traceback (most recent call last):",
+    "    self.pdf_processor = NaivePDFProcessorStrategy(",
+    "    raise ImportError(\"pypdf is required for PDF processing. Install with 'pip install crawl4ai[pdf]'\")",
+    "ImportError: pypdf is required for PDF processing. Install with 'pip install crawl4ai[pdf]'"
+  ],
+  "new_read_calls": 0,
+  "new_model_calls": 0
+}

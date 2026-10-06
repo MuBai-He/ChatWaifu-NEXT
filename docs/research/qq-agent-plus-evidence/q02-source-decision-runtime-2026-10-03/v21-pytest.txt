@@ -1,0 +1,71 @@
+........................................................................ [  3%]
+........................................................................ [  6%]
+........................................................................ [ 10%]
+........................................................................ [ 13%]
+........................................................................ [ 16%]
+........................................................................ [ 20%]
+.......s................................................................ [ 23%]
+........................................................................ [ 26%]
+........................................................................ [ 30%]
+........................................................................ [ 33%]
+........................................................................ [ 36%]
+........................................................................ [ 40%]
+........................................................................ [ 43%]
+........................................................................ [ 46%]
+........................................................................ [ 50%]
+........................................................................ [ 53%]
+........................................................................ [ 56%]
+........................................................................ [ 60%]
+........................................................................ [ 63%]
+........................................................................ [ 66%]
+........................................................................ [ 70%]
+........................................................................ [ 73%]
+........................................................................ [ 76%]
+........................................................................ [ 80%]
+.............................................ssssssssss................. [ 83%]
+........................................s......ss....................... [ 86%]
+........................................................................ [ 90%]
+...........ssss.ssssssssssssssssss...................................... [ 93%]
+...........................sssss.........sss.ss......................... [ 96%]
+.....................................................................    [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/pipecat/audio/utils.py:14
+  /Users/mubai/Desktop/CW2/.worktrees/qq-agent-plus-adoption/.venv/lib/python3.12/site-packages/pipecat/audio/utils.py:14: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13
+    import audioop
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] services/runtime/tests/test_database.py:479: validates Windows TerminateProcess recovery
+SKIPPED [1] services/runtime/tests/test_windows_appcontainer_acceptance.py:460: Windows AppContainer acceptance requires a real Windows host
+SKIPPED [1] services/runtime/tests/test_windows_appcontainer_acceptance.py:492: Windows AppContainer acceptance requires a real Windows host
+SKIPPED [1] services/runtime/tests/test_windows_appcontainer_acceptance.py:528: Windows AppContainer acceptance requires a real Windows host
+SKIPPED [1] services/runtime/tests/test_windows_appcontainer_acceptance.py:602: Windows AppContainer acceptance requires a real Windows host
+SKIPPED [1] services/runtime/tests/test_windows_appcontainer_acceptance.py:717: Windows AppContainer acceptance requires a real Windows host
+SKIPPED [1] services/runtime/tests/test_windows_appcontainer_acceptance.py:762: Windows AppContainer acceptance requires a real Windows host
+SKIPPED [2] services/runtime/tests/test_windows_appcontainer_acceptance.py:806: Windows AppContainer acceptance requires a real Windows host
+SKIPPED [1] services/runtime/tests/test_windows_appcontainer_acceptance.py:834: Windows AppContainer acceptance requires a real Windows host
+SKIPPED [1] services/runtime/tests/test_windows_appcontainer_acceptance.py:887: Windows AppContainer acceptance requires a real Windows host
+SKIPPED [1] tools/tests/test_ci_release_gates.py:124: requires Windows PowerShell
+SKIPPED [1] tools/tests/test_desktop_tauri_config.py:264: PowerShell is unavailable
+SKIPPED [1] tools/tests/test_desktop_tauri_config.py:498: PowerShell is unavailable
+SKIPPED [1] tools/tests/test_recover_runtime_database.py:278: requires Windows hard-link enumeration
+SKIPPED [1] tools/tests/test_recover_runtime_database.py:319: requires Windows path policy
+SKIPPED [1] tools/tests/test_recover_runtime_database.py:355: requires Win32 file sharing
+SKIPPED [1] tools/tests/test_recover_runtime_database.py:376: requires Windows hard-link enumeration
+SKIPPED [1] tools/tests/test_recover_runtime_database.py:430: requires Win32 file sharing
+SKIPPED [4] tools/tests/test_recover_runtime_database.py:469: requires Windows path policy
+SKIPPED [6] tools/tests/test_recover_runtime_database.py:494: requires Windows junctions
+SKIPPED [1] tools/tests/test_recover_runtime_database.py:544: requires Windows junctions
+SKIPPED [3] tools/tests/test_recover_runtime_database.py:589: requires loopback Windows UNC
+SKIPPED [2] tools/tests/test_recover_runtime_database.py:626: requires Windows 8.3 names
+SKIPPED [1] tools/tests/test_recover_runtime_database.py:663: requires Windows hard-link enumeration
+SKIPPED [1] tools/tests/test_windows_worker_pack_builders.py:147: requires the Windows x64 install helper
+SKIPPED [1] tools/tests/test_windows_worker_pack_builders.py:214: requires Windows path handles
+SKIPPED [1] tools/tests/test_windows_worker_pack_builders.py:280: requires Windows junctions
+SKIPPED [1] tools/tests/test_windows_worker_pack_builders.py:324: requires Windows PowerShell
+SKIPPED [1] tools/tests/test_windows_worker_pack_builders.py:432: requires Windows PowerShell
+SKIPPED [1] tools/tests/test_worker_packs.py:232: requires Win32 extended-length paths
+SKIPPED [1] tools/tests/test_worker_packs.py:264: requires Win32 extended-length paths
+SKIPPED [1] tools/tests/test_worker_packs.py:299: requires Win32 extended-length paths
+SKIPPED [2] tools/tests/test_worker_packs.py:337: requires Windows path namespaces
+2111 passed, 46 skipped, 1 warning in 74.00s (0:01:14)

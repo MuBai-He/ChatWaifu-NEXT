@@ -1,0 +1,15 @@
+{
+  "local_tests": 422,
+  "ruff": "passed",
+  "ruff_format": "passed",
+  "pyright_errors": 0,
+  "diff_check": "passed",
+  "source_policy_ast_unchanged": true,
+  "new_model_http": 0,
+  "before_product_regressions": 8,
+  "before_unrelated_passed": 289,
+  "setup_errors": "initial unrestricted-case assertion lacked a question; fixed before implementation. New paper fixture initially lacked READ body_sha256, fixed to valid schema; this artificial frame validation error is not historical RuntimeError. Earlier post-fix two missing-body failures required extending explicit acquired-document scope, then passed.",
+  "server_tests": 422,
+  "source_files": 413,
+  "server_changed_python_files": 5
+}

@@ -1,0 +1,156 @@
+[
+  {
+    "label": "generic_current",
+    "arguments": {
+      "query": "2026 国内航班 充电宝 最新 规定",
+      "max_results": 5,
+      "dns_resolver": "cloudflare"
+    },
+    "ok": true,
+    "result": {
+      "provider": "searxng",
+      "query": "2026 国内航班 充电宝 最新 规定",
+      "effective_query": "民航局 充电宝 2026 国内航班 最新 规定 额定能量 3C 召回 修订 生效",
+      "provider_queries": [
+        {
+          "query": "民航局 充电宝 2026 国内航班 最新 规定 额定能量 3C 召回 修订 生效",
+          "body_sha256": "98a09027328692ce0ae47baef3fa9174e09d1d9f26627cfe4584a9e371479256"
+        },
+        {
+          "query": "site:caac.gov.cn 民航局 充电宝 3C 召回",
+          "body_sha256": "700b373833d37bc65816860d28096937fecab47d24fb02a11767ab8d925bfbf0"
+        },
+        {
+          "query": "site:caac.gov.cn 民航局 充电宝 额定能量 规定",
+          "body_sha256": "55d6009847727edd567d747be8e530f73ce7c1cda1a2c4337099a2c46bbd6fa1"
+        }
+      ],
+      "search_url": "http://127.0.0.1:18080/search",
+      "retrieved_at": "2026-10-03T08:57:53.104507+00:00",
+      "body_sha256": "9684c683cf0fa0ba2f56f03bbcab5b4e22e60a0d7faee83835eaac86e93c3ef7",
+      "dns_resolver": "system",
+      "results": [
+        {
+          "url": "https://www.bbc.com/zhongwen/articles/c6x2z2dqv080o/simp",
+          "title": "bbc.com/zhongwen/articles/c6x2z2dqv080o/simp",
+          "snippet": "Author, 凯拉·爱泼斯坦（Kayla Epstein）. Published 2026年10月2日."
+        },
+        {
+          "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XNGLJ/XN_XXGK/XNYSSC/202601/t20260106_229694.html",
+          "title": "caac.gov.cn/PHONE/GLJ_PHONE/XNGLJ/XN_XXGK/XNYSSC...",
+          "snippet": "险品航空运输安全形势的总体平稳。 会议通报近期辖区危险品管理动态。 结合行政检查、教员评估、人员资质排查、培训机构测评等工作开展情况，要求各单位持续优化基于胜任能力的培训模式，加强教员力量培养，同时要严格落. 实充电宝、锂电池运输新规。"
+        },
+        {
+          "url": "https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html",
+          "title": "中国民用航空局--航空旅行常识",
+          "snippet": "额定能量超过160Wh的锂电池、充电宝不可携带。4.锂电池额定能量≤100Wh或锂含量≤2克的电子体温计，可随身携带和托运。"
+        },
+        {
+          "url": "https://aihuangdou.com/drama/2595/",
+          "title": "妖孽小村医 - AI成人短剧在线观看 | 黄豆短剧",
+          "snippet": "2026-09-30 上线. 小小村医韩尘，惹得村里村外的无数美女倒贴追求。 一只圣手医人无数，一只邪手惩恶扬善。 且看小村医如何从山村小农民，变成一个让万千豪族财阀颤抖恐惧的存在！"
+        },
+        {
+          "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+          "title": "caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT...",
+          "snippet": "设置了管控充电宝后续处置服务设施，提供了充电宝3C标识、召回型号查询、充电宝暂存等服务，让旅客感受到民航对充电宝的管控是有温度的执法，旅."
+        }
+      ],
+      "total_matched": 26,
+      "filtered_count": 1,
+      "truncated": true,
+      "empty_reason": null
+    },
+    "latency_ms": 3240
+  },
+  {
+    "label": "airline_current",
+    "arguments": {
+      "query": "site:airchina.com.cn 2026 充电宝",
+      "max_results": 5,
+      "dns_resolver": "cloudflare"
+    },
+    "ok": true,
+    "result": {
+      "provider": "searxng",
+      "query": "site:airchina.com.cn 2026 充电宝",
+      "effective_query": "site:airchina.com.cn 2026 充电宝",
+      "provider_queries": [
+        {
+          "query": "site:airchina.com.cn 2026 充电宝",
+          "body_sha256": "0a83f9ad6fd0438d35b7dc4070a58f5aee993c645893366d84aad0fe32053def"
+        }
+      ],
+      "search_url": "http://127.0.0.1:18080/search",
+      "retrieved_at": "2026-10-03T08:57:53.756874+00:00",
+      "body_sha256": "0a83f9ad6fd0438d35b7dc4070a58f5aee993c645893366d84aad0fe32053def",
+      "dns_resolver": "system",
+      "results": [
+        {
+          "url": "https://mall.airchina.com.cn/?share=true",
+          "title": "凤凰知音商城",
+          "snippet": "纽曼（Newmine） 三合一充电线数据线XS06金 -2米长.睿量/Remax 磁吸无线充电宝 Magsafe快充 5000mAh超薄小巧便携移动电源 手机背夹迷你移动电源 适用于苹果华为小米手机 RPP-107."
+        },
+        {
+          "url": "https://mall.airchina.com.cn/",
+          "title": "凤凰知音商城",
+          "snippet": "纽曼（Newmine） 自带线充电宝迷你小巧便携 22.5W超级快充移动电源F86-E 1万毫安.品胜（PISEN) 100W/66W华为Type-C数据线充电线6A快充线 1米."
+        },
+        {
+          "url": "https://ffp.airchina.com.cn/goodsSearch.html?searchType=gcIdSearch&keyword=13076&brandId=311355",
+          "title": "凤凰知音",
+          "snippet": "科沃（KOVOL） 【国家3C认证】10000mAh磁吸充电宝MagSafe无线快充移动电源."
+        },
+        {
+          "url": "https://ffp.airchina.com.cn/goodsSearch.html?searchType=gcIdSearch&keyword=13165",
+          "title": "凤凰知音",
+          "snippet": "2026年“凤凰知音”会员保级政策. “凤凰知音”会员尊享出行礼遇产品评定及权 益包规则.ZNNCO 充电宝20000毫安时超薄小巧迷你自带线大容量快充移动电源便携苹果华为小米2万mAh手机."
+        },
+        {
+          "url": "https://ffp.airchina.com.cn/goodsSearch.html?searchType=gcIdSearch&keyword=13076&brandId=306724",
+          "title": "凤凰知音",
+          "snippet": "2026年“凤凰知音”会员保级政策. 里程安全 重要提示. 关于防范以国航名义进行诈骗的温馨提示.爱国者（aigo） 磁吸无线充电宝 WS-T193P 10000mAh."
+        }
+      ],
+      "total_matched": 6,
+      "filtered_count": 0,
+      "truncated": true,
+      "empty_reason": null
+    },
+    "latency_ms": 651
+  },
+  {
+    "label": "known_current_html",
+    "arguments": {
+      "url": "https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml",
+      "dns_resolver": "cloudflare",
+      "fresh": true,
+      "max_characters": 6000
+    },
+    "ok": true,
+    "result": {
+      "url": "https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml",
+      "provider": "crawl4ai",
+      "title": "",
+      "text": "图片标签\n关于加强充电宝、锂电池机上安全风险管控的提示\n按照中国民航局要求，为保障航班飞行安全，请您乘坐航班时严格遵守充电宝、锂电池运输相关要求：\n一、禁运要求：\n生产厂家召回（召回信息在“国家市场监督管理总局缺陷产品召回技术中心”官方网站“消费品召回”栏目查询）、鼓包、变形、开裂、标识不清、无法确认额定能量或锂金属含量的充电宝。\n二、数量限制：\n每位旅客最多携带2块充电宝。\n三、能量限制：\n1.单个充电宝的额定能量不得超过160Wh；\n2.100Wh及以下的充电宝，无需国航批准；\n3.超过100Wh但不超过160Wh的充电宝，须经国航批准。\n四、其他要求：\n1.乘坐中国境内航班须有清晰3C标识；\n2.充电宝只能随身携带，不允许托运；\n3.如果充电宝具备电源开关功能，需要将电源关闭；\n4.机上全程不得将充电宝放入行李架，不得使用充电宝给任何设备供电，不得使用机上电源给充电宝充电；\n5.充电宝做好绝缘防护，放置于前方座椅下方的手提行李或座椅靠背口袋内。\n中国国际航空股份有限公司\n二〇二六年八月四日\n[关于国航](https://webresource.airchina.com.cn/zh-CN/content/about_us/company/) | [运输总条件](https://webresource.airchina.com.cn/zh-CN/content/trans_conditions/general/) | [法律声明](https://www.airchina.com.cn/zh-CN/content/website/info/legal_statement/) | [隐私条款](https://www.airchina.com.cn/zh-CN/content/website/info/privacy_policy/) | [cookie声明](https://www.airchina.com.cn/zh-CN/content/website/info/cookie/) | [国货航](http://www.airchinacargo.com/) | [投资者关系](https://www.airchina.com.cn/investor-relations?type=HOME) | [中航集团](http://www.airchinagroup.com/cnah/) | [国家会议中心](https://www.cnccchina.com/) | [汉莎航空](https://www.lufthansa.com/cn/hk/homepage) | [星盟环球程产品](https://webresource.airchina.com.cn/zh-CN/content/about_us/solidarity/25054/) | [营业执照](https://www.airchina.com.cn/zh-CN/content/website/info/business_license/) |\nCopyright 2022 Air China, All Rights Reserved. | 京ICP证 030872号-1",
+      "retrieved_at": "2026-10-03T08:57:55.645793+00:00",
+      "content_type": "text/plain",
+      "body_sha256": "25eeb3bd9e5cf0bb50d42330a586d307257a3bd36b39e63bd4c50aaf781048c4",
+      "total_characters": 1339,
+      "text_offset": 0,
+      "truncated": false,
+      "focus_matched": null,
+      "dns_resolver": "cloudflare",
+      "extraction_method": "plain_text",
+      "document_characters": 1339,
+      "links": [],
+      "links_requested": false,
+      "links_truncated": false,
+      "links_scope": "selected_source",
+      "read_url_schemes": [
+        "https"
+      ]
+    },
+    "latency_ms": 1888
+  }
+]

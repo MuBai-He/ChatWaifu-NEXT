@@ -1,0 +1,123 @@
+{
+  "estimator": "cl100k_chat_json_v1",
+  "operational_window": 65536,
+  "output_reserve_tokens": 900,
+  "estimation_margin": 0,
+  "input_allowance": 64636,
+  "maximum_native_context_probed": false,
+  "notes": [
+    "A/B changes evidence position only, not rules, question, history, sources or budgets.",
+    "First 9 runs retain actual transport JSON payloads and normalized supplier usage. Raw SSE usage is available only for the 2-sample supplement.",
+    "Supplement streaming completion_tokens excludes reasoning; total_tokens includes it. Preserve raw records and do not double-count.",
+    "Reference estimates are not native counts or universal bounds. These timings do not establish p95 or a latency improvement."
+  ],
+  "cases": {
+    "legacy_before_history": {
+      "samples": 3,
+      "reference_input_tokens": [
+        3566,
+        3566,
+        3566
+      ],
+      "supplier_prompt_tokens": [
+        2903,
+        2903,
+        2903
+      ],
+      "elapsed_ms": [
+        4326,
+        5042,
+        5599
+      ]
+    },
+    "current_turn": {
+      "samples": 3,
+      "reference_input_tokens": [
+        3566,
+        3566,
+        3566
+      ],
+      "supplier_prompt_tokens": [
+        2903,
+        2903,
+        2903
+      ],
+      "elapsed_ms": [
+        6775,
+        6502,
+        8392
+      ]
+    },
+    "bare_with_discussion": {
+      "samples": 2,
+      "reference_input_tokens": [
+        3584,
+        3584
+      ],
+      "supplier_prompt_tokens": [
+        2914,
+        2914
+      ],
+      "elapsed_ms": [
+        6070,
+        7565
+      ]
+    },
+    "bare_without_discussion": {
+      "samples": 1,
+      "reference_input_tokens": [
+        3262
+      ],
+      "supplier_prompt_tokens": [
+        2572
+      ],
+      "elapsed_ms": [
+        5663
+      ]
+    }
+  },
+  "usage_supplement": [
+    {
+      "case": "legacy_before_history",
+      "reference_tokens": 3566,
+      "usage": {
+        "prompt_tokens": 2903,
+        "completion_tokens": 16,
+        "total_tokens": 3386,
+        "reasoning_tokens": 467
+      },
+      "raw_provider_usage": [
+        {
+          "completion_tokens": 16,
+          "total_tokens": 3386,
+          "prompt_tokens": 2903,
+          "completion_tokens_details": {
+            "reasoning_tokens": 467
+          }
+        }
+      ],
+      "elapsed_ms": 7039
+    },
+    {
+      "case": "current_turn",
+      "reference_tokens": 3566,
+      "usage": {
+        "prompt_tokens": 2903,
+        "completion_tokens": 19,
+        "total_tokens": 3346,
+        "reasoning_tokens": 424
+      },
+      "raw_provider_usage": [
+        {
+          "completion_tokens": 19,
+          "total_tokens": 3346,
+          "prompt_tokens": 2903,
+          "completion_tokens_details": {
+            "reasoning_tokens": 424
+          }
+        }
+      ],
+      "elapsed_ms": 4559
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "credential_leaks": 0,
+  "credential_values_checked_on_server": 2,
+  "logical_artifacts_exported_and_matched": 92,
+  "macos_auxiliary_tar_files_not_artifacts": 98,
+  "new_model_calls": 0,
+  "new_reader_calls": 0,
+  "scope": "All 92 local artifacts prior to adding generated privacy/verification reports and final manifest"
+}

@@ -1,0 +1,695 @@
+{
+  "version_mapping_revealed": true,
+  "mapping_sha256": "12bf5e1d65753be9ba0a3fa460a24ff8388b2a03852e7ac5ba3f6fdcfa3771ea",
+  "freeze_sha256": "2549423e6fb6db83dee6cc935e1e102deb517b03ad6add68da0aec2a54d9bdc4",
+  "reviewer": "primary implementation author, version-masked before freeze; not independent/double-blind",
+  "original": {
+    "pairs": 432,
+    "preference": {
+      "baseline": 105,
+      "candidate": 140,
+      "tie": 187
+    },
+    "compliance": {
+      "baseline": {
+        "comply": 264,
+        "partial": 148,
+        "fail": 20
+      },
+      "candidate": {
+        "comply": 266,
+        "partial": 154,
+        "fail": 12
+      }
+    },
+    "hard_failures": {
+      "baseline": 0,
+      "candidate": 1
+    },
+    "hard_failure_rows": [
+      {
+        "version": "candidate",
+        "review_group_id": "single_text:greeting:r1",
+        "turn_id": 1,
+        "side": 1,
+        "reason": "候选1无来源声称当天看书和整理东西，违反不编造现实活动；候选2没有该动作但追加多项动机猜测。"
+      }
+    ],
+    "naturalness_observed": {
+      "baseline": {
+        "n": 392,
+        "unknown": 40,
+        "mean": 3.4591836734693877
+      },
+      "candidate": {
+        "n": 392,
+        "unknown": 40,
+        "mean": 3.4744897959183674
+      }
+    },
+    "persona_numeric_usable": false
+  },
+  "calibrated": {
+    "pairs": 432,
+    "preference": {
+      "baseline": 105,
+      "candidate": 140,
+      "tie": 187
+    },
+    "compliance": {
+      "baseline": {
+        "comply": 266,
+        "partial": 146,
+        "fail": 20
+      },
+      "candidate": {
+        "comply": 269,
+        "partial": 152,
+        "fail": 11
+      }
+    },
+    "hard_failures": {
+      "baseline": 0,
+      "candidate": 1
+    },
+    "hard_failure_rows": [
+      {
+        "version": "candidate",
+        "review_group_id": "single_text:greeting:r1",
+        "turn_id": 1,
+        "side": 1,
+        "reason": "候选1无来源声称当天看书和整理东西，违反不编造现实活动；候选2没有该动作但追加多项动机猜测。"
+      }
+    ],
+    "naturalness_observed": {
+      "baseline": {
+        "n": 395,
+        "unknown": 37,
+        "mean": 3.458227848101266
+      },
+      "candidate": {
+        "n": 395,
+        "unknown": 37,
+        "mean": 3.473417721518987
+      }
+    },
+    "persona_numeric_usable": false
+  },
+  "by_scene": {
+    "greeting": {
+      "pairs": 36,
+      "preference": {
+        "baseline": 8,
+        "candidate": 10,
+        "tie": 18
+      },
+      "compliance": {
+        "baseline": {
+          "comply": 17,
+          "partial": 13,
+          "fail": 6
+        },
+        "candidate": {
+          "comply": 16,
+          "partial": 15,
+          "fail": 5
+        }
+      },
+      "hard_failures": {
+        "baseline": 0,
+        "candidate": 1
+      },
+      "hard_failure_rows": [
+        {
+          "version": "candidate",
+          "review_group_id": "single_text:greeting:r1",
+          "turn_id": 1,
+          "side": 1,
+          "reason": "候选1无来源声称当天看书和整理东西，违反不编造现实活动；候选2没有该动作但追加多项动机猜测。"
+        }
+      ],
+      "naturalness_observed": {
+        "baseline": {
+          "n": 36,
+          "unknown": 0,
+          "mean": 3.3055555555555554
+        },
+        "candidate": {
+          "n": 36,
+          "unknown": 0,
+          "mean": 3.2777777777777777
+        }
+      },
+      "persona_numeric_usable": false
+    },
+    "teasing": {
+      "pairs": 36,
+      "preference": {
+        "baseline": 13,
+        "candidate": 13,
+        "tie": 10
+      },
+      "compliance": {
+        "baseline": {
+          "comply": 18,
+          "partial": 17,
+          "fail": 1
+        },
+        "candidate": {
+          "comply": 21,
+          "partial": 14,
+          "fail": 1
+        }
+      },
+      "hard_failures": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "hard_failure_rows": [],
+      "naturalness_observed": {
+        "baseline": {
+          "n": 36,
+          "unknown": 0,
+          "mean": 3.4444444444444446
+        },
+        "candidate": {
+          "n": 36,
+          "unknown": 0,
+          "mean": 3.5
+        }
+      },
+      "persona_numeric_usable": false
+    },
+    "correction": {
+      "pairs": 36,
+      "preference": {
+        "baseline": 13,
+        "candidate": 7,
+        "tie": 16
+      },
+      "compliance": {
+        "baseline": {
+          "comply": 30,
+          "partial": 6,
+          "fail": 0
+        },
+        "candidate": {
+          "comply": 24,
+          "partial": 12,
+          "fail": 0
+        }
+      },
+      "hard_failures": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "hard_failure_rows": [],
+      "naturalness_observed": {
+        "baseline": {
+          "n": 36,
+          "unknown": 0,
+          "mean": 3.6666666666666665
+        },
+        "candidate": {
+          "n": 36,
+          "unknown": 0,
+          "mean": 3.5277777777777777
+        }
+      },
+      "persona_numeric_usable": false
+    },
+    "stop_joking": {
+      "pairs": 36,
+      "preference": {
+        "baseline": 10,
+        "candidate": 9,
+        "tie": 17
+      },
+      "compliance": {
+        "baseline": {
+          "comply": 27,
+          "partial": 4,
+          "fail": 5
+        },
+        "candidate": {
+          "comply": 23,
+          "partial": 9,
+          "fail": 4
+        }
+      },
+      "hard_failures": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "hard_failure_rows": [],
+      "naturalness_observed": {
+        "baseline": {
+          "n": 36,
+          "unknown": 0,
+          "mean": 3.388888888888889
+        },
+        "candidate": {
+          "n": 36,
+          "unknown": 0,
+          "mean": 3.4444444444444446
+        }
+      },
+      "persona_numeric_usable": false
+    },
+    "low_mood": {
+      "pairs": 36,
+      "preference": {
+        "baseline": 5,
+        "candidate": 26,
+        "tie": 5
+      },
+      "compliance": {
+        "baseline": {
+          "comply": 8,
+          "partial": 22,
+          "fail": 6
+        },
+        "candidate": {
+          "comply": 18,
+          "partial": 17,
+          "fail": 1
+        }
+      },
+      "hard_failures": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "hard_failure_rows": [],
+      "naturalness_observed": {
+        "baseline": {
+          "n": 20,
+          "unknown": 16,
+          "mean": 3.05
+        },
+        "candidate": {
+          "n": 20,
+          "unknown": 16,
+          "mean": 3.3
+        }
+      },
+      "persona_numeric_usable": false
+    },
+    "insufficient_shared_history": {
+      "pairs": 36,
+      "preference": {
+        "baseline": 11,
+        "candidate": 17,
+        "tie": 8
+      },
+      "compliance": {
+        "baseline": {
+          "comply": 20,
+          "partial": 14,
+          "fail": 2
+        },
+        "candidate": {
+          "comply": 23,
+          "partial": 13,
+          "fail": 0
+        }
+      },
+      "hard_failures": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "hard_failure_rows": [],
+      "naturalness_observed": {
+        "baseline": {
+          "n": 24,
+          "unknown": 12,
+          "mean": 3.4166666666666665
+        },
+        "candidate": {
+          "n": 24,
+          "unknown": 12,
+          "mean": 3.3333333333333335
+        }
+      },
+      "persona_numeric_usable": false
+    },
+    "identity": {
+      "pairs": 36,
+      "preference": {
+        "baseline": 9,
+        "candidate": 14,
+        "tie": 13
+      },
+      "compliance": {
+        "baseline": {
+          "comply": 29,
+          "partial": 7,
+          "fail": 0
+        },
+        "candidate": {
+          "comply": 31,
+          "partial": 5,
+          "fail": 0
+        }
+      },
+      "hard_failures": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "hard_failure_rows": [],
+      "naturalness_observed": {
+        "baseline": {
+          "n": 27,
+          "unknown": 9,
+          "mean": 3.3703703703703702
+        },
+        "candidate": {
+          "n": 27,
+          "unknown": 9,
+          "mean": 3.4814814814814814
+        }
+      },
+      "persona_numeric_usable": false
+    },
+    "goodbye": {
+      "pairs": 36,
+      "preference": {
+        "baseline": 3,
+        "candidate": 2,
+        "tie": 31
+      },
+      "compliance": {
+        "baseline": {
+          "comply": 36,
+          "partial": 0,
+          "fail": 0
+        },
+        "candidate": {
+          "comply": 34,
+          "partial": 2,
+          "fail": 0
+        }
+      },
+      "hard_failures": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "hard_failure_rows": [],
+      "naturalness_observed": {
+        "baseline": {
+          "n": 36,
+          "unknown": 0,
+          "mean": 3.9722222222222223
+        },
+        "candidate": {
+          "n": 36,
+          "unknown": 0,
+          "mean": 3.9444444444444446
+        }
+      },
+      "persona_numeric_usable": false
+    },
+    "verbose_history_pressure": {
+      "pairs": 36,
+      "preference": {
+        "baseline": 6,
+        "candidate": 14,
+        "tie": 16
+      },
+      "compliance": {
+        "baseline": {
+          "comply": 17,
+          "partial": 19,
+          "fail": 0
+        },
+        "candidate": {
+          "comply": 19,
+          "partial": 17,
+          "fail": 0
+        }
+      },
+      "hard_failures": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "hard_failure_rows": [],
+      "naturalness_observed": {
+        "baseline": {
+          "n": 36,
+          "unknown": 0,
+          "mean": 3.4166666666666665
+        },
+        "candidate": {
+          "n": 36,
+          "unknown": 0,
+          "mean": 3.4722222222222223
+        }
+      },
+      "persona_numeric_usable": false
+    },
+    "technical_help": {
+      "pairs": 36,
+      "preference": {
+        "baseline": 13,
+        "candidate": 11,
+        "tie": 12
+      },
+      "compliance": {
+        "baseline": {
+          "comply": 33,
+          "partial": 3,
+          "fail": 0
+        },
+        "candidate": {
+          "comply": 25,
+          "partial": 11,
+          "fail": 0
+        }
+      },
+      "hard_failures": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "hard_failure_rows": [],
+      "naturalness_observed": {
+        "baseline": {
+          "n": 36,
+          "unknown": 0,
+          "mean": 3.75
+        },
+        "candidate": {
+          "n": 36,
+          "unknown": 0,
+          "mean": 3.6666666666666665
+        }
+      },
+      "persona_numeric_usable": false
+    },
+    "topic_switch": {
+      "pairs": 36,
+      "preference": {
+        "baseline": 8,
+        "candidate": 4,
+        "tie": 24
+      },
+      "compliance": {
+        "baseline": {
+          "comply": 20,
+          "partial": 16,
+          "fail": 0
+        },
+        "candidate": {
+          "comply": 20,
+          "partial": 16,
+          "fail": 0
+        }
+      },
+      "hard_failures": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "hard_failure_rows": [],
+      "naturalness_observed": {
+        "baseline": {
+          "n": 36,
+          "unknown": 0,
+          "mean": 3.2222222222222223
+        },
+        "candidate": {
+          "n": 36,
+          "unknown": 0,
+          "mean": 3.1944444444444446
+        }
+      },
+      "persona_numeric_usable": false
+    },
+    "detailed_answer": {
+      "pairs": 36,
+      "preference": {
+        "baseline": 6,
+        "candidate": 13,
+        "tie": 17
+      },
+      "compliance": {
+        "baseline": {
+          "comply": 11,
+          "partial": 25,
+          "fail": 0
+        },
+        "candidate": {
+          "comply": 15,
+          "partial": 21,
+          "fail": 0
+        }
+      },
+      "hard_failures": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "hard_failure_rows": [],
+      "naturalness_observed": {
+        "baseline": {
+          "n": 36,
+          "unknown": 0,
+          "mean": 3.2777777777777777
+        },
+        "candidate": {
+          "n": 36,
+          "unknown": 0,
+          "mean": 3.4166666666666665
+        }
+      },
+      "persona_numeric_usable": false
+    }
+  },
+  "by_profile": {
+    "instant_message": {
+      "pairs": 144,
+      "preference": {
+        "baseline": 23,
+        "candidate": 44,
+        "tie": 77
+      },
+      "compliance": {
+        "baseline": {
+          "comply": 108,
+          "partial": 36,
+          "fail": 0
+        },
+        "candidate": {
+          "comply": 119,
+          "partial": 25,
+          "fail": 0
+        }
+      },
+      "hard_failures": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "hard_failure_rows": [],
+      "naturalness_observed": {
+        "baseline": {
+          "n": 133,
+          "unknown": 11,
+          "mean": 3.7593984962406015
+        },
+        "candidate": {
+          "n": 133,
+          "unknown": 11,
+          "mean": 3.819548872180451
+        }
+      },
+      "persona_numeric_usable": false
+    },
+    "single_text": {
+      "pairs": 144,
+      "preference": {
+        "baseline": 40,
+        "candidate": 47,
+        "tie": 57
+      },
+      "compliance": {
+        "baseline": {
+          "comply": 80,
+          "partial": 54,
+          "fail": 10
+        },
+        "candidate": {
+          "comply": 80,
+          "partial": 60,
+          "fail": 4
+        }
+      },
+      "hard_failures": {
+        "baseline": 0,
+        "candidate": 1
+      },
+      "hard_failure_rows": [
+        {
+          "version": "candidate",
+          "review_group_id": "single_text:greeting:r1",
+          "turn_id": 1,
+          "side": 1,
+          "reason": "候选1无来源声称当天看书和整理东西，违反不编造现实活动；候选2没有该动作但追加多项动机猜测。"
+        }
+      ],
+      "naturalness_observed": {
+        "baseline": {
+          "n": 129,
+          "unknown": 15,
+          "mean": 3.372093023255814
+        },
+        "candidate": {
+          "n": 129,
+          "unknown": 15,
+          "mean": 3.3488372093023258
+        }
+      },
+      "persona_numeric_usable": false
+    },
+    "default_voice": {
+      "pairs": 144,
+      "preference": {
+        "baseline": 42,
+        "candidate": 49,
+        "tie": 53
+      },
+      "compliance": {
+        "baseline": {
+          "comply": 78,
+          "partial": 56,
+          "fail": 10
+        },
+        "candidate": {
+          "comply": 70,
+          "partial": 67,
+          "fail": 7
+        }
+      },
+      "hard_failures": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "hard_failure_rows": [],
+      "naturalness_observed": {
+        "baseline": {
+          "n": 133,
+          "unknown": 11,
+          "mean": 3.2406015037593985
+        },
+        "candidate": {
+          "n": 133,
+          "unknown": 11,
+          "mean": 3.2481203007518795
+        }
+      },
+      "persona_numeric_usable": false
+    }
+  },
+  "quality_approved": false,
+  "limitations": [
+    "Live retrieval/history differed between variants; not a persona-only causal control.",
+    "37 early pairs have unknown naturalness; no imputation.",
+    "Append helper constant persona values excluded from numeric assessment.",
+    "Preference votes cannot override source/task completeness or hard boundaries."
+  ]
+}

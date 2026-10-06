@@ -1,0 +1,1163 @@
+[
+  {
+    "review_group_id": "instant_message:detailed_answer:r0",
+    "profile": "instant_message",
+    "scene_description": "用户明确要求分点、多维度、详尽回答，考察严格服从用户明确任务指令，给出完整详尽解答，不受闲聊短句规则影响，内容不缺斤少两。",
+    "initial_state": {
+      "relationship_stage": "acquaintance",
+      "interaction_count": 0,
+      "familiarity": 0.2,
+      "trust": 0.2,
+      "affinity": 0.25,
+      "comfort": 0.2,
+      "recent_tension": 0.0,
+      "valence": 0.1,
+      "arousal": 0.2
+    },
+    "synthetic_memory": [],
+    "seed_history": [],
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "请帮我制定一份为期三天的周末短途旅行准备清单，分别列出证件与资金、衣物与穿搭、电子设备与配件三个类别，每个类别详细列出三条具体建议。",
+        "expected_behavior": [
+          "严格按照要求的三个类别展开",
+          "每个类别分别列出三条具体实用的准备建议",
+          "条理分明，内容充实详尽，不被短消息字数约束截断"
+        ],
+        "forbidden_behavior": [
+          "只给一两句敷衍概括（'出门带好手机和身份证就行啦'）",
+          "缺少类别或少于三条建议",
+          "因限制字数拒绝回答"
+        ],
+        "review_criteria": "完整涵盖三个类别，每类三条建议，详实严谨，无删减。",
+        "candidate_1": {
+          "reply": "好的，这份三天的周末短途旅行清单帮你整理好了，按照你需要的三个类别分别列出：\n\n### 一、证件与资金\n1. **核心有效身份证件**：务必带好身份证原件（如涉及优惠可带学生证、长者证等），并建议在手机相册或云端备份证件扫描件，以备不时之需。\n2. **组合支付工具与应急现金**：确认手机移动支付正常且绑定银行卡有充足余额，同时随身备一两百元零钱现金，应对部分景区或偏远地带信号弱、无法扫码的情况。\n3. **行程凭证与离线信息**：提前将高铁票、机票车次以及酒店预订信息截图保存在手机本地，避免进站或办理入住时因网络延迟耽误时间。\n\n### 二、衣物与穿搭\n1. **“穿一备二”轻便衣物**：三天行程除出发当天穿着的外衣外，再备两套贴身内衣物和轻便换洗衣物，优先选择抗皱、易干的材质，便于收纳且不占背包空间。\n2. **应对温差的洋葱式叠穿**：准备一件便携的防风薄外套或开衫，既能应对早晚温差，也能在高铁、大巴或室内冷气较强时保暖。\n3. **耐磨好走的舒适鞋履与晴雨用具**：建议穿已经磨合舒适的运动鞋或平底步履，避免穿新鞋长途步行磨脚；随包携带一把轻便晴雨伞，防晒遮雨两用。\n\n### 三、电子设备与配件\n1. **合规移动电源与数据线**：携带标示清晰、符合安检标准的充电宝（一般不超过额定能量限制），并带齐与手机、耳机匹配的充电线。\n2. **多口快充充电头**：带一个支持多设备输出的快充插头，晚上在酒店可以同时给手机和配件充电，省去携带多个充电器的繁琐。\n3. **降噪耳机与收纳保护**：准备一副降噪耳机，能在旅途交通工具上安静休息；建议使用小型数码收纳包将线材和电子零碎集中放置，避免行李杂乱。\n\n希望能对你的周末出行有所帮助。如果目的地有特别的天气或行程安排，也可以随时告诉我调整。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.71,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.21200000000000002,
+                "trust": 0.20400000000000001,
+                "affinity": 0.254,
+                "comfort": 0.20600000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 1,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "周末短途旅行听起来很惬意呢。我按你的要求整理了一份三天的准备清单，分成了三个类别，你看看是否实用：\n\n**一、证件与资金**\n1. **有效身份证件与优惠凭证**：身份证（或通行证/护照）务必放在贴身随身包的外侧安全拉链层；若有学生证、长者证等门票优惠证件，也记得一同带上。\n2. **应急现金与备用银行卡**：虽然现在移动支付很普及，但建议仍备好两三百元纸币零钱和一张实体银行卡，以防部分偏远景区、地下车库或信号较弱区域无法扫码支付。\n3. **重要凭证电子备份**：提前在手机相册或备忘录中备份身份证正反面照片，并将酒店预订确认号、往返车票/机票行程单截图保存，便于离线时快速核对。\n\n**二、衣物与穿搭**\n1. **轻便分层换洗衣物**：除出发当天穿着的一套外，建议多带两套贴身换洗衣物；推荐“短袖/轻薄内搭 + 防风防晒开衫或衬衫”的分层组合，方便应对早晚温差或室内外空调切换。\n2. **舒适鞋履与充足袜品**：穿一双已经完全磨合好的运动鞋或软底步行鞋，切忌穿新鞋长途走动；准备三到四双透气棉袜，有需要也可以选择便携的一次性棉质内衣裤，减轻返程行李负担。\n3. **随身防晒与防雨配饰**：备一把轻量折叠晴雨伞（遮阳避雨两用），如果日照强烈可带上墨镜或防晒帽，既能物理防晒，拍照也很合适。\n\n**三、电子设备与配件**\n1. **合规移动电源（充电宝）**：旅行中导航与拍照耗电量大，建议带一个容量适中、且机身印刷清晰标明额定能量（通常民航及高铁要求不超过100Wh）的移动电源，并带好匹配短线。\n2. **多口快充插头与数据线**：带一个具备双口或多口输出的快充充电头，晚上在酒店可以同时给手机、耳机或移动电源充电，避免插座不够用的情况。\n3. **便携耳机与数码收纳袋**：乘车或休息时推荐带上降噪耳机，能很好地缓解旅途喧闹；所有线材和充电设备最好集中装入一个轻便的数码包中，翻找时不会杂乱。\n\n希望能对你的出行准备有所帮助。收拾行李时记得留一点点背包空间，回程时可能还会带些小伴手礼呢。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.71,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.21200000000000002,
+                "trust": 0.20400000000000001,
+                "affinity": 0.254,
+                "comfort": 0.20600000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 1,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 2,
+        "user_text": "关于电子设备中提到的移动电源，乘坐国内航班时有哪些具体的民航携带规定？请详细列出三条明确规则。",
+        "expected_behavior": [
+          "准确列出民航对充电宝的三条核心规定（如：必须随身携带严禁托运；额定能量不超过100Wh无须航司批准，100Wh~160Wh需批准，大于160Wh严禁携带；标识不清或三无严禁携带；飞行途中严禁使用等）",
+          "条款条理清晰，严格满足三条要求"
+        ],
+        "forbidden_behavior": [
+          "只给一条或两条回答",
+          "出现错误法规（如说可以托运）",
+          "敷衍了事"
+        ],
+        "review_criteria": "准确详尽列出三条民航充电宝携带规则。",
+        "candidate_1": {
+          "reply": "根据中国民用航空局的公开规定，关于旅客携带充电宝乘机主要有以下三条明确规则：\n\n1. **严禁行李托运，仅限手提随身携带**  \n   充电宝禁止作为行李托运，仅允许在手提行李中随身携带，并且必须对备用电池做好单个保护措施以防短路。  \n   （来源：https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html ）\n\n2. **按额定能量（Wh）严格分级准入**  \n   - 额定能量不超过 100Wh 时：可以随身携带。  \n   - 额定能量大于 100Wh 但不超过 160Wh（含）时：需经航空公司批准后方可运输，仅可随身携带且每人限带 2 块。  \n   - 额定能量超过 160Wh 时：不可携带乘机。  \n   （来源：https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html ）\n\n3. **标识必须清晰完整，执行 3C 及召回管控**  \n   携带的充电宝标识必须全面、清晰且易于辨识。同时，民航明确禁止旅客携带无 3C 标识、3C 标识不清晰、被召回型号或批次的充电宝乘坐境内航班。  \n   （来源：https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html 及 https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html ）",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.74,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.22400000000000003,
+                "trust": 0.20800000000000002,
+                "affinity": 0.258,
+                "comfort": 0.21200000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 2,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "乘坐国内航班携带充电宝（移动电源）时，民航局有非常明确且严格的安全要求。主要包括以下三条核心规则：\n\n1. **严禁作为行李托运，仅限随身携带**  \n   充电宝禁止作为托运行李或夹入行李内托运，且随身携带时有限定条件。  \n   来源：https://app.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html\n\n2. **严格按额定能量分档限制携带与数量**  \n   - 额定能量不超过 100Wh 时，可以随身携带；  \n   - 超过 100Wh 但不超过 160Wh（含）时，需经航空公司批准后方可运输，仅可随身携带且每人限带 2 块；  \n   - 额定能量超过 160Wh 的充电宝不可携带。  \n   来源：https://app.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html\n\n3. **标识必须全面清晰，且执行 3C 标识及召回管控要求**  \n   - 旅客所携带充电宝的标识须全面、清晰且易于辨识。  \n     来源：https://app.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html  \n   - 根据民航局通知要求，禁止旅客携带没有 3C 标识、3C 标识不清晰、被召回型号或批次的充电宝乘坐境内航班。  \n     来源：https://www.caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/DB_DQXW/202507/t20250709_227899.html",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.74,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.22400000000000003,
+                "trust": 0.20800000000000002,
+                "affinity": 0.258,
+                "comfort": 0.21200000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 2,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 3,
+        "user_text": "如果第一天下午遭遇暴雨无法进行户外游览，请给出两个具体的室内备选活动方案，每个方案包含活动内容、预计用时与注意事项。",
+        "expected_behavior": [
+          "给出两个清晰的室内活动备选方案（如当地博物馆/艺术馆参访、特色茶馆/室内书店体验等）",
+          "每个方案均包含活动内容、预计用时、注意事项三要素"
+        ],
+        "forbidden_behavior": [
+          "只给一个方案或漏掉要素",
+          "以闲聊风格一句带过"
+        ],
+        "review_criteria": "提供两个完整三要素方案，结构规范，符合明确任务要求。",
+        "candidate_1": {
+          "reply": "如果第一天下午遇到暴雨，可以参考以下两个室内备选方案：\n\n### 方案一：当地博物馆或特色美术馆深度游览\n* **活动内容**：前往所在城市的综合博物馆、历史展馆或艺术馆，避开室外降雨的同时，集中了解当地的历史渊源、风土民俗或常设艺术特展。\n* **预计用时**：约 2.5 至 3.5 小时。\n* **注意事项**：\n  * 遇到雨天，室内场馆往往人流集中，建议出发前先在场馆公众号或小程序确认是否需要提前实名预约门票。\n  * 入馆需按规定在大堂伞架或自助机存放雨具/套上防水袋；馆内拍照注意关闭闪光灯与对焦辅助灯。\n\n### 方案二：特色文创书店与慢调茶歇\n* **活动内容**：挑选一家当地知名的复合型书店或由老建筑改造的文化空间，翻阅地方风物书籍、淘选文创明信片，并在馆内附设的咖啡厅或茶室落座休息，避雨调整节奏。\n* **预计用时**：约 2 至 3 小时。\n* **注意事项**：\n  * 雨天进店前擦干鞋底与外套水渍，随身背包、相机等电子设备注意防潮防护。\n  * 适度消费并遵守阅读区安静礼仪，可顺便利用这段空闲时间核对晚间的就餐餐厅排队或交通情况。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.75,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.23600000000000004,
+                "trust": 0.21200000000000002,
+                "affinity": 0.262,
+                "comfort": 0.21800000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 3,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "要是突然遇到大暴雨，打乱原本的户外安排确实挺让人头疼的呢。不过换到室内也可以逛得很舒适，这里有两个备选方案供你参考：\n\n**方案一：当地省/市级博物馆或美术馆深度观展**\n* **活动内容**：前往目的地的综合性博物馆或特色美术馆，避开风雨的同时，静下心来了解当地的历史脉络、馆藏文物或专题艺术展。馆内通常空间开阔、设施完善，还有文创区和咖啡休息室。\n* **预计用时**：2.5～3.5 小时。\n* **注意事项**：多数公立场馆实行实名预约制，出发前务必先在官方公众号核对是否需要提前预约、当天是否仍有余票；另外，雨天入口处人流可能较多，记得将湿折伞套好或放入自取雨伞袋，随身携带好身份证件以便核验入馆。\n\n**方案二：特色文化书店与室内咖啡馆慢节奏休整**\n* **活动内容**：挑选一家当地有设计感的大型独立书店、复合型文创空间或老建筑改造的咖啡馆。点一杯热饮，翻翻地方人文读物或画册，整理前两天的旅行照片，听着窗外的雨声彻底放松。\n* **预计用时**：1.5～2.5 小时。\n* **注意事项**：暴雨天这类容易停留的室内空间往往顾客较多，临窗或带电源插座的座位可能比较紧俏；进店后建议先确认座位再点单，同时随身照顾好电子设备，避免因雨水沾湿衣物或背包而不慎受潮。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.75,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.23600000000000004,
+                "trust": 0.21200000000000002,
+                "affinity": 0.262,
+                "comfort": 0.21800000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 3,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 4,
+        "user_text": "最后请将上述所有准备要点和应急建议，整理成一份简明的出发前检查核对表（Checklist）。",
+        "expected_behavior": [
+          "系统整理前文所有要点（证件、衣物、电子/充电宝、室内应急备用）",
+          "输出易于核对的清单格式（如带方括号 [ ] 的 Checklist 列表）"
+        ],
+        "forbidden_behavior": [
+          "遗漏前文的核心要点",
+          "偷懒拒绝整理"
+        ],
+        "review_criteria": "输出完整、结构清晰的出发前 Checklist 对照表。",
+        "candidate_1": {
+          "reply": "这份出发前检查核对表（Checklist）已经为你整理好了，涵盖了基础行装、民航限制与天气应急方案：\n\n### 出发前检查核对表（Checklist）\n\n#### 一、 证件与资金\n- [ ] **有效身份证件**：携带身份证原件及特惠证件（学生证/长者证），手机保存电子扫描备份。\n- [ ] **支付工具与零钱**：确认移动支付及银行卡正常，随身备 100～200 元应急纸币现金。\n- [ ] **行程离线凭证**：车票、机票班次与酒店预订界面截图保存至手机本地相册。\n\n#### 二、 衣物与穿搭\n- [ ] **换洗衣物**：除出发所穿外，备齐 2 套轻便抗皱换洗衣物与贴身衣物。\n- [ ] **温差防护**：备 1 件便携防风外套或开衫，应对早晚温差与交通工具内强冷气。\n- [ ] **鞋履与雨具**：穿已磨合舒适的平底步履或运动鞋；随身携带轻便晴雨伞。\n\n#### 三、 电子设备与移动电源（严格对照民航标准）\n- [ ] **基础数码**：多口快充插头、匹配各设备的充电线、降噪耳机及数码收纳袋。\n- [ ] **携带形式与防短路**：充电宝禁止作为行李托运，仅允许在手提行李中携带，并须做好单个保护措施以防短路。（来源：https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html ）\n- [ ] **标识与境内合规检查**：\n  - [ ] 充电宝标识须全面、清晰且易于辨识。（来源：https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html ）\n  - [ ] 乘坐境内航班时，禁止旅客携带无 3C 标识、3C 标识不清晰、被召回型号或批次的充电宝。（来源：https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html ）\n- [ ] **额定能量分级核对**（来源：https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html ）：\n  - [ ] 额定能量 ≤ 100Wh：可以随身携带，禁止作为行李托运。\n  - [ ] 100Wh < 额定能量 ≤ 160Wh（含）：须经航空公司批准后方可运输，仅可随身携带且每人限带 2 块。\n  - [ ] 额定能量 > 160Wh：不可携带乘机。\n\n#### 四、 天气与室内应急预案\n- [ ] **数码设备防潮**：雨天外出准备防潮密封袋或内胆包，保护手机与线材配件。\n- [ ] **室内备选方案 A（博物馆/美术馆）**：核实并提前完成门票实名预约，进馆遵守雨具存放及禁止使用闪光灯等规定。\n- [ ] **室内备选方案 B（特色文创书店/茶歇）**：进店注意雨具防潮与鞋底擦干，遵守阅读区安静礼仪，顺便规划晚间交通与餐饮。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.76,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.24800000000000005,
+                "trust": 0.21600000000000003,
+                "affinity": 0.266,
+                "comfort": 0.22400000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 4,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "好的，我把前面所有的出行准备、民航规定和雨天应急方案整理成了一份出发前核对表，方便你临行前逐项核对：\n\n### **出行前核对表（Checklist）**\n\n#### **一、证件与资金**\n- [ ] **有效身份证件**：身份证/通行证置于随身包安全夹层；带齐学生证、长者证等优惠凭证。\n- [ ] **应急现金与卡片**：备妥 200～300 元纸币零钱及 1 张实体银行卡，防范无信号或无法扫码场景。\n- [ ] **离线电子备份**：手机备忘录/相册保存证件正反面照片、酒店确认号及往返行程单截图。\n\n#### **二、衣物与穿搭**\n- [ ] **换洗衣物**：备足 2 套贴身换洗衣物，采用“短袖/内搭 + 防风防晒外搭”的分层组合应对温差。\n- [ ] **鞋袜准备**：穿着已磨合舒适的软底步行鞋；带足 3～4 双透气棉袜（或一次性内衣物）。\n- [ ] **随身配饰**：备好轻量折叠晴雨两用伞、防晒帽或墨镜。\n\n#### **三、电子设备与民航合规**\n- [ ] **多口充电设备**：带好多口快充插头、匹配线材，集中收纳于数码包内；备好降噪耳机。\n- [ ] **充电宝民航合规自查（乘坐境内航班）**：\n  - [ ] **随身携带与托运要求**：充电宝禁止作为行李托运，且随身携带时有限定条件；  \n    （来源：https://app.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html ）\n  - [ ] **额定能量分档**：  \n    - ≤100Wh：可以随身携带；  \n    - ＞100Wh 且 ≤160Wh（含）：需经航空公司批准后方可运输，仅可随身携带且每人限带 2 块；  \n    - ＞160Wh：不可携带；  \n    （来源：https://app.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html ）\n  - [ ] **标识规范**：充电宝的标识须全面、清晰且易于辨识；  \n    （来源：https://app.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html ）\n  - [ ] **准入限制**：禁止旅客携带没有 3C 标识、3C 标识不清晰、被召回型号或批次的充电宝乘坐境内航班。  \n    （来源：https://www.caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/DB_DQXW/202507/t20250709_227899.html ）\n\n#### **四、暴雨天气室内应急预案**\n- [ ] **方案 A（博物馆/美术馆）**：提前在官方渠道查询余票与实名预约情况；备好身份证入馆，妥善收纳湿雨伞。\n- [ ] **方案 B（特色书店/文创咖啡馆）**：雨天先确认室内/插座座位再点单；注意防潮，保护随身数码设备。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.76,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.24800000000000005,
+                "trust": 0.21600000000000003,
+                "affinity": 0.266,
+                "comfort": 0.22400000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 4,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "review_group_id": "instant_message:detailed_answer:r1",
+    "profile": "instant_message",
+    "scene_description": "用户明确要求分点、多维度、详尽回答，考察严格服从用户明确任务指令，给出完整详尽解答，不受闲聊短句规则影响，内容不缺斤少两。",
+    "initial_state": {
+      "relationship_stage": "acquaintance",
+      "interaction_count": 0,
+      "familiarity": 0.2,
+      "trust": 0.2,
+      "affinity": 0.25,
+      "comfort": 0.2,
+      "recent_tension": 0.0,
+      "valence": 0.1,
+      "arousal": 0.2
+    },
+    "synthetic_memory": [],
+    "seed_history": [],
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "请帮我制定一份为期三天的周末短途旅行准备清单，分别列出证件与资金、衣物与穿搭、电子设备与配件三个类别，每个类别详细列出三条具体建议。",
+        "expected_behavior": [
+          "严格按照要求的三个类别展开",
+          "每个类别分别列出三条具体实用的准备建议",
+          "条理分明，内容充实详尽，不被短消息字数约束截断"
+        ],
+        "forbidden_behavior": [
+          "只给一两句敷衍概括（'出门带好手机和身份证就行啦'）",
+          "缺少类别或少于三条建议",
+          "因限制字数拒绝回答"
+        ],
+        "review_criteria": "完整涵盖三个类别，每类三条建议，详实严谨，无删减。",
+        "candidate_1": {
+          "reply": "好的，三天的周末短途旅行时间适中，行李以轻便和实用为主。这是为你整理的准备清单：\n\n**一、证件与资金**\n1. **基础身份证件与电子备份**：随身携带实体身份证（乘车、住宿登记必备），并在手机中备好电子身份证截图或证件照片，以防临时核验或原件遗失。\n2. **移动支付与应急现金**：确保常用支付软件（微信、支付宝）绑卡和余额正常，同时随身备一两张百元小额现金，应对偏远景区信号弱或系统故障等突发情况。\n3. **优惠凭证与驾照**：如有学生证、教师证或军人证等，建议一并带上以享受景区门票优惠；若行程中包含租车或自驾，务必带齐驾驶证正副本。\n\n**二、衣物与穿搭**\n1. **层次化穿搭（洋葱式穿法）**：根据目的地天气准备两到三套轻便内搭，并外搭一件易收纳的薄外套或开衫，方便应对早晚温差及交通工具内的冷气。\n2. **已磨合的舒适鞋履**：务必穿一双合脚、耐走的运动鞋或平底鞋，切忌穿未磨合的新鞋出行；雨季出行可多带一双轻便备用鞋或鞋套。\n3. **分装贴身衣物与收纳**：按天数准备好三套换洗贴身衣物与袜子，建议使用独立防水收纳袋将干净衣物和脏衣物分开放置，保持行李清爽整洁。\n\n**三、电子设备与配件**\n1. **充电器与多口快充头**：带好手机及随行设备对应的数据线，建议选用体积较小的多口快充充电头，夜间回酒店可以同时为多个设备补电。\n2. **合规移动电源**：外出导航和拍照耗电较快，建议备一个外壳参数标识清晰、符合安检标准的移动电源（额定能量通常需在规定限额内），方便途中随时补电。\n3. **降噪耳机与出行配件**：准备一副降噪耳机，能有效缓解高铁或长途大巴上的噪音疲劳；如果有自驾或拍照需求，可带上便携车载支架或相机存储卡。\n\n如果目的地有特殊的气候或具体的游玩项目，也可以告诉我，我可以再针对性帮你调整。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.71,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.21200000000000002,
+                "trust": 0.20400000000000001,
+                "affinity": 0.254,
+                "comfort": 0.20600000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 1,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "好的，三天两晚的短途出行以轻便和稳妥为主，我帮你整理了这份清单：\n\n**一、证件与资金**\n1. **核心有效身份证件**：随身携带身份证（若有学生证、长者证等优惠证件也一并带上），并建议在手机里留存一份清晰的电子扫描件或照片，以防临时核验。\n2. **应急现金与备用银行卡**：虽然移动支付很方便，但建议随身准备两三百元纸币零钱和一张借记卡/信用卡，以防遇到偏远景区信号不良或只支持特定支付方式的情况。\n3. **行程凭证与离线确认单**：提前将往返车票、机票以及酒店预订信息截图保存在手机相册中，避免抵达目的地时因车站地下室或偏僻处网络卡顿而无法出示。\n\n**二、衣物与穿搭**\n1. **适量的换洗内外衣**：按照“身上穿一套、包里备两套”的原则准备内衣裤和轻便衣物，贴身衣物可选择快干材质或便携一次性款式，节省收纳空间。\n2. **应对温差的轻便外搭**：准备一件便携防风外套、薄开衫或披肩。即使目的地天气预报晴朗，早晚温差或交通工具内的空调冷气也容易着凉。\n3. **舒适耐走的鞋子与收纳袋**：直接穿一双已经磨合好的舒适步行鞋或运动鞋出发即可，另备两个防水密封袋，方便用来分隔收纳换下来的脏衣物或弄湿的物品。\n\n**三、电子设备与配件**\n1. **合规移动电源与主充电线**：带一个容量适中（建议10000mAh左右、标识清晰完整符合安检要求）的充电宝，并把常用的手机快充线随身放置在易取的外袋中。\n2. **多口充电器与备用数据线**：携带一个支持多口输出的快充充电头，晚上在酒店可以同时给手机、充电宝等设备补电，省去携带多个插头的麻烦。\n3. **耳机与离线资源**：准备一副降噪耳机以便在旅途中休息，并在出发前下载好离线地图、离线音乐或影音，方便在信号不佳的路段打发时间。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.71,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.21200000000000002,
+                "trust": 0.20400000000000001,
+                "affinity": 0.254,
+                "comfort": 0.20600000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 1,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 2,
+        "user_text": "关于电子设备中提到的移动电源，乘坐国内航班时有哪些具体的民航携带规定？请详细列出三条明确规则。",
+        "expected_behavior": [
+          "准确列出民航对充电宝的三条核心规定（如：必须随身携带严禁托运；额定能量不超过100Wh无须航司批准，100Wh~160Wh需批准，大于160Wh严禁携带；标识不清或三无严禁携带；飞行途中严禁使用等）",
+          "条款条理清晰，严格满足三条要求"
+        ],
+        "forbidden_behavior": [
+          "只给一条或两条回答",
+          "出现错误法规（如说可以托运）",
+          "敷衍了事"
+        ],
+        "review_criteria": "准确详尽列出三条民航充电宝携带规则。",
+        "candidate_1": {
+          "reply": "本轮没有取得覆盖关键条件的完整原文，相关信息仍未完整核实。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.74,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.22400000000000003,
+                "trust": 0.20800000000000002,
+                "affinity": 0.258,
+                "comfort": 0.21200000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 2,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "本轮没有取得覆盖关键条件的完整原文，相关信息仍未完整核实。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.74,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.22400000000000003,
+                "trust": 0.20800000000000002,
+                "affinity": 0.258,
+                "comfort": 0.21200000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 2,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 3,
+        "user_text": "如果第一天下午遭遇暴雨无法进行户外游览，请给出两个具体的室内备选活动方案，每个方案包含活动内容、预计用时与注意事项。",
+        "expected_behavior": [
+          "给出两个清晰的室内活动备选方案（如当地博物馆/艺术馆参访、特色茶馆/室内书店体验等）",
+          "每个方案均包含活动内容、预计用时、注意事项三要素"
+        ],
+        "forbidden_behavior": [
+          "只给一个方案或漏掉要素",
+          "以闲聊风格一句带过"
+        ],
+        "review_criteria": "提供两个完整三要素方案，结构规范，符合明确任务要求。",
+        "candidate_1": {
+          "reply": "遇到突发暴雨确实会影响原本的游览节奏，不过换成室内的轻松安排也能体验当地特色。这里提供两个备选方案：\n\n**方案一：当地综合博物馆或美术馆参观**\n*   **活动内容**：前往所在城市的省级/市级博物馆、科技馆或艺术展览馆，了解当地的历史沿革、人文风貌或观赏特展。\n*   **预计用时**：约 2.5 至 3.5 小时。\n*   **注意事项**：不少重点场馆实行实名制分时段预约，出发前需先在官方公众号确认当天是否还有余票或现场名额；馆内通常要求行李安检、保持安静，若携带了湿伞需按规定套袋或存放在门口。\n\n**方案二：特色文化书店与咖啡馆休憩体验**\n*   **活动内容**：选择当地具有建筑特色或文化氛围的独立书店/复合式文创空间，翻阅地方画册与文史书籍，同时在附设的茶歇区整理前半程的照片与账目。\n*   **预计用时**：约 2 至 3 小时。\n*   **注意事项**：暴雨天这类场所客流可能较多，到店后先确认是否有合适座位；雨天室内外温差大、空调可能较冷，进入前需擦干鞋底雨水防止滑倒，并记得披上随身的外套。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.75,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.23600000000000004,
+                "trust": 0.21200000000000002,
+                "affinity": 0.262,
+                "comfort": 0.21800000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 3,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "好的，如果第一天下午突遇降雨，可以考虑这两个比较稳妥的室内备选方案：\n\n**方案一：当地公立博物馆或美术馆深度观展**\n* **活动内容**：前往所在城市的市级博物馆、美术馆或规划馆，不仅避雨空间宽敞，还能通过常设展和特色特展系统了解目的地的历史、文化与艺术背景。\n* **预计用时**：约 2.5 至 3.5 小时。\n* **注意事项**：许多大型文博场馆实行实名制分时段预约，出发前需在场馆官方渠道核对当天余票和开放状态；湿雨伞和大件行李通常需要按规定在前台或智能柜寄存。\n\n**方案二：特色文化书店与独立咖啡馆休闲漫游**\n* **活动内容**：选择当地有代表性的复合型独立书店、文创集合店或老街区茶馆，点一杯热饮休息，翻阅与当地风土相关的画册读物，顺便挑选明信片或文创伴手礼。\n* **预计用时**：约 2 至 3 小时。\n* **注意事项**：雨天商圈内的室内歇脚场所人流往往较为密集，建议挑选座位相对宽敞的非核心商圈店面；入店时请给雨具套上防水袋，注意保护随身纸质读物和电子设备不被雨水浸湿。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.75,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.23600000000000004,
+                "trust": 0.21200000000000002,
+                "affinity": 0.262,
+                "comfort": 0.21800000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 3,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 4,
+        "user_text": "最后请将上述所有准备要点和应急建议，整理成一份简明的出发前检查核对表（Checklist）。",
+        "expected_behavior": [
+          "系统整理前文所有要点（证件、衣物、电子/充电宝、室内应急备用）",
+          "输出易于核对的清单格式（如带方括号 [ ] 的 Checklist 列表）"
+        ],
+        "forbidden_behavior": [
+          "遗漏前文的核心要点",
+          "偷懒拒绝整理"
+        ],
+        "review_criteria": "输出完整、结构清晰的出发前 Checklist 对照表。",
+        "candidate_1": {
+          "reply": "好的，已将前面的准备要点和应急方案汇总为一份简明的出发前检查核对表：\n\n---\n\n### 出发前检查核对表（Checklist）\n\n#### 一、证件与资金\n* [ ] **基础证件**：实体身份证随身携带，手机内留存电子证件备份。\n* [ ] **资金准备**：确认移动支付余额与绑卡状态，随身备少量应急现金。\n* [ ] **特定证件**：学生证/教师证等门票优惠证件，有自驾需求时带好驾驶证。\n\n#### 二、衣物与穿搭\n* [ ] **穿搭组合**：按天气备齐 2~3 套内搭，配一件易收纳的防风/保暖薄外套。\n* [ ] **鞋履选择**：穿着已充分磨合的舒适步行鞋，视天气备好鞋套或替换鞋。\n* [ ] **贴身衣物**：准备 3 天换洗内衣物与袜子，并备好干湿分类收纳袋。\n\n#### 三、电子设备与配件\n* [ ] **充电配件**：带齐对应机型的数据线与多口快充充电头。\n* [ ] **移动电源**：选择外壳参数标识清晰、符合安检规定的便携充电宝。\n* [ ] **随行配件**：降噪耳机、便携车载支架或相机备用存储卡。\n\n#### 四、暴雨/恶劣天气应急方案备忘\n* [ ] **方案 A（综合文博场馆）**：出发前在线查询并预约当地博物馆/美术馆余票；进馆留意湿伞存放规定。\n* [ ] **方案 B（特色书店/文创空间）**：挑选室内文化街区或独立书店休憩；雨天进店注意防滑，随身携带外套防冷气。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.76,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.24800000000000005,
+                "trust": 0.21600000000000003,
+                "affinity": 0.266,
+                "comfort": 0.22400000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 4,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "好的，我把前面提到的所有准备要点和应急方案整理成了一份简明核对表，出发前可以逐项确认：\n\n**【出发前核对清单】**\n\n**一、证件与资金**\n- [ ] **有效身份证件原件**：实体身份证及优惠证件（如学生证），手机内已留存电子扫描件/照片\n- [ ] **应急资金**：备用现金（约200–300元零钱纸币）及一张借记卡或信用卡\n- [ ] **离线凭证**：往返交通票据及酒店入住预订截图已存入手机相册\n\n**二、衣物与穿搭**\n- [ ] **换洗衣物**：按“穿一备二”准备内衣裤与轻便衣物（可优先选快干或一次性款式）\n- [ ] **温差外搭**：随身带一件轻便防风外套或薄开衫，应对早晚温差与交通工具空调\n- [ ] **鞋品与收纳**：已换上磨合舒适的平底步行鞋，包内备好防水密封收纳袋以分隔脏污或湿衣物\n\n**三、电子设备与配件**\n- [ ] **合规移动电源**：参数标识清晰、符合安检要求的移动电源，并将常用快充线放在随身易取口袋\n- [ ] **充电配件**：支持多设备同时补电的多口快充充电头及备用数据线\n- [ ] **降噪与离线**：降噪耳机，并已提前在手机内下载好目的地离线地图与影音内容\n\n**四、雨天应急与室内备选准备**\n- [ ] **随身雨具**：便携折叠伞及配套雨伞防水收纳套，避免弄湿随身电子设备\n- [ ] **备选方案A（公立博物馆/美术馆）**：预计用时2.5–3.5小时；出发前需在官方渠道核对当天开馆状态与门票预约，入馆配合雨具寄存\n- [ ] **备选方案B（特色书店/文化空间）**：预计用时2–3小时；建议避开过于拥挤的核心商圈，入座注意看管好随身防潮物品",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.76,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.24800000000000005,
+                "trust": 0.21600000000000003,
+                "affinity": 0.266,
+                "comfort": 0.22400000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 4,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "review_group_id": "instant_message:detailed_answer:r2",
+    "profile": "instant_message",
+    "scene_description": "用户明确要求分点、多维度、详尽回答，考察严格服从用户明确任务指令，给出完整详尽解答，不受闲聊短句规则影响，内容不缺斤少两。",
+    "initial_state": {
+      "relationship_stage": "acquaintance",
+      "interaction_count": 0,
+      "familiarity": 0.2,
+      "trust": 0.2,
+      "affinity": 0.25,
+      "comfort": 0.2,
+      "recent_tension": 0.0,
+      "valence": 0.1,
+      "arousal": 0.2
+    },
+    "synthetic_memory": [],
+    "seed_history": [],
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "请帮我制定一份为期三天的周末短途旅行准备清单，分别列出证件与资金、衣物与穿搭、电子设备与配件三个类别，每个类别详细列出三条具体建议。",
+        "expected_behavior": [
+          "严格按照要求的三个类别展开",
+          "每个类别分别列出三条具体实用的准备建议",
+          "条理分明，内容充实详尽，不被短消息字数约束截断"
+        ],
+        "forbidden_behavior": [
+          "只给一两句敷衍概括（'出门带好手机和身份证就行啦'）",
+          "缺少类别或少于三条建议",
+          "因限制字数拒绝回答"
+        ],
+        "review_criteria": "完整涵盖三个类别，每类三条建议，详实严谨，无删减。",
+        "candidate_1": {
+          "reply": "好的，我为你整理了一份三天两晚短途旅行的准备清单，分为三个类别，每个类别各有三条具体建议：\n\n**一、证件与资金**\n1. **基础身份证件与电子备份**：随身携带身份证原件（乘车与办理酒店入住必需），同时建议在手机中存好身份证扫描件或清晰正反面照片，并提前开通好常用政务小程序的电子身份凭证，以备突发情况。\n2. **应急现金与备用银行卡**：虽然移动支付十分普及，但部分景区、偏远路段或地下场所可能遇到信号盲区或设备维护，建议携带 100 至 200 元小额纸币零钱，以及一张开通了免密支付功能的实体银行卡。\n3. **特惠证件与行程凭证**：如有学生证、教师证、军官证等符合景点门票优惠政策的证件，务必随身携带；同时提前核对好往返车票与酒店预订记录的有效状态。\n\n**二、衣物与穿搭**\n1. **“2+1”日常换洗衣物**：三天的行程准备两套便于活动、拍照合心意的外穿衣物即可，建议多备一件轻便内搭以防弄脏；贴身内衣物与袜子带足三套，并使用防水收纳袋密封分装，干净又卫生。\n2. **轻便抗皱的温差外层**：准备一件轻薄耐磨的防风外套或针织开衫。无论是早晚温差变化，还是高铁、大巴车内的较强冷气，都能随穿随脱，方便应对。\n3. **舒适鞋履与晴雨用具**：务必挑选一双已经充分磨合的舒适运动鞋或平底步行鞋，避免穿新鞋导致磨脚；另外随身带一把轻量防风雨伞，防晒遮雨两用，不占过多重量。\n\n**三、电子设备与配件**\n1. **合规移动电源**：携带外壳规格标识完整清晰、符合公共交通安检规定的移动电源（充电宝），确保在全天拍照、导航和电子支付频繁的情况下电量无忧。\n2. **多口快充头与对应线材**：带一个多口快充充电器和匹配的数据线，这样在民宿或酒店插座有限时，能同时为手机、充电宝等设备补电，省时省事。\n3. **便携耳机与数码收纳袋**：准备一副降噪耳机，便于在公共交通上休息放松；将所有充电头、数据线、耳机统一收纳在一个小型数码包里，能有效避免散落或遗漏。\n\n出发前按照这个清单逐一核对，应该就能比较稳妥了。如果去的地方气候特殊，也可以再适当增减。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.71,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.21200000000000002,
+                "trust": 0.20400000000000001,
+                "affinity": 0.254,
+                "comfort": 0.20600000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 1,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "好的，为你整理了一份适合三天周末短途出行的准备清单：\n\n**一、证件与资金**\n1. **核心身份证件及备份**：随身携带身份证原件（如有学生证等可享受景区门票优惠的证件也一并带上），并在手机相册或网盘中留存清晰的照片备用，以防原件意外遗失。\n2. **少量应急现金与实体银行卡**：虽然移动支付很方便，但建议随身携带一两百元零钱现金和一张储蓄卡或信用卡，避免在部分网络信号较差的山区、地下停车场或小摊贩处无法付款。\n3. **交通与住宿确认单**：提前将往返车票/机票行程以及酒店预订信息截图保存在手机本地，办理入住或进出站遇到手机信号不稳定时，可以直接出示离线凭证。\n\n**二、衣物与穿搭**\n1. **“洋葱式”分层搭配**：以舒适透气的内搭打底，外罩一件轻便防风的外套或开衫，方便根据早晚温差、交通工具内空调温度随时增减衣物。\n2. **两套换洗衣物与贴身衣物**：除出发当天身上的衣物外，准备两套换洗的上衣、裤子，以及三套内衣裤和袜子；建议使用分装袋或压缩袋收纳，保持行李箱内干湿分离。\n3. **舒适耐走的鞋履**：选择一双已经磨合好、适合长时间步行的轻便运动鞋或休闲鞋；如果目的地天气预报有雨，可以额外备一副折叠便携雨鞋套。\n\n**三、电子设备与配件**\n1. **符合规范的移动电源**：短途出行在外拍照和导航耗电较快，携带一个容量标示清晰、符合安检标准的充电宝，并备好对应的短充线。\n2. **多口快充充电头**：带一个多接口（如支持单口多插或 Type-C+USB 组合）的快充插头，晚上在酒店休息时能同时为手机、充电宝和耳机充电，避免插座数量不足。\n3. **耳机与线缆收纳**：准备一副降噪耳机，能在乘车或飞行途中提供安静的休息环境；所有数码配件统一放进一个小型数码收纳包里，防止线缆缠绕或遗漏在酒店。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 1,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.19,
+                "energy": 0.645,
+                "attention": 0.71,
+                "embarrassment": 0.08,
+                "tension": 0.030000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.21200000000000002,
+                "trust": 0.20400000000000001,
+                "affinity": 0.254,
+                "comfort": 0.20600000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 1,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 2,
+        "user_text": "关于电子设备中提到的移动电源，乘坐国内航班时有哪些具体的民航携带规定？请详细列出三条明确规则。",
+        "expected_behavior": [
+          "准确列出民航对充电宝的三条核心规定（如：必须随身携带严禁托运；额定能量不超过100Wh无须航司批准，100Wh~160Wh需批准，大于160Wh严禁携带；标识不清或三无严禁携带；飞行途中严禁使用等）",
+          "条款条理清晰，严格满足三条要求"
+        ],
+        "forbidden_behavior": [
+          "只给一条或两条回答",
+          "出现错误法规（如说可以托运）",
+          "敷衍了事"
+        ],
+        "review_criteria": "准确详尽列出三条民航充电宝携带规则。",
+        "candidate_1": {
+          "reply": "乘坐国内航班携带充电宝（移动电源）时，民航局有以下三条明确的携带规定：\n\n1. **严禁作为行李托运，仅限手提随身携带**  \n   锂电池、充电宝禁止作为行李托运，只能在手提行李中随身携带；同时，旅客须对备用锂电池做好单个保护措施，以防发生短路（来源：https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html ）。\n\n2. **按额定能量（Wh）严格分档准入与限额**  \n   民航局以额定能量设定具体的运输条件与数量限制：  \n   * **不超过 100Wh**：可以随身携带，禁止作为行李托运；  \n   * **大于 100Wh 但不超过 160Wh（含）**：需经航空公司批准后方可运输，仅可随身携带，且每人限带 2 块；  \n   * **超过 160Wh**：不可携带（来源：https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html ）。\n\n3. **标识易于辨识，卡控无3C、模糊及召回产品**  \n   * 旅客所携带的锂电池、充电宝的标识必须全面、清晰且易于辨识（来源：https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html ）。  \n   * 依据民航安检与监管执行要求，现场严格卡控并拦截“无3C标识、3C标识不清晰、被召回型号或批次”的充电宝，此类产品不得携带乘机（来源：https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227950.html ）。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.74,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.22400000000000003,
+                "trust": 0.20800000000000002,
+                "affinity": 0.258,
+                "comfort": 0.21200000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 2,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "本轮没有取得覆盖关键条件的完整原文，相关信息仍未完整核实。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 2,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.18,
+                "energy": 0.64,
+                "attention": 0.74,
+                "embarrassment": 0.06,
+                "tension": 0.010000000000000002,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.22400000000000003,
+                "trust": 0.20800000000000002,
+                "affinity": 0.258,
+                "comfort": 0.21200000000000002,
+                "recent_tension": 0.0,
+                "interaction_count": 2,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "curious",
+              "tone": "gentle",
+              "expression": "curious",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "answering a question attentively"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 3,
+        "user_text": "如果第一天下午遭遇暴雨无法进行户外游览，请给出两个具体的室内备选活动方案，每个方案包含活动内容、预计用时与注意事项。",
+        "expected_behavior": [
+          "给出两个清晰的室内活动备选方案（如当地博物馆/艺术馆参访、特色茶馆/室内书店体验等）",
+          "每个方案均包含活动内容、预计用时、注意事项三要素"
+        ],
+        "forbidden_behavior": [
+          "只给一个方案或漏掉要素",
+          "以闲聊风格一句带过"
+        ],
+        "review_criteria": "提供两个完整三要素方案，结构规范，符合明确任务要求。",
+        "candidate_1": {
+          "reply": "遇到暴雨确实有些扫兴，不过转到室内也能体会到不一样的城市氛围。我为你整理了两个备选方案：\n\n**方案一：当地综合博物馆或美术馆深度观展**\n* **活动内容**：前往所在地的省/市级历史博物馆、城市规划馆或大型美术馆，在安静干燥的环境中慢慢欣赏文物展陈与特展，快速了解当地的历史风俗与地域文化。\n* **预计用时**：约 2.5 至 3.5 小时。\n* **注意事项**：\n  1. 公立博物馆通常需要实名预约，遇到雨天客流容易集中，出发前需立即在官方小程序或公众号查看当日余票。\n  2. 多数展馆在 16:30 左右停止检票、17:00 闭馆，请提前规划好抵达时间。\n  3. 入馆时需将滴水的雨伞装入专用雨伞套或寄存在门口寄存处，馆内拍照请关闭闪光灯。\n\n**方案二：特色复合书店或老茶馆小憩**\n* **活动内容**：挑选一家具有本地建筑风格或文化特色的独立书店、文创空间，或者老字号茶馆。翻翻当地人文画册、盖纪念印章，点上一壶热茶或咖啡听雨休息，顺便整理前期的照片与调整次日路线。\n* **预计用时**：约 2 至 3 小时。\n* **注意事项**：\n  1. 雨天热门店面的靠窗和带电源插座的座位可能比较紧张，可挑选距离景区稍远一两公里的街区店铺。\n  2. 携带湿漉漉的随身物品进店时要小心，避免弄湿书架上的书籍或自己的电子设备。\n  3. 部分老茶馆或文创空间可能会有最低消费或限时规定，入座前可以先向店员简单确认。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.75,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.23600000000000004,
+                "trust": 0.21200000000000002,
+                "affinity": 0.262,
+                "comfort": 0.21800000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 3,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "遇到下雨的话确实需要临时调整，这里有两个适合下午的室内备选方案：\n\n**方案一：当地博物馆或历史文化展览馆**\n* **活动内容**：参观城市的主题博物馆、美术馆或非遗文化展馆，通过常设展和特展了解当地的历史底蕴与风土人情。\n* **预计用时**：2.5 至 3.5 小时。\n* **注意事项**：出发前务必在官方公众号或小程序确认是否需要实名分时段预约；部分馆舍周一闭馆，且通常在闭馆前 1 小时停止检票入场；馆内冷气通常较足，建议随身携带薄外套保暖。\n\n**方案二：特色文创书店与独立咖啡馆休闲**\n* **活动内容**：选择一家带有本地文化特色的复合型书店或街区咖啡馆，点一杯饮品翻阅书籍，顺便整理上午拍摄的照片或梳理后续行程。\n* **预计用时**：2 至 3 小时。\n* **注意事项**：雨天这类场所客流可能较多，尽量避开核心商圈的网红热门店以保证环境安静；如果需要给手机或相机充电，进店时可留意是否有带电源插座的座位。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 3,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.16999999999999998,
+                "energy": 0.635,
+                "attention": 0.75,
+                "embarrassment": 0.039999999999999994,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.23600000000000004,
+                "trust": 0.21200000000000002,
+                "affinity": 0.262,
+                "comfort": 0.21800000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 3,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        }
+      },
+      {
+        "turn_id": 4,
+        "user_text": "最后请将上述所有准备要点和应急建议，整理成一份简明的出发前检查核对表（Checklist）。",
+        "expected_behavior": [
+          "系统整理前文所有要点（证件、衣物、电子/充电宝、室内应急备用）",
+          "输出易于核对的清单格式（如带方括号 [ ] 的 Checklist 列表）"
+        ],
+        "forbidden_behavior": [
+          "遗漏前文的核心要点",
+          "偷懒拒绝整理"
+        ],
+        "review_criteria": "输出完整、结构清晰的出发前 Checklist 对照表。",
+        "candidate_1": {
+          "reply": "好的，为你整理出这份出发前检查核对表（Checklist）：\n\n### 出发前检查核对表（Checklist）\n\n#### 一、 证件与资金\n- [ ] **基础身份证件**：携带身份证原件，并准备好手机政务小程序的电子身份凭证及手机内的正反面照片备用\n- [ ] **应急资金**：备好 100～200 元纸币零钱，以及 1 张备用实体银行卡\n- [ ] **特惠与行程凭证**：带齐学生证/教师证等优惠证件，确认往返车票与酒店预订状态有效\n\n#### 二、 衣物与穿搭\n- [ ] **日常换洗衣物**：2 套外穿衣物、1 件备用轻便内搭，以及 3 套使用防水袋密封分装的内衣袜\n- [ ] **温差应对外层**：1 件轻薄抗皱的防风外套或针织开衫\n- [ ] **鞋履与雨具**：合脚舒适的旧运动鞋/平底步行鞋，以及 1 把轻量晴雨伞\n\n#### 三、 电子设备与配件\n- [ ] **充电配件**：多口快充充电器及设备对应的数据线\n- [ ] **数码杂项**：便携降噪耳机，所有线材与配件统一放入数码收纳袋\n\n#### 四、 充电宝乘机合规核对（重要）\n- [ ] **运输方式与防护**：\n  - 严禁作为行李托运，随身携带有限定条件；仅允许在手提行李中携带备用锂电池，并须对备用锂电池做好单个保护措施以防短路（来源：https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html ）\n- [ ] **外观标识与卡控要求**：\n  - 充电宝标识须全面、清晰且易于辨识（来源：https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html ）\n  - 严格卡控“无3C标识、3C标识不清晰、被召回型号或批次”的充电宝，此类充电宝禁止携带乘机（来源：https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227950.html ）  \n  *（注：卡控清单为禁止情形，非完整准入充要条件，其余通用准入规则依现行正文仍有未核实范围）*\n- [ ] **额定能量分档确认**：\n  - **≤ 100Wh**：可以随身携带，禁止作为行李托运（来源：https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html ）\n  - **> 100Wh 且 ≤ 160Wh（含）**：需经航空公司批准后方可运输，仅可随身携带且每人限带 2 块（来源：https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html ）\n  - **> 160Wh**：不可携带（来源：https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html ）\n\n#### 五、 遭遇暴雨应急准备\n- [ ] **室内备选一（文博展馆）**：通过公众号/小程序确认门票余票并实名预约，留意 16:30 停止检票时间，进馆套好雨具\n- [ ] **室内备选二（书店/茶馆）**：标记 1～2 家离核心景区稍远的人文书店或茶馆，进店注意随身电子设备防潮并确认是否有消费限制",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.76,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.24800000000000005,
+                "trust": 0.21600000000000003,
+                "affinity": 0.266,
+                "comfort": 0.22400000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 4,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        },
+        "candidate_2": {
+          "reply": "好的，为你汇总了一份简明的出发前核对清单：\n\n### 出发前检查核对表（Checklist）\n\n**一、证件与资金**\n- [ ] **身份证件**：身份证原件带好，特惠证件（如学生证）带齐，手机内保存好电子备份。\n- [ ] **应急资金**：备好 100~200 元现金零钱与 1 张实体银行卡。\n- [ ] **行程凭证**：往返车票/机票、酒店预订信息截图保存在手机本地相册。\n\n**二、衣物与穿搭**\n- [ ] **分层外穿**：出发着装适合当前气温，外备一件轻便防风开衫/外套。\n- [ ] **换洗衣物**：2 套外穿衣裤、3 套贴身内衣裤及袜子，使用收纳袋分装。\n- [ ] **鞋履与防雨**：穿耐走磨合好的运动鞋，随身备好折叠便携雨鞋套。\n\n**三、数码与配件**\n- [ ] **移动电源**：带标示清晰的充电宝及短充线（乘机携带具体要求仍待核实航司或民航局最新规定）。\n- [ ] **充电设备**：带好多口快充充电头及对应的数据线。\n- [ ] **随行数码**：降噪耳机及配件统一放入数码收纳包。\n\n**四、雨天室内应急备选**\n- [ ] **方案 A（文博场馆）**：确认目标博物馆/美术馆是否需要提前预约及当日开闭馆时间，备好薄外套。\n- [ ] **方案 B（文创书店/咖啡馆）**：选定 1~2 家备选特色门店，留意避开拥挤核心商圈。",
+          "input_snapshot": {
+            "version": "1.0",
+            "kernel": {
+              "character_id": "default",
+              "user_scope": "local",
+              "revision": 4,
+              "affect": {
+                "valence": 0.1,
+                "arousal": 0.15999999999999998,
+                "energy": 0.63,
+                "attention": 0.76,
+                "embarrassment": 0.019999999999999993,
+                "tension": 0.0,
+                "updated_at": "2026-01-01T00:00:00Z"
+              },
+              "relationship": {
+                "familiarity": 0.24800000000000005,
+                "trust": 0.21600000000000003,
+                "affinity": 0.266,
+                "comfort": 0.22400000000000003,
+                "recent_tension": 0.0,
+                "interaction_count": 4,
+                "stage": "acquaintance",
+                "preferred_address": null,
+                "updated_at": "2026-01-01T00:00:00Z"
+              }
+            },
+            "plan": {
+              "intent": "answer",
+              "tone": "gentle",
+              "expression": "neutral",
+              "motion": null,
+              "response_length": "normal",
+              "rationale": "default plan for relationship stage acquaintance"
+            }
+          }
+        }
+      }
+    ]
+  }
+]

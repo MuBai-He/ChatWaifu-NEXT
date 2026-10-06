@@ -1,0 +1,12 @@
+{
+  "files": {
+    "docs/adr/0065-bounded-source-answer-coverage-candidate.md": "6379c1bd853a7e04ee2b7a7761c672a125a2f7bc69956392a65a92d601b0b2c9",
+    "services/runtime/src/chatwaifu_runtime/agent/source_answer_frame.py": "682502fb6a51c71b34858865cdaad84b0bf424bbb3d28b0bb6b3ec787a6defa3",
+    "services/runtime/src/chatwaifu_runtime/agent/source_answer_state.py": "5a26c64a1ea71738b3bb80e46e21f5a55d6640d9f088a6f4d88ac03c3b5a42e4",
+    "services/runtime/src/chatwaifu_runtime/agent/source_quote_frame.py": "ffc4d04af7f3b7c846c25641f725d38a67fe07d80c38cd459bb1d352aac24b9e",
+    "services/runtime/tests/test_conversation_source_answer_state.py": "b6e73d72ebd5feafee3fcd666f4e3d6ba3d90e2967e196f592b09d8940aacae9",
+    "services/runtime/tests/test_source_answer_frame.py": "7b58eb6a4e38a5de0342c7514e2e2e84576ef45bbb51085a3dc06f9bcb0ad06b",
+    "services/runtime/tests/test_source_answer_state.py": "bc64f0220f2db011aaa7c4bb2cd49f6359e789145f032069bca494bd4f2eb67d",
+    "services/runtime/tests/test_source_quote_frame.py": "f64f5de23d6842f273f263a15743972ee5efd182c83fcc2e7f0c74463f49e105"
+  }
+}

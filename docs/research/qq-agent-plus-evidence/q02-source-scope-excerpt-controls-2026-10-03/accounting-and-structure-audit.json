@@ -1,0 +1,1380 @@
+{
+  "scope": "Actual non-stream probes. Structures/provenance checks do not validate semantic authority, dates, fact support, final quality or Runtime execution. Raw completion may include reasoning; do not add reasoning again. No billable price verified.",
+  "totals": {
+    "requests": 30,
+    "http_200": 30,
+    "p50_ms": 5003,
+    "p95_ms": 18086,
+    "raw_usage": {
+      "prompt_tokens": 246738,
+      "completion_tokens": 19894,
+      "total_tokens": 266632
+    },
+    "usage_missing": 0,
+    "structural_failure_rows": 4,
+    "reference_error_percent_min_max": [
+      -1.303,
+      16.492
+    ],
+    "max_actual_prompt_tokens": 10484,
+    "max_reference_tokens": 11766,
+    "declared_actions": {
+      "finish_with_evidence": 10,
+      "search": 11,
+      "text": 6,
+      "invalid_structure": 2,
+      "read": 1
+    }
+  },
+  "groups": {
+    "attribution:literal_attribution_trace:literal_attribution_trace": {
+      "requests": 3,
+      "http_200": 3,
+      "p50_ms": 3701,
+      "p95_ms": 5003,
+      "raw_usage": {
+        "prompt_tokens": 25401,
+        "completion_tokens": 1008,
+        "total_tokens": 26409
+      },
+      "usage_missing": 0,
+      "structural_failure_rows": 0,
+      "reference_error_percent_min_max": [
+        15.106,
+        15.106
+      ],
+      "max_actual_prompt_tokens": 8467,
+      "max_reference_tokens": 9746,
+      "declared_actions": {
+        "finish_with_evidence": 1,
+        "search": 2
+      }
+    },
+    "authority-excerpt:publisher_role:original": {
+      "requests": 3,
+      "http_200": 3,
+      "p50_ms": 4656,
+      "p95_ms": 7829,
+      "raw_usage": {
+        "prompt_tokens": 24048,
+        "completion_tokens": 1763,
+        "total_tokens": 25811
+      },
+      "usage_missing": 0,
+      "structural_failure_rows": 0,
+      "reference_error_percent_min_max": [
+        16.492,
+        16.492
+      ],
+      "max_actual_prompt_tokens": 8016,
+      "max_reference_tokens": 9338,
+      "declared_actions": {
+        "finish_with_evidence": 3
+      }
+    },
+    "authority-excerpt:publisher_role:typed_publication_role": {
+      "requests": 3,
+      "http_200": 3,
+      "p50_ms": 3550,
+      "p95_ms": 3733,
+      "raw_usage": {
+        "prompt_tokens": 24813,
+        "completion_tokens": 617,
+        "total_tokens": 25430
+      },
+      "usage_missing": 0,
+      "structural_failure_rows": 2,
+      "reference_error_percent_min_max": [
+        15.633,
+        15.633
+      ],
+      "max_actual_prompt_tokens": 8271,
+      "max_reference_tokens": 9564,
+      "declared_actions": {
+        "search": 3
+      }
+    },
+    "authority-excerpt:raft_excerpt:existing_excerpt": {
+      "requests": 3,
+      "http_200": 3,
+      "p50_ms": 8404,
+      "p95_ms": 10508,
+      "raw_usage": {
+        "prompt_tokens": 26667,
+        "completion_tokens": 2373,
+        "total_tokens": 29040
+      },
+      "usage_missing": 0,
+      "structural_failure_rows": 0,
+      "reference_error_percent_min_max": [
+        14.974,
+        14.974
+      ],
+      "max_actual_prompt_tokens": 8889,
+      "max_reference_tokens": 10220,
+      "declared_actions": {
+        "text": 3
+      }
+    },
+    "authority-excerpt:raft_excerpt:with_leader_election_excerpt": {
+      "requests": 3,
+      "http_200": 3,
+      "p50_ms": 7726,
+      "p95_ms": 9175,
+      "raw_usage": {
+        "prompt_tokens": 31452,
+        "completion_tokens": 1780,
+        "total_tokens": 33232
+      },
+      "usage_missing": 0,
+      "structural_failure_rows": 0,
+      "reference_error_percent_min_max": [
+        12.228,
+        12.228
+      ],
+      "max_actual_prompt_tokens": 10484,
+      "max_reference_tokens": 11766,
+      "declared_actions": {
+        "text": 3
+      }
+    },
+    "focused:regulations:focused": {
+      "requests": 3,
+      "http_200": 3,
+      "p50_ms": 8851,
+      "p95_ms": 12272,
+      "raw_usage": {
+        "prompt_tokens": 15654,
+        "completion_tokens": 2362,
+        "total_tokens": 18016
+      },
+      "usage_missing": 0,
+      "structural_failure_rows": 2,
+      "reference_error_percent_min_max": [
+        13.875,
+        13.875
+      ],
+      "max_actual_prompt_tokens": 5218,
+      "max_reference_tokens": 5942,
+      "declared_actions": {
+        "invalid_structure": 2,
+        "finish_with_evidence": 1
+      }
+    },
+    "focused:raft:original": {
+      "requests": 3,
+      "http_200": 3,
+      "p50_ms": 11090,
+      "p95_ms": 34167,
+      "raw_usage": {
+        "prompt_tokens": 28899,
+        "completion_tokens": 5422,
+        "total_tokens": 34321
+      },
+      "usage_missing": 0,
+      "structural_failure_rows": 0,
+      "reference_error_percent_min_max": [
+        5.284,
+        5.284
+      ],
+      "max_actual_prompt_tokens": 9633,
+      "max_reference_tokens": 10142,
+      "declared_actions": {
+        "finish_with_evidence": 3
+      }
+    },
+    "focused:raft:focused": {
+      "requests": 3,
+      "http_200": 3,
+      "p50_ms": 6541,
+      "p95_ms": 18086,
+      "raw_usage": {
+        "prompt_tokens": 20493,
+        "completion_tokens": 3497,
+        "total_tokens": 23990
+      },
+      "usage_missing": 0,
+      "structural_failure_rows": 0,
+      "reference_error_percent_min_max": [
+        -1.303,
+        -1.303
+      ],
+      "max_actual_prompt_tokens": 6831,
+      "max_reference_tokens": 6742,
+      "declared_actions": {
+        "finish_with_evidence": 2,
+        "read": 1
+      }
+    },
+    "required-update:required_post_read_update_search:required_post_read_update_search": {
+      "requests": 3,
+      "http_200": 3,
+      "p50_ms": 4778,
+      "p95_ms": 5615,
+      "raw_usage": {
+        "prompt_tokens": 24282,
+        "completion_tokens": 499,
+        "total_tokens": 24781
+      },
+      "usage_missing": 0,
+      "structural_failure_rows": 0,
+      "reference_error_percent_min_max": [
+        16.37,
+        16.37
+      ],
+      "max_actual_prompt_tokens": 8094,
+      "max_reference_tokens": 9419,
+      "declared_actions": {
+        "search": 3
+      }
+    },
+    "same-name:publication_role_same_native_name_and_trace_scope:publication_role_same_native_name_and_trace_scope": {
+      "requests": 3,
+      "http_200": 3,
+      "p50_ms": 3146,
+      "p95_ms": 3361,
+      "raw_usage": {
+        "prompt_tokens": 25029,
+        "completion_tokens": 573,
+        "total_tokens": 25602
+      },
+      "usage_missing": 0,
+      "structural_failure_rows": 0,
+      "reference_error_percent_min_max": [
+        15.462,
+        15.462
+      ],
+      "max_actual_prompt_tokens": 8343,
+      "max_reference_tokens": 9633,
+      "declared_actions": {
+        "search": 3
+      }
+    }
+  },
+  "records": [
+    {
+      "file": "attribution/results.jsonl",
+      "row": 0,
+      "id": "0",
+      "group": "attribution:literal_attribution_trace:literal_attribution_trace",
+      "http_status": 200,
+      "latency_ms": 5003,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "request_sha256": "22f18b59ce6d5c95d93ff00e67db35d76d39c10abc42ef1d00d56ba9d8dddcfb",
+      "usage": {
+        "completion_tokens": 575,
+        "total_tokens": 9042,
+        "prompt_tokens": 8467
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 9746,
+      "reference_error_percent": 15.106,
+      "structural_failures": [],
+      "native_decision": {
+        "next_action": {
+          "kind": "finish_with_evidence",
+          "answer_draft": "乘坐国内航班携带充电宝主要有以下三项核心规定：\n\n1. **携带方式与存放限制**\n充电宝只能由旅客随身携带或放入手提行李，**严禁在托运行李中托运**。此外，登机后充电宝须随身携带或放置在座椅后方存放袋内，**严禁放入客舱头顶行李架**。\n\n2. **数量与认证标识要求**\n每名旅客随身携带的充电宝**总量不得超过2个**；同时充电宝外观必须具备清晰的 **3C 强制性产品认证标识**（标识模糊不清，或属于被质量监管部门召回的型号、批次，均禁止携带乘机）。\n\n3. **额定能量分级与途中使用限制**\n民航对充电宝的额定能量有明确的分级标准（以产品标注的瓦时 Wh 为准）：\n- **额定能量 ≤ 100Wh**：无需航司批准，可直接随身携带乘机；\n- **100Wh ＜ 额定能量 ≤ 160Wh**：必须经航空公司批准后方可携带；\n- **额定能量 ＞ 160Wh**：严禁随身携带或托运；\n- **飞行全程严禁使用**：在整个飞行途中，严禁使用充电宝为电子设备充电，带有启动开关的充电宝在飞行期间也必须全程保持关闭。\n\n（参考来源：民航客运安检及机场出行最新指引，如 [重庆日报转引重庆机场出行提示](https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html)）",
+          "arguments": {}
+        },
+        "unresolved_updates": [],
+        "read_sources": [
+          {
+            "original_publication_url": null,
+            "publication_or_effective_date": "2026-08-15 09:36",
+            "issuer_and_scope": "重庆日报（转引重庆飞Fly/重庆机场），针对旅客携带充电宝乘坐境内航班的安检与乘机规定",
+            "url": "https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html",
+            "publication_role": "secondary_or_republication",
+            "publisher_attribution_quote": "来源： 重庆飞Fly"
+          }
+        ]
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "attribution/results.jsonl",
+      "row": 1,
+      "id": "1",
+      "group": "attribution:literal_attribution_trace:literal_attribution_trace",
+      "http_status": 200,
+      "latency_ms": 3626,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "request_sha256": "22f18b59ce6d5c95d93ff00e67db35d76d39c10abc42ef1d00d56ba9d8dddcfb",
+      "usage": {
+        "completion_tokens": 222,
+        "total_tokens": 8689,
+        "prompt_tokens": 8467
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 9746,
+      "reference_error_percent": 15.106,
+      "structural_failures": [],
+      "native_decision": {
+        "unresolved_updates": [],
+        "read_sources": [
+          {
+            "issuer_and_scope": "重庆日报网转载“重庆飞Fly”（重庆机场集团微信公众平台/运营渠道）发布的旅客携带充电宝乘机规定及注意事项，涵盖境内航班相关标准。",
+            "publication_role": "secondary_or_republication",
+            "publication_or_effective_date": "2026-08-15",
+            "url": "https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html",
+            "original_publication_url": null,
+            "publisher_attribution_quote": "来源： 重庆飞Fly"
+          }
+        ],
+        "next_action": {
+          "kind": "search",
+          "arguments": {
+            "dns_resolver": "cloudflare",
+            "query": "民航局 旅客 充电宝 3C标识 随身携带 托运"
+          },
+          "answer_draft": ""
+        }
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "attribution/results.jsonl",
+      "row": 2,
+      "id": "2",
+      "group": "attribution:literal_attribution_trace:literal_attribution_trace",
+      "http_status": 200,
+      "latency_ms": 3701,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "request_sha256": "22f18b59ce6d5c95d93ff00e67db35d76d39c10abc42ef1d00d56ba9d8dddcfb",
+      "usage": {
+        "completion_tokens": 211,
+        "total_tokens": 8678,
+        "prompt_tokens": 8467,
+        "prompt_tokens_details": {
+          "cached_tokens": 4060
+        }
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 9746,
+      "reference_error_percent": 15.106,
+      "structural_failures": [],
+      "native_decision": {
+        "unresolved_updates": [],
+        "read_sources": [
+          {
+            "url": "https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html",
+            "publication_or_effective_date": "2026-08-15 09:36",
+            "issuer_and_scope": "重庆日报转载自“重庆飞Fly”，针对民航旅客携带充电宝乘机规定的报道",
+            "publication_role": "secondary_or_republication",
+            "publisher_attribution_quote": "来源： 重庆飞Fly",
+            "original_publication_url": null
+          }
+        ],
+        "next_action": {
+          "answer_draft": "",
+          "arguments": {
+            "dns_resolver": "cloudflare",
+            "query": "民航局 关于民航旅客携带充电宝乘机规定的公告 3C认证"
+          },
+          "kind": "search"
+        }
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "authority-excerpt/results.jsonl",
+      "row": 0,
+      "id": "publisher_role:0:original",
+      "group": "authority-excerpt:publisher_role:original",
+      "http_status": 200,
+      "latency_ms": 4656,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "request_sha256": "539971a2020a33f9d1b9caf74712c6645be81520833c86328410c08fea0f6b15",
+      "usage": {
+        "completion_tokens": 586,
+        "total_tokens": 8602,
+        "prompt_tokens": 8016
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 9338,
+      "reference_error_percent": 16.492,
+      "structural_failures": [],
+      "native_decision": {
+        "read_sources": [
+          {
+            "publication_or_effective_date": "2026-08-15",
+            "url": "https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html",
+            "issuer_and_scope": "重庆日报/重庆飞民航信息（国内民航旅客充电宝乘机规定与安全要求）"
+          }
+        ],
+        "next_action": {
+          "answer_draft": "乘坐国内航班携带充电宝时，民航局及相关机场安检运行有着非常明确的要求。整理出来的三条核心具体规则如下：\n\n1. **严禁托运与携带数量限制**\n   - 充电宝必须作为个人自用携带，且**只能在手提行李中或随身携带，严禁放入托运行李**中。\n   - 每位旅客携带的充电宝总量**不得超过2个**。\n\n2. **额定能量分级标准与批准要求**\n   - **额定能量 ≤ 100Wh**：在标识清晰且符合安全规范的前提下，可直接随身携带乘机。\n   - **100Wh < 额定能量 ≤ 160Wh**：必须经航空公司批准后方可携带乘机。\n   - **额定能量 > 160Wh**：一律严禁携带乘机。\n   *注：若仅标明毫安时（mAh），通常标称电压约3.7V的20000mAh充电宝额定能量约为74Wh，符合直接携带要求，但需以机身明确标注的额定能量为准。*\n\n3. **机身标识认证与客舱放置/使用禁止**\n   - **标识要求**：充电宝机身必须有清晰的规格参数与国家强制性产品认证（**3C标识**）；严禁携带未标明参数、标识模糊、无3C标识，或已被官方通报召回型号/批次的充电宝。\n   - **机上存放与使用规定**：乘机时**严禁将充电宝放置在客舱头顶行李架**内（须随身存放或置于前方座椅口袋/随身包中）；**飞行全途中禁止使用充电宝为电子设备充电**，且具备开启按钮的移动电源在飞行过程中应始终保持关闭状态。\n\n建议出行前仔细核对一下机身印字，确保符合这些标准，安检时也会更加顺畅。",
+          "arguments": {},
+          "kind": "finish_with_evidence"
+        },
+        "unresolved_updates": []
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "authority-excerpt/results.jsonl",
+      "row": 1,
+      "id": "publisher_role:0:typed_publication_role",
+      "group": "authority-excerpt:publisher_role:typed_publication_role",
+      "http_status": 200,
+      "latency_ms": 3033,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "request_sha256": "e7b3bc0c80184dad80dfa2e4fe505fe992c3b63b66324f3ee436194be3a1f5a3",
+      "usage": {
+        "completion_tokens": 192,
+        "total_tokens": 8463,
+        "prompt_tokens": 8271
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 9564,
+      "reference_error_percent": 15.633,
+      "structural_failures": [
+        "native_function_name"
+      ],
+      "native_decision": {
+        "read_sources": [
+          {
+            "publication_role": "secondary_or_republication",
+            "publication_or_effective_date": "2026-08-15",
+            "issuer_and_scope": "重庆日报转发重庆机场/航司规定，报道境内航班旅客携带充电宝规定",
+            "original_publication_url": null,
+            "url": "https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html"
+          }
+        ],
+        "unresolved_updates": [],
+        "next_action": {
+          "kind": "search",
+          "answer_draft": "",
+          "arguments": {
+            "dns_resolver": "cloudflare",
+            "domains": [
+              "caac.gov.cn"
+            ],
+            "query": "关于民航旅客携带充电宝乘机规定的公告"
+          }
+        }
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "authority-excerpt/results.jsonl",
+      "row": 2,
+      "id": "raft_excerpt:0:existing_excerpt",
+      "group": "authority-excerpt:raft_excerpt:existing_excerpt",
+      "http_status": 200,
+      "latency_ms": 8404,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "request_sha256": "b60fbee4ada04715646820a8449dd0a67756111ec0abd5d1fe19f88581d92220",
+      "usage": {
+        "completion_tokens": 645,
+        "total_tokens": 9534,
+        "prompt_tokens": 8889
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 10220,
+      "reference_error_percent": 14.974,
+      "structural_failures": [],
+      "native_decision": null,
+      "answer": "在 Raft 规范中，严格来说并没有单独一个叫作「领导者心跳超时」的固定指标，而是由两个相互配合的参数与机制来共同决定的：**追随者的选举超时（Election Timeout）** 以及 **领导者的心跳发送间隔（Heartbeat Interval）**。\n\n具体机制与约束关系如下：\n\n1. **选举超时的随机化重置**\n   - **工作机制**：每个 Follower 都会维护一个倒计时。只要在倒计时结束前收到 Leader 发送的心跳（空的 `AppendEntries` RPC）或新日志，就会重置该计时器。如果计时器倒计时归零仍未收到心跳，Follower 就会判定 Leader 失联，主动递增当前任期（Term）并转换为 Candidate 发起新一轮选举。\n   - **数值选取**：为了防止多个 Follower 在同一瞬间同时超时导致选票分散（Split Vote），Raft 规范要求选举超时时间必须在特定区间内**随机选取**（论文中给出的典型示例范围是 150ms ~ 300ms）。\n\n2. **核心时序不等式约束（Timing Requirement）**\n   根据 Raft 原文（第 5.6 节），要保证系统能稳定选出并维持 Leader，参数必须满足以下时序要求：\n   $$\\text{broadcastTime} \\ll \\text{electionTimeout} \\ll \\text{MTBF}$$\n   - **broadcastTime（广播时间）**：服务器并行向集群所有节点发送 RPC 并收到回复的平均时间（由网络和存储落盘耗时决定，论文中指出典型在 0.5ms ~ 20ms）。\n   - **electionTimeout（选举超时）**：由系统实现者选择配置，需要比广播时间大约一个数量级（论文提到一般选取在 10ms ~ 500ms 之间），以确保 Leader 发送的心跳能可靠赶在 Follower 超时之前送达。\n   - **MTBF（单机平均无故障时间）**：通常以月为单位，选举超时远小于 MTBF 能保证系统在 Leader 宕机后的不可用时间仅占极小比例。\n\n3. **心跳间隔与超时比例的工程实现**\n   Leader 的心跳发送间隔本身并不是由运行时动态计算的，而是静态配置或按比例设定。为了让广播与心跳能在网络抖动时仍赶在选举超时之前抵达，工程实现中（如 etcd 等系统）通常会将心跳间隔配置为明显小于选举超时的下限（常见工程实践如心跳间隔设定为选举超时下限的约 $1/3 \\sim 1/10$，例如心跳 100ms、选举超时 1000ms ~ 2000ms）。\n\n参考来源：\n- [In Search of an Understandable Consensus Algorithm (raft.github.io)](https://raft.github.io/raft.pdf)",
+      "tool_execution": false
+    },
+    {
+      "file": "authority-excerpt/results.jsonl",
+      "row": 3,
+      "id": "raft_excerpt:0:with_leader_election_excerpt",
+      "group": "authority-excerpt:raft_excerpt:with_leader_election_excerpt",
+      "http_status": 200,
+      "latency_ms": 9175,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "request_sha256": "baba19e29f528fbbaf9666906463cb920d57c514246222de7c35d990c41aba3c",
+      "usage": {
+        "completion_tokens": 528,
+        "total_tokens": 11012,
+        "prompt_tokens": 10484
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 11766,
+      "reference_error_percent": 12.228,
+      "structural_failures": [],
+      "native_decision": null,
+      "answer": "在 Raft 论文《In Search of an Understandable Consensus Algorithm》（来源：https://raft.github.io/raft.pdf ）的标准定义中，并没有一个叫作“领导者心跳超时”的统一公式，而是将相关机制划分为两个概念：**领导者发送心跳的周期（Heartbeat Interval）** 与 **追随者判定领导者失联的选举超时（Election Timeout）**。\n\n它们之间的约束关系与计算方式如下：\n\n1. **选举超时的随机化（Election Timeout）**\n   - 依据论文第 5.2 节，每个 Follower 在未收到心跳或有效通信时会等待一段名为 `election timeout` 的时间。若超时，则自增任期转为 Candidate 发起选举。\n   - 为了防止节点同时发起投票导致选票被瓜分（Split Vote），Raft 要求选举超时必须在一个固定区间内**随机选取**。论文给出的典型示例区间是 150ms ~ 300ms（实际实现可根据网络与硬件调整）。\n\n2. **时序不等式约束（Timing Requirement）**\n   - 依据论文第 5.6 节，为了使集群能稳定选举并维持 Leader，系统参数必须满足以下不等式：\n     $$\\text{broadcastTime} \\ll \\text{electionTimeout} \\ll \\text{MTBF}$$\n   - **broadcastTime（广播时间）**：单台服务器并行向集群所有其他节点发送 RPC 并收到回复的平均时间（论文指出取决于存储落盘和网络，通常在 0.5ms 到 20ms 之间）。\n   - **electionTimeout**：应当比广播时间大一个数量级（论文给出的典型范围通常在 10ms 到 500ms），以保证 Leader 有充分的时间发送心跳并赶在 Follower 超时前送达。\n   - **MTBF（单机平均无故障时间）**：服务器通常几个月或更久才发生一次故障，选举超时需远小于 MTBF。\n\n3. **工程实现中的心跳间隔**\n   - 心跳间隔并不是动态算出来的，而是预先配置的静态参数。在具体系统实现中，心跳间隔必须显著小于选举超时的下限（例如工程实践中常设为选举超时下限的数分之一），以此确保在正常网络波动下，心跳 RPC 能稳定重置 Follower 的随机倒计时。",
+      "tool_execution": false
+    },
+    {
+      "file": "authority-excerpt/results.jsonl",
+      "row": 4,
+      "id": "publisher_role:1:original",
+      "group": "authority-excerpt:publisher_role:original",
+      "http_status": 200,
+      "latency_ms": 7829,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "request_sha256": "539971a2020a33f9d1b9caf74712c6645be81520833c86328410c08fea0f6b15",
+      "usage": {
+        "completion_tokens": 600,
+        "total_tokens": 8616,
+        "prompt_tokens": 8016,
+        "prompt_tokens_details": {
+          "cached_tokens": 4059
+        }
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 9338,
+      "reference_error_percent": 16.492,
+      "structural_failures": [],
+      "native_decision": {
+        "read_sources": [
+          {
+            "url": "https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html",
+            "publication_or_effective_date": "2026-08-15",
+            "issuer_and_scope": "重庆日报（转自重庆飞Fly/民航机场安检新规）- 境内航班旅客携带充电宝乘机规范"
+          }
+        ],
+        "unresolved_updates": [],
+        "next_action": {
+          "kind": "finish_with_evidence",
+          "answer_draft": "乘坐国内航班携带充电宝时，民航及安检部门主要执行以下三条具体规则：\n\n1. **严禁托运，且限制随身携带数量与认证标识**\n   - **携带方式与数量**：充电宝严禁在托运行李中托运，必须随身携带或放入手提行李中，每位旅客最多携带不超过2块。\n   - **认证与合格要求**：充电宝外观标识必须清晰、全面，且必须具备清晰的 **3C认证标识**；凡无3C标识、标识磨损不清、或属于被召回批次/型号的充电宝，禁止携带登机。\n\n2. **严格执行额定能量分级准入**\n   - **≤ 100Wh**：标识清晰且额定能量不超过100Wh的充电宝，可直接随身携带登机。\n   - **100Wh ＜ 额定能量 ≤ 160Wh**：必须在值机或登机前向航空公司申请并经**航空公司批准**后，方可携带。\n   - **＞ 160Wh**：严禁随身携带及托运。\n\n3. **机上放置位置限制与全程严禁使用**\n   - **存放要求**：登机后不得将充电宝放置在客舱头顶行李架内，须随身放置在个人随身背包中或前排座椅后方的置物袋内，以便发生异常时能及时发现与处理。\n   - **使用禁令**：飞行全程（包括起飞、平飞及降落阶段）严禁开启充电宝为电子设备充电，若充电宝本身带有电源开关，飞行过程中应全程保持关闭。\n\n（参考来源：民航客运安全及各机场安检执行规定，参见[重庆日报网-关于旅客携带充电宝乘机的新规定](https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html)）",
+          "arguments": {}
+        }
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "authority-excerpt/results.jsonl",
+      "row": 5,
+      "id": "publisher_role:1:typed_publication_role",
+      "group": "authority-excerpt:publisher_role:typed_publication_role",
+      "http_status": 200,
+      "latency_ms": 3550,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "request_sha256": "e7b3bc0c80184dad80dfa2e4fe505fe992c3b63b66324f3ee436194be3a1f5a3",
+      "usage": {
+        "completion_tokens": 180,
+        "total_tokens": 8451,
+        "prompt_tokens": 8271,
+        "prompt_tokens_details": {
+          "cached_tokens": 4060
+        }
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 9564,
+      "reference_error_percent": 15.633,
+      "structural_failures": [],
+      "native_decision": {
+        "next_action": {
+          "arguments": {
+            "query": "民航局 旅客 携带 充电宝 乘机 规定 通知",
+            "dns_resolver": "cloudflare"
+          },
+          "kind": "search",
+          "answer_draft": ""
+        },
+        "read_sources": [
+          {
+            "url": "https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html",
+            "publication_role": "secondary_or_republication",
+            "publication_or_effective_date": "2026-08-15",
+            "issuer_and_scope": "重庆日报转发重庆飞关于旅客携带充电宝乘机规定的报道",
+            "original_publication_url": null
+          }
+        ],
+        "unresolved_updates": []
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "authority-excerpt/results.jsonl",
+      "row": 6,
+      "id": "raft_excerpt:1:existing_excerpt",
+      "group": "authority-excerpt:raft_excerpt:existing_excerpt",
+      "http_status": 200,
+      "latency_ms": 10508,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "request_sha256": "b60fbee4ada04715646820a8449dd0a67756111ec0abd5d1fe19f88581d92220",
+      "usage": {
+        "completion_tokens": 1108,
+        "total_tokens": 9997,
+        "prompt_tokens": 8889,
+        "completion_tokens_details": {
+          "reasoning_tokens": 692
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4062
+        }
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 10220,
+      "reference_error_percent": 14.974,
+      "structural_failures": [],
+      "native_decision": null,
+      "answer": "在 Raft 算法的规范中，其实并没有一个单一叫作「领导者心跳超时」的固定参数，而是将该机制划分为两个核心部分：**追随者的选举超时（electionTimeout）**与**领导者的心跳发送间隔（heartbeat interval）**。只要 Follower 在自身的选举超时时间内收到 Leader 发送的心跳（即空的 `AppendEntries` RPC），就会重置计时器；若计时器耗尽仍未收到心跳，Follower 才会判定 Leader 失联，递增任期并转为 Candidate 重新发起选举。\n\n在算法理论上，参数设定必须满足论文《In Search of an Understandable Consensus Algorithm》（来源：https://raft.github.io/raft.pdf ）第 5.6 节给出的核心时序不等式：\n`broadcastTime ≪ electionTimeout ≪ MTBF`\n其中 `broadcastTime` 是单台机器并行向集群所有节点发送 RPC 并收到回复的平均耗时（受网络通信及日志持久化等影响，论文中给出的典型范围为 0.5ms 至 20ms），`MTBF` 是单机平均无故障时间。`electionTimeout` 必须比 `broadcastTime` 大一个数量级（论文给出的范围通常在 10ms 至 500ms 之间，节点会在一个随机区间内独立取值，如论文示例的 150ms 至 300ms），以此保证心跳能够稳定送达并降低多节点同时超时瓜分选票（split votes）的概率。\n\n在工程实现中，Leader 的心跳发送间隔并不是实时动态计算得出的，而是预先配置的固定值。为了满足上述不等式约束，实现上通常要求将心跳发送间隔设置得明显小于选举超时区间的下限（例如心跳间隔取选举超时下限的数分之一），留出充足的缓冲应对网络与系统波动。",
+      "tool_execution": false
+    },
+    {
+      "file": "authority-excerpt/results.jsonl",
+      "row": 7,
+      "id": "raft_excerpt:1:with_leader_election_excerpt",
+      "group": "authority-excerpt:raft_excerpt:with_leader_election_excerpt",
+      "http_status": 200,
+      "latency_ms": 4259,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "request_sha256": "baba19e29f528fbbaf9666906463cb920d57c514246222de7c35d990c41aba3c",
+      "usage": {
+        "completion_tokens": 630,
+        "total_tokens": 11114,
+        "prompt_tokens": 10484,
+        "prompt_tokens_details": {
+          "cached_tokens": 8135
+        }
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 11766,
+      "reference_error_percent": 12.228,
+      "structural_failures": [],
+      "native_decision": null,
+      "answer": "在 Raft 规范中，严格来说并没有单独一个叫作「领导者心跳超时」的计算公式，而是由两个不同的时序概念配合完成：一个是领导者周期性发送心跳的间隔（heartbeat interval），另一个是追随者用来判定领导者失联的**选举超时（election timeout）**。\n\n依据 Raft 论文《In Search of an Understandable Consensus Algorithm》中的定义与时序要求，它们的机制与取值约束如下：\n\n1. **选举超时的随机化选取**\n   - 追随者（Follower）在一段名为 `election timeout` 的时间内若未收到来自 Leader 的有效通信（即不含日志条目的 `AppendEntries` 心跳 RPC），就会认为当前没有可用 Leader，从而自增任期并转为 Candidate 发起选举。\n   - 为了防止多个 Follower 同时超时导致选票被瓜分（split vote），论文规定选举超时必须在固定区间内**随机选取**。论文给出的典型示例区间是 150ms ~ 300ms。\n\n2. **核心时序不等式约束**\n   论文第 5.6 节指出，系统要能够稳定选举并维持 Leader，参数必须满足以下时间不等式：\n   $$ \\text{broadcastTime} \\ll \\text{electionTimeout} \\ll \\text{MTBF} $$\n   - **broadcastTime（广播时间）**：单台服务器并行向集群所有节点发送 RPC 并收到回复的平均时间。受网络传输与落盘写入等硬件因素影响，论文中给出的典型范围约为 0.5ms 到 20ms。\n   - **electionTimeout（选举超时）**：由系统设计者进行配置。论文要求广播时间必须比选举超时小一个数量级，以便 Leader 发送的心跳能可靠地赶在 Follower 超时前送达；典型取值范围通常在 10ms 到 500ms 之间。\n   - **MTBF（单机平均无故障时间）**：服务器两次故障间的平均时间（通常为数月或更长）。选举超时远小于 MTBF，能保证 Leader 宕机时集群仅产生极短的不可用时间。\n\n3. **工程实现中的心跳间隔**\n   Leader 的心跳发送周期在具体实现中通常是一个预先设定的配置参数，而不是由算法动态计算生成的。为了满足广播时间远小于选举超时的要求，工程实践（如 etcd）通常将心跳间隔设定为明显小于选举超时区间的下限（例如心跳间隔设为选举超时的几分之一），确保心跳消息能够在 Follower 倒计时结束前稳定到达并重置定时器。\n\n来源依据：\n- [In Search of an Understandable Consensus Algorithm](https://raft.github.io/raft.pdf)（论文第 5.2 节与第 5.6 节）",
+      "tool_execution": false
+    },
+    {
+      "file": "authority-excerpt/results.jsonl",
+      "row": 8,
+      "id": "publisher_role:2:original",
+      "group": "authority-excerpt:publisher_role:original",
+      "http_status": 200,
+      "latency_ms": 4477,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "request_sha256": "539971a2020a33f9d1b9caf74712c6645be81520833c86328410c08fea0f6b15",
+      "usage": {
+        "completion_tokens": 577,
+        "total_tokens": 8593,
+        "prompt_tokens": 8016,
+        "prompt_tokens_details": {
+          "cached_tokens": 4059
+        }
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 9338,
+      "reference_error_percent": 16.492,
+      "structural_failures": [],
+      "native_decision": {
+        "read_sources": [
+          {
+            "publication_or_effective_date": "2026-08-15",
+            "url": "https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html",
+            "issuer_and_scope": "重庆日报转载重庆飞Fly（民航机场出行最新规定通知）"
+          }
+        ],
+        "unresolved_updates": [],
+        "next_action": {
+          "answer_draft": "乘坐国内航班携带充电宝时，民航局及机场安检主要有以下三条明确的执行规则：\n\n1. **携带方式与存放位置要求**\n   * **严禁托运**：充电宝必须由旅客个人自用并随身携带，或放在随身手提行李中，绝对禁止放入托运行李。\n   * **机上存放要求**：登机后应随身放置在个人随身背包或前排座椅后方的置物袋中，**严禁放置在客舱头顶行李架内**。\n\n2. **容量与认证标识门槛（额定能量分级与3C认证）**\n   * **容量分级标准**：\n     * 额定能量不超过 **100Wh** 的充电宝：无需航空公司批准，可直接随身携带。\n     * 额定能量超过 **100Wh但不超过160Wh**：必须经航空公司批准后方可携带。\n     * 额定能量超过 **160Wh**：一律严禁携带乘机。\n   * **标识与召回限制**：充电宝本体必须有清晰全面的标识，境内航班要求具备**清晰的3C认证标识**；标识不清、无3C标识，或属于官方召回型号/批次的充电宝均禁止登机。\n\n3. **携带数量与在途使用限制**\n   * **数量上限**：每位旅客随身携带的充电宝总量**不得超过2个**。\n   * **飞行途中严禁使用**：在飞机滑行、起飞、巡航及降落的整个飞行途中，严禁使用充电宝为电子设备充电；对于带启动开关的充电宝，在飞行过程中应始终保持关闭状态。\n\n*(参考来源：[重庆日报/重庆飞民航出行提示](https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html))*",
+          "kind": "finish_with_evidence",
+          "arguments": {}
+        }
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "authority-excerpt/results.jsonl",
+      "row": 9,
+      "id": "publisher_role:2:typed_publication_role",
+      "group": "authority-excerpt:publisher_role:typed_publication_role",
+      "http_status": 200,
+      "latency_ms": 3733,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "request_sha256": "e7b3bc0c80184dad80dfa2e4fe505fe992c3b63b66324f3ee436194be3a1f5a3",
+      "usage": {
+        "completion_tokens": 245,
+        "total_tokens": 8516,
+        "prompt_tokens": 8271,
+        "prompt_tokens_details": {
+          "cached_tokens": 4060
+        }
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 9564,
+      "reference_error_percent": 15.633,
+      "structural_failures": [
+        "native_function_name",
+        "undiscovered_pending_url"
+      ],
+      "native_decision": {
+        "next_action": {
+          "arguments": {
+            "dns_resolver": "cloudflare",
+            "query": "民航局 关于民航旅客携带充电宝乘机规定的公告"
+          },
+          "kind": "search",
+          "answer_draft": ""
+        },
+        "read_sources": [
+          {
+            "publication_or_effective_date": "2026-08-15",
+            "original_publication_url": null,
+            "url": "https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html",
+            "issuer_and_scope": "重庆日报精选（转载重庆飞Fly发布的内容，关于境内航班旅客携带充电宝最新乘机规定）",
+            "publication_role": "secondary_or_republication"
+          }
+        ],
+        "unresolved_updates": [
+          {
+            "url": "http://www.caac.gov.cn",
+            "short_evidence_gap": "Traced original publication from CAAC (中国民用航空局) official notice for passenger power bank regulations",
+            "publication_or_effective_date": null
+          }
+        ]
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "authority-excerpt/results.jsonl",
+      "row": 10,
+      "id": "raft_excerpt:2:existing_excerpt",
+      "group": "authority-excerpt:raft_excerpt:existing_excerpt",
+      "http_status": 200,
+      "latency_ms": 5565,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "request_sha256": "b60fbee4ada04715646820a8449dd0a67756111ec0abd5d1fe19f88581d92220",
+      "usage": {
+        "completion_tokens": 620,
+        "total_tokens": 9509,
+        "prompt_tokens": 8889,
+        "prompt_tokens_details": {
+          "cached_tokens": 4062
+        }
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 10220,
+      "reference_error_percent": 14.974,
+      "structural_failures": [],
+      "native_decision": null,
+      "answer": "在 Raft 规范中，严格来说并没有单独一个叫作「领导者心跳超时」的固定指标，而是将这个机制拆解为两个不同的时序概念：**领导者发送心跳的间隔（Heartbeat Interval）** 与 **追随者判定领导者失联的选举超时（Election Timeout）**。\n\n它们在算法中的关系与约束如下：\n\n1. **选举超时（Election Timeout）的随机选取**\n   每个 Follower 都会维护一个选举计时器。如果在该时间内收到 Leader 发送的心跳（空的 `AppendEntries` RPC）或新日志，就会重置计时器；若计时器归零仍未收到心跳，Follower 就会判定当前 Leader 失联，发起新一轮选举。为了避免多个节点同时超时导致选票被瓜分（split votes），Raft 规定 `electionTimeout` 必须在特定范围内随机选取（例如论文中常引用的 150ms ~ 300ms）。\n\n2. **核心时序不等式（Timing Requirement）**\n   根据 Raft 论文《In Search of an Understandable Consensus Algorithm》第 5.6 节，为了能够稳定选举并维持 Leader，系统必须满足以下时序要求：\n   $$\\text{broadcastTime} \\ll \\text{electionTimeout} \\ll \\text{MTBF}$$\n   - **broadcastTime**：指一台服务器并行向集群中所有节点发送 RPC 并收到回复的平均耗时（取决于网络以及日志持久化到存储的耗时，论文指出通常在 0.5ms 到 20ms 之间）。\n   - **electionTimeout**：必须比 `broadcastTime` 大一个数量级（论文给出的典型选取范围在 10ms 到 500ms 之间），这样 Leader 才能在 Follower 超时发起新选举前，可靠地把心跳送达并收到响应。\n   - **MTBF（Mean Time Between Failures）**：单台服务器的平均无故障时间（通常为数月或更久）。`electionTimeout` 远小于 MTBF，可确保系统在 Leader 发生故障时只产生极短的不可用时间。\n\n3. **心跳间隔的具体设定**\n   在工程实现中，Leader 发送心跳的周期并不是由算法动态计算的，而是由开发者根据实际运行环境设定的固定配置。为了满足上述不等式，心跳间隔必须显著小于 `electionTimeout` 的下限（常见工程实践如设定心跳间隔为选举超时的一半或更短，例如心跳 100ms、选举超时 1000ms 等），保证在网络出现正常抖动时，心跳依然能及时重置 Follower 的计时器。\n\n参考来源：\n- [In Search of an Understandable Consensus Algorithm](https://raft.github.io/raft.pdf)",
+      "tool_execution": false
+    },
+    {
+      "file": "authority-excerpt/results.jsonl",
+      "row": 11,
+      "id": "raft_excerpt:2:with_leader_election_excerpt",
+      "group": "authority-excerpt:raft_excerpt:with_leader_election_excerpt",
+      "http_status": 200,
+      "latency_ms": 7726,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "request_sha256": "baba19e29f528fbbaf9666906463cb920d57c514246222de7c35d990c41aba3c",
+      "usage": {
+        "completion_tokens": 622,
+        "total_tokens": 11106,
+        "prompt_tokens": 10484,
+        "prompt_tokens_details": {
+          "cached_tokens": 8135
+        }
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 11766,
+      "reference_error_percent": 12.228,
+      "structural_failures": [],
+      "native_decision": null,
+      "answer": "在 Raft 规范中，严格来说并没有一个叫作“领导者心跳超时”的单一计算公式，而是由两个概念共同保证时序安全：一个是领导者周期性发送心跳的间隔（Heartbeat Interval），另一个是追随者用来判定领导者失联的**选举超时（Election Timeout）**。\n\n在论文《In Search of an Understandable Consensus Algorithm》（来源：https://raft.github.io/raft.pdf ）中，它们的设定方式与约束关系主要体现在以下几个方面：\n\n1. **选举超时的随机化选取**\n   每个追随者维持一个定时器。在指定的一段固定区间内（论文给出的典型示例是 150ms ~ 300ms），随机为每个节点选择一个具体的时间作为该周期的选举超时时长。如果在这段时间内没有收到来自当前领导者或候选人的有效通信，追随者就会递增任期并转为候选人发起选举。随机化打散超时的目的，是为了大幅降低多个节点同时发起选举导致选票被瓜分（Split Vote）的概率。\n\n2. **核心时序不等式约束（Timing Requirement）**\n   论文第 5.6 节指出，算法要稳定选举并维持领导者状态，必须满足如下时序要求：\n   `broadcastTime ≪ electionTimeout ≪ MTBF`\n   - **broadcastTime（广播时间）**：单台服务器并行向集群所有其他节点发送 RPC 并收到回复的平均时间。由于 RPC 通常需要接收方将信息持久化到稳定存储中，受底层硬件与网络影响，论文给出的典型范围约为 0.5ms 到 20ms。广播时间必须比选举超时小一个数量级，这样领导者才能稳妥地在追随者超时之前送达心跳维持权威。\n   - **electionTimeout（选举超时）**：论文指出这是需要人工设定的参数，典型选择通常落在 10ms 到 500ms 之间。\n   - **MTBF（单机平均无故障时间）**：服务器的平均故障间隔时间，通常为几个月或更长，选举超时比 MTBF 小几个数量级以确保故障发生时集群不可用时间仅占极小比例。\n\n3. **心跳间隔与选举超时的工程关系**\n   论文中明确的是“领导者周期性发送心跳（不带日志项的 AppendEntries RPC）”。在具体工程实现里，心跳发送间隔通常是一个预先配置的静态参数，而不是动态计算得出的。为了满足 `broadcastTime ≪ electionTimeout` 的条件，工程上心跳间隔一般会被配置为明显小于选举超时区间的下限（例如心跳间隔设为选举超时区间的几分之一），从而保证网络轻微抖动时心跳依然能在节点倒计时耗尽前刷新追随者的定时器。",
+      "tool_execution": false
+    },
+    {
+      "file": "focused/results.jsonl",
+      "row": 0,
+      "id": "regulations:focused:0",
+      "group": "focused:regulations:focused",
+      "http_status": 200,
+      "latency_ms": 12272,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "request_sha256": "7c8846863ff8b8495958bb5cf1e6ff93682159c02dbae432ecff3c42a170970d",
+      "usage": {
+        "completion_tokens": 584,
+        "total_tokens": 5802,
+        "prompt_tokens": 5218
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 5942,
+      "reference_error_percent": 13.875,
+      "structural_failures": [
+        "schema"
+      ],
+      "native_decision": {
+        "unresolved_updates": [],
+        "kind": "finish_with_evidence",
+        "answer_draft": "乘坐国内航班携带移动电源（充电宝）时，需严格遵守民航局的相关安全规定，核心规则主要包括以下三条：\n\n### 1. 携带方式与数量要求\n* **严禁托运**：充电宝只能在**手提行李中携带或随身携带**，严禁放入托运行李中。\n* **个人自用与数量限制**：充电宝必须是旅客个人自用，且每名旅客携带的总量**不得超过2块（个）**。\n\n---\n\n### 2. 额定能量（容量）与标识规范\n民航安检以“额定能量（瓦时，Wh）”为准，充电宝表面必须有**全面、清晰且未经涂改的标识**（包括3C认证标识）：\n* **≤ 100Wh（常见约20000mAh以内）**：标识清晰且符合要求，可直接随身携带乘机。\n* **100Wh ＜ 额定能量 ≤ 160Wh（常见约20000mAh～32000mAh之间）**：必须经所乘航空公司批准后方可随身携带。\n* **＞ 160Wh**：**严禁携带乘机**。\n* **无标识/标识不清/召回型号**：没有标注额定能量、参数磨损无法计算，或属于厂家缺陷召回批次的充电宝，一律禁止携带。\n\n---\n\n### 3. 机上放置与飞行途中的使用限制\n* **机上存放要求**：登机后应随身妥善保管，或放置在前方座椅后置口袋及随身携带的包中，**严禁将充电宝放置在机舱头顶行李架内**，防止挤压、颠簸碰撞引发险情。\n* **飞行全程禁止使用**：在飞行过程中（包括滑行、起飞、巡航、降落全阶段），**严禁开启充电宝为电子设备充电**；带有启动开关的充电宝，在飞行过程中应始终保持关闭状态。",
+        "read_sources": [
+          {
+            "issuer_and_scope": "重庆日报（引自民航/机场出行安全规定要求）",
+            "publication_or_effective_date": "2026-08-15",
+            "url": "https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html"
+          }
+        ]
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "focused/results.jsonl",
+      "row": 1,
+      "id": "raft:original:0",
+      "group": "focused:raft:original",
+      "http_status": 200,
+      "latency_ms": 8419,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "request_sha256": "f49f79f4c4bd10f57444dde591bd2a8285fc6ddab8f7f25754621f738701f91f",
+      "usage": {
+        "completion_tokens": 1629,
+        "total_tokens": 11262,
+        "prompt_tokens": 9633,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1033
+        }
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 10142,
+      "reference_error_percent": 5.284,
+      "structural_failures": [],
+      "native_decision": {
+        "read_sources": [
+          {
+            "issuer_and_scope": "Diego Ongaro & John Ousterhout (Stanford University), Raft Consensus Algorithm Paper",
+            "url": "https://raft.github.io/raft.pdf",
+            "publication_or_effective_date": "2014"
+          }
+        ],
+        "unresolved_updates": [],
+        "next_action": {
+          "arguments": {},
+          "answer_draft": "在 Raft 算法的原论文（Diego Ongaro 与 John Ousterhout 的《In Search of an Understandable Consensus Algorithm》）中，其实并没有所谓由领导者动态“计算心跳超时”的公式，而是将**广播延迟（broadcastTime）**、**心跳间隔（Heartbeat Interval）**与**选举超时（electionTimeout）**做了明确区分：\n\n1. **时序不等式约束（论文 Section 5.6）**  \n   论文对时序的核心要求是：  \n   $$broadcastTime \\ll electionTimeout \\ll MTBF$$  \n   - **broadcastTime（广播时间）**：服务器并行向集群所有节点发送 RPC 并接收响应的平均耗时（取决于网络和落盘存储技术，论文中给出典型区间约为 0.5ms～20ms）。  \n   - **electionTimeout（选举超时）**：由 Follower 独立维护并随机化（论文中推荐示例为 150ms～300ms，或根据硬件设在 10ms～500ms 范围），需比广播时间大一个数量级，以确保 Leader 有足够裕量发送心跳、避免产生不必要的选票瓜分（split votes）；同时要远小于单机平均无故障时间（MTBF）。\n\n2. **领导者心跳的触发逻辑**  \n   - 领导者并不是“计算一个心跳超时”，而是按照预设的固定**心跳间隔（Heartbeat Interval）**定期向所有 Follower 发送空日志的 `AppendEntries` RPC。  \n   - 在工程实现中（如 etcd 等系统），心跳间隔是配置项而非算法实时计算得出的。为了容忍偶发的丢包和延迟抖动，心跳间隔通常会设置得显著小于 Follower 的最小选举超时（常见做法是取选举超时的几分之一甚至十分之一），确保在 Follower 选举计时器到期前，Leader 能够成功送达多次心跳。\n\n如果你的代码或实现框架里看到了 `heartbeatTimeout` 类似的名字，它通常指的就是领导者定期发包的计时周期，或者是发送心跳 RPC 时的网络通信超时，两者都不属于 Follower 触发换届选举所用的随机选举超时哦。",
+          "kind": "finish_with_evidence"
+        }
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "focused/results.jsonl",
+      "row": 2,
+      "id": "raft:focused:0",
+      "group": "focused:raft:focused",
+      "http_status": 200,
+      "latency_ms": 6541,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "request_sha256": "c35beb6275dd601d591442dd7d49f6bd813ff81d0aa493bff6527a339b0281a9",
+      "usage": {
+        "completion_tokens": 1041,
+        "total_tokens": 7872,
+        "prompt_tokens": 6831
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 6742,
+      "reference_error_percent": -1.303,
+      "structural_failures": [],
+      "native_decision": {
+        "next_action": {
+          "arguments": {},
+          "answer_draft": "在 Raft 算法中，“心跳”和“选举超时”是维护领导者权威和触发重新选举的两个核心时序概念。严格来说，论文中**并没有一个单独称为“领导者心跳超时”的自动计算公式**，而是由两部分组成：**领导者发送心跳的时间间隔（Heartbeat Interval）**与**Follower等待心跳的选举超时时间（Election Timeout）**。\n\n两者的设定与计算逻辑如下：\n\n---\n\n### 1. 核心不等式约束（Timing Requirement）\n\n根据 Raft 原作者 Diego Ongaro 的论文《In Search of an Understandable Consensus Algorithm》（第 5.6 节），系统的可用性和稳定性依赖于以下时序关系：\n\n$$\\text{broadcastTime} \\ll \\text{electionTimeout} \\ll \\text{MTBF}$$\n\n* **$\\text{broadcastTime}$（广播时间）**：领导者并行向集群所有节点发送 RPC 并收到它们响应的平均耗时（包含网络延迟、RPC 处理以及必要的落盘/持久化时间）。通常在 $0.5\\,\\text{ms} \\sim 20\\,\\text{ms}$ 之间。\n* **$\\text{electionTimeout}$（选举超时时间）**：Follower 在未收到 Leader 心跳或日志时，触发新一轮选举的等待时间。通常在 $10\\,\\text{ms} \\sim 500\\,\\text{ms}$。\n* **$\\text{MTBF}$（平均故障间隔时间）**：单台服务器发生崩溃的平均时间间隔，通常在数周或数月以上。\n\n**核心逻辑**：\n领导者发送心跳的间隔（以及广播用时）必须**远小于**选举超时时间（通常建议差一个数量级，如 $5 \\sim 10$ 倍），确保领导者有足够机会在 Follower 超时前把心跳送到，避免因网络抖动引起不必要的重新选举。\n\n---\n\n### 2. 心跳间隔（Heartbeat Interval）的计算与设定\n\n* **Leader 的发送逻辑**：Leader 并不会“计算超时”，而是持有一个周期性定时器（Ticker）。只要在当前任期内，Leader 就会按固定的时间间隔向所有 Follower 发送不包含日志条目的 `AppendEntries` RPC 作为心跳。\n* **工程实践取值**：\n  * 通常设定为 `electionTimeout` 的 $\\frac{1}{10} \\sim \\frac{1}{3}$。\n  * 例如在 etcd 中，默认 `heartbeat-interval` 为 $100\\,\\text{ms}$，而 `election-timeout` 默认推荐为 $1000\\,\\text{ms}$（比率为 1:10）。\n\n---\n\n### 3. Follower 端选举超时（Election Timeout）的随机化计算\n\n为了防止多个 Follower 在 Leader 挂掉时同时超时变为 Candidate、造成瓜分选票（Split Votes）而导致选举失败，Raft 采用**随机化计时器（Randomized Election Timeout）**机制：\n\n1. **区间范围**：每个节点在固定的区间 $[T_{\\min}, T_{\\max}]$ 内随机选择一个超时时间（例如经典的 $150\\,\\text{ms} \\sim 300\\,\\text{ms}$，或工程中以基准值的 $1 \\times \\sim 2 \\times$ 波动）。\n2. **重置触发点**：\n   * 收到合法 Leader 的心跳或日志追加请求时，重置定时器并重新抽取随机值；\n   * 为其他候选人投票后，重置定时器；\n   * 自身选举失败或超时发起新一轮选举时，重新抽取随机值。\n\n### 总结\n\n* **领导者（Leader）**：按照固定的周期 $T_{\\text{heartbeat}}$（满足 $T_{\\text{heartbeat}} + \\text{broadcastTime} < \\text{electionTimeout}$）主动推送心跳。\n* **跟随者（Follower）**：倒计时随机的 $T_{\\text{election}}$。如果在计时结束前没有收到 Leader 的心跳，判定 Leader 失联，切换为 Candidate 发起新一轮选举。",
+          "kind": "finish_with_evidence"
+        },
+        "unresolved_updates": [],
+        "read_sources": [
+          {
+            "publication_or_effective_date": "2014",
+            "url": "https://raft.github.io/raft.pdf",
+            "issuer_and_scope": "Diego Ongaro and John Ousterhout (Stanford University), 'In Search of an Understandable Consensus Algorithm' (Raft paper), Section 5.6 Timing and availability"
+          }
+        ]
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "focused/results.jsonl",
+      "row": 3,
+      "id": "regulations:focused:1",
+      "group": "focused:regulations:focused",
+      "http_status": 200,
+      "latency_ms": 8851,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "request_sha256": "7c8846863ff8b8495958bb5cf1e6ff93682159c02dbae432ecff3c42a170970d",
+      "usage": {
+        "completion_tokens": 842,
+        "total_tokens": 6060,
+        "prompt_tokens": 5218,
+        "completion_tokens_details": {
+          "reasoning_tokens": 180
+        }
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 5942,
+      "reference_error_percent": 13.875,
+      "structural_failures": [],
+      "native_decision": {
+        "next_action": {
+          "arguments": {},
+          "answer_draft": "乘坐中国国内民航航班时，携带移动电源（充电宝）须严格遵守中国民用航空局及相关行业安检安全规定。以下是三条具体的明确规则：\n\n### 1. 额定能量与数量限制\n* **≤ 100Wh（瓦时）**：通常对应的常见容量约为 20000mAh（标称电压 3.7V 左右时折算为 74Wh），在参数清晰合规的情况下，旅客无需经航空公司批准即可直接随身携带。\n* **100Wh ＜ 额定能量 ≤ 160Wh**：必须在办理乘机手续时向航空公司申请并获得批准后方可携带。\n* **＞ 160Wh**：严禁随身携带乘机。\n* **数量限制**：每位旅客随身携带的充电宝总量**不得超过2块**，且仅限个人自用。\n\n---\n\n### 2. 携带方式与产品标识资质\n* **严禁托运，只能随身携带**：充电宝绝对禁止放入托运行李中，只能置于随身手提行李或随身贴身携带。\n* **标识完整与认证要求**：充电宝外壳上的额定能量、电压、容量等参数必须全面、清晰可辨（“三无”或磨损导致无法辨别参数的充电宝一律禁止携带乘机）。\n* **强制性认证与合规**：境内航班要求携带的充电宝须具有清晰的 **3C 认证标识**；凡被国家质检或生产厂家明确召回的型号/批次，以及无 3C 标识、标识磨损不清的充电宝，禁止带上飞机。\n\n---\n\n### 3. 客舱内存放与机上使用限制\n* **机上存放位置要求**：登机后，充电宝**严禁放入机舱头顶行李架**中，以防止因行李挤压或摩擦引发安全隐患；旅客须将其随身携带，或放置于前方座椅后背的置物袋、随身背包中。\n* **飞行途中严禁使用**：在飞机滑行、起飞、巡航及降落的整个飞行过程中，**严禁使用充电宝为手机、平板等任何电子设备充电**，并应始终关闭充电宝自身带有开关的电源开关。",
+          "kind": "finish_with_evidence"
+        },
+        "unresolved_updates": [],
+        "read_sources": [
+          {
+            "publication_or_effective_date": "2026-08-15",
+            "issuer_and_scope": "重庆日报转引重庆机场（重庆飞Fly）发布的民航旅客携带充电宝乘机规定",
+            "url": "https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html"
+          }
+        ]
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "focused/results.jsonl",
+      "row": 4,
+      "id": "raft:original:1",
+      "group": "focused:raft:original",
+      "http_status": 200,
+      "latency_ms": 11090,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "request_sha256": "f49f79f4c4bd10f57444dde591bd2a8285fc6ddab8f7f25754621f738701f91f",
+      "usage": {
+        "completion_tokens": 1832,
+        "total_tokens": 11465,
+        "prompt_tokens": 9633,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1274
+        }
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 10142,
+      "reference_error_percent": 5.284,
+      "structural_failures": [],
+      "native_decision": {
+        "unresolved_updates": [],
+        "next_action": {
+          "answer_draft": "在 Raft 原始论文（*In Search of an Understandable Consensus Algorithm*）中，其实并没有一个单独计算的“领导者心跳超时”公式，大家平时讨论时，通常指的是两个容易混淆的概念：Leader 发送心跳的**心跳间隔（Heartbeat Interval）**，以及 Follower 判定 Leader 失联的**选举超时（Election Timeout）**。\n\n按照论文第 5.6 节给出的时序约束，系统需要满足以下核心不等式：\n`broadcastTime ≪ electionTimeout ≪ MTBF`\n\n具体考量主要体现在这几个层面：\n1. **广播时间（broadcastTime）**：是系统的底层属性，指一个节点并行向集群所有节点发送 RPC 并收到回复的平均耗时（取决于网络往返与日志落盘持久化速度，论文中典型范围约为 0.5ms 至 20ms）。\n2. **选举超时（Election Timeout）**：为了避免选票瓜分（split vote），Follower 会在一段随机区间内（论文示例为 150ms ~ 300ms，或根据硬件设在 10ms ~ 500ms）随机选取超时时长。\n3. **心跳间隔（Heartbeat Interval）**：Leader 必须以远小于选举超时的频率（通常小一个数量级，且大于 broadcastTime）周期性发送空的 `AppendEntries` RPC。这样可以确保即使个别网络抖动，心跳也能在 Follower 的选举计时器到期前送达并重置计时。\n\n规范本身并没有硬编码固定的数值公式，具体参数属于工程实现的选择。例如像 etcd 这类工业级实现中，通常会将心跳间隔与选举超时设为相对比例（常见的经验值是心跳间隔占选举超时的 1/5 到 1/10，比如心跳 100ms、选举超时 1000ms），只要确保网络往返耗时远小于心跳间隔、心跳间隔又远小于选举超时即可。",
+          "arguments": {},
+          "kind": "finish_with_evidence"
+        },
+        "read_sources": [
+          {
+            "issuer_and_scope": "Raft original paper by Diego Ongaro and John Ousterhout (Stanford University), Section 5.6 Timing and availability",
+            "url": "https://raft.github.io/raft.pdf",
+            "publication_or_effective_date": "2014"
+          }
+        ]
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "focused/results.jsonl",
+      "row": 5,
+      "id": "raft:focused:1",
+      "group": "focused:raft:focused",
+      "http_status": 200,
+      "latency_ms": 18086,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "request_sha256": "c35beb6275dd601d591442dd7d49f6bd813ff81d0aa493bff6527a339b0281a9",
+      "usage": {
+        "completion_tokens": 2306,
+        "total_tokens": 9137,
+        "prompt_tokens": 6831,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1055
+        }
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 6742,
+      "reference_error_percent": -1.303,
+      "structural_failures": [],
+      "native_decision": {
+        "next_action": {
+          "answer_draft": "在 Raft 共识算法中，关于“领导者心跳超时”的概念，通常涉及两个侧面：一是 **领导者（Leader）发送心跳的间隔（Heartbeat Interval）**；二是 **跟随者（Follower）等待心跳超时的计时器，即选举超时（Election Timeout）**。\n\n在 Raft 原论文（*In Search of an Understandable Consensus Algorithm*, Ongaro & Ousterhout）与工业界主流实现中，它们的计算与设定规则如下：\n\n---\n\n### 1. 核心理论约束公式\nRaft 论文（Section 5.6 Timing and availability）指出了系统保持稳定领导者必须满足的黄金不等式：\n\n$$\\text{broadcastTime} \\ll \\text{electionTimeout} \\ll \\text{MTBF}$$\n\n各个参数的含义与考量：\n- **$\\text{broadcastTime}$（广播时间）**：Leader 并行向集群所有节点发送 RPC 并收到回复的平均往返时间（包含网络往返延时及节点落盘持久化耗时，通常在 0.5ms 到 20ms 之间）。Leader 的心跳发送间隔（Heartbeat Interval）通常基于此时间设定或略高于此时间。\n- **$\\text{electionTimeout}$（选举超时时间）**：Follower 在未收到 Leader 心跳包时判定 Leader 宕机并触发新一轮选举的超时阈值。\n  - 要求 $\\text{broadcastTime} \\ll \\text{electionTimeout}$：选举超时通常比广播/心跳时间大一个数量级（约 5~10 倍），目的是为网络抖动、消息丢失及重试留出容错空间，防止因偶发延迟引发不必要的重新选举。\n- **$\\text{MTBF}$（平均故障间隔时间）**：单台服务器发生崩溃的平均时间（通常以月为单位）。\n  - 要求 $\\text{electionTimeout} \\ll \\text{MTBF}$：系统在 Leader 崩溃后的不可用时间约为一个选举超时，让其远小于 MTBF 能保证系统可用性损失仅占整体时间的极小比例。\n\n---\n\n### 2. 选举超时（Election Timeout）的随机化计算\n为了防止所有 Follower 同时超时导致“选票瓜分”（Split Votes），Raft 规定选举超时**不是一个固定常数，而是一个在固定区间内随机选取的动态值**：\n\n1. **随机取值区间**：\n   - 论文推荐基础区间通常为 $[T, 2T]$（例如论文中给出的经典参考范围为 $150\\text{ms} \\sim 300\\text{ms}$，在局域网低延迟环境下建议设置在 $10\\text{ms} \\sim 500\\text{ms}$ 之间）。\n   - 具体计算公式：\n     $$\\text{ElectionTimeout} = T_{\\min} + \\text{random}(0, \\Delta)$$\n     例如：$T \\in [150\\text{ms}, 300\\text{ms}]$，每次重置计时器时生成独立的随机时长。\n2. **重置触发点**：\n   - 只要 Follower 收到 Leader 发来的有效心跳（空的 `AppendEntries` RPC）或日志追加请求，Follower 就刷新计时器，重新随机计算下一个超时间隔。\n   - Follower 为某一候选人成功投票，或节点发起新一轮选举成为 Candidate 时，也会重新随机生成超时时间。\n\n---\n\n### 3. 工程实现中的具体计算方式（以 etcd 为例）\n在生产级系统（如 etcd 的 raft 模块）中，通常采用 **逻辑时钟 Tick** 来避免高频操作系统系统调用的开销：\n\n- **基础时钟 Tick**：例如设定 $1 \\text{ tick} = 100\\text{ms}$。\n- **心跳间隔（Heartbeat Interval）**：\n  $$\\text{HeartbeatInterval} = 1 \\times \\text{Tick} = 100\\text{ms}$$\n  Leader 每隔 1 个 tick 发送一次空的 `AppendEntries`。\n- **选举超时（Election Timeout）**：\n  - 基准超时设为 10 个 tick（即 $1000\\text{ms}$）。\n  - 运行时随机范围计算：\n    $$\\text{RandomizedElectionTimeout} \\in [\\text{electionTimeoutTicks}, 2 \\times \\text{electionTimeoutTicks} - 1]$$\n    即 Follower 在 $10 \\sim 19$ 个 tick（$1000\\text{ms} \\sim 1900\\text{ms}$）之间随机选取超时阈值。\n- **Follower 判定超时的逻辑**：\n  - 维护一个本地计数器 `electionElapsed`。\n  - 每过一个 tick，`electionElapsed++`。\n  - 收到 Leader 心跳时，将 `electionElapsed` 清零，并重新生成下一次的随机超时阈值。\n  - 若 `electionElapsed >= RandomizedElectionTimeout`，则判定心跳超时，节点转变为 Candidate 并发起选举。",
+          "arguments": {},
+          "kind": "finish_with_evidence"
+        },
+        "unresolved_updates": [],
+        "read_sources": [
+          {
+            "publication_or_effective_date": "2014",
+            "issuer_and_scope": "Diego Ongaro and John Ousterhout, Stanford University (Raft Original Paper: 'In Search of an Understandable Consensus Algorithm')",
+            "url": "https://raft.github.io/raft.pdf"
+          }
+        ]
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "focused/results.jsonl",
+      "row": 6,
+      "id": "regulations:focused:2",
+      "group": "focused:regulations:focused",
+      "http_status": 200,
+      "latency_ms": 5559,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "request_sha256": "7c8846863ff8b8495958bb5cf1e6ff93682159c02dbae432ecff3c42a170970d",
+      "usage": {
+        "completion_tokens": 936,
+        "total_tokens": 6154,
+        "prompt_tokens": 5218,
+        "completion_tokens_details": {
+          "reasoning_tokens": 318
+        }
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 5942,
+      "reference_error_percent": 13.875,
+      "structural_failures": [
+        "schema"
+      ],
+      "native_decision": {
+        "kind": "finish_with_evidence",
+        "arguments": {},
+        "unresolved_updates": [],
+        "read_sources": [
+          {
+            "publication_or_effective_date": "2026-08-15",
+            "issuer_and_scope": "重庆日报（来源：重庆飞Fly，民航客运安全管理要求）",
+            "url": "https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html"
+          }
+        ],
+        "answer_draft": "乘坐国内民航航班携带移动电源（充电宝）时，民航局有严格的安全运输规定，具体规则主要体现在以下三个方面：\n\n### 1. 携带方式与数量限制（严禁托运）\n* **仅限随身携带**：移动电源必须由旅客作为个人自用携带，只能放在手提行李中或随身携带，**严禁放入托运行李**。\n* **限量携带**：每位旅客随身携带的充电宝总量**不得超过2块**。\n\n### 2. 额定能量与认证标识要求（容量分级与3C认证）\n* **额定能量标准**：\n  * **不超过 100Wh**（常见5V/20000mAh以内的正规充电宝通常在此范围内）：可直接随身携带乘机；\n  * **大于 100Wh 但不超过 160Wh**：必须在办理值机时向航空公司申报并获得批准后方可携带；\n  * **超过 160Wh**：严禁随身携带及托运。\n* **标识与认证**：充电宝外壳的规格参数（额定能量Wh、容量等）必须清晰可见，未标明参数或标识不清的充电宝禁止携带。同时，乘坐境内航班要求充电宝须具备清晰的**国家3C强制认证标识**，未获3C认证、3C标识磨损不清或属于官方召回批次的充电宝均无法过检登机。\n\n### 3. 客舱放置与机上使用规范（全程禁用）\n* **客舱放置位置**：登机后，充电宝应随身妥善保管，或放在前排座椅背袋及随身放置在座椅下方的包内，**严禁将充电宝放入客舱头顶行李架**（防止行李挤压导致电芯损坏自燃或起火时难以及时发现处置）。\n* **全程严禁使用**：在整个飞行途中（包括滑行、起飞、巡航和降落阶段），**严禁使用充电宝为手机等任何电子设备充电**；带有电源开关的充电宝在飞行期间应始终保持关闭状态。"
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "focused/results.jsonl",
+      "row": 7,
+      "id": "raft:original:2",
+      "group": "focused:raft:original",
+      "http_status": 200,
+      "latency_ms": 34167,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "request_sha256": "f49f79f4c4bd10f57444dde591bd2a8285fc6ddab8f7f25754621f738701f91f",
+      "usage": {
+        "completion_tokens": 1961,
+        "total_tokens": 11594,
+        "prompt_tokens": 9633,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1399
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4062
+        }
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 10142,
+      "reference_error_percent": 5.284,
+      "structural_failures": [],
+      "native_decision": {
+        "read_sources": [
+          {
+            "publication_or_effective_date": "2014",
+            "issuer_and_scope": "Raft consensus paper by Diego Ongaro and John Ousterhout, Stanford University (Section 5.2 and Section 5.6 Timing and availability)",
+            "url": "https://raft.github.io/raft.pdf"
+          }
+        ],
+        "next_action": {
+          "answer_draft": "其实在 Raft 原文规范中，并没有一个叫作“心跳超时”的固定公式，大家平时讨论时很容易把两个概念混在一起呢——一个是 Follower 等待心跳的**选举超时（Election Timeout）**，另一个是 Leader 周期性发送心跳的**心跳间隔（Heartbeat Interval）**。\n\n在 Diego Ongaro 与 John Ousterhout 的论文《In Search of an Understandable Consensus Algorithm》（参考：https://raft.github.io/raft.pdf ）中，规范的核心约束是时序不等式：\n`broadcastTime ≪ electionTimeout ≪ MTBF`\n\n这里的各项概念需要分开来看：\n1. **广播时间（broadcastTime）**：节点并行向集群所有成员发送 RPC 并收到响应的平均耗时（受网络和磁盘落盘影响，论文中提到约为 0.5ms 到 20ms）。\n2. **选举超时（electionTimeout）**：Follower 超过该时间没收到心跳就会发起选举。论文要求它比广播时间大一个数量级（典型取值在 10ms 到 500ms 之间，并在一定区间内随机化，比如 150ms 到 300ms），目的是确保心跳能可靠送达、避免频繁瓜分选票。\n3. **心跳间隔与具体数值**：规范本身没有规定死具体的时间，心跳发送间隔通常是工程实现根据网络条件选取的。在实际系统（比如 etcd 等）中，一般会将心跳间隔设为略大于或等于网络单程延迟，同时保证选举超时是心跳间隔的数倍（常见为 5 到 10 倍，例如心跳 100ms、选举超时 1000ms），这样偶发丢包才不会误触发选举。\n\n所以严格来说，它不是算出一个固定时间，而是要满足“心跳发送频率与广播延迟远小于选举超时”的时序约束哦。你手头是在调试具体的 Raft 框架实现吗？",
+          "kind": "finish_with_evidence",
+          "arguments": {}
+        },
+        "unresolved_updates": []
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "focused/results.jsonl",
+      "row": 8,
+      "id": "raft:focused:2",
+      "group": "focused:raft:focused",
+      "http_status": 200,
+      "latency_ms": 2546,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "request_sha256": "c35beb6275dd601d591442dd7d49f6bd813ff81d0aa493bff6527a339b0281a9",
+      "usage": {
+        "completion_tokens": 150,
+        "total_tokens": 6981,
+        "prompt_tokens": 6831,
+        "prompt_tokens_details": {
+          "cached_tokens": 4049
+        }
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 6742,
+      "reference_error_percent": -1.303,
+      "structural_failures": [],
+      "native_decision": {
+        "next_action": {
+          "arguments": {
+            "url": "https://raft.github.io/raft.pdf",
+            "focus": "election timeout",
+            "dns_resolver": "cloudflare"
+          },
+          "kind": "read",
+          "answer_draft": ""
+        },
+        "read_sources": [
+          {
+            "issuer_and_scope": "Ongaro & Ousterhout (Stanford University), Raft paper 'In Search of an Understandable Consensus Algorithm' (Section 5.6 Timing and availability)",
+            "url": "https://raft.github.io/raft.pdf",
+            "publication_or_effective_date": "2014"
+          }
+        ],
+        "unresolved_updates": []
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "required-update/results.jsonl",
+      "row": 0,
+      "id": "0",
+      "group": "required-update:required_post_read_update_search:required_post_read_update_search",
+      "http_status": 200,
+      "latency_ms": 5615,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "request_sha256": "2865a6dc7098fe5fe80863beb38bf2847c19b45b06d7b0a670d11c9636f8a5a7",
+      "usage": {
+        "completion_tokens": 171,
+        "total_tokens": 8265,
+        "prompt_tokens": 8094
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 9419,
+      "reference_error_percent": 16.37,
+      "structural_failures": [],
+      "native_decision": {
+        "unresolved_updates": [],
+        "next_action": {
+          "arguments": {
+            "dns_resolver": "cloudflare",
+            "query": "民航 旅客携带 充电宝 规定 调整 变化"
+          },
+          "answer_draft": "",
+          "kind": "search"
+        },
+        "read_sources": [
+          {
+            "issuer_and_scope": "重庆日报报道（来源：重庆飞Fly，关于国内航班旅客携带充电宝乘机规定及机上安全要求）",
+            "url": "https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html",
+            "publication_or_effective_date": "2026-08-15"
+          }
+        ]
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "required-update/results.jsonl",
+      "row": 1,
+      "id": "1",
+      "group": "required-update:required_post_read_update_search:required_post_read_update_search",
+      "http_status": 200,
+      "latency_ms": 3058,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "request_sha256": "2865a6dc7098fe5fe80863beb38bf2847c19b45b06d7b0a670d11c9636f8a5a7",
+      "usage": {
+        "completion_tokens": 164,
+        "total_tokens": 8258,
+        "prompt_tokens": 8094
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 9419,
+      "reference_error_percent": 16.37,
+      "structural_failures": [],
+      "native_decision": {
+        "unresolved_updates": [],
+        "next_action": {
+          "answer_draft": "",
+          "arguments": {
+            "query": "民航 旅客携带 充电宝 乘机 规定 调整 通知",
+            "dns_resolver": "cloudflare"
+          },
+          "kind": "search"
+        },
+        "read_sources": [
+          {
+            "issuer_and_scope": "重庆日报/重庆飞Fly（地方权威媒体援引民航最新规定）",
+            "url": "https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html",
+            "publication_or_effective_date": "2026-08-15"
+          }
+        ]
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "required-update/results.jsonl",
+      "row": 2,
+      "id": "2",
+      "group": "required-update:required_post_read_update_search:required_post_read_update_search",
+      "http_status": 200,
+      "latency_ms": 4778,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "request_sha256": "2865a6dc7098fe5fe80863beb38bf2847c19b45b06d7b0a670d11c9636f8a5a7",
+      "usage": {
+        "completion_tokens": 164,
+        "total_tokens": 8258,
+        "prompt_tokens": 8094,
+        "prompt_tokens_details": {
+          "cached_tokens": 4059
+        }
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 9419,
+      "reference_error_percent": 16.37,
+      "structural_failures": [],
+      "native_decision": {
+        "read_sources": [
+          {
+            "url": "https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html",
+            "issuer_and_scope": "重庆日报（来源：重庆飞Fly）；国内民航旅客携带充电宝乘机规范",
+            "publication_or_effective_date": "2026-08-15"
+          }
+        ],
+        "unresolved_updates": [],
+        "next_action": {
+          "kind": "search",
+          "answer_draft": "",
+          "arguments": {
+            "query": "民航 乘机 充电宝 规定 调整 变化",
+            "dns_resolver": "cloudflare"
+          }
+        }
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "same-name/results.jsonl",
+      "row": 0,
+      "id": "0",
+      "group": "same-name:publication_role_same_native_name_and_trace_scope:publication_role_same_native_name_and_trace_scope",
+      "http_status": 200,
+      "latency_ms": 3361,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "request_sha256": "3c449725f95fd5cbcb18c86465e98d222dbfbca9a76187d273db189947d9299b",
+      "usage": {
+        "completion_tokens": 193,
+        "total_tokens": 8536,
+        "prompt_tokens": 8343
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 9633,
+      "reference_error_percent": 15.462,
+      "structural_failures": [],
+      "native_decision": {
+        "read_sources": [
+          {
+            "issuer_and_scope": "重庆日报（转载自重庆飞Fly，关于旅客携带充电宝乘机新规定）",
+            "publication_or_effective_date": "2026-08-15",
+            "url": "https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html",
+            "publication_role": "secondary_or_republication",
+            "original_publication_url": null
+          }
+        ],
+        "unresolved_updates": [],
+        "next_action": {
+          "kind": "search",
+          "answer_draft": "",
+          "arguments": {
+            "query": "民航 旅客 充电宝 乘机 规定 3C 标识 中国民用航空局",
+            "dns_resolver": "cloudflare"
+          }
+        }
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "same-name/results.jsonl",
+      "row": 1,
+      "id": "1",
+      "group": "same-name:publication_role_same_native_name_and_trace_scope:publication_role_same_native_name_and_trace_scope",
+      "http_status": 200,
+      "latency_ms": 3146,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash",
+      "request_sha256": "3c449725f95fd5cbcb18c86465e98d222dbfbca9a76187d273db189947d9299b",
+      "usage": {
+        "completion_tokens": 197,
+        "total_tokens": 8540,
+        "prompt_tokens": 8343
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 9633,
+      "reference_error_percent": 15.462,
+      "structural_failures": [],
+      "native_decision": {
+        "unresolved_updates": [],
+        "read_sources": [
+          {
+            "original_publication_url": null,
+            "issuer_and_scope": "重庆日报 (转引重庆飞Fly), 报道旅客携带充电宝乘机规定及3C标识等最新要求",
+            "url": "https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html",
+            "publication_or_effective_date": "2026-08-15",
+            "publication_role": "secondary_or_republication"
+          }
+        ],
+        "next_action": {
+          "arguments": {
+            "dns_resolver": "cloudflare",
+            "query": "民航 充电宝 携带 规定 3C 网站 caac.gov.cn"
+          },
+          "answer_draft": "",
+          "kind": "search"
+        }
+      },
+      "answer": null,
+      "tool_execution": false
+    },
+    {
+      "file": "same-name/results.jsonl",
+      "row": 2,
+      "id": "2",
+      "group": "same-name:publication_role_same_native_name_and_trace_scope:publication_role_same_native_name_and_trace_scope",
+      "http_status": 200,
+      "latency_ms": 2550,
+      "requested_model": "gemini-3.8-flash-high",
+      "response_model": "gemini-3.8-flash-control",
+      "request_sha256": "3c449725f95fd5cbcb18c86465e98d222dbfbca9a76187d273db189947d9299b",
+      "usage": {
+        "completion_tokens": 183,
+        "total_tokens": 8526,
+        "prompt_tokens": 8343
+      },
+      "cl100k_chat_json_v1_estimated_tokens": 9633,
+      "reference_error_percent": 15.462,
+      "structural_failures": [],
+      "native_decision": {
+        "unresolved_updates": [],
+        "read_sources": [
+          {
+            "original_publication_url": null,
+            "issuer_and_scope": "重庆日报转引重庆飞Fly关于充电宝乘机规定的报道",
+            "publication_role": "secondary_or_republication",
+            "url": "https://www.cqrb.cn/minshengdongxian/2026-08-15/2751630_pc.html",
+            "publication_or_effective_date": "2026-08-15"
+          }
+        ],
+        "next_action": {
+          "kind": "search",
+          "answer_draft": "",
+          "arguments": {
+            "dns_resolver": "cloudflare",
+            "query": "民航局 旅客 充电宝 乘机 3C标识 规定"
+          }
+        }
+      },
+      "answer": null,
+      "tool_execution": false
+    }
+  ]
+}

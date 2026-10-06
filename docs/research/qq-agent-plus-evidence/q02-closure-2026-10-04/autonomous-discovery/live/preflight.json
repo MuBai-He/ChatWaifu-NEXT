@@ -1,0 +1,21 @@
+{
+  "isolated_python_files": 413,
+  "changed_from_v40": [
+    "services/runtime/tests/test_runtime_source_evaluation.py",
+    "tools/evaluate_character_scenarios.py",
+    "tools/runtime_source_evaluation.py"
+  ],
+  "selected_code_sha256": {
+    "services/runtime/tests/test_runtime_source_evaluation.py": "a42818c924bdb8dca88efd33c3f6efbe0b1d041cc884183d7e214b3703ef9d63",
+    "tools/evaluate_character_scenarios.py": "4717ed0c444062485b6c518e5dc5bc041071cd5372e23d8edc2d019c48775723",
+    "tools/runtime_source_evaluation.py": "a157bbd3e69a0dc624a96e9e2f85f44553244034faef5c425952868e86bd01f5"
+  },
+  "production_reader_sha256": "9095b832c38f799b90eb1243c06f0690694e78fc9b2535604e5780047e51cf37",
+  "production_reader_image_id": "sha256:76646f4e6d20c9514828b15e68487aafbb0fd15b52d2666a76891ee7d4b40c17",
+  "production_searxng_settings_sha256": "e3ce12a176b2a1dfd976e7da24766738703e557c63364b2b4eea97fc604641bc",
+  "additional_legacy_test_fixture": "docs/research/qq-agent-plus-evidence/character_scenarios_ab_demo_v2/results.jsonl",
+  "model_http_attempts": 0,
+  "system_scope_runtime_state": "inactive",
+  "user_scope_runtime_state": "active",
+  "user_scope_state_query_returncode": 0
+}

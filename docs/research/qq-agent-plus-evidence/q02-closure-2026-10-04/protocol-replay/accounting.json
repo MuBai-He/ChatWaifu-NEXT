@@ -1,0 +1,30 @@
+{
+  "attempts": 5,
+  "format_valid": 4,
+  "unknown_tool": 1,
+  "actual_source_execution": false,
+  "usage": {
+    "prompt_tokens": {
+      "reported_count": 5,
+      "known_subtotal": 58480
+    },
+    "completion_tokens": {
+      "reported_count": 5,
+      "known_subtotal": 1692
+    },
+    "total_tokens": {
+      "reported_count": 5,
+      "known_subtotal": 62250
+    }
+  },
+  "reasoning_reported_count": 2,
+  "reasoning_known_subtotal": 2078,
+  "latencies_ms": [
+    3085,
+    2569,
+    2774,
+    3635,
+    9968
+  ],
+  "original_v30_failure_cause": "unproven"
+}

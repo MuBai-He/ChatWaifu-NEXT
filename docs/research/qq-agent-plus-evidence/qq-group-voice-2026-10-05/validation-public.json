@@ -1,0 +1,81 @@
+{
+  "product_commit": "d1714b5756907b875efb597764a38f0bab36a039",
+  "branch": "mubai/messaging-short-replies",
+  "no_agy": true,
+  "source_validation": {
+    "python_full": {
+      "tests": "3832",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "46",
+      "time": "241.482"
+    },
+    "related_python_final": {
+      "tests": "159",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "36.761"
+    },
+    "linux_prior_regression": {
+      "tests": "354",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "174.773",
+      "scope": "354 related regressions before final two admission regex additions; final changed module/tests independently verified in 65-case Linux run"
+    },
+    "linux_final_focused": {
+      "tests": "65",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "25.934"
+    }
+  },
+  "protocol_typescript_tests": 111,
+  "web_tests": 412,
+  "web_typecheck_lint_and_build_passed": true,
+  "web_artifact_isolation_passed": true,
+  "python_strict_types_and_product_ruff_and_format_passed": true,
+  "global_ruff_existing_findings": {
+    "findings": 284,
+    "existing_evidence_scripts": 19,
+    "in_feature_changed_files": 0,
+    "scope": "global CI lint is not green; these unmodified evidence scripts were not repaired as part of this voice feature"
+  },
+  "migration": "populated schema 42 to 43; old columns/facts/checksums retained, default-off route/version flags",
+  "covered_boundaries": [
+    "two current authorized group speakers",
+    "same group next ordinary message is text",
+    "default-off other group",
+    "old operator update preserves flag",
+    "unmentioned/quoted/historical/definition questions do not grant voice",
+    "model may choose text",
+    "group audio rejection keeps one truthful fallback and audit",
+    "new mention/disable/membership/reconnect/late TTS revoke old generation",
+    "unknown result survives reconnect without replay",
+    "manual/shared other skills remain denied",
+    "unchanged private voice and channel regressions"
+  ],
+  "failures_before_freeze": [
+    {
+      "type": "production compatibility",
+      "detail": "normal idempotent fixed-plan mismatch must keep ChannelConflictError; restored without relaxing completed-generation guard"
+    },
+    {
+      "type": "test adapter contract",
+      "detail": "route-update atomic-transition spy gained allow_requested_voice argument and still calls actual repository"
+    },
+    {
+      "type": "admission boundary",
+      "detail": "definition/discussion of voice/read-aloud must not grant tool; narrowed regex and added cases"
+    }
+  ],
+  "physical_qq_playback": "pending; simulated OneBot/TTS and real provider dry selection do not count as phone acceptance",
+  "full_q02": "not accepted by this slice",
+  "evidence_collector_repairs": [
+    "initial external pytest probe lacked explicit repository config; fixed setup before any provider requests were sent",
+    "systemd baseline trimmed trailing newline but readback did not; normalization fixed without changing identity checks"
+  ]
+}

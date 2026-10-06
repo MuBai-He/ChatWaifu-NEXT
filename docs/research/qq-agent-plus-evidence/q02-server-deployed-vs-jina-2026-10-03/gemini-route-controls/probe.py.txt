@@ -1,0 +1,59 @@
+"""Nine bounded same-evidence controls; no new source fetches or tool executions."""
+import asyncio
+import hashlib
+import json
+import sys
+from dataclasses import asdict, replace
+from pathlib import Path
+from uuid import UUID, uuid4
+
+root = Path('/tmp/cw2-q02-wire-eval')
+sys.path[:0] = [str(root/'services/runtime/src'), str(root/'packages/protocol-python/src'), str(root/'packages/model-worker-sdk-python/src'), '/tmp/cw2-q02-eval-deps', str(root)]
+from chatwaifu_runtime.agent.input_budget import fit_input_budget
+from chatwaifu_runtime.agent.tool_calling import _FINAL_TOOL_POLICY
+from chatwaifu_runtime.providers.contracts import LlmRequest, LlmInputBudget, LlmInputBudgetReport, LlmToolDefinition, LlmToolExchange, LlmToolCall, LlmToolResult
+from chatwaifu_runtime.providers.openai_compatible import OpenAiCompatibleLlmProvider, build_messages, build_chat_completions_payload
+from tools.runtime_source_evaluation import _RecordedProvider
+
+def digest(value):
+    return hashlib.sha256(json.dumps(value,ensure_ascii=False,sort_keys=True,default=str).encode()).hexdigest()
+
+def restore(data):
+    raw=dict(data)
+    raw['generation_id']=UUID(raw['generation_id'])
+    for field in ('context','history'):
+        raw[field]=tuple(map(tuple,raw[field]))
+    assert raw['images']==[]
+    raw['images']=()
+    raw['recalled_memory_texts']=tuple(raw['recalled_memory_texts'])
+    raw['tools']=tuple(LlmToolDefinition(**t) for t in raw['tools'])
+    raw['tool_exchanges']=tuple(LlmToolExchange(e['assistant_text'],tuple(LlmToolCall(**c) for c in e['calls']),tuple(LlmToolResult(**r) for r in e['results'])) for e in raw['tool_exchanges'])
+    raw['input_budget']=LlmInputBudget(**raw['input_budget']) if raw['input_budget'] else None
+    raw['input_budget_report']=LlmInputBudgetReport(**raw['input_budget_report']) if raw['input_budget_report'] else None
+    return LlmRequest(**raw)
+
+async def main():
+    base=Path('/tmp/cw2-q02-wire-probe-20261003')
+    rows=[json.loads(l) for l in (base/'actual-provider-payloads.jsonl').read_text().splitlines()]
+    original=restore([r for r in rows if len(r['request']['tool_exchanges'])==3][-1]['request'])
+    out=base/'gemini-route-controls';out.mkdir(exist_ok=False)
+    key=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+    models=['gemini-3.1-pro-low','gemini-pro-agent']
+    (out/'metadata.json').write_text(json.dumps({'scope':'Same exact original character/source/history/budget; alternate Gemini endpoint aliases advertised by /models; model identity behind aliases is unverified; no production route changes','models':models,'repeats':3,'source_tools_executed':0,'release_approved':False},ensure_ascii=False,indent=2)+'\n')
+    providers={model:_RecordedProvider(OpenAiCompatibleLlmProvider(base_url='https://mubai.website:8318/v1',model=model,api_key=key,timeout_seconds=120,request_usage=True),out/(model+'-provider-rounds.jsonl'),3) for model in models}
+    for repeat in range(3):
+        for model in models[repeat%2:]+models[:repeat%2]:
+            request=fit_input_budget(replace(original,generation_id=uuid4(),tools=(),tool_choice='auto',input_budget_report=None))
+            payload=build_chat_completions_payload(model,request,build_messages(request),request_usage=True)
+            sample=f'{model}:r{repeat}'
+            (out/f'{sample}-request.json').write_text(json.dumps(payload,ensure_ascii=False,indent=2)+'\n')
+            provider=providers[model];provider.sample_key=sample
+            error=None
+            try:
+                async for _event in provider.stream(request):pass
+            except Exception as exc:error=type(exc).__name__
+            call=provider.calls[-1]
+            result={'sample_key':sample,'error_type':error,'raw_reply':call['text'],'finish_reason':call['finish_reason'],'requested_calls':call['requested_calls'],'usage':call['usage'],'latency_ms':call['latency_ms'],'input_budget_report':asdict(request.input_budget_report),'payload_sha256':digest(payload)}
+            with (out/'results.jsonl').open('a') as f:f.write(json.dumps(result,ensure_ascii=False)+'\n')
+            print(json.dumps({'sample':sample,'finish':call['finish_reason'],'characters':len(call['text']),'error':error}),flush=True)
+if __name__=='__main__': asyncio.run(main())

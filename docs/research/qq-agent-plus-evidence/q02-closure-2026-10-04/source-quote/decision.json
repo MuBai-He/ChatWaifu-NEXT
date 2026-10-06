@@ -1,0 +1,15 @@
+{
+  "prototype_version": "2.0",
+  "adopted": false,
+  "quote_only_variants_closed": true,
+  "production_integration_implemented": false,
+  "source_wording_binding_observed": true,
+  "known_structured_gap_retained_in_both_airchina_controls": true,
+  "typed_gap_retention_not_tested_for_icao_historical_prefix": true,
+  "quality_gate_passed": false,
+  "new_role_candidate": false,
+  "candidate_persona": "closure-c1 remains unchanged and rejected",
+  "full_role_ab_started": false,
+  "no_agy": true,
+  "next_dependency": "separate bounded completed-generation unresolved-coverage state and source-reference audit from natural-language presentation; require complete frozen four-turn Runtime publication review before retrieval/role/full A-B gates"
+}

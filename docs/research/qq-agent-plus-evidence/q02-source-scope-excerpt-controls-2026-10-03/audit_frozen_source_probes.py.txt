@@ -1,0 +1,63 @@
+"""Audit actual frozen-input probes; structural checks are not quality approval."""
+import hashlib,json,math,sys
+from collections import Counter,defaultdict
+from pathlib import Path
+from jsonschema import Draft202012Validator
+from chatwaifu_runtime.providers.input_estimation import count_reference_tokens
+root=Path(sys.argv[1])
+rows=[]
+for file in sorted(root.glob('*/results.jsonl')):
+ for i,line in enumerate(file.read_text().splitlines()):
+  r=json.loads(line);req=r['request'];resp=r['response']
+  ident=r.get('key',r.get('id',str(r.get('repeat'))))
+  failures=[]
+  computed=hashlib.sha256(json.dumps(req,ensure_ascii=False,sort_keys=True).encode()).hexdigest()
+  if computed!=r['request_sha256']:failures.append('request_hash')
+  if r['http_status']!=200:failures.append('http_status')
+  known=set();read={}
+  for m in req['messages']:
+   if m['role']!='tool':continue
+   value=json.loads(m['content']);c=value.get('executed_call',{})
+   value=value.get('executed_result',value)
+   if not value.get('ok'):continue
+   d=value.get('data',{})
+   if isinstance(d.get('text'),str) and d['text'].strip():
+    for u in [d.get('url'),c.get('arguments',{}).get('url')]:
+     if u:read[u]=d['text'];known.add(u)
+   for item in d.get('results',[])+d.get('links',[]):
+    if item.get('url'):known.add(item['url'])
+  choice=resp['choices'][0];msg=choice['message'];calls=msg.get('tool_calls') or []
+  decision=None;action=None
+  if req.get('tools'):
+   if len(calls)!=1:failures.append('single_native_call')
+   else:
+    f=calls[0]['function'];expected=req['tools'][0]['function']
+    if f['name']!=expected['name']:failures.append('native_function_name')
+    try:decision=json.loads(f['arguments'])
+    except Exception:failures.append('invalid_json')
+    if decision is not None:
+     if not Draft202012Validator(expected['parameters']).is_valid(decision):failures.append('schema')
+     action=decision.get('next_action',{})
+     for source in decision.get('read_sources',[]):
+      if source['url'] not in read:failures.append('unread_source_url')
+      u=source.get('original_publication_url')
+      if u and u not in read:failures.append('unread_original_url')
+      quote=source.get('publisher_attribution_quote')
+      if quote and ' '.join(quote.split()) not in ' '.join(read.get(source['url'],'').split()):failures.append('unmatched_attribution_quote')
+     if any(s['url'] not in known for s in decision.get('unresolved_updates',[])):failures.append('undiscovered_pending_url')
+  elif calls:failures.append('unexpected_tool_call')
+  if any(k in msg for k in ['reasoning','reasoning_content','thinking']):failures.append('implicit_reasoning_retained')
+  usage=resp.get('usage',{})
+  projection={k:req[k] for k in ('messages','tools','tool_choice') if k in req}
+  reference=count_reference_tokens(json.dumps(projection,ensure_ascii=False,separators=(',',':')))+16*len(req['messages'])+16*len(req.get('tools',[]))
+  group=file.parent.name+':'+r.get('target',r.get('id','').split(':')[0] or r.get('variant','probe'))+':'+r.get('variant',r.get('id','').split(':')[1] if ':' in r.get('id','') else '')
+  rows.append({'file':str(file.relative_to(root)),'row':i,'id':ident,'group':group,'http_status':r['http_status'],'latency_ms':r['latency_ms'],'requested_model':req['model'],'response_model':resp.get('model'),'request_sha256':computed,'usage':usage,'cl100k_chat_json_v1_estimated_tokens':reference,'reference_error_percent':round(100*(reference-usage['prompt_tokens'])/usage['prompt_tokens'],3),'structural_failures':list(dict.fromkeys(failures)),'native_decision':decision,'answer':msg.get('content'),'tool_execution':r.get('tool_execution',False)})
+groups=defaultdict(list)
+for row in rows:groups[row['group']].append(row)
+def stats(items):
+ lat=sorted(r['latency_ms'] for r in items)
+ totals={k:sum(r['usage'].get(k,0) for r in items) for k in ['prompt_tokens','completion_tokens','total_tokens']}
+ return {'requests':len(items),'http_200':sum(r['http_status']==200 for r in items),'p50_ms':lat[math.ceil(len(lat)*.5)-1],'p95_ms':lat[math.ceil(len(lat)*.95)-1],'raw_usage':totals,'usage_missing':sum(any(k not in r['usage'] for k in totals) for r in items),'structural_failure_rows':sum(bool(r['structural_failures']) for r in items),'reference_error_percent_min_max':[min(r['reference_error_percent'] for r in items),max(r['reference_error_percent'] for r in items)],'max_actual_prompt_tokens':max(r['usage']['prompt_tokens'] for r in items),'max_reference_tokens':max(r['cl100k_chat_json_v1_estimated_tokens'] for r in items),'declared_actions':dict(Counter((r['native_decision'] or {}).get('next_action',{}).get('kind','invalid_structure' if r['native_decision'] is not None else 'text') for r in items))}
+output={'scope':'Actual non-stream probes. Structures/provenance checks do not validate semantic authority, dates, fact support, final quality or Runtime execution. Raw completion may include reasoning; do not add reasoning again. No billable price verified.','totals':stats(rows),'groups':{k:stats(v) for k,v in groups.items()},'records':rows}
+(root/'accounting-and-structure-audit.json').write_text(json.dumps(output,ensure_ascii=False,indent=2)+'\n')
+print(json.dumps({'totals':output['totals'],'groups':output['groups']},ensure_ascii=False,indent=2))

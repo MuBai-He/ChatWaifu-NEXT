@@ -1,0 +1,9 @@
+{
+  "credential_scan": "pass",
+  "sha256": {
+    "metadata.json": "7d0172a7f4fc634002ebe1a6177b8199a370fee5c6e417605ce093ea03f11253",
+    "incomplete.jsonl": "93a655eddbd8fd05a45c4f4e291787f738102412f406d4e42fb5bc3d826554bc",
+    "provider-rounds.jsonl": "33bc83f8b4ea2ed88159c3bcf248be68bd41b88d0bfd1a7ff97fa79eadd41082",
+    "actual-provider-payloads.jsonl": "a16b04ffc9169b3c383974f99a150110821277428fa365ad67b3cd38cdd51195"
+  }
+}

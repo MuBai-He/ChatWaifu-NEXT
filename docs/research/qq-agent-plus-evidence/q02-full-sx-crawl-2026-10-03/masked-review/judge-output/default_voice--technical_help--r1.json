@@ -1,0 +1,61 @@
+{
+  "review_group_id": "default_voice:technical_help:r1",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "5b4b970f3fcaf9fd3104f7d832f17cb5e81ca704b7b154ec1c887d13ab0fbe11",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 508,
+    "total_tokens": 6336,
+    "prompt_tokens": 5828
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"default_voice:technical_help:r1\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均清晰准确指出默认抛出异常但其余任务不自动取消，且补充了TaskGroup与return_exceptions参数。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均准确给出 return_exceptions=True 并解释了异常作为结果元素返回及后续处理机制。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均提供了完整、语法正确且包含 isinstance 判断的代码块与运行输出示例。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均准确确认直接作为元素返回，无额外包装，并补充了堆栈和重新抛出等实用特性说明。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "default_voice:technical_help:r1",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均清晰准确指出默认抛出异常但其余任务不自动取消，且补充了TaskGroup与return_exceptions参数。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均准确给出 return_exceptions=True 并解释了异常作为结果元素返回及后续处理机制。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均提供了完整、语法正确且包含 isinstance 判断的代码块与运行输出示例。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均准确确认直接作为元素返回，无额外包装，并补充了堆栈和重新抛出等实用特性说明。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 3360
+}

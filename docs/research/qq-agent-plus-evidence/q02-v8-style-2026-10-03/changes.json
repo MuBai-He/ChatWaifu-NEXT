@@ -1,0 +1,13 @@
+{
+  "purpose": "v8 standard output contract and SearXNG relevance preservation; no persona change",
+  "files": {
+    "services/runtime/src/chatwaifu_runtime/character_kernel/prompt.py": "53f57ab43751e80478899bbf9fe53c32dbdcad2342b6c411ebdf502cb1746e42",
+    "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web_search.py": "960f8d32dbf5b5584244b217bda0f3a258e6ac288d25095b32f14abc2ba12383",
+    "packages/protocol-python/src/chatwaifu_protocol/character.py": "e0db6b114484e9c7c823bda2639b8f325e01fdd9c2d409645a19e7251e291d31",
+    "skills/builtin/web-search/chatwaifu.yaml": "7eb6882ba05993088d7a352046d78fb89ab1ce0d2995ed889d94bae555951496",
+    "skills/builtin/web-search/SKILL.md": "c550a61ec63647595236e33c63f507f4a5132e14fee7708f58f600ea8fcf7bb9",
+    "services/runtime/tests/test_public_web_search.py": "42e7720c1a06bae3b6b0a6a7724288307dbff49e156235cbb3d95551f7c46e41",
+    "services/runtime/tests/test_character_kernel.py": "5f17b5688090484f39fd00f5d0c727a0d95ef12b42bdfdfa613b6522f7312eb2"
+  },
+  "full_original_batch_frozen": true
+}

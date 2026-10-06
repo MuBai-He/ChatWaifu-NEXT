@@ -1,0 +1,29 @@
+{
+  "scope": "worktree and server isolated snapshot, not production deployment",
+  "candidate_sha256": "1010cdcebcde165d367830bb669fe8cfe81bc96bd8c6266b8d8049f338f0aa00",
+  "test_sha256": "5f6443cb21b5e9e0ee78e744cc7678108a03e729a1be11dbc339e10e0aab3ff1",
+  "before_fix": {
+    "new_checks_failed": 6,
+    "new_checks_passed": 1,
+    "later_added_eof_checks": 2
+  },
+  "local_related_tests": {
+    "passed": 155,
+    "warnings": [
+      "existing audioop deprecation"
+    ]
+  },
+  "server_adapter_tests": {
+    "passed": 46
+  },
+  "ruff": "passed",
+  "pyright": "passed",
+  "actual_endpoint_probe": {
+    "model_alias": "gemini-3.1-pro-low",
+    "responses": 3,
+    "all_stop": true,
+    "async_generator_shutdown_error_observed": false
+  },
+  "production_provider_sha256": "648a718dfe4df9f9ae52ff9b0a39084500fcb99c4fe77038738638dd43224164",
+  "production_provider_changed": false
+}

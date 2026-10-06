@@ -1,0 +1,17 @@
+{
+  "local_pytest_passed": 137,
+  "server_pytest_passed": 29,
+  "pyright_errors": 0,
+  "ruff_check_passed": true,
+  "ruff_format_changed_files": 0,
+  "server_runtime_code_fingerprints_matched": 16,
+  "unchanged_original_v36_fingerprints": 13,
+  "production_callers_for_new_module": 0,
+  "frontend_not_changed": true,
+  "existing_build_and_physical_acceptance_not_repeated": true,
+  "quality_approval": false,
+  "git_diff_check_passed": true,
+  "markdown_links_checked": 44,
+  "all_four_model_handles_terminal": true,
+  "live_q02_model_probe_processes": 0
+}

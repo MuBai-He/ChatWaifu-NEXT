@@ -1,0 +1,52 @@
+{
+  "logical_results": 36,
+  "provider_rounds": 54,
+  "actual_http_requests": 54,
+  "actual_request_system_hash_matches": 54,
+  "source_revisions": 6,
+  "revision_usage": {
+    "prompt_tokens": 66791,
+    "completion_tokens": 4813,
+    "reasoning_tokens": 11205,
+    "total_tokens": 82809
+  },
+  "revision_latency_ms": {
+    "p50": 14457,
+    "p95": 17248
+  },
+  "provider_usage": {
+    "prompt_tokens": 315379,
+    "completion_tokens": 15983,
+    "reasoning_tokens": null,
+    "total_tokens": 360608
+  },
+  "reply_latency_ms": {
+    "p50": 6210,
+    "p95": 47116
+  },
+  "tools": {
+    "web.search:succeeded": 3,
+    "web.read:succeeded": 6
+  },
+  "input_estimation": {
+    "max_provider_prompt_tokens": 14303,
+    "max_estimated_input_tokens": 18591,
+    "min_relative_error": -0.21130276895142988,
+    "max_relative_error": 0.3600646399353601,
+    "history_omitted_calls": 0,
+    "preamble_omitted_calls": 0
+  },
+  "q02_approved": false,
+  "provider_usage_known_subtotals": {
+    "prompt_tokens": 315379,
+    "completion_tokens": 15983,
+    "reasoning_tokens": 29246,
+    "total_tokens": 360608
+  },
+  "provider_usage_reported_round_counts": {
+    "prompt_tokens": 54,
+    "completion_tokens": 54,
+    "reasoning_tokens": 49,
+    "total_tokens": 54
+  }
+}

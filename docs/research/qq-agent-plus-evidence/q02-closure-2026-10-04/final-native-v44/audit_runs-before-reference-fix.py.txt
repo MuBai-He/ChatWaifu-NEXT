@@ -1,0 +1,204 @@
+"""Recompute full wire, native usage, omissions and publications; no semantic auto-approval."""
+import argparse
+import hashlib
+import json
+import sys
+from collections import Counter
+from pathlib import Path
+
+phase = Path(__file__).resolve().parent
+root = next(p for p in phase.parents if (p / "services/runtime/src").is_dir())
+sys.path[:0] = [str(root / "services/runtime/src"), str(root / "packages/protocol-python/src"),
+               str(root / "packages/model-worker-sdk-python/src")]
+from chatwaifu_runtime.providers.input_estimation import count_reference_tokens
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--write-reports", action="store_true")
+args = parser.parse_args()
+def j(p): return json.loads(p.read_text())
+def rows(p): return [json.loads(x) for x in p.read_text().splitlines() if x]
+def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
+def text_sha(s): return hashlib.sha256(s.encode()).hexdigest()
+pending = {}
+def persist(name, value):
+    assert name not in pending
+    pending[name] = value
+def reference(payload):
+    projection = {k: payload[k] for k in ("messages", "tools", "tool_choice", "response_format") if k in payload}
+    return count_reference_tokens(json.dumps(projection, ensure_ascii=False, separators=(",", ":"))) + 16 * len(payload["messages"]) + 16 * len(payload.get("tools", []))
+def percentile(values, p):
+    a = sorted(values); index = (len(a) - 1) * p; lo = int(index); hi = min(lo + 1, len(a) - 1)
+    return round(a[lo] + (a[hi] - a[lo]) * (index - lo), 3)
+def originals(payload):
+    result = []
+    for message in payload["messages"]:
+        content = message.get("content")
+        if message["role"] == "tool":
+            row = json.loads(content)
+            data = row.get("data", {})
+            if row.get("ok") and isinstance(data, dict) and isinstance(data.get("text"), str):
+                result.append({"origin": "current_tool", "url": data["url"], "body_sha256": data["body_sha256"],
+                               "text_sha256": text_sha(data["text"]), "characters": len(data["text"]), "truncated": data["truncated"]})
+        elif isinstance(content, str) and content.startswith("[PUBLIC SOURCE DATA]\n"):
+            for receipt in json.loads(content.split("\n", 1)[1])["receipts"]:
+                data = receipt.get("data", {})
+                if receipt["original_result"] == "available" and isinstance(data.get("text"), str):
+                    result.append({"origin": "prior_receipt", "url": data["url"], "body_sha256": data["body_sha256"],
+                                   "text_sha256": text_sha(data["text"]), "characters": len(data["text"]), "truncated": data["truncated"]})
+    return result
+def history_markers(payload):
+    return [{"role": m["role"], "marker": m["content"]} for m in payload["messages"]
+            if m["role"] in ("user", "assistant") and isinstance(m.get("content"), str)
+            and m["content"].startswith("[Runtime omitted an earlier ")]
+
+native, frozen = phase / "server", phase / "frozen-guard-control/server"
+for directory in (native, frozen):
+    for rel, digest in j(directory / "export-manifest.json").items(): assert sha(directory / rel) == digest, rel
+assert j(native / "source-tree-before.json") == j(native / "source-tree-after.json")
+assert j(frozen / "code-binding.json")["source_tree"] == j(native / "source-tree-after.json")
+code = j(phase.parent / "latest-history-priority/code-sha256.json")
+assert all(j(native / "source-tree-after.json")[rel] == digest for rel, digest in code.items())
+assert all(sha(root / rel) == digest for rel, digest in code.items())
+assert j(native / "plan.json") == j(phase / "plan.json")
+for rel in ("fixtures.json", "persona.md", "budget.json"):
+    assert sha(native / rel) == sha(phase / rel)
+    assert sha(phase / rel) == sha(phase.parent / "budget-reconstruction/live-four-turn" / rel)
+
+flows = rows(native / "flow-observations.jsonl")
+results = rows(native / "runtime-pilot/results.jsonl")
+assert len(flows) == len(results) == 4
+for flow, result in zip(flows, results, strict=True):
+    assert flow["reply"] == result["raw_reply"] and not flow["error_type"]
+    if flow["execution"] == "provider":
+        assert flow["reply"] == flow["trace"]["provider_calls"][-1]["text"]
+        assert not flow["runtime_fallback_events"]
+    for run in flow["trace"]["tool_runs"]:
+        assert run["state"] == "succeeded"
+        if run["skill_id"] == "web.read":
+            assert run["result"]["data"]["provider"] == "crawl4ai"
+            assert run["result"]["data"]["dns_resolver"] == "cloudflare"
+turns = rows(frozen / "turns.jsonl")
+assert len(turns) == 2
+for turn in turns:
+    assert turn["execution"] == "provider" and not turn["error_type"] and not turn["runtime_fallback_events"]
+    assert turn["reply"] == turn["provider_calls"][-1]["text"]
+assert j(frozen / "exit.json")["actual_model_http"] == 3
+assert j(frozen / "exit.json")["source_http"] == 0
+assert j(phase / "frozen-guard-control/setup-failure.json")["actual_model_http"] == 0
+assert j(phase / "frozen-guard-control/corrected-setup/setup-preflight-error.json")["actual_model_http"] == 0
+
+review = j(phase / "primary-review.json")
+replies = {r["sample_key"]: r["reply"] for r in flows + turns}
+assert len(review["entries"]) == len(replies) == 6
+for row in review["entries"]: assert row["published_reply_sha256"] == text_sha(replies[row["sample_key"]])
+assert review["cohort_counts"]["native-four-turn"] == {"model_complete": 2, "model_partial": 1, "runtime_fallback_not_graded": 1}
+assert review["cohort_counts"]["frozen-guard-control"] == {"model_complete": 0, "model_partial": 2}
+
+reports = {}
+for label, directory, journal_name, group_turns, limit in (
+    ("native-four-turn", native, "runtime-pilot/provider-rounds.jsonl", flows, 21370),
+    ("frozen-guard-control", frozen, "provider-rounds.jsonl", turns, 22341),
+):
+    journal = rows(directory / journal_name)
+    started = [r for r in journal if r["event"] == "started"]
+    finished = [r for r in journal if r["event"] == "finished"]
+    assert {r["call_id"] for r in started} == {r["call_id"] for r in finished}
+    sent, http = rows(directory / "actual-provider-payloads.jsonl"), rows(directory / "http-outcomes.jsonl")
+    assert len(started) == len(sent) == len(http)
+    observations = []
+    for wire, call, outcome in zip(sent, finished, http, strict=True):
+        if "call_id" in wire: assert wire["call_id"] == call["call_id"]
+        assert wire["sample_key"] == call["sample_key"]
+        if "sample_key" in outcome: assert outcome["sample_key"] == wire["sample_key"]
+        else: assert outcome["call_id"] == call["call_id"]
+        payload = wire["payload"]
+        assert payload["model"] == "gemini-3.8-flash-high" and payload["max_tokens"] == 8192
+        assert text_sha(json.dumps(payload, ensure_ascii=False, sort_keys=True)) == wire["payload_sha256"]
+        used, report = reference(payload), call["input_budget_report"]
+        assert report["estimated_input_tokens"] == used <= report["estimated_token_limit"] == limit
+        usage = call["usage"]
+        observations.append({"sample_key": wire["sample_key"], "call_id": call["call_id"], "http_attempt": wire["http_attempt"],
+            "reference_tokens": used, "input_limit": limit, "usage": usage,
+            "reference_bias_percent": round((used - usage["prompt_tokens"]) / usage["prompt_tokens"] * 100, 6) if usage and usage.get("prompt_tokens") else None,
+            "reported_omitted_history_indices": report["omitted_history_indices"], "actual_wire_history_markers": history_markers(payload),
+            "reported_omitted_preamble_indices": report["omitted_tool_preamble_indices"], "read_originals": originals(payload),
+            "http_elapsed_ms": outcome["elapsed_ms"]})
+    known = [r["usage"] for r in observations if r["usage"] and all(type(r["usage"].get(k)) is int for k in ("prompt_tokens", "completion_tokens", "total_tokens"))]
+    reasoning = [u["reasoning_tokens"] for u in known if type(u.get("reasoning_tokens")) is int]
+    biases = [r["reference_bias_percent"] for r in observations if r["reference_bias_percent"] is not None]
+    accounting = {"actual_http_attempts": len(sent), "logical_provider_requests": len(started), "known_usage_calls": len(known),
+        "unknown_usage_calls": len(sent) - len(known), "known_usage_subtotals": {k: sum(u[k] for u in known) for k in ("prompt_tokens", "completion_tokens", "total_tokens")},
+        "reasoning_known_calls": len(reasoning), "reasoning_unknown_calls": len(sent) - len(reasoning), "reasoning_known_subtotal": sum(reasoning),
+        "reference_range": [min(r["reference_tokens"] for r in observations), max(r["reference_tokens"] for r in observations)],
+        "bias_percent_range": [min(biases), max(biases)], "http_status_counts": dict(Counter(str(r["status"]) for r in http)),
+        "http_error_counts": dict(Counter(r["error_type"] for r in http if r["error_type"])),
+        "http_latency_p50_p95_ms": [percentile([r["elapsed_ms"] for r in http], p) for p in (.5, .95)],
+        "turn_latency_p50_p95_ms": [percentile([r["elapsed_ms"] for r in group_turns], p) for p in (.5, .95)],
+        "execution_counts": dict(Counter(r["execution"] for r in group_turns)), "first_visible_latency": None, "usd_cost": None,
+        "native_context_maximum": None, "native_output_maximum": None}
+    persist(label + "-wire-audit.json", observations)
+    persist(label + "-accounting.json", accounting)
+    reports[label] = accounting
+
+blocked = [r for r in rows(native / "guard-observations.jsonl") if r["outcome"] == "blocked"]
+assert len(blocked) == 1
+blocked = blocked[0]
+assert reference(blocked["payload"]) == 24001 and reference(blocked["fitted_payload"]) == 21683
+assert blocked["report"]["estimated_token_limit"] == 21370
+first = rows(frozen / "actual-provider-payloads.jsonl")[0]
+assert first["payload"] == blocked["fitted_payload"]
+assert text_sha(json.dumps(first["payload"], ensure_ascii=False, sort_keys=True)) == j(frozen / "plan.json")["exact_unsent_payload_sha256"]
+assert j(frozen / "admission.json")["input_limit"] == 22341
+reads = [r["result"]["data"] for r in flows[2]["trace"]["tool_runs"] if r["skill_id"] == "web.read"]
+expected_reads = {(d["url"], d["body_sha256"], text_sha(d["text"])) for d in reads}
+assert len(expected_reads) == 3
+wire_groups = rows(native / "actual-provider-payloads.jsonl")
+selected = [next(r for r in reversed(wire_groups) if ":t3:" in r["sample_key"]),
+            {"sample_key": "native_T3_unsent_review", "payload": blocked["fitted_payload"]},
+            *[r for r in wire_groups if ":t4:" in r["sample_key"]],
+            *rows(frozen / "actual-provider-payloads.jsonl")]
+integrity = []
+for wire in selected:
+    actual = {(r["url"], r["body_sha256"], r["text_sha256"]) for r in originals(wire["payload"])}
+    assert expected_reads <= actual
+    own_answer = turns[0]["reply"] if wire["sample_key"] == "frozen_guard:T4" else flows[2]["reply"] if ":t4:" in wire["sample_key"] else None
+    retained = None if own_answer is None else sum(m["role"] == "assistant" and m.get("content") == own_answer for m in wire["payload"]["messages"])
+    assert retained is None or retained == 1
+    integrity.append({"sample_key": wire["sample_key"], "http_attempt": wire.get("http_attempt"), "all_three_received_powerbank_excerpts_sent": True,
+                      "own_preceding_published_answer_retained_once": retained == 1 if retained is not None else None,
+                      "own_preceding_answer_origin": "controlled_provider_review" if wire["sample_key"] == "frozen_guard:T4" else "runtime_fallback" if own_answer is not None else None})
+persist("source-history-integrity.json", integrity)
+persist("budget-control-comparison.json", {"same_total_window": 32768, "same_output_reserve_and_cap": 8192,
+    "formula": "floor((window - output_reserve) / (1 + estimate_margin_ratio))", "operating_margins": [0.15, 0.10], "input_limits": [21370, 22341],
+    "complete_original_reference": 24001, "same_fitted_reference": 21683, "fitted_wire_identical": True,
+    "low_guard_model_http": 0, "low_guard_native_usage": None, "low_outcome": "TOOL_SOURCE_REVISION_BUDGET_REPLY",
+    "higher_allowance_control_model_http": 3, "higher_allowance_control_source_http": 0,
+    "own_answer_retained_in_T4": True, "quality_approval": False, "known_native_limits": False,
+    "is_margin_universal_error_bound": False, "production_profile_changed": False,
+    "control_metadata_limitation": "Exact blocked fitted wire was reconstructed from the last-counted request. Its carried report lists indices 1/3; actual wire also already contains the user-0 omission marker. All markers are preserved separately; the original exception report lists 0/1/3. This is control evidence construction, not an unseen production history deletion."})
+raw_search = rows(native / "raw-searxng-responses.jsonl")
+assert len(raw_search) == 4
+source_report = {"search_calls": 4, "read_calls": 5, "builtin_fallback": False, "public_read_dns": "cloudflare",
+    "raw_backend_queries": [{"query": r["query"], "engines": sorted({x["engine"] for x in r["body"]["results"]}),
+                             "unresponsive_engines": r["body"].get("unresponsive_engines")} for r in raw_search],
+    "source_http_outcomes": rows(native / "source-http-observations.jsonl"),
+    "coverage_scope": "Actual received excerpts only; no proof of 2026 nationwide/current exhaustiveness or long-term engine stability",
+    "powerbank_read_records": [{k: d[k] for k in ("url", "body_sha256", "total_characters", "text_offset", "truncated")} | {"received_characters": len(d["text"]), "received_text_sha256": text_sha(d["text"])} for d in reads]}
+persist("source-acquisition-audit.json", source_report)
+previous = j(phase.parent / "budget-reconstruction/cumulative-accounting.json")
+cumulative = {"previous_actual_http_attempts": previous["cumulative_actual_http_attempts"], "current_actual_http_attempts": sum(a["actual_http_attempts"] for a in reports.values()),
+    "cumulative_actual_http_attempts": previous["cumulative_actual_http_attempts"] + sum(a["actual_http_attempts"] for a in reports.values()),
+    "cumulative_known_usage_calls": previous["cumulative_known_usage_calls"] + sum(a["known_usage_calls"] for a in reports.values()),
+    "cumulative_unknown_usage_calls": previous["cumulative_unknown_usage_calls"] + sum(a["unknown_usage_calls"] for a in reports.values()),
+    "known_usage_subtotals": {k: previous["known_usage_subtotals"][k] + sum(a["known_usage_subtotals"][k] for a in reports.values()) for k in ("prompt_tokens", "completion_tokens", "total_tokens")},
+    "old_unknown_rows_backfilled": False, "usd_cost": None, "is_full_usage_or_cost": False, "new_setup_failures_model_http": 0}
+persist("cumulative-accounting.json", cumulative)
+for name, value in pending.items():
+    path = phase / name
+    if args.write_reports:
+        assert not path.exists(), "Never overwrite frozen evidence"
+    else: assert j(path) == value, name
+if args.write_reports:
+    for name, value in pending.items():
+        (phase / name).write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n")
+print(json.dumps({"audit": "passed", "reports": reports, "cumulative": cumulative}, ensure_ascii=False))

@@ -1,0 +1,21 @@
+{
+  "endpoint": "https://mubai.website:8318/v1/models",
+  "requested_model": "gemini-3.8-flash-high",
+  "time_utc": "2026-10-04T10:17:17.196637+00:00",
+  "model_generation_calls": 0,
+  "http_status": 200,
+  "matching_rows": [
+    {
+      "id": "gemini-3.8-flash-high",
+      "object": "model",
+      "owned_by": "antigravity"
+    }
+  ],
+  "available_field_names": [
+    [
+      "id",
+      "object",
+      "owned_by"
+    ]
+  ]
+}

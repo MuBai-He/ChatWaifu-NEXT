@@ -1,0 +1,44 @@
+import asyncio,copy,hashlib,json,time
+from datetime import datetime,timezone
+from pathlib import Path
+import httpx
+ROOT=Path('/tmp/cw2-q02-plan-length-control-20261003')
+def stamp():return datetime.now(timezone.utc).isoformat()
+def append(name,value):
+ with (ROOT/name).open('a') as f:f.write(json.dumps(value,ensure_ascii=False)+'\n')
+async def main():
+ anchors=json.loads((ROOT/'anchors.json').read_text());assert len(anchors)==8
+ assert not (ROOT/'attempts.jsonl').exists(),'Existing batch must be inspected, not restarted'
+ secret=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+ async with httpx.AsyncClient(timeout=90,trust_env=False) as client:
+  for anchor in anchors:
+   for sequence,condition in enumerate(['normal','short','short','normal']):
+    payload=copy.deepcopy(anchor['payload']);assert payload['model']=='gemini-3.8-flash-high'
+    if condition=='short':payload['messages'][0]['content']=payload['messages'][0]['content'].replace('response length normal.','response length short.',1)
+    body=json.dumps(payload,ensure_ascii=False,separators=(',',':')).encode()
+    assert secret.encode() not in body
+    item={'id':f"{anchor['anchor_id']}:{sequence}",'anchor_id':anchor['anchor_id'],'sequence':sequence,'condition':condition,'started_at':stamp(),'payload_sha256':hashlib.sha256(body).hexdigest()}
+    append('attempts.jsonl',dict(item,event='started'))
+    append('actual-requests.jsonl',dict(item,payload=payload))
+    started=time.perf_counter()
+    try:
+     response=await client.post('https://mubai.website:8318/v1/chat/completions',headers={'Authorization':f'Bearer {secret}','Content-Type':'application/json'},content=body)
+     response.raise_for_status();data=response.json();choice=data['choices'][0];message=choice['message']
+     raw=message.get('content');assert isinstance(raw,str) and raw.strip() and not message.get('tool_calls')
+     model=data.get('model');assert model is None or (isinstance(model,str) and len(model)<=256 and model.isprintable())
+     rawusage=data.get('usage');usage=None
+     if isinstance(rawusage,dict):
+      usage={k:rawusage.get(k) for k in ['prompt_tokens','completion_tokens','total_tokens']}
+      details=rawusage.get('completion_tokens_details') or {};usage['reasoning_tokens']=details.get('reasoning_tokens') if isinstance(details,dict) else None
+     record=dict(item,event='finished',latency_ms=round((time.perf_counter()-started)*1000),finished_at=stamp(),http_status=response.status_code,reported_model=model,usage=usage,reply=raw,finish_reason=choice.get('finish_reason'))
+     assert secret not in json.dumps(record)
+     append('results.jsonl',record);append('attempts.jsonl',{k:v for k,v in record.items() if k!='reply'})
+    except Exception as exc:
+     append('attempts.jsonl',dict(item,event='failed',error_type=type(exc).__name__,latency_ms=round((time.perf_counter()-started)*1000)))
+     raise RuntimeError(type(exc).__name__) from None
+   print(json.dumps({'completed_anchor':anchor['anchor_id']}),flush=True)
+try:
+ asyncio.run(main())
+except BaseException:
+ (ROOT/'exit-code.json').write_text(json.dumps({'exit_code':1})+'\n');raise
+else:(ROOT/'exit-code.json').write_text(json.dumps({'exit_code':0})+'\n')

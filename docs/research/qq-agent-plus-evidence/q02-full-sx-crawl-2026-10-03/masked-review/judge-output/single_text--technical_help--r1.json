@@ -1,0 +1,61 @@
+{
+  "review_group_id": "single_text:technical_help:r1",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "d3fea0fae3fd686495ec092646285812063360d30426584ff5e39e3a8affafed",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 553,
+    "total_tokens": 6176,
+    "prompt_tokens": 5623
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"single_text:technical_help:r1\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"两者均准确指明默认行为及其他任务不自动取消的特性。C2 额外补充了 Python 3.11 TaskGroup 的最佳实践，技术视野更完善。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"两者均准确给出 return_exceptions=True 及机制，C2 主动提供了清晰完整的代码演示，解释更加透彻到位。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"两者均给出了完整可运行的代码块，C2 贴心附带了运行输出示例，排版和可读性略优。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"两者均明确确认直接作为元素返回，无额外封装。C2 进一步补充了 BaseException 与 raise item 的实践细节，技术更严谨。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "single_text:technical_help:r1",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "两者均准确指明默认行为及其他任务不自动取消的特性。C2 额外补充了 Python 3.11 TaskGroup 的最佳实践，技术视野更完善。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "两者均准确给出 return_exceptions=True 及机制，C2 主动提供了清晰完整的代码演示，解释更加透彻到位。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "两者均给出了完整可运行的代码块，C2 贴心附带了运行输出示例，排版和可读性略优。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "两者均明确确认直接作为元素返回，无额外封装。C2 进一步补充了 BaseException 与 raise item 的实践细节，技术更严谨。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 3701
+}

@@ -1,0 +1,133 @@
+{
+  "files": [
+    {
+      "path": "audit.py.txt",
+      "sha256": "4d57a06252011971a063fb40cb8d5c22343aa8f453fc0de4b33238130168a687",
+      "bytes": 4137
+    },
+    {
+      "path": "baseline-audit.json",
+      "sha256": "f604d59ac9de0e86b3da26d378b13b5ccfac59802e04e39b4ded9e5b0468d7c9",
+      "bytes": 138739
+    },
+    {
+      "path": "baseline-http.json",
+      "sha256": "8f551c343d5e4fb0f71081f0b9f28f2937ce532dc8c40cce0042ffff83578588",
+      "bytes": 1416957
+    },
+    {
+      "path": "baseline-plan.json",
+      "sha256": "5b147981e2120032505b8e6cff434ea450ad7a088a54e4bf213d2378c4f67f3b",
+      "bytes": 1890
+    },
+    {
+      "path": "baseline-requests.json",
+      "sha256": "155186ff32a520478e889a620f85929be457769d06cd3bf8b19193828f875fee",
+      "bytes": 537892
+    },
+    {
+      "path": "baseline-streams.json",
+      "sha256": "a77e3fa60b14dc8e8c0f0b7edd86bd05bf6bc84c609fa37b7c486b8c08078219",
+      "bytes": 266094
+    },
+    {
+      "path": "endpoint-metadata.json",
+      "sha256": "d1b8b912b3f108272d1d93e714c142ab21540441366a4bf21bd1fa81b20190aa",
+      "bytes": 1169
+    },
+    {
+      "path": "experimental_prompt.py.txt",
+      "sha256": "a481779e1670e583bc756b51920ed43976987f6e7897e65c0e0c9455465f8bb4",
+      "bytes": 20236
+    },
+    {
+      "path": "format-quality-audit.json",
+      "sha256": "93bd306e034accfd474bd4b2ed317541f003d037108051f826ab174ed766edc3",
+      "bytes": 2946
+    },
+    {
+      "path": "materials.json",
+      "sha256": "5abbf5738c22cb7d6b2dd1f73592fda0d41af057e3bff64fe6fd0d632f52ecd5",
+      "bytes": 94467
+    },
+    {
+      "path": "output-enforcement.py.txt",
+      "sha256": "86194ef59a0b99db278b337d5cc01961385fc09a531c6b065080ec9843b25765",
+      "bytes": 1232
+    },
+    {
+      "path": "output-probes.json",
+      "sha256": "cb72559156463b7946117523f2c3de2540509c5e10d05e15bcc399aaf9a939f1",
+      "bytes": 7674
+    },
+    {
+      "path": "post-implementation-audit.json",
+      "sha256": "c89e6acb932bfecf0150593a95d501479065298faa4d8f7e5c3388c619debd4a",
+      "bytes": 91707
+    },
+    {
+      "path": "post-implementation-http.json",
+      "sha256": "d149bee2ec3948e2824dbecbd6a46f0fc92ab30b3d684968fff2dbcb72d80b35",
+      "bytes": 823497
+    },
+    {
+      "path": "post-implementation-requests.json",
+      "sha256": "e33e22afd474d6171aa19394002f94f4ead2d5a997cf1efe20ca04fbb7fb5406",
+      "bytes": 285566
+    },
+    {
+      "path": "post-implementation-streams.json",
+      "sha256": "1baa1f1d72452547955f2a48f0f793fd004394f27d42483b4e613aac18e668ee",
+      "bytes": 88826
+    },
+    {
+      "path": "post_implementation.py.txt",
+      "sha256": "da5730ed439acc2fb69437fa99f2050e35c36cc180f1a50f2200a081eb1d2896",
+      "bytes": 9850
+    },
+    {
+      "path": "recommended-budget.json",
+      "sha256": "956b7b4eda8067229cfb75c470ef5233bcb16970bd8cb07b4bd57d016d684fc6",
+      "bytes": 302
+    },
+    {
+      "path": "secret-scan-review.json",
+      "sha256": "d5594c88ce4cabcb7526ad52a8d30a7d36adf8d0a094d8a42965578049e5680b",
+      "bytes": 1464
+    },
+    {
+      "path": "study.py.txt",
+      "sha256": "5a2a56ed64a95e0ff739477a8b3272a4e7bcb13664eca5a1b864c3b55016c2e7",
+      "bytes": 15391
+    },
+    {
+      "path": "supplement.py.txt",
+      "sha256": "e280257840ebe51cc5dd3a14cc46b94d0beba38effd2a9fa48bb69b91ccda615",
+      "bytes": 2732
+    },
+    {
+      "path": "whole-request-http.json",
+      "sha256": "4a234de1295ad850aaf6b4f38e5b4889e5a4be5dc522ed1cd2f36b69213f10a7",
+      "bytes": 310527
+    },
+    {
+      "path": "whole-request-plan.json",
+      "sha256": "f4931f04b55f3c3077d0bcd325b4955ea685fb74605ac788ae90dd538335327e",
+      "bytes": 1986
+    },
+    {
+      "path": "whole-request-requests.json",
+      "sha256": "8de921e81ef6365de5801a0a6b102482a8c6e55b420cbb4584bf36e05e43c3e0",
+      "bytes": 104111
+    },
+    {
+      "path": "whole-request-streams.json",
+      "sha256": "51536f1e53fa534da3068d8ba0243931dc5058dbcc43dd5e450f7e552dc71fd2",
+      "bytes": 28219
+    }
+  ],
+  "generation_requests": 166,
+  "comparison_replies": 156,
+  "output_probes": 10,
+  "scope": "Synthetic controlled sources only. No private endpoint URL or credentials. Exact actual HTTP JSON, raw response events and judgments retained. Drivers are archival .txt, refer to private local route selection and are not a turnkey public rerun. No human or full Q02 acceptance."
+}

@@ -1,0 +1,236 @@
+[
+  {
+    "sample_key": "http_normative_holdout:r0:t1:baseline",
+    "call_id": "13e2d68b-5077-4fe2-b2ad-6e7ca61ccdc5",
+    "actual_prompt_tokens": 2136,
+    "reference_estimated_tokens": 2110,
+    "relative_error_pct": -1.217,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r0:t1:baseline",
+    "call_id": "14547020-f2d5-4c8c-a1bb-229299110f1a",
+    "actual_prompt_tokens": 2259,
+    "reference_estimated_tokens": 2222,
+    "relative_error_pct": -1.638,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r0:t1:baseline",
+    "call_id": "fe927226-344c-4429-8c10-6a878b5e2555",
+    "actual_prompt_tokens": 3958,
+    "reference_estimated_tokens": 4513,
+    "relative_error_pct": 14.022,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r0:t1:baseline",
+    "call_id": "d10958d5-2a3f-4aab-813b-67159c098c1b",
+    "actual_prompt_tokens": 4057,
+    "reference_estimated_tokens": 4597,
+    "relative_error_pct": 13.31,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r0:t1:baseline",
+    "call_id": "5981ef4b-a20d-44f8-99e9-6d590e25a20d",
+    "actual_prompt_tokens": 5419,
+    "reference_estimated_tokens": 5873,
+    "relative_error_pct": 8.378,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r0:t1:baseline",
+    "call_id": "ef3bfc81-8387-49e5-9dcb-3b5887659a69",
+    "actual_prompt_tokens": 5378,
+    "reference_estimated_tokens": 6299,
+    "relative_error_pct": 17.125,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r0:t2:baseline",
+    "call_id": "e84d9f8c-3e38-47d3-bd8e-16d8226e306c",
+    "actual_prompt_tokens": 4917,
+    "reference_estimated_tokens": 5589,
+    "relative_error_pct": 13.667,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r0:t3:baseline",
+    "call_id": "0b06443a-7f4b-487e-9450-ca2d38c4a4a8",
+    "actual_prompt_tokens": 5659,
+    "reference_estimated_tokens": 5791,
+    "relative_error_pct": 2.333,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r0:t4:baseline",
+    "call_id": "76c2f2dc-9919-48dd-9b49-28e29ae41a0d",
+    "actual_prompt_tokens": 6684,
+    "reference_estimated_tokens": 5928,
+    "relative_error_pct": -11.311,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r1:t1:baseline",
+    "call_id": "7ceea593-cac4-4032-8d36-c2bf676b5caf",
+    "actual_prompt_tokens": 2136,
+    "reference_estimated_tokens": 2110,
+    "relative_error_pct": -1.217,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r1:t1:baseline",
+    "call_id": "9b640321-0ccb-428b-8589-bce873e020ff",
+    "actual_prompt_tokens": 2259,
+    "reference_estimated_tokens": 2222,
+    "relative_error_pct": -1.638,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r1:t1:baseline",
+    "call_id": "0eb52276-6c3e-4c43-b1a9-2e3eb74048a5",
+    "actual_prompt_tokens": 4111,
+    "reference_estimated_tokens": 4659,
+    "relative_error_pct": 13.33,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r1:t1:baseline",
+    "call_id": "dbf4e1cc-6720-4b4d-b229-11a9407c18b6",
+    "actual_prompt_tokens": 4247,
+    "reference_estimated_tokens": 4856,
+    "relative_error_pct": 14.34,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r1:t1:baseline",
+    "call_id": "ccfe2f29-7fdd-4817-ba94-978f6e6c3dcb",
+    "actual_prompt_tokens": 4346,
+    "reference_estimated_tokens": 4940,
+    "relative_error_pct": 13.668,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r1:t2:baseline",
+    "call_id": "915c8ff2-3c4e-4c29-aa8f-c927800aee88",
+    "actual_prompt_tokens": 3180,
+    "reference_estimated_tokens": 3751,
+    "relative_error_pct": 17.956,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r1:t3:baseline",
+    "call_id": "bbd1d430-3b9f-495f-881e-7adf5f412af7",
+    "actual_prompt_tokens": 6994,
+    "reference_estimated_tokens": 3960,
+    "relative_error_pct": -43.38,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r1:t4:baseline",
+    "call_id": "39bcbcc4-4ce1-45f1-8839-d06bc9a1dece",
+    "actual_prompt_tokens": 7850,
+    "reference_estimated_tokens": 4106,
+    "relative_error_pct": -47.694,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r2:t1:baseline",
+    "call_id": "35d546a8-f5b3-4ef7-81c2-41fca9aff3b2",
+    "actual_prompt_tokens": 2136,
+    "reference_estimated_tokens": 2110,
+    "relative_error_pct": -1.217,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r2:t1:baseline",
+    "call_id": "98aec285-0630-4eda-830c-b669fadca84b",
+    "actual_prompt_tokens": 2259,
+    "reference_estimated_tokens": 2222,
+    "relative_error_pct": -1.638,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r2:t1:baseline",
+    "call_id": "44480f6f-5080-4d53-a853-a924d1e876dc",
+    "actual_prompt_tokens": 4110,
+    "reference_estimated_tokens": 4669,
+    "relative_error_pct": 13.601,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r2:t1:baseline",
+    "call_id": "94db6e6a-79df-4b44-916d-888415d0e5d0",
+    "actual_prompt_tokens": 4209,
+    "reference_estimated_tokens": 4753,
+    "relative_error_pct": 12.925,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r2:t1:baseline",
+    "call_id": "3151073e-e1ca-40a5-9cbd-ea2c0a0a05fc",
+    "actual_prompt_tokens": 6051,
+    "reference_estimated_tokens": 6463,
+    "relative_error_pct": 6.809,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r2:t1:baseline",
+    "call_id": "59be328f-570e-4510-a681-9d1aef3b4527",
+    "actual_prompt_tokens": 6080,
+    "reference_estimated_tokens": 6984,
+    "relative_error_pct": 14.868,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r2:t2:baseline",
+    "call_id": "43f5a398-208d-4810-a8ab-51954ec57acf",
+    "actual_prompt_tokens": 5473,
+    "reference_estimated_tokens": 6035,
+    "relative_error_pct": 10.269,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r2:t3:baseline",
+    "call_id": "16dfabbf-a6f2-4818-b9f6-e82d76724f2f",
+    "actual_prompt_tokens": 6535,
+    "reference_estimated_tokens": 6259,
+    "relative_error_pct": -4.223,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "http_normative_holdout:r2:t4:baseline",
+    "call_id": "e7d8e022-2821-4535-a6dc-1512c9bfa187",
+    "actual_prompt_tokens": 7236,
+    "reference_estimated_tokens": 6392,
+    "relative_error_pct": -11.664,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  }
+]

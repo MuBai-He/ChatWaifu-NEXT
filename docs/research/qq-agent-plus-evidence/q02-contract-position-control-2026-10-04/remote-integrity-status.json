@@ -1,0 +1,9 @@
+{
+  "original_artifact_download_completed": true,
+  "separate_remote_hash_readback_completed": true,
+  "readback_failures": 2,
+  "error": "Connection closed by 192.168.1.103 port 22",
+  "no_evaluation_retry_or_duplicate_calls": true,
+  "verified_original_files": 6,
+  "recovery": "Reconnected 2026-10-04; verified original hashes without repeating calls."
+}

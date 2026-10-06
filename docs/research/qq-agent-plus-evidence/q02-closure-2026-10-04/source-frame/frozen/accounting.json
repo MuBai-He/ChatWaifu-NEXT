@@ -1,0 +1,61 @@
+{
+  "actual_http": 4,
+  "provider_raw_frames": 4,
+  "rendered_replies": 4,
+  "rejected_frames": 0,
+  "complete_four_turn_flows": 0,
+  "usage": {
+    "prompt_tokens": 16230,
+    "completion_tokens": 927,
+    "total_tokens": 26742
+  },
+  "reasoning": {
+    "reported_count": 4,
+    "unknown_count": 0,
+    "reported_subtotal": 9585
+  },
+  "latency_ms": {
+    "n": 4,
+    "p50": 16723.5,
+    "p95": 26990.05
+  },
+  "reference_error_percent": {
+    "min": 40.6548,
+    "max": 42.4372
+  },
+  "checks": [
+    {
+      "sample": "frame_control:r0:t3",
+      "wire_sha256": "ccb1f2988ae2dddc110db0e941de876a817eda3b45d5edde6bd1524f34e56e96",
+      "complete_original_and_no_omission": true,
+      "schema_valid": true,
+      "runtime_path_used": false,
+      "no_live_search": true
+    },
+    {
+      "sample": "frame_control:r0:t4",
+      "wire_sha256": "13cc83d54016a035f9c7a96ca10f55dd4036b4ea8a96c22a0558a503d738e703",
+      "complete_original_and_no_omission": true,
+      "schema_valid": true,
+      "runtime_path_used": false,
+      "no_live_search": true
+    },
+    {
+      "sample": "frame_control:r1:t3",
+      "wire_sha256": "3213eb5aaeb19dbe80ef11f2bd14151149fd8796c0a5a8701c299ad1e420e539",
+      "complete_original_and_no_omission": true,
+      "schema_valid": true,
+      "runtime_path_used": false,
+      "no_live_search": true
+    },
+    {
+      "sample": "frame_control:r1:t4",
+      "wire_sha256": "99c95ab0e2cfdff7f79219a7da367b8dfafeef9fe7e2fe9da2b992f70a99d042",
+      "complete_original_and_no_omission": true,
+      "schema_valid": true,
+      "runtime_path_used": false,
+      "no_live_search": true
+    }
+  ],
+  "quality_approval": false
+}

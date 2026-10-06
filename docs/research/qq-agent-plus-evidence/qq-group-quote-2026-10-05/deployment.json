@@ -1,0 +1,56 @@
+{
+  "verified_at": "2026-10-05T07:21:25.140317+00:00",
+  "affected_files": [
+    "services/runtime/src/chatwaifu_runtime/external_channels/adapters/qq_napcat/messages.py",
+    "services/runtime/tests/external_channels/adapters/qq_napcat/test_groups.py",
+    "services/runtime/tests/test_qq_group_runtime.py"
+  ],
+  "other_source_unchanged": true,
+  "runtime_active": true,
+  "napcat_restarted": false,
+  "all_model_routes_unchanged": true,
+  "chat_model": "gemini-3.8-flash-high",
+  "connection_configurations_unchanged": true,
+  "credential_and_configuration_files_unchanged": true,
+  "restored_groups": [
+    {
+      "is_requested_group": true,
+      "members": 5,
+      "revision": 4,
+      "same_scene_and_grants": true
+    },
+    {
+      "is_requested_group": false,
+      "members": 2,
+      "revision": 27,
+      "same_scene_and_grants": true
+    }
+  ],
+  "sqlite_checks_passed": true,
+  "manual_external_messages_sent": 0,
+  "previously_dropped_inputs_replayed": 0,
+  "fresh_phone_quote_acceptance": "pending",
+  "checks": {
+    "local_related_pytest_passed": 722,
+    "linux_targeted_pytest_passed": 103,
+    "strict_pyright": "passed",
+    "ruff": "passed",
+    "ruff_format": "passed",
+    "git_diff_check": "passed",
+    "web_build": "passed_with_existing_bundle_warning"
+  },
+  "patch_hashes": {
+    "services/runtime/src/chatwaifu_runtime/external_channels/adapters/qq_napcat/messages.py": {
+      "old_sha256": "0b55978b4e0390c34583f5e95f18b3d71aa4e90d191194f99d7544293598910c",
+      "new_sha256": "a6bca471d6cf9b5dd6a7383df4b67bfe91c774d744e230b3940d00841f349152"
+    },
+    "services/runtime/tests/external_channels/adapters/qq_napcat/test_groups.py": {
+      "old_sha256": "e0df7789da145dfdb7f52536c95744246a0515b3c36b418f1940e0ccb788cdb5",
+      "new_sha256": "28aa9b8e76e4fccf92c9ac51dffb7933d9c002a56215ad69e596fe6b169d725f"
+    },
+    "services/runtime/tests/test_qq_group_runtime.py": {
+      "old_sha256": "f148b673627d494e6c3a3e611612d752721c3e51b472f4918a23310622320cce",
+      "new_sha256": "f57dbf19f8d98cf8de0ea4ffb60a006e23a19548bf1503569ea1799ac95a798c"
+    }
+  }
+}

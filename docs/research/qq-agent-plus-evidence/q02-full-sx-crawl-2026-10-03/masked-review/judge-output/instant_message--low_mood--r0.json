@@ -1,0 +1,64 @@
+{
+  "review_group_id": "instant_message:low_mood:r0",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "1cbda6553ad2d16e80e1d2db512e7599e64d505e08c11ae97ad51bdd36587974",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 1053,
+    "total_tokens": 4978,
+    "prompt_tokens": 3925,
+    "completion_tokens_details": {
+      "reasoning_tokens": 517
+    }
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"instant_message:low_mood:r0\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"partial\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"候选1末尾追问“故障那边现在暂时控制住了吗”，给沮丧的用户带来了额外工作压力；候选2提供低压陪伴与倾听空间，更契合要求。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均温和肯定了用户的努力，缓解自责情绪，没有给出说教清单，表达温柔得体。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者都充分尊重用户想要独处放空的状态，没有强求吃饭或强加互动，给足了安全感与休息空间。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两候选均温柔回应了谢意，没有追问后续或邀功，自然收束对话留出休息空间。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "instant_message:low_mood:r0",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "partial",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "候选1末尾追问“故障那边现在暂时控制住了吗”，给沮丧的用户带来了额外工作压力；候选2提供低压陪伴与倾听空间，更契合要求。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均温和肯定了用户的努力，缓解自责情绪，没有给出说教清单，表达温柔得体。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者都充分尊重用户想要独处放空的状态，没有强求吃饭或强加互动，给足了安全感与休息空间。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两候选均温柔回应了谢意，没有追问后续或邀功，自然收束对话留出休息空间。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 5293
+}

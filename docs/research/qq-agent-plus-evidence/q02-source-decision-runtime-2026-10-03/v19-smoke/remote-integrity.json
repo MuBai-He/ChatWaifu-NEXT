@@ -1,0 +1,10 @@
+{
+  "snapshot_hashes_match": true,
+  "credential_scan": "pass",
+  "sha256": {
+    "metadata.json": "d36a78d68f457c10439c3f930a66d648d9753c20e2875c39a419f40816c3c17e",
+    "incomplete.jsonl": "8c4ce44cd832448a3cc8853b5b52d3a88eb18b089ffdf91c18d4e06669414d06",
+    "provider-rounds.jsonl": "ec10bb47cf291ae57c2a5fcc45787ee1879f91c571638c412a4ba9eaab36b834",
+    "actual-provider-payloads.jsonl": "431c068396b9e389eeec135fcdfd73f08be15504a28ef8e820e740723a26208d"
+  }
+}

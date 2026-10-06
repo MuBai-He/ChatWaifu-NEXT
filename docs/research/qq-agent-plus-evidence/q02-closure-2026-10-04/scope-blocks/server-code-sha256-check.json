@@ -1,0 +1,33 @@
+{
+  "retired_prototype_absent": true,
+  "source_checks": {
+    "docs/adr/0065-bounded-source-answer-coverage-candidate.md": true,
+    "run_script": true,
+    "services/runtime/src/chatwaifu_runtime/agent/source_answer.py": true,
+    "services/runtime/src/chatwaifu_runtime/agent/source_answer_frame.py": true,
+    "services/runtime/src/chatwaifu_runtime/agent/source_answer_state.py": true,
+    "services/runtime/src/chatwaifu_runtime/agent/source_context.py": true,
+    "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py": true,
+    "services/runtime/src/chatwaifu_runtime/bootstrap/container.py": true,
+    "services/runtime/src/chatwaifu_runtime/character_kernel/prompt.py": true,
+    "services/runtime/src/chatwaifu_runtime/conversation/service.py": true,
+    "services/runtime/src/chatwaifu_runtime/conversation/source_answer_context.py": true,
+    "services/runtime/src/chatwaifu_runtime/providers/contracts.py": true,
+    "services/runtime/src/chatwaifu_runtime/providers/demo_llm.py": true,
+    "services/runtime/src/chatwaifu_runtime/providers/input_estimation.py": true,
+    "services/runtime/src/chatwaifu_runtime/providers/openai_compatible.py": true,
+    "services/runtime/src/chatwaifu_runtime/runtime_skills/agent_router.py": true,
+    "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web.py": true,
+    "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web_search.py": true,
+    "services/runtime/src/chatwaifu_runtime/runtime_skills/service.py": true,
+    "services/runtime/tests/conversation/test_vision.py": true,
+    "services/runtime/tests/test_conversation_source_answer_state.py": true,
+    "services/runtime/tests/test_llm_response_schema.py": true,
+    "services/runtime/tests/test_source_answer_frame.py": true,
+    "services/runtime/tests/test_source_answer_state.py": true,
+    "services/runtime/tests/test_source_review_pipeline.py": true,
+    "services/runtime/tests/test_source_scope_blocks.py": true,
+    "tools/evaluate_character_scenarios.py": true,
+    "tools/runtime_source_evaluation.py": true
+  }
+}

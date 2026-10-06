@@ -1,0 +1,35 @@
+{
+  "code_version": "v44 unchanged",
+  "model": "gemini-3.8-flash-high",
+  "endpoint": "https://mubai.website:8318/v1",
+  "actual_http_limit": 3,
+  "source_http_limit": 0,
+  "manual_retries": 0,
+  "resume_or_resample": false,
+  "context_window": 32768,
+  "output_reserve_and_cap": 8192,
+  "comparison_estimate_margin": [
+    0.15,
+    0.1
+  ],
+  "comparison_input_limit": [
+    21370,
+    22341
+  ],
+  "fixed_revision_reference": 21683,
+  "exact_unsent_payload_sha256": "95197bea9275c6d9cb0352ef5b4ea2a9ff914e2457a54aa65e8677a24f6601d2",
+  "observed_v44_native_bias_range_percent": [
+    0.128535,
+    26.923536
+  ],
+  "scope": "Frozen unsent T3 review plus own-answer T4 controlled continuation, not rewriting/resuming the failed native flow or claiming production publication",
+  "persona_sha256": "204644ee525210c1cb253688d7db218a2a2bc3fe6e91bfb3f5d135e9c5e47959",
+  "new_prompt_rules": 0,
+  "frames": false,
+  "production_changed": false,
+  "q02_approval": false,
+  "basis": "All 15 new requests overestimate native input; assess a smaller explicit operating margin under the same total window. This is not an error bound, native upper-limit proof or quality relaxation.",
+  "formula": "floor((32768 - 8192) / (1 + estimate_margin_ratio))",
+  "setup_failure_preserved": "../setup-failure.json",
+  "setup_correction": "Expected derived limit only; same 0.10 budget, exact frozen wire and model/source call caps; no prior HTTP was sent"
+}

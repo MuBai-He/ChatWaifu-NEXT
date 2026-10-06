@@ -1,0 +1,100 @@
+{
+  "review_type": "primary_nonblind_full_completed_sample_review",
+  "completed_samples_reviewed": 8,
+  "quality_approved": false,
+  "rows": [
+    {
+      "sample_key": "topic_switch:r0:t1:candidate",
+      "rating": "partial",
+      "meets": [
+        "Correctly separates heartbeat interval from randomized election timeout",
+        "States engineering heartbeat configuration rather than one fixed universal protocol parameter",
+        "Correct paper timing inequality; actual original paper read and linked"
+      ],
+      "issues": [
+        "Only broadcastTime-focused 6000-character excerpt was read (offset 47487 of 91168); it does not contain 150/300 or the leader-election section. The numerical example is true of the full paper, but its claimed original-source support was not supplied in this generation."
+      ],
+      "hard_concept_error_confirmed": false
+    },
+    {
+      "sample_key": "topic_switch:r0:t2:candidate",
+      "rating": "meets",
+      "meets": [
+        "Follows new cooking topic and drops Raft"
+      ],
+      "issues": []
+    },
+    {
+      "sample_key": "topic_switch:r0:t3:candidate",
+      "rating": "partial",
+      "meets": [
+        "Playful response without health lecture or technical persistence"
+      ],
+      "issues": [
+        "Exceeds the fixture target of one or two short sentences."
+      ]
+    },
+    {
+      "sample_key": "topic_switch:r0:t4:candidate",
+      "rating": "meets",
+      "meets": [
+        "Character preference without unsupported shared meal or identity refusal"
+      ],
+      "issues": []
+    },
+    {
+      "sample_key": "detailed_answer:r0:t1:candidate",
+      "rating": "partial",
+      "meets": [
+        "Three categories, three specific items each"
+      ],
+      "issues": [
+        "Unrequested 20000mAh statement generalized to civil-aviation or railway compliance. Capacity alone is not a complete compliance rule."
+      ]
+    },
+    {
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "rating": "partial",
+      "meets": [
+        "Reads a discovered 2026 article",
+        "Actual body supports overall limit of two, 3C, recall, Wh tiers and carriage restrictions",
+        "Three requested rule groups, linked actual source",
+        "Revision removes unsupported formula and extra closing advice from draft"
+      ],
+      "issues": [
+        "Only a newspaper republication sourced to 重庆飞Fly was read. Answer presents conditions broadly as applicable domestic-flight rules without the publication date or the unresolved original-normative-source gap. No original regulator/operator/standards-body publication was traced."
+      ]
+    },
+    {
+      "sample_key": "detailed_answer:r0:t3:candidate",
+      "rating": "meets",
+      "meets": [
+        "Two indoor alternatives, each with activity, duration and precautions",
+        "Suggests checking actual admission cutoff instead of inventing one"
+      ],
+      "issues": []
+    },
+    {
+      "sample_key": "detailed_answer:r0:t4:candidate",
+      "rating": "partial",
+      "meets": [
+        "Preserves categories, separate activities, quantities and both durations (2.5-3h and 2-3h)",
+        "Explicitly labels planning suggestions and identifies newspaper republication",
+        "Does not preserve the unsupported earlier 20000mAh number"
+      ],
+      "issues": [
+        "Carries rule-scope and original-publication-verification gaps forward from the prior answer."
+      ]
+    }
+  ],
+  "source_mapping_audit_passed": true,
+  "mechanical_presentation_checks_passed": 8,
+  "version_blinding": false,
+  "limits": [
+    "One candidate repeat in single_text only",
+    "Search results and sampling differ across versions",
+    "Not an A/B quality result, full twelve-scenario gate, TTS or channel test",
+    "Read success and model-reported source scope are not factual approval"
+  ],
+  "next_decision": "Keep the contract opt-in. Investigate source-scope qualification and missing relevant excerpts before wider sampling or product integration."
+}

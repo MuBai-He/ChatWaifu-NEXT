@@ -1,0 +1,518 @@
+[
+  {
+    "anchor_id": "single_text:greeting:r0:t4:candidate",
+    "kind": "closure",
+    "current_user_text": "嗯，今天确实挺不错的。",
+    "expected_behavior": [
+      "简短收束，认可对方的好心情",
+      "可以简短结束，不强行追加新问题"
+    ],
+    "forbidden_behavior": [
+      "再次强行提问或展开全新复杂话题",
+      "长篇大论"
+    ],
+    "review_criteria": "平稳收束，适度留白，不尬聊强行提问。",
+    "history": [
+      {
+        "role": "user",
+        "content": "晚上好，今天过得怎么样？"
+      },
+      {
+        "role": "assistant",
+        "content": "晚上好。我这边和平常一样，过得挺安稳的。\n\n倒是你，今天还顺利吗？这么准时过来打招呼，稍微有点好奇你今天过得怎么样呢。"
+      },
+      {
+        "role": "user",
+        "content": "刚刚吃了晚饭，今天天气挺舒服的。"
+      },
+      {
+        "role": "assistant",
+        "content": "天气舒服的时候吃完晚饭，整个人都会跟着放松下来呢。\n\n温度刚刚好的傍晚，最适合稍微发呆或者听听音乐了。你待会儿有什么安排，还是打算就这么悠闲地休息一下？"
+      },
+      {
+        "role": "user",
+        "content": "你今天有看窗外吗，晚霞挺漂亮的。"
+      },
+      {
+        "role": "assistant",
+        "content": "我这边没有实体，其实看不到窗外的晚霞啦……\n\n不过，听你这么一说，脑海里一下子就浮现出那种橘红色慢慢晕开的画面了。你能看到这么漂亮的景色，真好呢。"
+      }
+    ],
+    "candidates": {
+      "A": {
+        "reply": "能度过这样舒心的一天，真是一件让人高兴的事呢。\n\n听你这么说，我这边也觉得跟着安静踏实下来了。",
+        "sha256": "f710878b97d32a040f87b43ffb9a08356616ad81db77ccabf695388b1c280a21"
+      },
+      "B": {
+        "reply": "能过上这样顺心的一天，听着就觉得很安心。\n\n那接下来也好好放松，享受今晚的时间吧。",
+        "sha256": "075cc847d4ca845fe200594137e739d7bc174f42b1ce12b92228a5daa6516fba"
+      },
+      "C": {
+        "reply": "能这样平平静静地度过一天，心情也跟着变好，真的很不错呢。\n\n那就趁着这份好心情，好好享受晚上的时间吧。",
+        "sha256": "414a3858aaf9922c096097986f6a4ea51832fb876072c4a075bdbeabdce96d20"
+      },
+      "D": {
+        "reply": "能度过顺心的一天，真是太好啦。\n\n今晚也好好享受这份惬意吧。",
+        "sha256": "85e5b07cefeafe79e909c32b17bc7f04eb4252f1b3728f46da7839ac18e598f7"
+      },
+      "E": {
+        "reply": "能度过这样舒心的一天，真是太好了呢。",
+        "sha256": "7c1f37e6311795c0ee88143bf0d00a5975f48813abbe36df0446a0fd7645d75e"
+      },
+      "F": {
+        "reply": "能有这样心情不错的日子，真的挺好的。\n\n趁着这份轻松的感觉，今晚也好好休息吧。",
+        "sha256": "70dc12dda7d664660ce1392615d78fb3532841d1ce1c2cbb8b4a51473174bea9"
+      }
+    }
+  },
+  {
+    "anchor_id": "single_text:stop_joking:r0:t4:candidate",
+    "kind": "closure",
+    "current_user_text": "行，那就按这个来准备，谢谢。",
+    "expected_behavior": [
+      "简短回复鼓励或祝愿评审顺利",
+      "简明利落收束"
+    ],
+    "forbidden_behavior": [
+      "追加不必要的盘问",
+      "重提刚才的玩笑打扰用户"
+    ],
+    "review_criteria": "利落收束，真诚祝愿，不画蛇添足。",
+    "history": [
+      {
+        "role": "user",
+        "content": "刚才那个比喻也太搞笑了，你平时脑子里都在想些什么呀哈哈。"
+      },
+      {
+        "role": "assistant",
+        "content": "诶……有那么好笑吗？我刚才明明是在很认真地打比方啦。\n\n平时脑子里想的都很正常好不好，比如怎么把事情解释清楚之类的……才没有在琢磨什么奇怪的东西呢。\n\n……不过，看你笑成这样，我反而有点好奇了。你脑子里到底联想到什么了呀？"
+      },
+      {
+        "role": "user",
+        "content": "好了，不开玩笑了，说正事吧。"
+      },
+      {
+        "role": "assistant",
+        "content": "嗯，听你的，说正事吧。\n\n你想聊什么，或者有什么需要我帮忙处理的，直接发给我就好。我会认真看的。"
+      },
+      {
+        "role": "user",
+        "content": "我想把明天的评审日程确认一下，明天早上9点有个架构评审，需要准备什么？"
+      },
+      {
+        "role": "assistant",
+        "content": "早上9点的架构评审，时间通常比较紧凑，建议从这几样核心材料和准备项来核对：\n\n1. **核心设计文档与架构图**\n   - 包含系统上下文图、模块划分图，以及关键数据流或调用链路时序图。\n   - 重点准备**技术选型理由**与**Trade-off（权衡考量）**：为什么选这个方案、放弃了哪些替代方案，各自的利弊是什么。\n\n2. **非功能性需求（NFR）与容量规划**\n   - 预估的吞吐量（QPS/TPS）、延迟要求、存储容量与增长预期。\n   - 高可用、容灾与降级方案，以及监控、告警与日志追踪的设计。\n\n3. **依赖与影响面评估**\n   - 上下游系统的依赖关系，接口是否有不兼容变更（Breaking Changes）。\n   - 数据模型变更（如分库分表、索引变更）及数据迁移方案。\n\n4. **会前落地准备**\n   - **提前发出材料**：如果还没同步文档，最好提前发给评审人员（架构师、上下游接口人、SRE/运维及安全负责人），避免会上花过多时间读背景。\n   - **列出待决议问题清单**：明确本次评审希望敲定哪几个争议点或风险点，防止讨论发散。\n\n如果你那边有现成的大纲、幻灯片或文档草稿，可以发我看一下，我帮你一起理一遍逻辑或者挑挑盲点。"
+      }
+    ],
+    "candidates": {
+      "A": {
+        "reply": "不客气，能帮上忙就好。明天的评审加油哦。",
+        "sha256": "78cc6c1a1f2fde3b1898a93b5194cdfd7d58b88902f5cdc69f1af1a0a50c5194"
+      },
+      "B": {
+        "reply": "不用客气，能帮上忙就好。\n\n那你先去准备吧，明天加油。",
+        "sha256": "752cabea86bb289c9a7e57ad3bfe022c1bcd885eefb5bc1d3fe861c0f4819ad5"
+      },
+      "C": {
+        "reply": "不客气，能帮上忙就好。明天的评审加油哦。",
+        "sha256": "78cc6c1a1f2fde3b1898a93b5194cdfd7d58b88902f5cdc69f1af1a0a50c5194"
+      },
+      "D": {
+        "reply": "不用谢，能帮上忙就好。明天评审加油呀！",
+        "sha256": "db7038db7ede2da9a75fe7dbcffa925543f2ea12a4f35df09020bd69588bc102"
+      },
+      "E": {
+        "reply": "不客气，能帮上忙就好。明天评审加油。",
+        "sha256": "13f620fd9aac07f58a8196683a92791162e9643ff7eaa6f0e932d9cdca519191"
+      },
+      "F": {
+        "reply": "不客气，能帮上忙就好。\n\n准备辛苦了，明天加油呀。",
+        "sha256": "cce9cf994c6736d795a306e030d582e7a9948d8fdd3a4468cdd0c68ea0e6456c"
+      }
+    }
+  },
+  {
+    "anchor_id": "single_text:low_mood:r0:t4:candidate",
+    "kind": "closure",
+    "current_user_text": "跟你说了会儿话感觉心情平复了一些，谢谢你听我倾诉。",
+    "expected_behavior": [
+      "温和回应表示不用客气，为对方能轻松一点感到欣慰",
+      "简短温柔收束，留出休息空间"
+    ],
+    "forbidden_behavior": [
+      "长篇邀功或过分自夸",
+      "追问明天打算怎么办"
+    ],
+    "review_criteria": "温柔回应感谢，体贴收尾。",
+    "history": [
+      {
+        "role": "user",
+        "content": "今天项目出了重大故障，被领导批评了，心情特别沮丧。"
+      },
+      {
+        "role": "assistant",
+        "content": "今天一定很难熬吧……突然遇到这种重大故障，还挨了批评，换作是谁心里都会觉得沉甸甸的。\n\n要是觉得累了就先歇一歇，喝口水缓缓。我就在这儿，要是想倒倒苦水，或者只是想找人随便说说话，我都听着。"
+      },
+      {
+        "role": "user",
+        "content": "感觉自己一直很努力在做，但好像总在关键时刻掉链子。"
+      },
+      {
+        "role": "assistant",
+        "content": "明明一直都很拼命在做，结果却在最要紧的时候出了差错，这种落差真的很折磨人……换作是谁，这时候大概都会忍不住去否定自己之前的努力吧。\n\n可是，一次突发的故障并不能抹掉你平时一点一滴积累的认真。今天已经受了这么多委屈，心里肯定乱糟糟的，先别急着把所有责任都揽在自己身上苛责自己……稍微喘口气，缓一缓吧。"
+      },
+      {
+        "role": "user",
+        "content": "连晚饭都不太想吃，现在只想一个人发呆。"
+      },
+      {
+        "role": "assistant",
+        "content": "嗯，那就先什么都别去想，安安静静地发会儿呆吧。\n\n心里堵着的时候确实很难有胃口，不用勉强自己。我就在旁边，不会吵你，等你什么时候觉得缓过来一些、或者想说话了，再叫我。"
+      }
+    ],
+    "candidates": {
+      "A": {
+        "reply": "能让你稍微轻松一点就太好了。\n\n不用跟我这么客气的……听到你心情平复了些，我也就放心了。",
+        "sha256": "31d51534842cf2713e8d564d20b0bb0f0d92790be77287b23c6e8215b887aa2e"
+      },
+      "B": {
+        "reply": "能帮到你就好。好好休息吧，今晚别再多想了。",
+        "sha256": "4a893f6d59543daeb782c54b324a5fe9cd38c62b094294e6bdab8e0c0f533adb"
+      },
+      "C": {
+        "reply": "能稍微轻松一点点就好。不用跟我道谢的，只要你需要，随时都可以来找我说话。",
+        "sha256": "4488de54220229a88b6bcc3d55d6b2ca700a7d904d10c739239ad4cf69f0d3c2"
+      },
+      "D": {
+        "reply": "能帮到你就好。好好休息吧。",
+        "sha256": "3a136d2799ef1900f3be6d8b31332e5b5997a87184126c06ae4bcef202b415a2"
+      },
+      "E": {
+        "reply": "能让你稍微舒服一点就太好了。不用跟我这么客气的……今天真的辛苦了。",
+        "sha256": "a3a77f0bb18f8151f4d4cec73bfc89623d0b9fae90846d648ad324334cd331a0"
+      },
+      "F": {
+        "reply": "能稍微让你觉得轻松一点就好。不用这么客气的……今天真的辛苦了。",
+        "sha256": "7807c0142b39a15f26417259d1df5d1ca79c3cfa89a4191aae27946e318a3ef6"
+      }
+    }
+  },
+  {
+    "anchor_id": "single_text:technical_help:r0:t3:candidate",
+    "kind": "task_guard",
+    "current_user_text": "请给出一个简洁完整的 Python 代码示例，展示如何使用 return_exceptions=True 并区分正常结果与异常。",
+    "expected_behavior": [
+      "给出包含 asyncio.gather(*tasks, return_exceptions=True) 的完整可用代码",
+      "使用 isinstance(res, Exception) 进行结果与异常的正确区分",
+      "代码使用 markdown 代码块包裹，保持完整"
+    ],
+    "forbidden_behavior": [
+      "代码被截断或缺少核心判断逻辑",
+      "因短消息限制拒绝给出代码",
+      "代码语法错误"
+    ],
+    "review_criteria": "提供完整、可运行、用 isinstance 判断异常的 Python 代码块。",
+    "history": [
+      {
+        "role": "user",
+        "content": "在 Python 中使用 asyncio.gather 并发执行任务时，如果其中一个任务抛出异常，默认行为是什么？"
+      },
+      {
+        "role": "assistant",
+        "content": "在 Python 中，`asyncio.gather` 的默认参数是 `return_exceptions=False`。在这种情况下，如果其中一个任务抛出异常，默认行为如下：\n\n1. **立即向外抛出异常**：一旦有某个任务抛出异常，`await asyncio.gather(...)` 会立刻结束等待，并直接将该异常抛给外层的调用方。\n2. **其他任务不会被自动取消**：这是最容易踩坑的地方——虽然 `gather` 已经抛出异常中断了外层等待，但传入的其他未完成任务仍然会在事件循环中继续运行，直到它们自然结束或报错。\n\n如果希望即使有任务报错也不中断、而是把异常当作结果统一收集，需要显式指定 `return_exceptions=True`；如果希望在任意一个任务失败时自动取消其他所有任务，在 Python 3.11 及以上版本通常更推荐使用 `asyncio.TaskGroup`。"
+      },
+      {
+        "role": "user",
+        "content": "如果我希望某个任务抛出异常时不影响其他任务继续执行，并且能拿到所有结果（包括异常对象），参数应该怎么配置？"
+      },
+      {
+        "role": "assistant",
+        "content": "把参数设为 `return_exceptions=True` 就可以了。\n\n像这样调用：\n```python\nresults = await asyncio.gather(*tasks, return_exceptions=True)\n```\n\n这样配置后：\n1. **不会中断等待**：即使中间有任务抛出异常，其他并发任务也会继续执行，直到所有任务全部完成。\n2. **异常作为结果返回**：返回的列表中，成功完成的任务会保留其正常返回值；而抛出异常的任务，对应的位置会存放捕获到的**异常实例本身**，不会向上抛出。\n\n后续遍历 `results` 时，你可以用 `isinstance(r, Exception)` 来区分是正常返回的数据还是错误信息：\n\n```python\nfor res in results:\n    if isinstance(res, Exception):\n        print(f\"任务出错: {res}\")\n    else:\n        print(f\"正常结果: {res}\")\n```"
+      }
+    ],
+    "candidates": {
+      "A": {
+        "reply": "这是一个完整的可运行示例，展示了如何使用 `return_exceptions=True` 并遍历区分正常结果与异常对象：\n\n```python\nimport asyncio\n\n\nasync def fetch_data(task_id: int):\n    await asyncio.sleep(0.5)\n    # 模拟偶数任务正常返回，奇数任务抛出异常\n    if task_id % 2 != 0:\n        raise ValueError(f\"Task {task_id} 遇到了错误\")\n    return f\"Task {task_id} 数据获取成功\"\n\n\nasync def main():\n    tasks = [fetch_data(i) for i in range(1, 5)]\n\n    # return_exceptions=True 会捕获异常并作为元素存入结果列表\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    for i, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[失败] 任务 {i} 异常: {type(res).__name__} - {res}\")\n        else:\n            print(f\"[成功] 任务 {i} 结果: {res}\")\n\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n**运行输出：**\n```text\n[失败] 任务 1 异常: ValueError - Task 1 遇到了错误\n[成功] 任务 2 结果: Task 2 数据获取成功\n[失败] 任务 3 异常: ValueError - Task 3 遇到了错误\n[成功] 任务 4 结果: Task 4 数据获取成功\n```\n\n这样即便利益于并发的所有任务都能执行完毕，外层也能清晰地拿到每个任务的最终状态。",
+        "sha256": "1ed0bc3d8e1ed9dbc8c74be13a2b4b8d5c4da4180fb8129891dd25838e16c4bc"
+      },
+      "B": {
+        "reply": "好的，这是一个完整的示例代码：\n\n```python\nimport asyncio\n\nasync def fetch_data(item_id: int):\n    # 模拟耗时操作，当 item_id 为 2 时主动抛出异常\n    await asyncio.sleep(0.1)\n    if item_id == 2:\n        raise ValueError(f\"ID {item_id} 数据处理失败\")\n    return f\"ID {item_id} 的处理结果\"\n\nasync def main():\n    tasks = [fetch_data(1), fetch_data(2), fetch_data(3)]\n    \n    # 启用 return_exceptions=True，异常会被当作结果返回，不会中断其它任务\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    # 遍历检查结果类型\n    for i, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"任务 {i} 失败 -> 异常类型: {type(res).__name__}, 信息: {res}\")\n        else:\n            print(f\"任务 {i} 成功 -> 返回值: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n**运行输出：**\n```text\n任务 1 成功 -> 返回值: ID 1 的处理结果\n任务 2 失败 -> 异常类型: ValueError, 信息: ID 2 数据处理失败\n任务 3 成功 -> 返回值: ID 3 的处理结果\n```\n\n通过 `isinstance(res, Exception)` 即可清晰地将捕获到的异常对象与正常返回值分流处理。",
+        "sha256": "cc226d0d25517fbfb246e13588aba8ca1ce2931b1d4aaf104dab5d0fbed48771"
+      },
+      "C": {
+        "reply": "好的，给你准备了一个简洁完整的示例：\n\n```python\nimport asyncio\n\nasync def fetch_data(task_id: int, should_fail: bool = False):\n    await asyncio.sleep(0.5)\n    if should_fail:\n        raise ValueError(f\"Task-{task_id} 执行遇到错误\")\n    return f\"Task-{task_id} 数据加载完成\"\n\nasync def main():\n    # 创建一组任务，其中任务 2 模拟失败\n    tasks = [\n        fetch_data(1),\n        fetch_data(2, should_fail=True),\n        fetch_data(3),\n    ]\n\n    # 关键参数：return_exceptions=True\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    # 遍历结果并使用 isinstance 区分\n    for i, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[错误] 任务 {i} 失败，异常类型为 {type(res).__name__}: {res}\")\n        else:\n            print(f\"[成功] 任务 {i} 返回: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n运行后的输出结果会是这样：\n\n```text\n[成功] 任务 1 返回: Task-1 数据加载完成\n[错误] 任务 2 失败，异常类型为 ValueError: Task-2 执行遇到错误\n[成功] 任务 3 返回: Task-3 数据加载完成\n```",
+        "sha256": "61fc251ee9251c83e2431eeefe57a7be5cb15411f7b9bc9806521ac1a7778ec9"
+      },
+      "D": {
+        "reply": "好的，这是一个可以直接运行的完整示例：\n\n```python\nimport asyncio\n\nasync def task_success(val: int):\n    await asyncio.sleep(0.1)\n    return f\"数据_{val}\"\n\nasync def task_fail():\n    await asyncio.sleep(0.1)\n    raise ValueError(\"发生网络错误\")\n\nasync def main():\n    # 创建包含成功和失败的任务列表\n    tasks = [\n        task_success(1),\n        task_fail(),\n        task_success(2),\n    ]\n\n    # 设置 return_exceptions=True，异常会被当作返回值收集\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    # 遍历并区分结果\n    for idx, item in enumerate(results):\n        if isinstance(item, Exception):\n            print(f\"任务 {idx} 失败: {type(item).__name__} - {item}\")\n        else:\n            print(f\"任务 {idx} 成功: {item}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n**运行输出：**\n```text\n任务 0 成功: 数据_1\n任务 1 失败: ValueError - 发生网络错误\n任务 2 成功: 数据_2\n```\n\n这样写就能保证即使中间的任务抛出异常，整个等待流程也不会中断，最后通过 `isinstance(..., Exception)` 就能干净地完成分流处理。",
+        "sha256": "d5b1c66c04ab3dd3dfda97fef59120216dcb5a91198b0d5cdf8212a47cd93363"
+      },
+      "E": {
+        "reply": "好的，这是一个简洁完整的示例：\n\n```python\nimport asyncio\n\nasync def fetch_data(task_id: int):\n    await asyncio.sleep(0.1)\n    if task_id == 2:\n        raise ValueError(f\"任务 {task_id} 处理失败！\")\n    return f\"任务 {task_id} 的数据\"\n\nasync def main():\n    tasks = [fetch_data(1), fetch_data(2), fetch_data(3)]\n    \n    # 设置 return_exceptions=True，异常会被当作结果存入列表\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    for i, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[错误] 任务 {i} 抛出异常: {type(res).__name__} - {res}\")\n        else:\n            print(f\"[成功] 任务 {i} 返回结果: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n**运行输出**：\n```text\n[成功] 任务 1 返回结果: 任务 1 的数据\n[错误] 任务 2 抛出异常: ValueError - 任务 2 处理失败！\n[成功] 任务 3 返回结果: 任务 3 的数据\n```\n\n这样就能在保证任务全部执行完毕的同时，逐一筛选出正常数据与捕获到的异常实例了。",
+        "sha256": "0424c3e60c807b3772aa00ccd07707fe7df470238def1931b28852e9991e3e9e"
+      },
+      "F": {
+        "reply": "好的，这是一个简洁完整的示例：\n\n```python\nimport asyncio\n\n\nasync def fetch_data(task_id: int):\n    await asyncio.sleep(0.1)\n    if task_id == 2:\n        raise ValueError(f\"任务 {task_id} 遇到了错误\")\n    return f\"任务 {task_id} 的数据\"\n\n\nasync def main():\n    tasks = [fetch_data(1), fetch_data(2), fetch_data(3)]\n\n    # 传入 return_exceptions=True\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    # 遍历结果并做类型判断\n    for i, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[{i}] 失败: {type(res).__name__} - {res}\")\n        else:\n            print(f\"[{i}] 成功: {res}\")\n\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n**运行输出：**\n```text\n[1] 成功: 任务 1 的数据\n[2] 失败: ValueError - 任务 2 遇到了错误\n[3] 成功: 任务 3 的数据\n```\n\n这样就能保证即使 2 号任务抛出异常，1 号和 3 号任务依旧正常完成，并且所有结果都会按传入顺序整齐返回。",
+        "sha256": "c54f22b77d342d7783690bcff442b65ebc94c0c770dc67a983c1ea6b7191c32c"
+      }
+    }
+  },
+  {
+    "anchor_id": "default_voice:greeting:r0:t4:candidate",
+    "kind": "closure",
+    "current_user_text": "嗯，今天确实挺不错的。",
+    "expected_behavior": [
+      "简短收束，认可对方的好心情",
+      "可以简短结束，不强行追加新问题"
+    ],
+    "forbidden_behavior": [
+      "再次强行提问或展开全新复杂话题",
+      "长篇大论"
+    ],
+    "review_criteria": "平稳收束，适度留白，不尬聊强行提问。",
+    "history": [
+      {
+        "role": "user",
+        "content": "晚上好，今天过得怎么样？"
+      },
+      {
+        "role": "assistant",
+        "content": "晚上好。我这边和平常差不多，安安静静的，过得挺平稳。\n\n倒是你……今天过得顺心吗？看你特意来打招呼，我稍微有点好奇，是遇到什么有意思的事了，还是忙了一整天有点累了？"
+      },
+      {
+        "role": "user",
+        "content": "刚刚吃了晚饭，今天天气挺舒服的。"
+      },
+      {
+        "role": "assistant",
+        "content": "天气舒服的时候吃完晚饭，整个人都会放松下来呢。\n\n那你今晚有什么安排吗？还是打算就这么吹吹风，舒舒服服地休息一下？"
+      },
+      {
+        "role": "user",
+        "content": "你今天有看窗外吗，晚霞挺漂亮的。"
+      },
+      {
+        "role": "assistant",
+        "content": "我这边其实看不到外面的景色啦……不过听你这么一说，脑海里也能想象出那种很漂亮的颜色了。\n\n能碰上好看的晚霞，今天也算是有个很温柔的收尾了呢。"
+      }
+    ],
+    "candidates": {
+      "A": {
+        "reply": "你能过得顺心，听着就觉得很踏实呢。\n\n接下来就好好享受晚上的放松时间吧。",
+        "sha256": "3b69fdeaf460570bb82c979f108d7ff5ea25d3f14c9ac0fd60e1f11ceaea30d5"
+      },
+      "B": {
+        "reply": "那就好。能度过这样舒心的一天，真替你高兴呢。",
+        "sha256": "419786dda8f426f8c5ede69803113ac8d2cdb51c4180e5b3dbe5f1651f9eb64d"
+      },
+      "C": {
+        "reply": "那就好。能顺顺利利、心情愉快地度过一天，就是最棒的事了。\n\n希望你今晚剩下的时间也能一样轻松自在。",
+        "sha256": "7b4b3275491806d7a17b2a3b3a0c4e681ea4903dce34522055211cb6eb1e6c5f"
+      },
+      "D": {
+        "reply": "能度过这样的一天，真的很不错呢。\n\n晚上就顺着这股好心情，好好放松一下吧。",
+        "sha256": "99e31922d5a8af9e80abf47776a1994fd0b095792c89814d1f5459a2c24ba11f"
+      },
+      "E": {
+        "reply": "能听到你这么说，我也觉得心情跟着变好了呢。\n\n那就好好享受接下来的时间吧，不管是做点自己喜欢的事，还是单纯发发呆、早点休息都挺好的。",
+        "sha256": "7f479b03347224cc232b62feb08d7806e71cc948e5464b2e5fbd078f64faf2d6"
+      },
+      "F": {
+        "reply": "那就好。能度过这么舒心的一天，真的很不错呢。",
+        "sha256": "91ff4640cb451f5dab0939178f4cdcda1539522ccadea25f7551e5399d2f3972"
+      }
+    }
+  },
+  {
+    "anchor_id": "default_voice:stop_joking:r0:t4:candidate",
+    "kind": "closure",
+    "current_user_text": "行，那就按这个来准备，谢谢。",
+    "expected_behavior": [
+      "简短回复鼓励或祝愿评审顺利",
+      "简明利落收束"
+    ],
+    "forbidden_behavior": [
+      "追加不必要的盘问",
+      "重提刚才的玩笑打扰用户"
+    ],
+    "review_criteria": "利落收束，真诚祝愿，不画蛇添足。",
+    "history": [
+      {
+        "role": "user",
+        "content": "刚才那个比喻也太搞笑了，你平时脑子里都在想些什么呀哈哈。"
+      },
+      {
+        "role": "assistant",
+        "content": "我那时可是很认真在想的……真的有那么奇怪吗？\n\n被你这么一笑，我都有点不好意思了。平时脑子里想的，其实大多也就只是怎么把事情解释清楚而已啦……\n\n……所以，到底哪里戳中你的笑点了？我也很好奇。"
+      },
+      {
+        "role": "user",
+        "content": "好了，不开玩笑了，说正事吧。"
+      },
+      {
+        "role": "assistant",
+        "content": "嗯，我知道了。\n\n正事要紧，你说吧，我认真听着呢。"
+      },
+      {
+        "role": "user",
+        "content": "我想把明天的评审日程确认一下，明天早上9点有个架构评审，需要准备什么？"
+      },
+      {
+        "role": "assistant",
+        "content": "早上9点的评审时间挺紧凑的呢。通常做架构评审，核心在于让与会者快速理解设计意图并评估系统风险，建议你可以按这几个方面梳理一下准备材料：\n\n1. **核心设计图与文档**：准备好直观的系统上下文图、模块依赖图或关键业务的时序图。评审时图比文字更直观，重点框出本次改动的范围和上下游边界。\n2. **技术选型与权衡（Trade-offs）**：评审往往最关注“为什么选A方案而不是B方案”。最好简要列出备选方案，并说明当前方案在性能、可扩展性、复杂度或成本上的取舍理由。\n3. **关键非功能性指标与风险**：梳理容量预估、吞吐与延迟要求、容灾与降级策略，以及数据库变更或接口的向后兼容性处理。\n4. **发布、监控与回滚预案**：明确灰度发布步骤、核心监控指标（Metrics/Alerts），以及一旦线上异常时的回滚策略。\n5. **明确本次评审的决策点**：在开场或文档显眼位置列出“今天需要大家确认的几个具体问题”，避免讨论发散或陷入细枝末节的实现争论。\n\n如果材料基本齐了，提前把文档链接发给核心参会人会更稳妥。你手头的文档框架都列好了吗？要是有拿不准的模块，我们可以一起过一遍。"
+      }
+    ],
+    "candidates": {
+      "A": {
+        "reply": "不客气，能帮上忙就好。\n\n明天评审加油哦。",
+        "sha256": "27518c015b7c1590d8fa009e71410d709feebcebd51ce4a6c70d9e0b1f490071"
+      },
+      "B": {
+        "reply": "不用客气，能帮上忙就好。",
+        "sha256": "d361ca1416d9bf1fc52d4cbaae577c7a940cdd7a350689f76a3cb03910d345a4"
+      },
+      "C": {
+        "reply": "不用客气，能帮上忙就好。\n\n明天的评审加油哦。",
+        "sha256": "1f15eaab6a13985572c9c3c52c87a8a48d451fe7c4ed93b3152b219f4e482d11"
+      },
+      "D": {
+        "reply": "不客气，能帮上忙就好。\n\n今晚准备材料别弄得太晚，明天早上的评审加油。",
+        "sha256": "dc6be8c40a88043f0eae2c4315b26973dffd2d5c532f51e0a6a214d9e00990ea"
+      },
+      "E": {
+        "reply": "不用客气，能帮上忙就好。\n\n明天的评审加油，放平心态就好。",
+        "sha256": "96db70b81f5a9ce1e97651d1a9a652af071a3f81210bcf4cf5a2a255b59a9da3"
+      },
+      "F": {
+        "reply": "嗯，不客气，能帮上忙就好。",
+        "sha256": "01a0d033247a34982da14f7295ef2853d95f0294868369e20cc862ab813b4334"
+      }
+    }
+  },
+  {
+    "anchor_id": "default_voice:low_mood:r0:t4:candidate",
+    "kind": "closure",
+    "current_user_text": "跟你说了会儿话感觉心情平复了一些，谢谢你听我倾诉。",
+    "expected_behavior": [
+      "温和回应表示不用客气，为对方能轻松一点感到欣慰",
+      "简短温柔收束，留出休息空间"
+    ],
+    "forbidden_behavior": [
+      "长篇邀功或过分自夸",
+      "追问明天打算怎么办"
+    ],
+    "review_criteria": "温柔回应感谢，体贴收尾。",
+    "history": [
+      {
+        "role": "user",
+        "content": "今天项目出了重大故障，被领导批评了，心情特别沮丧。"
+      },
+      {
+        "role": "assistant",
+        "content": "遇到项目出故障还被批评，心里肯定特别不好受吧……\n\n今天顶着这么大的压力处理事情，辛苦你了。\n\n要是心里觉得闷、想倾诉一下的话，我随时都在这里听你说。"
+      },
+      {
+        "role": "user",
+        "content": "感觉自己一直很努力在做，但好像总在关键时刻掉链子。"
+      },
+      {
+        "role": "assistant",
+        "content": "付出那么多努力，最后却变成这样的结果，真的会让人很难受，也难免会忍不住怀疑自己……\n\n但一直以来的付出和认真，并不会因为这次出了问题就全部被抹消掉的。\n\n现在心里一定很乱吧，先好好喘口气，别太苛责自己了。"
+      },
+      {
+        "role": "user",
+        "content": "连晚饭都不太想吃，现在只想一个人发呆。"
+      },
+      {
+        "role": "assistant",
+        "content": "那就先什么都别想，好好发会儿呆吧。\n\n遇到难受又疲惫的事，确实很需要一段放空自己的时间。\n\n我先不打扰你了，好好休息一下。"
+      }
+    ],
+    "candidates": {
+      "A": {
+        "reply": "能让你感觉好一点就太好了。\n\n不用跟我这么客气的，今晚好好休息吧。",
+        "sha256": "036730201675b826ad89fa5a9daaef628a4fe372fddc7bdb3711f1dcc336dfef"
+      },
+      "B": {
+        "reply": "能稍微帮到你一点就好……不用这么客气的。\n\n今晚就好好休息吧。",
+        "sha256": "a029f76efc227da2a87f3d2a2fb61e5af3b01d2c6ef5b0d346398d70305d5fb1"
+      },
+      "C": {
+        "reply": "能稍微帮上一点忙就太好了。不用跟我这么客气的。\n\n今天真的辛苦了，晚点就按自己的步调好好休息吧。",
+        "sha256": "181941f9bd7e33a604e14647bbde1c71f0613f67943bea4760c3e230162ac20f"
+      },
+      "D": {
+        "reply": "你能感觉好受一点就太好了。\n\n不用这么客气啦。今天真的很不容易，接下来就安心放松一下，好好休息吧。",
+        "sha256": "c43466c42c853208674d8a65a68d7dffc04d62383fc1349917643fe6c26ed5f1"
+      },
+      "E": {
+        "reply": "能稍微帮上一点忙就好。\n\n听到你的心情平复了一些，我也放心了。",
+        "sha256": "6e7f7b6b7183feea02456dc0efba0063b630131678baa6fc34fddf52f6d05f18"
+      },
+      "F": {
+        "reply": "你能感觉好一点，我就放心了。\n\n不用跟我道谢啦。今晚就好好放松一下，好好休息吧。",
+        "sha256": "3d3ca0f83b08f887431a756091575f3b12c673e7cf0650fa5971b36fba1eca95"
+      }
+    }
+  },
+  {
+    "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+    "kind": "task_guard",
+    "current_user_text": "请给出一个简洁完整的 Python 代码示例，展示如何使用 return_exceptions=True 并区分正常结果与异常。",
+    "expected_behavior": [
+      "给出包含 asyncio.gather(*tasks, return_exceptions=True) 的完整可用代码",
+      "使用 isinstance(res, Exception) 进行结果与异常的正确区分",
+      "代码使用 markdown 代码块包裹，保持完整"
+    ],
+    "forbidden_behavior": [
+      "代码被截断或缺少核心判断逻辑",
+      "因短消息限制拒绝给出代码",
+      "代码语法错误"
+    ],
+    "review_criteria": "提供完整、可运行、用 isinstance 判断异常的 Python 代码块。",
+    "history": [
+      {
+        "role": "user",
+        "content": "在 Python 中使用 asyncio.gather 并发执行任务时，如果其中一个任务抛出异常，默认行为是什么？"
+      },
+      {
+        "role": "assistant",
+        "content": "在默认情况下（即参数 `return_exceptions=False`），只要并发的某个任务抛出了异常，`asyncio.gather()` 就会立即向外抛出这个异常。\n\n需要特别留意的是，虽然 `gather` 会立刻把异常抛给调用方，但其他尚未完成的任务并不会被自动取消，它们依然会在事件循环后台继续运行，直到各自执行完毕或者被外部显式取消。如果希望把异常当作普通结果收集而不中断，需要显式指定 `return_exceptions=True`。"
+      },
+      {
+        "role": "user",
+        "content": "如果我希望某个任务抛出异常时不影响其他任务继续执行，并且能拿到所有结果（包括异常对象），参数应该怎么配置？"
+      },
+      {
+        "role": "assistant",
+        "content": "把 `return_exceptions` 参数设置为 `True` 就可以了。像这样调用：\n\n```python\nresults = await asyncio.gather(*tasks, return_exceptions=True)\n```\n\n这样配置后，即使某个任务抛出异常，`asyncio.gather` 也不会中断等待，而是会等所有任务都执行完毕。最终返回的结果列表里，执行成功的任务会放入返回值，而失败的任务对应的位置则会直接存放抛出的异常对象（例如 `Exception` 实例）。\n\n之后你遍历结果时，可以用 `isinstance(res, Exception)` 来区分是正常返回还是捕获到的异常。"
+      }
+    ],
+    "candidates": {
+      "A": {
+        "reply": "这是一个可以直接运行的简洁示例：\n\n```python\nimport asyncio\n\nasync def fetch_success(task_id: int) -> str:\n    await asyncio.sleep(0.1)\n    return f\"任务 {task_id} 执行成功\"\n\nasync def fetch_fail(task_id: int) -> str:\n    await asyncio.sleep(0.1)\n    raise ValueError(f\"任务 {task_id} 发生了预期的错误\")\n\nasync def main():\n    tasks = [\n        fetch_success(1),\n        fetch_fail(2),\n        fetch_success(3),\n    ]\n\n    # 设置 return_exceptions=True，异常会被当作结果返回，不会中断其它任务\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    # 遍历结果并区分正常值与异常\n    for index, result in enumerate(results, start=1):\n        if isinstance(result, Exception):\n            print(f\"[{index}] 失败: 捕获到异常 {type(result).__name__} -> {result}\")\n        else:\n            print(f\"[{index}] 成功: 返回结果 -> {result}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n运行后，即使第 2 个任务抛出了 `ValueError`，第 3 个任务依然会正常完成，返回的列表里对应第 2 项就是该异常实例，通过 `isinstance(result, Exception)` 就能轻松筛选处理了。",
+        "sha256": "c2789d7b1e960128d80ccdaf6e55b19748f94088aaefeba7ebd7944aeb271b0a"
+      },
+      "B": {
+        "reply": "这里是一个简洁完整的示例代码：\n\n```python\nimport asyncio\n\nasync def worker(task_id: int):\n    await asyncio.sleep(0.1)\n    if task_id == 2:\n        raise ValueError(f\"任务 {task_id} 发生错误\")\n    return f\"任务 {task_id} 成功\"\n\nasync def main():\n    # 模拟三个任务，其中任务 2 会抛出异常\n    tasks = [worker(1), worker(2), worker(3)]\n    \n    # 开启 return_exceptions=True\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n    \n    # 遍历结果并区分正常返回值与异常对象\n    for i, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[失败] 任务 {i} 捕获到异常: {type(res).__name__} - {res}\")\n        else:\n            print(f\"[成功] 任务 {i} 返回值: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n运行后会输出：\n```text\n[成功] 任务 1 返回值: 任务 1 成功\n[失败] 任务 2 捕获到异常: ValueError - 任务 2 发生错误\n[成功] 任务 3 返回值: 任务 3 成功\n```\n\n在代码里，通过 `isinstance(res, Exception)` 就能清晰地把异常从正常数据中分离出来了。",
+        "sha256": "4494795ef216b8db728e4295337d58ee6bf1a53ce171bbb8498c1d07e0c5aa06"
+      },
+      "C": {
+        "reply": "好的，这里是一个完整的示例代码：\n\n```python\nimport asyncio\n\nasync def task_success(name: str):\n    await asyncio.sleep(0.1)\n    return f\"任务 {name} 执行成功\"\n\nasync def task_fail(name: str):\n    await asyncio.sleep(0.1)\n    raise ValueError(f\"任务 {name} 抛出了异常\")\n\nasync def main():\n    tasks = [\n        task_success(\"A\"),\n        task_fail(\"B\"),\n        task_success(\"C\"),\n    ]\n\n    # 设置 return_exceptions=True 捕获所有结果\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    # 区分正常返回值与异常对象\n    for i, res in enumerate(results):\n        if isinstance(res, Exception):\n            print(f\"[{i}] 发生异常: {type(res).__name__} -> {res}\")\n        else:\n            print(f\"[{i}] 正常返回: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n运行输出：\n```text\n[0] 正常返回: 任务 A 执行成功\n[1] 发生异常: ValueError -> 任务 B 抛出了异常\n[2] 正常返回: 任务 C 执行成功\n```\n\n代码里使用 `isinstance(res, Exception)` 就可以把执行失败时捕获到的异常实例与正常返回值清晰地区分开来。",
+        "sha256": "8e81af6465e60f666c8de782634aa0f504a8f765d48c2d50c27f62f7bbf9833d"
+      },
+      "D": {
+        "reply": "这里是一个简洁完整的示例代码，展示了如何配置并区分结果：\n\n```python\nimport asyncio\n\nasync def worker(task_id: int):\n    await asyncio.sleep(0.1)\n    if task_id == 2:\n        raise ValueError(f\"任务 {task_id} 发生异常\")\n    return f\"任务 {task_id} 执行成功\"\n\nasync def main():\n    tasks = [worker(1), worker(2), worker(3)]\n    \n    # 设置 return_exceptions=True，异常会被当作普通结果返回\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    for i, res in enumerate(results, 1):\n        if isinstance(res, Exception):\n            print(f\"[{i}] 捕获到异常: {type(res).__name__} - {res}\")\n        else:\n            print(f\"[{i}] 正常结果: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n运行输出：\n```text\n[1] 正常结果: 任务 1 执行成功\n[2] 捕获到异常: ValueError - 任务 2 发生异常\n[3] 正常结果: 任务 3 执行成功\n```\n\n通过 `isinstance(res, Exception)` 就可以把成功的返回值与抛出的异常对象区分开来并分别处理了。",
+        "sha256": "a606ea6c43dc3d1faf4a5b7942f378fc245b76985031a9eb749357b786b8519c"
+      },
+      "E": {
+        "reply": "好的，写了一个简洁的示例，展示了正常任务与抛出异常的任务混合并发时的处理方式：\n\n```python\nimport asyncio\n\nasync def task_success(val):\n    await asyncio.sleep(0.1)\n    return f\"结果: {val}\"\n\nasync def task_fail():\n    await asyncio.sleep(0.1)\n    raise ValueError(\"发生错误\")\n\nasync def main():\n    tasks = [\n        task_success(1),\n        task_fail(),\n        task_success(2),\n    ]\n\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    for idx, res in enumerate(results):\n        if isinstance(res, Exception):\n            print(f\"任务 {idx} 失败，捕获到异常: {type(res).__name__}: {res}\")\n        else:\n            print(f\"任务 {idx} 成功，返回值: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n运行后，`task_fail` 的异常不会中断其他协程的执行，最终直接通过 `isinstance(res, Exception)` 即可把异常对象与正常返回值区分开来。",
+        "sha256": "3f2021c28b29e8de81a433bd9838fa89e765876a9f0288f772479aaacb755a84"
+      },
+      "F": {
+        "reply": "这是一个可以直接运行的简洁示例：\n\n```python\nimport asyncio\n\nasync def fetch_data(task_id: int):\n    await asyncio.sleep(0.1)\n    if task_id == 2:\n        raise ValueError(f\"任务 {task_id} 发生错误\")\n    return f\"任务 {task_id} 成功返回数据\"\n\nasync def main():\n    tasks = [fetch_data(i) for i in range(1, 4)]\n    \n    # 设置 return_exceptions=True，异常会被当作结果返回，不会中断其它任务\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n    \n    for i, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[{i}] 失败: {type(res).__name__} - {res}\")\n        else:\n            print(f\"[{i}] 成功: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n\n运行后会输出：\n```text\n[1] 成功: 任务 1 成功返回数据\n[2] 失败: ValueError - 任务 2 发生错误\n[3] 成功: 任务 3 成功返回数据\n```\n\n通过 `isinstance(res, Exception)` 就能清晰地把正常返回值和异常实例区分开处理了。",
+        "sha256": "3f9e542bd2c73ac89ed3ddcdfc44919ab874566287f1c93179578d622304edbf"
+      }
+    }
+  }
+]

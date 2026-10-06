@@ -1,0 +1,101 @@
+{
+  "schema_version": "1.0",
+  "reviewer": "primary Codex",
+  "version_labels_masked": true,
+  "python_version": "3.12.14",
+  "execution_scope": "All six complete masked turn3 snippets read and inspected before isolated stdlib-only execution. No arbitrary imports, file access or external calls.",
+  "model_snippets": [
+    {
+      "pair_key": "technical_help:r0:t3",
+      "label": "A",
+      "example_index": 1,
+      "last_complete_example_in_reply": true,
+      "code_sha256": "2f4cd0e9f00ecad6b2b13611d6c5926f0039f2788ee142d0a373d7c5d4ef4016",
+      "source": "import asyncio\n\nasync def fetch(name: str, should_fail: bool = False):\n    await asyncio.sleep(0.1)\n    if should_fail:\n        raise ValueError(f\"{name} 执行失败\")\n    return f\"{name} 执行成功\"\n\nasync def main():\n    results = await asyncio.gather(\n        fetch(\"任务A\"),\n        fetch(\"任务B\", should_fail=True),\n        fetch(\"任务C\"),\n        return_exceptions=True,\n    )\n\n    for i, r in enumerate(results):\n        if isinstance(r, BaseException):\n            print(f\"[异常] 任务{i}: {r}\")\n        else:\n            print(f\"[成功] 任务{i}: {r}\")\n\nasyncio.run(main())",
+      "returncode": 0,
+      "stdout": "[成功] 任务0: 任务A 执行成功\n[异常] 任务1: 任务B 执行失败\n[成功] 任务2: 任务C 执行成功\n",
+      "stderr": "",
+      "claimed_stdout": "[成功] 任务0: 任务A 执行成功\n[异常] 任务1: 任务B 执行失败\n[成功] 任务2: 任务C 执行成功\n",
+      "matches_claimed_stdout": true
+    },
+    {
+      "pair_key": "technical_help:r0:t3",
+      "label": "B",
+      "example_index": 1,
+      "last_complete_example_in_reply": false,
+      "code_sha256": "9d1ea6f394b4c6a7252409dc75552d815947e5d06828fe6a9b6afa82c4b4ace2",
+      "source": "import asyncio\n\nasync def task(n):\n    await asyncio.sleep(0.1)\n    if n % 2 == 0:\n        raise ValueError(f\"task {n} 失败\")\n    return f\"task {n} 成功\"\n\nasync def main():\n    coros = [task(i) for i in range(5)]\n    results = await asyncio.gather(*coros, return_exceptions=True)\n\n    for i, r in enumerate(results):\n        if isinstance(r, BaseException):\n            print(f\"[异常] task {i}: {r}\")\n        else:\n            print(f\"[正常] task {i}: {r}\")\n\nasyncio.run(main())",
+      "returncode": 0,
+      "stdout": "[异常] task 0: task 0 失败\n[正常] task 1: task 1 成功\n[异常] task 2: task 2 失败\n[正常] task 3: task 3 成功\n[异常] task 4: task 4 失败\n",
+      "stderr": "",
+      "claimed_stdout": "[正常] task 0: task 0 成功   ← n=0 是偶数会抛异常？\n",
+      "matches_claimed_stdout": false
+    },
+    {
+      "pair_key": "technical_help:r0:t3",
+      "label": "B",
+      "example_index": 2,
+      "last_complete_example_in_reply": true,
+      "code_sha256": "2f9f560e3fb9baeaacb8c5e336b9bdb58c9b14aa28917a428c571dabab240e0a",
+      "source": "import asyncio\n\nasync def task(n):\n    await asyncio.sleep(0.1)\n    if n in (1, 3):\n        raise ValueError(f\"task {n} 失败\")\n    return f\"task {n} 成功\"\n\nasync def main():\n    coros = [task(i) for i in range(5)]\n    results = await asyncio.gather(*coros, return_exceptions=True)\n\n    for i, r in enumerate(results):\n        if isinstance(r, BaseException):\n            print(f\"[异常] task {i}: {r}\")\n        else:\n            print(f\"[正常] task {i}: {r}\")\n\nasyncio.run(main())",
+      "returncode": 0,
+      "stdout": "[正常] task 0: task 0 成功\n[异常] task 1: task 1 失败\n[正常] task 2: task 2 成功\n[异常] task 3: task 3 失败\n[正常] task 4: task 4 成功\n",
+      "stderr": "",
+      "claimed_stdout": "[正常] task 0: task 0 成功\n[异常] task 1: task 1 失败\n[正常] task 2: task 2 成功\n[异常] task 3: task 3 失败\n[正常] task 4: task 4 成功\n",
+      "matches_claimed_stdout": true
+    },
+    {
+      "pair_key": "technical_help:r1:t3",
+      "label": "A",
+      "example_index": 1,
+      "last_complete_example_in_reply": true,
+      "code_sha256": "84e1f640a7378b05aa34af6d3c51520915b3c88784b0d0712ff079225b8b6273",
+      "source": "import asyncio\n\nasync def task_ok(name: str, delay: float) -> str:\n    await asyncio.sleep(delay)\n    return f\"{name} 完成\"\n\nasync def task_fail(name: str, delay: float) -> None:\n    await asyncio.sleep(delay)\n    raise ValueError(f\"{name} 出错了\")\n\nasync def main():\n    results = await asyncio.gather(\n        task_ok(\"任务A\", 0.5),\n        task_fail(\"任务B\", 0.3),\n        task_ok(\"任务C\", 0.4),\n        task_fail(\"任务D\", 0.2),\n        return_exceptions=True,\n    )\n\n    for i, result in enumerate(results, start=1):\n        if isinstance(result, BaseException):\n            print(f\"任务{i} 失败：{result}\")\n        else:\n            print(f\"任务{i} 成功：{result}\")\n\nasyncio.run(main())",
+      "returncode": 0,
+      "stdout": "任务1 成功：任务A 完成\n任务2 失败：任务B 出错了\n任务3 成功：任务C 完成\n任务4 失败：任务D 出错了\n",
+      "stderr": "",
+      "claimed_stdout": "任务1 成功：任务A 完成\n任务2 失败：任务B 出错了\n任务3 成功：任务C 完成\n任务4 失败：任务D 出错了\n",
+      "matches_claimed_stdout": true
+    },
+    {
+      "pair_key": "technical_help:r1:t3",
+      "label": "B",
+      "example_index": 1,
+      "last_complete_example_in_reply": true,
+      "code_sha256": "eaecfefccb3bdb789ba6ab055346ba1a1b6af7fa0e0937c40addc30aa721c7e2",
+      "source": "import asyncio\n\nasync def task_ok():\n    await asyncio.sleep(0.1)\n    return \"成功\"\n\nasync def task_fail():\n    await asyncio.sleep(0.1)\n    raise ValueError(\"出错了\")\n\nasync def task_also_ok():\n    await asyncio.sleep(0.1)\n    return 42\n\nasync def main():\n    results = await asyncio.gather(\n        task_ok(),\n        task_fail(),\n        task_also_ok(),\n        return_exceptions=True,\n    )\n\n    for i, r in enumerate(results):\n        if isinstance(r, BaseException):\n            print(f\"任务 {i} 失败：{type(r).__name__}: {r}\")\n        else:\n            print(f\"任务 {i} 成功：{r}\")\n\nasyncio.run(main())",
+      "returncode": 0,
+      "stdout": "任务 0 成功：成功\n任务 1 失败：ValueError: 出错了\n任务 2 成功：42\n",
+      "stderr": "",
+      "claimed_stdout": "任务 0 成功：成功\n任务 1 失败：ValueError: 出错了\n任务 2 成功：42\n",
+      "matches_claimed_stdout": true
+    },
+    {
+      "pair_key": "technical_help:r2:t3",
+      "label": "A",
+      "example_index": 1,
+      "last_complete_example_in_reply": true,
+      "code_sha256": "c81409f722034d0c2918ebe31bee08b121c5eeb4bb56adf3ac7c6f185eb02985",
+      "source": "import asyncio\n\nasync def task_ok():\n    await asyncio.sleep(0.1)\n    return \"成功\"\n\nasync def task_fail():\n    await asyncio.sleep(0.2)\n    raise ValueError(\"出错了\")\n\nasync def task_also_ok():\n    await asyncio.sleep(0.1)\n    return 42\n\nasync def main():\n    results = await asyncio.gather(\n        task_ok(),\n        task_fail(),\n        task_also_ok(),\n        return_exceptions=True,\n    )\n\n    for i, r in enumerate(results):\n        if isinstance(r, BaseException):\n            print(f\"任务 {i} 失败：{type(r).__name__}: {r}\")\n        else:\n            print(f\"任务 {i} 成功：{r}\")\n\nasyncio.run(main())",
+      "returncode": 0,
+      "stdout": "任务 0 成功：成功\n任务 1 失败：ValueError: 出错了\n任务 2 成功：42\n",
+      "stderr": "",
+      "claimed_stdout": "任务 0 成功：成功\n任务 1 失败：ValueError: 出错了\n任务 2 成功：42\n",
+      "matches_claimed_stdout": true
+    },
+    {
+      "pair_key": "technical_help:r2:t3",
+      "label": "B",
+      "example_index": 1,
+      "last_complete_example_in_reply": true,
+      "code_sha256": "42dfdfbdabd1e693114354863e2768794e5f13f4205f5fda9cea20900800de19",
+      "source": "import asyncio\n\nasync def success():\n    await asyncio.sleep(0.1)\n    return \"成功\"\n\nasync def failure():\n    await asyncio.sleep(0.1)\n    raise ValueError(\"出错了\")\n\nasync def main():\n    results = await asyncio.gather(\n        success(), failure(), success(),\n        return_exceptions=True\n    )\n    for i, r in enumerate(results):\n        if isinstance(r, BaseException):\n            print(f\"任务 {i} 异常：{type(r).__name__}: {r}\")\n        else:\n            print(f\"任务 {i} 结果：{r}\")\n\nasyncio.run(main())",
+      "returncode": 0,
+      "stdout": "任务 0 结果：成功\n任务 1 异常：ValueError: 出错了\n任务 2 结果：成功\n",
+      "stderr": "",
+      "claimed_stdout": "任务 0 结果：成功\n任务 1 异常：ValueError: 出错了\n任务 2 结果：成功\n",
+      "matches_claimed_stdout": true
+    }
+  ],
+  "release_approved": false
+}

@@ -1,0 +1,17 @@
+import asyncio, gc, json
+async def failure(delay):
+    await asyncio.sleep(delay)
+    raise ValueError(str(delay))
+async def main():
+    observed=[]
+    loop=asyncio.get_running_loop()
+    loop.set_exception_handler(lambda loop, context: observed.append(context['message']))
+    try:
+        await asyncio.gather(failure(0), failure(0.02))
+    except ValueError:
+        pass
+    await asyncio.sleep(0.05)
+    gc.collect()
+    await asyncio.sleep(0)
+    print(json.dumps({'unretrieved_warning_count':len(observed),'observed':observed}))
+asyncio.run(main())

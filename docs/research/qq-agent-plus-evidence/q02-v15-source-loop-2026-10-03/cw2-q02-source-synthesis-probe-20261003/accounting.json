@@ -1,0 +1,33 @@
+{
+  "requests": 4,
+  "quality_approved": false,
+  "http_statuses": {
+    "200": 4
+  },
+  "usage": {
+    "prompt_tokens": {
+      "reported": 4,
+      "known_subtotal": 57710
+    },
+    "completion_tokens": {
+      "reported": 4,
+      "known_subtotal": 5921
+    },
+    "total_tokens": {
+      "reported": 4,
+      "known_subtotal": 63631
+    }
+  },
+  "variants": {
+    "original": {
+      "requests": 2,
+      "p50_ms": 5324,
+      "p95_ms": 12565
+    },
+    "whole_task_coverage": {
+      "requests": 2,
+      "p50_ms": 5098,
+      "p95_ms": 5530
+    }
+  }
+}

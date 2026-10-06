@@ -1,0 +1,92 @@
+{
+  "scope": "role-persona-controls",
+  "release_approved": false,
+  "source_urls": [
+    "https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html",
+    "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227950.html"
+  ],
+  "groups": {
+    "character_native": {
+      "completed": 3,
+      "stop": 3,
+      "source_url_present": 0,
+      "all_two_source_urls_present": 0,
+      "provider_usage": {
+        "prompt_tokens": 32163,
+        "completion_tokens": 1214,
+        "reasoning_tokens": 1430,
+        "total_tokens": 34807
+      },
+      "latency_ms": [
+        6160,
+        6183,
+        8142
+      ],
+      "median_ms": 6183,
+      "latency_p50_ms": 6183,
+      "latency_p95_ms": 8142
+    },
+    "character_source_user": {
+      "completed": 3,
+      "stop": 3,
+      "source_url_present": 0,
+      "all_two_source_urls_present": 0,
+      "provider_usage": {
+        "prompt_tokens": 31290,
+        "completion_tokens": 1199,
+        "reasoning_tokens": 1866,
+        "total_tokens": 34355
+      },
+      "latency_ms": [
+        7051,
+        7168,
+        10826
+      ],
+      "median_ms": 7168,
+      "latency_p50_ms": 7168,
+      "latency_p95_ms": 10826
+    },
+    "neutral_native": {
+      "completed": 3,
+      "stop": 3,
+      "source_url_present": 1,
+      "all_two_source_urls_present": 1,
+      "provider_usage": {
+        "prompt_tokens": 28299,
+        "completion_tokens": 1497,
+        "reasoning_tokens": 1729,
+        "total_tokens": 31525
+      },
+      "latency_ms": [
+        9036,
+        10881,
+        15303
+      ],
+      "median_ms": 10881,
+      "latency_p50_ms": 10881,
+      "latency_p95_ms": 15303
+    },
+    "neutral_source_user": {
+      "completed": 3,
+      "stop": 3,
+      "source_url_present": 0,
+      "all_two_source_urls_present": 0,
+      "provider_usage": {
+        "prompt_tokens": 27426,
+        "completion_tokens": 1333,
+        "reasoning_tokens": null,
+        "total_tokens": 30169
+      },
+      "latency_ms": [
+        6568,
+        7192,
+        13863
+      ],
+      "median_ms": 7192,
+      "latency_p50_ms": 7192,
+      "latency_p95_ms": 13863
+    }
+  },
+  "metrics_note": "URL presence is a diagnostic observation, not factual approval; aliases do not independently verify the underlying model.",
+  "percentile_method": "nearest_rank; tiny samples describe this batch only"
+}

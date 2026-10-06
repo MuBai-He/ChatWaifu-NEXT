@@ -1,0 +1,33 @@
+{
+  "model": "gemini-3.8-flash-high",
+  "scenarios": [
+    "greeting",
+    "teasing",
+    "correction",
+    "low_mood",
+    "goodbye",
+    "verbose_history_pressure"
+  ],
+  "samples": 144,
+  "pairs": 72,
+  "nonempty_replies": 144,
+  "finish_reasons": {
+    "stop": 144
+  },
+  "provider_usage_coverage": 144,
+  "latency_ms_p50": 4662.5,
+  "latency_ms_p95": 8027,
+  "totals": {
+    "provider_tokens_prompt": 376217,
+    "provider_tokens_completion": 4309,
+    "provider_tokens_reasoning": 64277,
+    "provider_tokens_total": 444803
+  },
+  "usage_field_coverage": {
+    "provider_tokens_prompt": 144,
+    "provider_tokens_completion": 144,
+    "provider_tokens_reasoning": 144,
+    "provider_tokens_total": 144
+  },
+  "shared_compiler_sha256_first16": "7c85a6ef6515d89c"
+}

@@ -1,0 +1,24 @@
+{
+  "identity": {
+    "tool": "evaluate_character_scenarios",
+    "version": "1.1.0",
+    "fixtures_hash": "43c9624b51198247",
+    "provider": "openai_compatible",
+    "model": "claude-sonnet-4-6",
+    "repeats": 3,
+    "base_url_hash": "937c7a5a291b7e56",
+    "input_usd_per_million": null,
+    "output_usd_per_million": null,
+    "pricing_source": null,
+    "cost_policy": "no_cost_ceiling",
+    "cost_ceiling": null,
+    "variants": {
+      "baseline": {
+        "hash": "a12bb898beb0205e"
+      },
+      "candidate": {
+        "hash": "b477415eb9903b0d"
+      }
+    }
+  }
+}

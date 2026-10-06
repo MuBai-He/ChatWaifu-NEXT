@@ -1,0 +1,141 @@
+{
+  "controls": [
+    {
+      "phase": "T4 draft",
+      "old_exact_actual_wire": true,
+      "old_latest_answer_retained": false,
+      "new_latest_answer_retained": true,
+      "new_latest_answer_sha256": "dd52bd62b4125cf37e35b01075140a17d948ee50cdf54cb6ef080060296c1108",
+      "old_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 23104,
+        "estimated_input_tokens": 21177,
+        "omitted_history_indices": [
+          1,
+          3,
+          5
+        ],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "new_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 21767,
+        "estimated_input_tokens": 20979,
+        "omitted_history_indices": [
+          1
+        ],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "prior_read_bodies": [
+        {
+          "url": "https://item.btime.com/41v8i91ponu8e9pnuojftmddbgs",
+          "original_result": "available"
+        },
+        {
+          "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+          "original_result": "available"
+        },
+        {
+          "url": "https://www.caac.gov.cn/PHONE/XWZX/MHYW/201408/t20140808_13837.html",
+          "original_result": "available"
+        },
+        {
+          "url": "https://raft.github.io/raft.pdf",
+          "original_result": "available"
+        },
+        {
+          "url": "https://raft.github.io/raft.pdf",
+          "original_result": "omitted_for_input_budget"
+        },
+        {
+          "url": "https://raft.github.io/raft.pdf",
+          "original_result": "omitted_for_input_budget"
+        },
+        {
+          "url": "https://raft.github.io/raft.pdf",
+          "original_result": "omitted_for_input_budget"
+        }
+      ],
+      "new_exact_actual_wire": false
+    },
+    {
+      "phase": "T4 fixed review input",
+      "old_exact_actual_wire": true,
+      "old_latest_answer_retained": false,
+      "new_latest_answer_retained": true,
+      "new_latest_answer_sha256": "dd52bd62b4125cf37e35b01075140a17d948ee50cdf54cb6ef080060296c1108",
+      "old_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 23104,
+        "estimated_input_tokens": 21221,
+        "omitted_history_indices": [
+          1,
+          3,
+          5
+        ],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "new_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 22891,
+        "estimated_input_tokens": 20975,
+        "omitted_history_indices": [
+          1
+        ],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "prior_read_bodies": [
+        {
+          "url": "https://item.btime.com/41v8i91ponu8e9pnuojftmddbgs",
+          "original_result": "available"
+        },
+        {
+          "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+          "original_result": "available"
+        },
+        {
+          "url": "https://www.caac.gov.cn/PHONE/XWZX/MHYW/201408/t20140808_13837.html",
+          "original_result": "available"
+        },
+        {
+          "url": "https://raft.github.io/raft.pdf",
+          "original_result": "omitted_for_input_budget"
+        },
+        {
+          "url": "https://raft.github.io/raft.pdf",
+          "original_result": "omitted_for_input_budget"
+        },
+        {
+          "url": "https://raft.github.io/raft.pdf",
+          "original_result": "omitted_for_input_budget"
+        },
+        {
+          "url": "https://raft.github.io/raft.pdf",
+          "original_result": "omitted_for_input_budget"
+        }
+      ],
+      "new_exact_actual_wire": false
+    }
+  ],
+  "old_original_estimate_preserved": 6,
+  "new_original_estimate_preserved": 8,
+  "diagnostic_boundaries": 8,
+  "actual_model_http": 0,
+  "source_http": 0,
+  "new_usage": null,
+  "quality_approval": false,
+  "same_budget": 21370,
+  "prompts_unchanged": true
+}

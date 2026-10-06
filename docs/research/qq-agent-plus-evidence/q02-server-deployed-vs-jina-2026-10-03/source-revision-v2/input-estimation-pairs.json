@@ -1,0 +1,488 @@
+[
+  {
+    "sample_key": "technical_help:r0:t1:baseline",
+    "call_id": "199408f7-b064-4560-8cca-c01efe692be5",
+    "estimated_input_tokens": 2519,
+    "provider_prompt_tokens": 1887,
+    "relative_error": 0.3349231584525702,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "technical_help:r0:t2:baseline",
+    "call_id": "0031bf03-3b19-4dcb-9703-9d661d0d7a92",
+    "estimated_input_tokens": 2866,
+    "provider_prompt_tokens": 2429,
+    "relative_error": 0.17990942774804447,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "technical_help:r0:t3:baseline",
+    "call_id": "ca7915eb-a93d-4627-87f6-7ae5455d85ed",
+    "estimated_input_tokens": 3204,
+    "provider_prompt_tokens": 2861,
+    "relative_error": 0.11988815099615519,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "technical_help:r0:t4:baseline",
+    "call_id": "08e6ac9d-f3a0-4e49-91e0-890fbac56ad0",
+    "estimated_input_tokens": 3663,
+    "provider_prompt_tokens": 3403,
+    "relative_error": 0.07640317367029092,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r0:t1:baseline",
+    "call_id": "a7361e2b-a9a0-4314-a565-8cde5d8ad91f",
+    "estimated_input_tokens": 2541,
+    "provider_prompt_tokens": 1890,
+    "relative_error": 0.34444444444444444,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r0:t2:baseline",
+    "call_id": "66922854-a551-4972-9c08-53797c62e9f1",
+    "estimated_input_tokens": 3125,
+    "provider_prompt_tokens": 3334,
+    "relative_error": -0.0626874625074985,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r0:t3:baseline",
+    "call_id": "c4147d8e-a3e0-407a-b0aa-b5daea63820e",
+    "estimated_input_tokens": 3314,
+    "provider_prompt_tokens": 3911,
+    "relative_error": -0.15264638199948863,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r0:t4:baseline",
+    "call_id": "cf2726f7-412c-4096-8854-873bb3e2c0c6",
+    "estimated_input_tokens": 3475,
+    "provider_prompt_tokens": 4406,
+    "relative_error": -0.21130276895142988,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r0:t1:baseline",
+    "call_id": "4850e0cf-b8f5-40fd-b649-7a06a7e63095",
+    "estimated_input_tokens": 2567,
+    "provider_prompt_tokens": 1909,
+    "relative_error": 0.34468308014667365,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:baseline",
+    "call_id": "9445cef5-bda0-4920-9c42-9e7552dca115",
+    "estimated_input_tokens": 3163,
+    "provider_prompt_tokens": 2727,
+    "relative_error": 0.1598826549321599,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:baseline",
+    "call_id": "e72481fc-e5c8-4bc4-ac16-b47e598ea2b1",
+    "estimated_input_tokens": 6161,
+    "provider_prompt_tokens": 5998,
+    "relative_error": 0.02717572524174725,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:baseline",
+    "call_id": "deb15a00-c09c-44bc-a7de-b3ea3eabb611",
+    "estimated_input_tokens": 12606,
+    "provider_prompt_tokens": 10686,
+    "relative_error": 0.17967434025828186,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:baseline",
+    "call_id": "59183f84-7b4a-4006-ad34-fa0ecdc096cb",
+    "estimated_input_tokens": 12869,
+    "provider_prompt_tokens": 10662,
+    "relative_error": 0.20699681110485837,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:baseline",
+    "call_id": "03eba503-ae4e-46bb-99e2-c95e65232c36",
+    "estimated_input_tokens": 13977,
+    "provider_prompt_tokens": 11357,
+    "relative_error": 0.2306947257198204,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r0:t2:baseline",
+    "call_id": "977023b9-afa4-41cb-a126-454532aaaea8",
+    "estimated_input_tokens": 14326,
+    "provider_prompt_tokens": 11298,
+    "relative_error": 0.2680120375287662,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r0:t3:baseline",
+    "call_id": "42dcac3d-4438-4ae6-9673-06d4b5ec15f0",
+    "estimated_input_tokens": 13466,
+    "provider_prompt_tokens": 9901,
+    "relative_error": 0.3600646399353601,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r0:t4:baseline",
+    "call_id": "d150c942-219f-4120-a2fe-1a50e9b3d64d",
+    "estimated_input_tokens": 14167,
+    "provider_prompt_tokens": 11340,
+    "relative_error": 0.24929453262786597,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r0:t4:baseline",
+    "call_id": "4b89a482-4f88-4b30-8ba3-1e7bdb262994",
+    "estimated_input_tokens": 15668,
+    "provider_prompt_tokens": 12401,
+    "relative_error": 0.2634464962503024,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "technical_help:r1:t1:baseline",
+    "call_id": "4c48ee74-df23-423f-a05e-ad0a9b92ddde",
+    "estimated_input_tokens": 2519,
+    "provider_prompt_tokens": 1887,
+    "relative_error": 0.3349231584525702,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "technical_help:r1:t2:baseline",
+    "call_id": "c0e8e3c2-7096-47b9-a16c-47c6c2554416",
+    "estimated_input_tokens": 2765,
+    "provider_prompt_tokens": 2281,
+    "relative_error": 0.2121876370013152,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "technical_help:r1:t3:baseline",
+    "call_id": "7a542092-a5e7-476b-818e-1f5d3f76607a",
+    "estimated_input_tokens": 2988,
+    "provider_prompt_tokens": 2553,
+    "relative_error": 0.17038777908343125,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "technical_help:r1:t4:baseline",
+    "call_id": "2b08bdea-fa9a-4b2a-ac2b-9bf6484f7cc7",
+    "estimated_input_tokens": 3431,
+    "provider_prompt_tokens": 3009,
+    "relative_error": 0.1402459288800266,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r1:t1:baseline",
+    "call_id": "0be6d01a-d5ae-403b-878e-99ae56fa7b39",
+    "estimated_input_tokens": 2541,
+    "provider_prompt_tokens": 1890,
+    "relative_error": 0.34444444444444444,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r1:t2:baseline",
+    "call_id": "9fcd1f4f-12d8-4e82-b1e9-b8d74f1252b1",
+    "estimated_input_tokens": 2993,
+    "provider_prompt_tokens": 2765,
+    "relative_error": 0.08245931283905968,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r1:t3:baseline",
+    "call_id": "34619fcf-33c1-46b1-966f-63dfbbbbe4d8",
+    "estimated_input_tokens": 3164,
+    "provider_prompt_tokens": 3223,
+    "relative_error": -0.018305926155755506,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r1:t4:baseline",
+    "call_id": "4f0394c0-c092-4293-aac1-caccc2054ac4",
+    "estimated_input_tokens": 3311,
+    "provider_prompt_tokens": 3482,
+    "relative_error": -0.04910970706490523,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r1:t1:baseline",
+    "call_id": "a18dc1bd-0af0-420e-a9ba-4d074fcc3d0f",
+    "estimated_input_tokens": 2567,
+    "provider_prompt_tokens": 1909,
+    "relative_error": 0.34468308014667365,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r1:t2:baseline",
+    "call_id": "161be266-e834-4ebc-8491-217a838c8262",
+    "estimated_input_tokens": 3192,
+    "provider_prompt_tokens": 2724,
+    "relative_error": 0.17180616740088106,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r1:t2:baseline",
+    "call_id": "c8841c55-53b7-4f8c-abe9-94044e0509e2",
+    "estimated_input_tokens": 6388,
+    "provider_prompt_tokens": 6096,
+    "relative_error": 0.047900262467191604,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r1:t2:baseline",
+    "call_id": "b415d651-e43e-4134-8dc5-8146a2e2b4b9",
+    "estimated_input_tokens": 12833,
+    "provider_prompt_tokens": 10711,
+    "relative_error": 0.19811408832041827,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r1:t2:baseline",
+    "call_id": "d5f50467-1fd9-4a86-8d7b-f6aa7ee5e4b3",
+    "estimated_input_tokens": 13095,
+    "provider_prompt_tokens": 10765,
+    "relative_error": 0.21644217371110078,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r1:t2:baseline",
+    "call_id": "987e849f-2369-40da-b605-3780e0337a78",
+    "estimated_input_tokens": 16705,
+    "provider_prompt_tokens": 13392,
+    "relative_error": 0.24738649940262844,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r1:t2:baseline",
+    "call_id": "4f9baaac-df2b-4db3-a841-fb64db9e8254",
+    "estimated_input_tokens": 17087,
+    "provider_prompt_tokens": 13362,
+    "relative_error": 0.27877563239036074,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r1:t3:baseline",
+    "call_id": "4384bbc4-7fca-4736-af70-5d694a44629d",
+    "estimated_input_tokens": 16480,
+    "provider_prompt_tokens": 12328,
+    "relative_error": 0.33679428942245293,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r1:t4:baseline",
+    "call_id": "420ea629-4167-46e3-afdf-a17b42b51f1f",
+    "estimated_input_tokens": 17168,
+    "provider_prompt_tokens": 13265,
+    "relative_error": 0.2942329438371655,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r1:t4:baseline",
+    "call_id": "3e02ccb6-f562-4b8a-8695-70a35401fd8e",
+    "estimated_input_tokens": 18591,
+    "provider_prompt_tokens": 14303,
+    "relative_error": 0.2997972453331469,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "technical_help:r2:t1:baseline",
+    "call_id": "1fd7fcf3-5ca4-4869-85e7-490a85034303",
+    "estimated_input_tokens": 2519,
+    "provider_prompt_tokens": 1887,
+    "relative_error": 0.3349231584525702,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "technical_help:r2:t2:baseline",
+    "call_id": "1c5c114d-fc09-4b13-a859-dcc152e1c491",
+    "estimated_input_tokens": 2908,
+    "provider_prompt_tokens": 2539,
+    "relative_error": 0.14533280819220165,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "technical_help:r2:t3:baseline",
+    "call_id": "5b620e7c-5163-470c-94db-54128f743e0f",
+    "estimated_input_tokens": 3229,
+    "provider_prompt_tokens": 2947,
+    "relative_error": 0.09569053274516458,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "technical_help:r2:t4:baseline",
+    "call_id": "515916d9-e2be-4b30-92f4-1519cf30e46e",
+    "estimated_input_tokens": 3653,
+    "provider_prompt_tokens": 3367,
+    "relative_error": 0.08494208494208494,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r2:t1:baseline",
+    "call_id": "65907061-2789-44a1-8e0b-83d290872356",
+    "estimated_input_tokens": 2541,
+    "provider_prompt_tokens": 1890,
+    "relative_error": 0.34444444444444444,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r2:t2:baseline",
+    "call_id": "fe86e63b-c2a0-4200-974d-f23af5b4ea71",
+    "estimated_input_tokens": 3044,
+    "provider_prompt_tokens": 2777,
+    "relative_error": 0.09614692113791862,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r2:t3:baseline",
+    "call_id": "0771217d-5b9e-413f-ac5b-54092dd073b6",
+    "estimated_input_tokens": 3258,
+    "provider_prompt_tokens": 3196,
+    "relative_error": 0.01939924906132666,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "topic_switch:r2:t4:baseline",
+    "call_id": "c1a28488-47f4-41e9-9ca6-2a37e7670e62",
+    "estimated_input_tokens": 3409,
+    "provider_prompt_tokens": 3448,
+    "relative_error": -0.01131090487238979,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r2:t1:baseline",
+    "call_id": "12417da3-388b-42f5-a9ca-ca8746a5522b",
+    "estimated_input_tokens": 2567,
+    "provider_prompt_tokens": 1909,
+    "relative_error": 0.34468308014667365,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r2:t2:baseline",
+    "call_id": "0147b070-c499-4ac0-a254-9f130babe2a7",
+    "estimated_input_tokens": 3076,
+    "provider_prompt_tokens": 2653,
+    "relative_error": 0.159442140972484,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r2:t2:baseline",
+    "call_id": "71fd9141-964a-4680-9f6d-8f361ab3b210",
+    "estimated_input_tokens": 6347,
+    "provider_prompt_tokens": 6063,
+    "relative_error": 0.046841497608444665,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r2:t2:baseline",
+    "call_id": "7bd0778b-4d8e-485a-af84-c2ad87c32b3d",
+    "estimated_input_tokens": 7190,
+    "provider_prompt_tokens": 7059,
+    "relative_error": 0.018557869386598667,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r2:t2:baseline",
+    "call_id": "33871cab-3253-4640-bba5-bdf0ae1a4f5c",
+    "estimated_input_tokens": 7413,
+    "provider_prompt_tokens": 7032,
+    "relative_error": 0.05418088737201365,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r2:t2:baseline",
+    "call_id": "49e6338a-8324-498c-a8c2-dcbddbf9346f",
+    "estimated_input_tokens": 8561,
+    "provider_prompt_tokens": 7786,
+    "relative_error": 0.09953763164654508,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r2:t2:baseline",
+    "call_id": "ee3d2cbb-cab0-4fc3-b092-5954065d1fc0",
+    "estimated_input_tokens": 8941,
+    "provider_prompt_tokens": 7752,
+    "relative_error": 0.15337977296181632,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r2:t3:baseline",
+    "call_id": "636214ff-f938-4fdc-80fc-17af7b329e9b",
+    "estimated_input_tokens": 7973,
+    "provider_prompt_tokens": 6339,
+    "relative_error": 0.25776936425303676,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r2:t4:baseline",
+    "call_id": "229c11e3-810e-4948-a66b-4fa462920b82",
+    "estimated_input_tokens": 8637,
+    "provider_prompt_tokens": 6715,
+    "relative_error": 0.28622486969471334,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  },
+  {
+    "sample_key": "detailed_answer:r2:t4:baseline",
+    "call_id": "ad08dfe1-af67-4a21-824d-a46e0ebfbc1c",
+    "estimated_input_tokens": 9925,
+    "provider_prompt_tokens": 7675,
+    "relative_error": 0.2931596091205212,
+    "omitted_history_indices": [],
+    "omitted_tool_preamble_indices": []
+  }
+]

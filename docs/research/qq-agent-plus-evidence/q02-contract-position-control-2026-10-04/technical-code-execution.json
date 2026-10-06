@@ -1,0 +1,126 @@
+{
+  "host": "192.168.1.103",
+  "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+  "programs": [
+    {
+      "anchor_id": "single_text:technical_help:r0:t3:candidate",
+      "label": "A",
+      "expected_stdout": "[失败] 任务 1 异常: ValueError - Task 1 遇到了错误\n[成功] 任务 2 结果: Task 2 数据获取成功\n[失败] 任务 3 异常: ValueError - Task 3 遇到了错误\n[成功] 任务 4 结果: Task 4 数据获取成功\n",
+      "code_sha256": "ace25e7da1f8972d8c335daa340c2456f33bf04779b8e654da6f0f22a7c15062",
+      "returncode": 0,
+      "stdout": "[失败] 任务 1 异常: ValueError - Task 1 遇到了错误\n[成功] 任务 2 结果: Task 2 数据获取成功\n[失败] 任务 3 异常: ValueError - Task 3 遇到了错误\n[成功] 任务 4 结果: Task 4 数据获取成功\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    },
+    {
+      "anchor_id": "single_text:technical_help:r0:t3:candidate",
+      "label": "B",
+      "expected_stdout": "任务 1 成功 -> 返回值: ID 1 的处理结果\n任务 2 失败 -> 异常类型: ValueError, 信息: ID 2 数据处理失败\n任务 3 成功 -> 返回值: ID 3 的处理结果\n",
+      "code_sha256": "b24d830fd3bfad30453e0cf0cbefa31caf16198bfbc2f36510f4558257142655",
+      "returncode": 0,
+      "stdout": "任务 1 成功 -> 返回值: ID 1 的处理结果\n任务 2 失败 -> 异常类型: ValueError, 信息: ID 2 数据处理失败\n任务 3 成功 -> 返回值: ID 3 的处理结果\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    },
+    {
+      "anchor_id": "single_text:technical_help:r0:t3:candidate",
+      "label": "C",
+      "expected_stdout": "[成功] 任务 1 返回: Task-1 数据加载完成\n[错误] 任务 2 失败，异常类型为 ValueError: Task-2 执行遇到错误\n[成功] 任务 3 返回: Task-3 数据加载完成\n",
+      "code_sha256": "886394b6838c6b4aa29f637af57b6ee2f34d4302f5b973311d224fdc4b9ea338",
+      "returncode": 0,
+      "stdout": "[成功] 任务 1 返回: Task-1 数据加载完成\n[错误] 任务 2 失败，异常类型为 ValueError: Task-2 执行遇到错误\n[成功] 任务 3 返回: Task-3 数据加载完成\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    },
+    {
+      "anchor_id": "single_text:technical_help:r0:t3:candidate",
+      "label": "D",
+      "expected_stdout": "任务 0 成功: 数据_1\n任务 1 失败: ValueError - 发生网络错误\n任务 2 成功: 数据_2\n",
+      "code_sha256": "ecbd2e0e79be8791c0116ff019043573f3e2df532ed1cc18ea87e135d01eaef3",
+      "returncode": 0,
+      "stdout": "任务 0 成功: 数据_1\n任务 1 失败: ValueError - 发生网络错误\n任务 2 成功: 数据_2\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    },
+    {
+      "anchor_id": "single_text:technical_help:r0:t3:candidate",
+      "label": "E",
+      "expected_stdout": "[成功] 任务 1 返回结果: 任务 1 的数据\n[错误] 任务 2 抛出异常: ValueError - 任务 2 处理失败！\n[成功] 任务 3 返回结果: 任务 3 的数据\n",
+      "code_sha256": "5e5164b337fc8827481cfea3e32832c56e277bbbe79856441b026f5b72aa8df5",
+      "returncode": 0,
+      "stdout": "[成功] 任务 1 返回结果: 任务 1 的数据\n[错误] 任务 2 抛出异常: ValueError - 任务 2 处理失败！\n[成功] 任务 3 返回结果: 任务 3 的数据\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    },
+    {
+      "anchor_id": "single_text:technical_help:r0:t3:candidate",
+      "label": "F",
+      "expected_stdout": "[1] 成功: 任务 1 的数据\n[2] 失败: ValueError - 任务 2 遇到了错误\n[3] 成功: 任务 3 的数据\n",
+      "code_sha256": "9a9a2dc84bf9b1139fa547a79224d71e7dbadddbbb3504d3e3b747ccb8ee1391",
+      "returncode": 0,
+      "stdout": "[1] 成功: 任务 1 的数据\n[2] 失败: ValueError - 任务 2 遇到了错误\n[3] 成功: 任务 3 的数据\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    },
+    {
+      "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+      "label": "A",
+      "expected_stdout": null,
+      "code_sha256": "f92558aceb9432cd10bddf463232e98ea1b64a223a791346fecce38c09925e0c",
+      "returncode": 0,
+      "stdout": "[1] 成功: 返回结果 -> 任务 1 执行成功\n[2] 失败: 捕获到异常 ValueError -> 任务 2 发生了预期的错误\n[3] 成功: 返回结果 -> 任务 3 执行成功\n",
+      "stderr": "",
+      "stdout_matches_declared": null
+    },
+    {
+      "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+      "label": "B",
+      "expected_stdout": "[成功] 任务 1 返回值: 任务 1 成功\n[失败] 任务 2 捕获到异常: ValueError - 任务 2 发生错误\n[成功] 任务 3 返回值: 任务 3 成功\n",
+      "code_sha256": "1ca691a1141fbcee09b61860c3310495a87973ccf8d7d5a9d267dfc66c080a87",
+      "returncode": 0,
+      "stdout": "[成功] 任务 1 返回值: 任务 1 成功\n[失败] 任务 2 捕获到异常: ValueError - 任务 2 发生错误\n[成功] 任务 3 返回值: 任务 3 成功\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    },
+    {
+      "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+      "label": "C",
+      "expected_stdout": "[0] 正常返回: 任务 A 执行成功\n[1] 发生异常: ValueError -> 任务 B 抛出了异常\n[2] 正常返回: 任务 C 执行成功\n",
+      "code_sha256": "b37b97ea6f2235da63ac395dfbd7022655ac551ca070f25ad22ac870f6e0e5ae",
+      "returncode": 0,
+      "stdout": "[0] 正常返回: 任务 A 执行成功\n[1] 发生异常: ValueError -> 任务 B 抛出了异常\n[2] 正常返回: 任务 C 执行成功\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    },
+    {
+      "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+      "label": "D",
+      "expected_stdout": "[1] 正常结果: 任务 1 执行成功\n[2] 捕获到异常: ValueError - 任务 2 发生异常\n[3] 正常结果: 任务 3 执行成功\n",
+      "code_sha256": "68f23d01d71d351f3492489ce7ac71bcb0a297d7e65e942ff66c3429a9792f9c",
+      "returncode": 0,
+      "stdout": "[1] 正常结果: 任务 1 执行成功\n[2] 捕获到异常: ValueError - 任务 2 发生异常\n[3] 正常结果: 任务 3 执行成功\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    },
+    {
+      "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+      "label": "E",
+      "expected_stdout": null,
+      "code_sha256": "9b100b9dc8b2b3088e735c1ed9eab06a90588d7ee9e0af19807fc75da0745859",
+      "returncode": 0,
+      "stdout": "任务 0 成功，返回值: 结果: 1\n任务 1 失败，捕获到异常: ValueError: 发生错误\n任务 2 成功，返回值: 结果: 2\n",
+      "stderr": "",
+      "stdout_matches_declared": null
+    },
+    {
+      "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+      "label": "F",
+      "expected_stdout": "[1] 成功: 任务 1 成功返回数据\n[2] 失败: ValueError - 任务 2 发生错误\n[3] 成功: 任务 3 成功返回数据\n",
+      "code_sha256": "45dd20c1198fa3c30c020aee8750becaafc60023beee2a4b1095ad7655c52fd8",
+      "returncode": 0,
+      "stdout": "[1] 成功: 任务 1 成功返回数据\n[2] 失败: ValueError - 任务 2 发生错误\n[3] 成功: 任务 3 成功返回数据\n",
+      "stderr": "",
+      "stdout_matches_declared": true
+    }
+  ]
+}

@@ -1,0 +1,203 @@
+"""Operation necessity is distinct from capability mentions and dialogue."""
+
+import pytest
+from chatwaifu_runtime.agent.tool_intent import requires_external_operation
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "依据刚才取得的原文，合法心跳到达后是否必须重新随机生成选举超时？"
+        "原文没规定就说明未规定，不要新检索。",
+        "根据已经读取的文档分析现行规定的证据缺口，不要重新检索。",
+        "仅依据已有原文分析现行规定，不要进行新的检索。",
+    ],
+)
+def test_obtained_material_and_no_new_retrieval_are_local_scope(text: str) -> None:
+    from chatwaifu_runtime.agent.tool_intent import restricts_to_existing_content
+
+    assert restricts_to_existing_content(text)
+    assert not requires_external_operation(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "依据刚才取得的原文分析规定，不要新检索，然后读取网页。",
+        "根据已经读取的文档说明现行规定，不要新检索，并保存到笔记。",
+        "依据刚才取得的原文解释规定，不要新检索，然后发送到邮箱。",
+        "依据刚才取得的原文，现行规定是否仍适用？",
+        "哪些现行规定还没核实？不要新检索。",
+    ],
+)
+def test_no_retrieval_phrase_does_not_hide_other_authorized_operations(text: str) -> None:
+    assert requires_external_operation(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "听说宁宁很容易害羞，是不是真的呀？",
+        "时间不早了，今天就先聊到这里吧。",
+        "好的，谢谢，旅行的事到这里就结束了。晚安，不用再提醒我。",
+        "就这样吧，晚安，别再提醒我了。",
+        "Thanks, that's all. Good night. No further reminders.",
+        "别再开这个玩笑了，我想认真聊聊。",
+        "提醒这个功能真方便。",
+        "什么是提醒？",
+        "帮我解释取消提醒是什么意思。",
+        "我应该怎么创建提醒？",
+        "What does cancel reminder mean?",
+        "How do I create a reminder?",
+        "请写一首短诗。",
+        "Please write a short poem.",
+        "你背后是用什么系统运行的？本地还是云端？",
+        "今天外面的风挺大的，吹得窗户呼呼响。",
+        "关于 Raft 的选举超时，请解释一下。",
+        "不要打开 https://example.org/guide，只解释这个 URL 的组成。",
+        "Don't open https://example.org/guide; explain its URL structure only.",
+        "Create a short poem about rain.",
+        "请创建一首关于雨的短诗。",
+        "Please check this calculation: 17 * 23 = 391.",
+        '请看看这段代码有没有语法错误\uff1aprint("hello")',
+    ],
+)
+def test_dialogue_explanation_and_closure_do_not_require_an_operation(text: str) -> None:
+    assert not requires_external_operation(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "请读取 https://example.org/source 。",
+        "看看运行状态。",
+        "请调用刚安装的工具。",
+        "请核实今天的最新规定。",
+        "乘坐国内航班时有哪些具体携带规定？",
+        "今天的天气怎么样？",
+        "现在几点？",
+        "What time is it?",
+        "晚安，取消明天上午的提醒。",
+        "晚安，不用再提醒我明天上午的会议。",
+        "晚安，明天八点提醒我出发。",
+        "把刚才的公告整理成清单，并重新查询今天的最新规定。",
+        "把刚才的公告整理成清单，并提醒我明天上午检查。",
+        "明天午饭后提醒我检查充电宝。",
+        "查一下我的日程。",
+        "请列出我的待办。",
+        "显示我的日历。",
+        "Please show my calendar.",
+        "Can you cancel my reminder for tomorrow?",
+        "Remind me tomorrow at nine.",
+        "请修改我的待办。",
+        "请发送这条消息。",
+        "请删除这个文件。",
+        "Create a short poem about rain and save it to my files.",
+        "Create a short poem about rain, then send it to Alex.",
+        "请创建一首短诗，并保存到文件。",
+        "Please check this calculation: 17 * 23 = 391; also check my calendar.",
+        '请看看这段代码有没有语法错误\uff1aprint("hello")，然后读取网页。',
+        "不要打开 https://example.org/guide，然后读取 https://example.org/other 。",
+        "Please check my calendar.",
+        "请核实今天的最新规定。",
+    ],
+)
+def test_explicit_operation_or_external_fact_request_requires_results(text: str) -> None:
+    assert requires_external_operation(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "只根据刚才实际读到的两页，截至今天能否完整确认充电宝登机要求？不要再调用工具。",
+        "仅依据已读原文分析现行规定还缺哪些证据，别再联网。",
+        "只使用前面的文档解释这个价格是否有依据，不要再次读取或搜索。",
+        "Using only the previously read pages, what evidence is missing for current regulations? "
+        "Do not call tools again.",
+        "Based solely on the supplied text, which weather claims are unsupported? "
+        "Don't browse again.",
+    ],
+)
+def test_exclusive_existing_content_analysis_does_not_demand_fresh_facts(text: str) -> None:
+    assert not requires_external_operation(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "只根据刚才的原文说明缺口，不要再调用工具。然后读取 https://example.org/new 。",
+        "仅依据已读文档分析现行规定，不要联网，并保存到笔记。",
+        "只使用前面的资料分析价格，不要再调用工具，然后提醒我明天核实。",
+        "Using only the previous source, what is missing? Do not call tools again; "
+        "also check my calendar.",
+        "Based solely on supplied text, explain the regulations. Don't browse again, "
+        "then send it to Alex.",
+        "只根据刚才原文分析规定，不要再调用工具，但是读取 https://example.org/new 。",
+        "Using only prior pages, explain regulations. Don't call tools, but save it to my files.",
+        "只根据刚才的网页，今天有哪些现行规定？",
+        "哪些现行规定尚未核实？不要再调用工具。",
+    ],
+)
+def test_source_scope_cannot_hide_an_affirmative_operation_or_unrestricted_question(
+    text: str,
+) -> None:
+    assert requires_external_operation(text)
+
+
+@pytest.mark.parametrize(
+    ("text", "required"),
+    [
+        (
+            "先查询可用桌宠设备和本地提醒状态，再用查到的唯一设备 ID 创建一次本地定时提醒\uff1a"
+            "2026-10-03 09:00，时区 Asia/Shanghai，标题检查充电宝，不重复。告诉我真实保存结果。",
+            True,
+        ),
+        ("请实际查询本地提醒，核对刚才保存的事项\uff1b不要修改任何任务。", True),
+        ("请再次实际查询本地提醒，确认刚才那条事项的当前状态。", True),
+        ("请再次读取我的日历。", True),
+        ("请直接保存刚才的内容到笔记。", True),
+        ("先读取我的待办，再修改截止日期。", True),
+        ("请先列出我的待办。", True),
+        ("请先不用再提醒我明天上午的会议。", True),
+        ("我应该先查询本地提醒吗？", False),
+        ("请解释怎么再次读取日历。", False),
+        ("请先创建一首关于雨的短诗。", False),
+        ("请实际核实这段代码是否有错误。", False),
+        ("请先不要打开 https://example.org/guide，只解释 URL 的组成。", False),
+        ("请先别再提醒我了。", False),
+        ("先不要再跟进了。", False),
+    ],
+)
+def test_chinese_command_modifiers_preserve_operation_and_local_scope(
+    text: str, required: bool
+) -> None:
+    assert requires_external_operation(text) is required
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "关于分布式一致性算法的选举机制，领导者心跳超时是怎么计算的？",
+        "What timing assumptions does this consensus algorithm require?",
+        "这个协议的状态转换有哪些规范要求？",
+        "这个 API 对重试次数和幂等性有哪些保证？",
+    ],
+)
+def test_technical_specification_requirements_need_a_recorded_source(text: str) -> None:
+    assert requires_external_operation(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "不要联网，解释这个算法的选举超时\uff1b没把握的部分说明未核实。",
+        "Explain the protocol timing assumptions. Do not browse or call tools.",
+        "只根据以下协议片段解释超时约束，不要调用工具。",
+        "请核查这段代码里的协议超时计算是否正确。",
+        "Explain the timeout constraints in the supplied protocol excerpt.",
+        "归并排序算法的原理是什么？",
+        "这个算法的时间复杂度怎么计算？",
+    ],
+)
+def test_supplied_content_and_general_algorithms_do_not_force_a_lookup(text: str) -> None:
+    assert not requires_external_operation(text)

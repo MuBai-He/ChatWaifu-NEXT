@@ -1,0 +1,148 @@
+"""Network-forbidden controls over actual v43 inputs; cached prose is not new model output."""
+import argparse
+import asyncio
+import hashlib
+import json
+import socket
+import sys
+from dataclasses import asdict, replace
+from pathlib import Path
+from uuid import UUID, uuid4
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--root", type=Path, required=True)
+parser.add_argument("--evidence", type=Path, required=True)
+parser.add_argument("--out", type=Path, required=True)
+args = parser.parse_args()
+root, evidence, out = args.root.resolve(), args.evidence.resolve(), args.out.resolve()
+assert not out.exists(), "Never overwrite or resume a replay"
+out.mkdir(parents=True)
+sys.path[:0] = [str(root / "services/runtime/src"), str(root / "packages/protocol-python/src"),
+               str(root / "packages/model-worker-sdk-python/src"), str(root)]
+
+import httpx2
+from chatwaifu_protocol.skills import SkillRunSnapshot
+from chatwaifu_runtime.agent.input_budget import InputBudgetExceeded, estimate_input_tokens
+from chatwaifu_runtime.agent.source_context import project_source_context
+from chatwaifu_runtime.agent.tool_calling import AgentTurnOrchestrator, _budgeted_request
+from chatwaifu_runtime.conversation.source_context import SourceContextPacket, SourceContextReceipt
+from chatwaifu_runtime.providers.contracts import (
+    LlmRequest, LlmInputBudget, LlmInputBudgetReport, LlmToolExchange, LlmToolCall, LlmToolResult,
+)
+from chatwaifu_runtime.providers.openai_compatible import build_messages, build_chat_completions_payload
+
+network_attempts = 0
+def forbid(*unused, **unused_kwargs):
+    global network_attempts
+    network_attempts += 1
+    raise AssertionError("Offline control forbids all network")
+socket.create_connection = forbid
+socket.socket.connect = forbid
+socket.socket.connect_ex = forbid
+httpx2.AsyncClient.stream = forbid
+httpx2.AsyncClient.send = forbid
+def rows(path): return [json.loads(v) for v in path.read_text().splitlines() if v]
+def digest(payload): return hashlib.sha256(json.dumps(payload,ensure_ascii=False,sort_keys=True).encode()).hexdigest()
+def wire(request): return build_chat_completions_payload("gemini-3.8-flash-high",request,build_messages(request),request_usage=True)
+def decode(raw):
+    d=dict(raw)
+    assert not d["tools"] and not d["images"] and d["response_schema"] is None
+    d.update(generation_id=UUID(d["generation_id"]),context=tuple(map(tuple,d["context"])),
+             history=tuple(map(tuple,d["history"])),tools=(),images=(),recalled_memory_texts=tuple(d["recalled_memory_texts"]),
+             input_budget=LlmInputBudget(**d["input_budget"]))
+    d["tool_exchanges"]=tuple(LlmToolExchange(e["assistant_text"],tuple(LlmToolCall(**c) for c in e["calls"]),
+                                             tuple(LlmToolResult(**r) for r in e["results"])) for e in d["tool_exchanges"])
+    report=d.get("input_budget_report")
+    if report:
+        report=dict(report)
+        for k in ("omitted_history_indices","omitted_tool_preamble_indices"):report[k]=tuple(report[k])
+        d["input_budget_report"]=LlmInputBudgetReport(**report)
+    return LlmRequest(**d)
+
+v41=evidence/"autonomous-discovery/live"
+flow=rows(v41/"flow-observations.jsonl")
+terminals={r["skill_run_id"]:SkillRunSnapshot.model_validate(r) for f in flow for r in f["trace"]["tool_runs"]}
+trace=flow[3]["trace"]["source_context"]
+packet=SourceContextPacket(tuple(SourceContextReceipt(terminals[r["skill_run_id"]],r["original_result_available"])
+                                 for r in trace["receipts"]),truncated=trace["truncated"])
+frozen=evidence/"budget-reconstruction/frozen-budget/live-server"
+key="frozen_budget:w32768:t4"
+admitted=next(r for r in rows(frozen/"admitted-requests.jsonl") if r["sample_key"]==key)
+actual_wires=[r for r in rows(frozen/"actual-provider-payloads.jsonl") if r["sample_key"]==key]
+guards=[r for r in rows(frozen/"guards.jsonl") if r["sample_key"]==key]
+assert len(actual_wires)==2
+review=next(r for r in guards if r["request"]["continuation_system_prompt"])
+request=decode(admitted["request"])
+latest=request.history[-1]
+assert latest[0]=="assistant" and len(request.history)==6
+observations=[]
+class Boundary(Exception): pass
+class Provider:
+    kind="offline"
+    supports_tool_calling=True
+    supports_response_schema=True
+    def __init__(self): self.request=None
+    async def stream(self,request):
+        self.request=request
+        raise Boundary()
+        yield None
+class Gateway:
+    async def invoke(self,*unused,**unused_kwargs):raise AssertionError("No tools admitted")
+class Router:
+    def select(self,*unused,**unused_kwargs):return ()
+
+def capture(name,before,fitted,actual=None):
+    payload=wire(fitted)
+    entry={"phase":name,"prefit_reference":estimate_input_tokens(before),"prefit_request":asdict(before),
+           "fitted_request":asdict(fitted),"payload":payload,"payload_sha256":digest(payload),
+           "report":asdict(fitted.input_budget_report),"latest_answer_retained":fitted.history[-1]==latest,
+           "latest_answer_in_context":any(latest[1] in text for _,text in fitted.context),
+           "actual_v43_wire_equal":digest(payload)==actual["payload_sha256"] if actual else None,
+           "generated_reply":None,"native_usage":None,"quality_approval":False}
+    assert not entry["latest_answer_in_context"]
+    observations.append(entry)
+async def main():
+    provider=Provider();agent=AgentTurnOrchestrator(provider,Gateway(),Router())
+    try:
+        async for _ in agent.stream(request,session_id=uuid4(),turn_id=uuid4(),ensure_current=lambda:None,
+                                    tools=(),source_context=packet):
+            raise AssertionError("No text may be generated or published offline")
+    except Boundary: pass
+    assert provider.request is not None
+    draft=provider.request
+    capture("T4 draft",request,draft,actual_wires[0])
+    # Reuse the exact paid draft/review policy as a sizing control, not a new
+    # draft or successful answer. In real execution a changed input needs a new
+    # generation; no historical response is called equivalent to that output.
+    revision=replace(draft,continuation_system_prompt=review["request"]["continuation_system_prompt"],
+                     tools=(),tool_choice="auto")
+    fitted=_budgeted_request(revision,source_context=packet)
+    capture("T4 fixed review input",revision,fitted,actual_wires[1])
+    # Complete original estimates at the real T3/T4 guard boundaries, including
+    # the unsent prefit body. No original source or tool result is modified.
+    for source in rows(frozen/"guards.jsonl"):
+        if not source["request"]["tools"]:
+            raw=decode(source["request"])
+            index=2 if ":t3" in source["sample_key"] else 3
+            current_trace=flow[index]["trace"]["source_context"]
+            p=SourceContextPacket(tuple(SourceContextReceipt(terminals[r["skill_run_id"]],r["original_result_available"])
+                                         for r in current_trace["receipts"]),truncated=current_trace["truncated"])
+            before=estimate_input_tokens(raw)
+            try:
+                f=_budgeted_request(raw,source_context=p);report=f.input_budget_report
+                outcome="fits"
+            except InputBudgetExceeded as error:
+                report=error.report;outcome="blocked"
+            observations.append({"phase":"original-estimate","sample_key":source["sample_key"],
+                "complete_prefit_reference":before,"outcome":outcome,"report":asdict(report),
+                "original_estimate_preserved":report.estimated_original_tokens>=before})
+    assert network_attempts==0
+    (out/"observations.json").write_text(json.dumps(observations,ensure_ascii=False,indent=2,default=str)+"\n")
+    (out/"admission.json").write_text(json.dumps({"root":str(root),"network_attempts":network_attempts,
+        "model_http":0,"source_http":0,"quality_approval":False,"context_window":32768,
+        "source":"actual v43 own T3 history and v41 packet; exact old review sizing control"},indent=2)+"\n")
+    print(json.dumps({"network_attempts":network_attempts,"draft_latest_retained":observations[0]["latest_answer_retained"],
+       "review_latest_retained":observations[1]["latest_answer_retained"],
+       "draft_old_wire_equal":observations[0]["actual_v43_wire_equal"],
+       "review_old_wire_equal":observations[1]["actual_v43_wire_equal"]}))
+asyncio.run(main())

@@ -1,0 +1,28 @@
+{
+  "same_total_window": 32768,
+  "same_output_reserve_and_cap": 8192,
+  "formula": "floor((window - output_reserve) / (1 + estimate_margin_ratio))",
+  "operating_margins": [
+    0.15,
+    0.1
+  ],
+  "input_limits": [
+    21370,
+    22341
+  ],
+  "incoming_guard_wire_reference": 23535,
+  "reported_original_high_water_reference": 24001,
+  "same_fitted_reference": 21683,
+  "fitted_wire_identical": true,
+  "low_guard_model_http": 0,
+  "low_guard_native_usage": null,
+  "low_outcome": "TOOL_SOURCE_REVISION_BUDGET_REPLY",
+  "higher_allowance_control_model_http": 3,
+  "higher_allowance_control_source_http": 0,
+  "own_answer_retained_in_T4": true,
+  "quality_approval": false,
+  "known_native_limits": false,
+  "is_margin_universal_error_bound": false,
+  "production_profile_changed": false,
+  "control_metadata_limitation": "Exact blocked fitted wire was reconstructed from the last-counted request. Its carried report lists indices 1/3; actual wire also already contains the user-0 omission marker. All markers are preserved separately; the original exception report lists 0/1/3. This is control evidence construction, not an unseen production history deletion."
+}

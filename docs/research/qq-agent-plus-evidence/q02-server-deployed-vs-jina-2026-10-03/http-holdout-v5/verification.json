@@ -1,0 +1,17 @@
+{
+  "reply_count": 12,
+  "unique_samples": 12,
+  "provider_calls": 26,
+  "actual_http_requests": 26,
+  "all_system_hashes_match": true,
+  "models": [
+    "gemini-3.8-flash-high"
+  ],
+  "reply_finish_reasons": {
+    "stop": 11,
+    "other": 1
+  },
+  "provider_error_types": {
+    "None": 26
+  }
+}

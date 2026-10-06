@@ -1,0 +1,82 @@
+[
+  {
+    "sample_key": "frozen_icao:r0:t1:closure_c1",
+    "all_prior_replies_whole_on_wire": true,
+    "prior_reply_count": 0
+  },
+  {
+    "sample_key": "frozen_icao:r0:t2:closure_c1",
+    "all_prior_replies_whole_on_wire": true,
+    "prior_reply_count": 1
+  },
+  {
+    "sample_key": "frozen_icao:r0:t3:closure_c1",
+    "all_prior_replies_whole_on_wire": true,
+    "prior_reply_count": 2
+  },
+  {
+    "sample_key": "frozen_icao:r0:t4:closure_c1",
+    "all_prior_replies_whole_on_wire": true,
+    "prior_reply_count": 3
+  },
+  {
+    "sample_key": "frozen_airchina:r0:t1:closure_c1",
+    "all_prior_replies_whole_on_wire": true,
+    "prior_reply_count": 0
+  },
+  {
+    "sample_key": "frozen_airchina:r0:t2:closure_c1",
+    "all_prior_replies_whole_on_wire": true,
+    "prior_reply_count": 1
+  },
+  {
+    "sample_key": "frozen_airchina:r0:t3:closure_c1",
+    "all_prior_replies_whole_on_wire": true,
+    "prior_reply_count": 2
+  },
+  {
+    "sample_key": "frozen_airchina:r0:t4:closure_c1",
+    "all_prior_replies_whole_on_wire": true,
+    "prior_reply_count": 3
+  },
+  {
+    "sample_key": "frozen_icao:r1:t1:closure_c1",
+    "all_prior_replies_whole_on_wire": true,
+    "prior_reply_count": 0
+  },
+  {
+    "sample_key": "frozen_icao:r1:t2:closure_c1",
+    "all_prior_replies_whole_on_wire": true,
+    "prior_reply_count": 1
+  },
+  {
+    "sample_key": "frozen_icao:r1:t3:closure_c1",
+    "all_prior_replies_whole_on_wire": true,
+    "prior_reply_count": 2
+  },
+  {
+    "sample_key": "frozen_icao:r1:t4:closure_c1",
+    "all_prior_replies_whole_on_wire": true,
+    "prior_reply_count": 3
+  },
+  {
+    "sample_key": "frozen_airchina:r1:t1:closure_c1",
+    "all_prior_replies_whole_on_wire": true,
+    "prior_reply_count": 0
+  },
+  {
+    "sample_key": "frozen_airchina:r1:t2:closure_c1",
+    "all_prior_replies_whole_on_wire": true,
+    "prior_reply_count": 1
+  },
+  {
+    "sample_key": "frozen_airchina:r1:t3:closure_c1",
+    "all_prior_replies_whole_on_wire": true,
+    "prior_reply_count": 2
+  },
+  {
+    "sample_key": "frozen_airchina:r1:t4:closure_c1",
+    "all_prior_replies_whole_on_wire": true,
+    "prior_reply_count": 3
+  }
+]

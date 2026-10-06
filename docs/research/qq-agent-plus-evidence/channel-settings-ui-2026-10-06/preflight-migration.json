@@ -1,0 +1,10 @@
+{
+  "migration": "43->44",
+  "all_original_tables_preserved": 82,
+  "all_original_rows_preserved": 6614,
+  "old_schema_and_checksums_preserved": true,
+  "integrity_and_foreign_keys": true,
+  "settings_starts_empty": true,
+  "default_policy_valid": true,
+  "imports_from_staged_release": true
+}

@@ -1,0 +1,101 @@
+{
+  "id": 2,
+  "query": "Raft original paper randomized election timeout",
+  "endpoint": "http://127.0.0.1:18080/search",
+  "http": 200,
+  "results": [
+    {
+      "url": "https://timilearning.com/posts/mit-6.824/lecture-6-7-fault-tolerance-raft/",
+      "title": "MIT 6.824: Lectures 6 & 7 - Fault Tolerance(Raft)",
+      "content": "Election Timeouts Are Randomized #. Raft takes measures to prevent split votes in the first place by ensuring that the election timeout of each server is randomly chosen from a fixed interval.The original Raft paper. Raft Consensus Algorithm - Site with more Raft resources.",
+      "engine": "yandex",
+      "engines": [
+        "yandex"
+      ]
+    },
+    {
+      "url": "https://semicolony.dev/how-it-works/raft-consensus",
+      "title": "How Raft reaches consensus: leader election, log replication, safety",
+      "content": "Leader election: randomized timeouts break ties. Three states, one leader per term.Followers expect heartbeats from the current leader within an election timeout, randomized between 150 and 300 ms in the original paper (etcd defaults to 1 s, configurable).",
+      "engine": "yandex",
+      "engines": [
+        "yandex"
+      ]
+    },
+    {
+      "url": "https://teachyourselfcoding.com/system-design-consensus-raft/",
+      "title": "Consensus with Raft: What a Cluster Does... - Teach YourSelf Coding",
+      "content": "The random wait is the randomized election timeout. etcd’s default is 1,000 to 1,900 ms. Where the analogy breaks: a leader who’s cut off from the class doesn’t know it. For a while it goes on believing it’s leader.",
+      "engine": "yandex",
+      "engines": [
+        "yandex"
+      ]
+    },
+    {
+      "url": "https://raft.github.io/raft.pdf",
+      "title": "In Search of an Understandable Consensus Algorithm",
+      "content": "• Leader election: Raft uses randomized timers to elect leaders. This adds only a small amount of mechanism to the heartbeats already required for any consensus algorithm, while resolving conicts sim-ply and rapidly.",
+      "engine": "yandex",
+      "engines": [
+        "yandex"
+      ]
+    },
+    {
+      "url": "https://www.freecodecamp.org/news/in-search-of-an-understandable-consensus-algorithm-a-summary-4bc294c97e0d/",
+      "title": "Understanding the Raft consensus algorithm: an academic article...",
+      "content": "Raft uses randomized election timeouts to ensure that split votes are rare and that they are resolved quickly. To prevent split votes in the first place, election timeouts are chosen randomly from a fixed interval (e.g., 150–300ms)...",
+      "engine": "yandex",
+      "engines": [
+        "yandex"
+      ]
+    },
+    {
+      "url": "https://deepwiki.com/etcd-io/raft/9.1-raft-paper-tests",
+      "title": "Raft Paper Tests | etcd-io/raft | DeepWiki",
+      "content": "raft_paper_test.go248-263. Randomized Election Timeouts.Creates 5 raft nodes. Runs 1000 rounds of elections. In each round, counts how many nodes timeout simultaneously. Asserts conflicts (multiple simultaneous timeouts) occur ≤ 30% of the time.",
+      "engine": "yandex",
+      "engines": [
+        "yandex"
+      ]
+    },
+    {
+      "url": "https://yizhang82.dev/paper-raft",
+      "title": "Paper Reading: In Search of an Understandable... | yizhang82’s blog",
+      "content": "Raft implements consensus by first electing a leader who is responsible for managing the replicated log. Therefore, consensus algorithm can be broken down into 3 categories: Leader election - leader must be elected.",
+      "engine": "yandex",
+      "engines": [
+        "yandex"
+      ]
+    },
+    {
+      "url": "https://www.mysimulator.uk/content/articles/raft-consensus.html",
+      "title": "Raft Consensus Algorithm — Leader Election and Log Replication",
+      "content": "The election timeout is randomized (typically 150–300 ms) to avoid split votes where many candidates start simultaneously.Raft originally proposed a joint consensus approach transitioning through a combined old+new configuration.",
+      "engine": "yandex",
+      "engines": [
+        "yandex"
+      ]
+    },
+    {
+      "url": "https://www.linkedin.com/pulse/raft-consensus-protocol-made-distributed-systems-siddarth-pai-2iy7e",
+      "title": "Raft Consensus: The Protocol That Made Distributed Systems...",
+      "content": "Raft breaks this symmetry with randomized election timeouts.The original Raft paper includes a proof sketch based on these key properties: Election Safety — at most one leader per term.",
+      "engine": "yandex",
+      "engines": [
+        "yandex"
+      ]
+    },
+    {
+      "url": "https://imraan.in/system-design/raft-explained/",
+      "title": "Raft Explained: Leader Election, Log Replication, and Safety",
+      "content": "The Raft consensus algorithm explained: raft leader election with randomized timeouts, raft log replication through a strong leader, and the raft safety properties that keep etcd, Consul, and CockroachDB consistent.",
+      "engine": "yandex",
+      "engines": [
+        "yandex"
+      ]
+    }
+  ],
+  "unresponsive_engines": [],
+  "total_number": null,
+  "elapsed_ms": 647
+}

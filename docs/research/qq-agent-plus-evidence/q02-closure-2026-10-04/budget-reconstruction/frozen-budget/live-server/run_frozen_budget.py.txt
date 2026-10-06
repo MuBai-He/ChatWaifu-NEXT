@@ -1,0 +1,216 @@
+"""Two bounded real final-answer flows over identical already-acquired material."""
+import argparse
+import asyncio
+import contextlib
+import hashlib
+import json
+import sys
+import time
+from dataclasses import asdict, replace
+from datetime import datetime
+from pathlib import Path
+from types import SimpleNamespace
+from uuid import UUID, NAMESPACE_URL, uuid5
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--root", type=Path, required=True)
+parser.add_argument("--stage", type=Path, required=True)
+parser.add_argument("--execute", action="store_true")
+args = parser.parse_args()
+ROOT, STAGE = args.root.resolve(), args.stage.resolve()
+assert not (STAGE / "admission.json").exists(), "Never replace or resume a prior comparison"
+sys.path[:0] = [str(ROOT / "services/runtime/src"), str(ROOT / "packages/protocol-python/src"),
+               str(ROOT / "packages/model-worker-sdk-python/src"), str(ROOT), "/tmp/cw2-q02-eval-deps"]
+
+import httpx2
+from chatwaifu_protocol.character import CharacterKernelSnapshot, ModelContextBudget, ResponsePlan
+from chatwaifu_protocol.memory import MemoryContextPacket
+from chatwaifu_protocol.skills import SkillRunSnapshot
+from chatwaifu_runtime.characters.service import CharacterService
+from chatwaifu_runtime.character_kernel.prompt import PromptCompiler
+from chatwaifu_runtime.conversation.models import ConversationHistoryEntry
+from chatwaifu_runtime.conversation.source_context import SourceContextPacket, SourceContextReceipt
+from chatwaifu_runtime.providers.contracts import (
+    LlmRequest, LlmInputBudget, LlmToolExchange, LlmToolCall, LlmToolResult,
+)
+from chatwaifu_runtime.providers.context_budget import resolve_context_budget
+from chatwaifu_runtime.providers.openai_compatible import (
+    OpenAiCompatibleLlmProvider, build_messages, build_chat_completions_payload,
+)
+from chatwaifu_runtime.providers.input_estimation import estimate_reference_input_tokens
+from tools.runtime_source_evaluation import _RecordedProvider
+import chatwaifu_runtime.agent.tool_calling as tool_calling
+import chatwaifu_runtime.agent.input_budget as input_budget
+
+MODEL, ENDPOINT = "gemini-3.8-flash-high", "https://mubai.website:8318/v1"
+EVIDENCE = Path("/tmp/cw2-q02-autonomous-discovery-20261004")
+BOUNDARY = Path("/tmp/cw2-q02-budget-reconstruction-v43-20261004/candidate-large/provider-boundaries.jsonl")
+def rows(path): return [json.loads(line) for line in path.read_text().splitlines()]
+old_results, old_flows = rows(EVIDENCE / "runtime-pilot/results.jsonl"), rows(EVIDENCE / "flow-observations.jsonl")
+terminals = {r["skill_run_id"]: SkillRunSnapshot.model_validate(r) for f in old_flows for r in f["trace"]["tool_runs"]}
+boundary = next(r for r in rows(BOUNDARY) if ":t3:" in r["sample_key"] and r["outcome"] == "unrecorded_model_boundary")
+assert boundary["request"]["tools"] == [] and boundary["request"]["images"] == []
+assert boundary["request"]["response_schema"] is None
+as_of = datetime.fromisoformat(json.loads((EVIDENCE / "admission.json").read_text())["prompt_as_of"])
+persona = (EVIDENCE / "persona.md").read_text().strip()
+key = json.loads(Path("/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json").read_text())["chat"] if args.execute else None
+current = None
+http_count = 0
+fallback_events = []
+last_counted = None
+def save(name, value, append=False):
+    encoded = json.dumps(value, ensure_ascii=False, default=str)
+    assert key is None or key not in encoded
+    with (STAGE / name).open("a" if append else "w") as f: f.write(encoded + "\n")
+def wire(request): return build_chat_completions_payload(MODEL, request, build_messages(request), request_usage=True)
+def packet(index):
+    trace = old_flows[index]["trace"]["source_context"]
+    return SourceContextPacket(tuple(SourceContextReceipt(terminals[r["skill_run_id"]], r["original_result_available"])
+                                    for r in trace["receipts"]), truncated=trace["truncated"])
+def decode_request(raw):
+    data = dict(raw)
+    data.update(generation_id=UUID(data["generation_id"]), context=tuple(map(tuple, data["context"])),
+                history=tuple(map(tuple, data["history"])), tools=(), images=(), input_budget_report=None,
+                input_budget=LlmInputBudget(data["input_budget"]["estimated_token_limit"]))
+    data["recalled_memory_texts"] = tuple(data["recalled_memory_texts"])
+    data["tool_exchanges"] = tuple(LlmToolExchange(e["assistant_text"], tuple(LlmToolCall(**c) for c in e["calls"]),
+                                                 tuple(LlmToolResult(**r) for r in e["results"]))
+                                   for e in data["tool_exchanges"])
+    return LlmRequest(**data)
+
+original_guard, original_estimate = tool_calling._budgeted_request, input_budget.estimate_input_tokens
+original_stream, original_send = httpx2.AsyncClient.stream, httpx2.AsyncClient.send
+original_fallback = tool_calling._runtime_fallback
+def capture_count(request):
+    global last_counted
+    last_counted = request
+    return original_estimate(request)
+def capture_guard(request, **kwargs):
+    global last_counted
+    last_counted = None
+    row = {"sample_key": current, "request": asdict(request), "payload": wire(request), "dispatched": False}
+    try:
+        fitted = original_guard(request, **kwargs)
+        row.update(outcome="fits", fitted_request=asdict(fitted), fitted_payload=wire(fitted),
+                   report=asdict(fitted.input_budget_report) if fitted.input_budget_report else None)
+        return fitted
+    except input_budget.InputBudgetExceeded as error:
+        row.update(outcome="blocked", report=asdict(error.report), fitted_request=asdict(last_counted),
+                   fitted_payload=wire(last_counted))
+        raise
+    finally: save("guards.jsonl", row, append=True)
+def capture_fallback(text, turn):
+    fallback_events.extend(k for k,v in vars(tool_calling).items() if k.endswith("_REPLY") and v == text)
+    return original_fallback(text, turn)
+@contextlib.asynccontextmanager
+async def capture_http(self, method, url, **kwargs):
+    global http_count
+    assert args.execute and str(url) == ENDPOINT + "/chat/completions" and http_count < 8
+    assert kwargs["json"]["model"] == MODEL and kwargs["json"]["max_tokens"] == 8192
+    http_count += 1
+    row = {"sample_key": current, "http_attempt": http_count, "payload": kwargs["json"],
+           "reference_input_tokens": None, "status": None, "error_type": None}
+    row["payload_sha256"] = hashlib.sha256(json.dumps(row["payload"], ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+    started = time.monotonic()
+    save("actual-provider-payloads.jsonl", row, append=True)
+    try:
+        async with original_stream(self, method, url, **kwargs) as response:
+            row["status"] = response.status_code
+            yield response
+    except BaseException as error:
+        row["error_type"] = type(error).__name__
+        raise
+    finally:
+        row.pop("payload")
+        row["elapsed_ms"] = round((time.monotonic() - started) * 1000)
+        save("http-outcomes.jsonl", row, append=True)
+async def forbid_source(self, request, **kwargs):
+    if str(request.url) == ENDPOINT + "/chat/completions":
+        return await original_send(self, request, **kwargs)
+    raise AssertionError("Frozen comparison admits no source/network operation")
+input_budget.estimate_input_tokens = capture_count
+tool_calling._budgeted_request = capture_guard
+tool_calling._runtime_fallback = capture_fallback
+httpx2.AsyncClient.stream = capture_http
+httpx2.AsyncClient.send = forbid_source
+
+class Router:
+    def select(self, query, **kwargs): return ()
+class Gateway:
+    async def invoke(self, *unused_args, **unused_kwargs): raise AssertionError("No new tools admitted")
+
+characters = CharacterService(ROOT / "characters")
+characters.start()
+character = characters.get("default").model_copy(update={"system_prompt": persona})
+evaluation_policy = ("\nPublic source tools use an evaluation-only permission policy. "
+                     "When selecting a source tool use dns_resolver=cloudflare. "
+                     "This operational setting supplies no facts or source URLs.")
+async def main():
+    global current, fallback_events
+    save("admission.json", {"execute": args.execute, "model": MODEL, "endpoint": ENDPOINT,
+          "http_limit": 8, "source_http_limit": 0, "frames": False, "root": str(ROOT),
+          "source_version": "v41", "prompt_as_of": as_of.isoformat(), "persona_sha256": hashlib.sha256(persona.encode()).hexdigest(),
+          "new_rules": False, "production_changed": False, "channel_sends": False, "agy": False,
+          "scope": "Two affected final-answer/checklist rounds per arm; old actual T1/T2 prefix; not a new complete four-turn flow"})
+    for window in [32768, 65536]:
+        budget = ModelContextBudget.model_validate(json.loads((EVIDENCE / "budget.json").read_text()))
+        config = SimpleNamespace(context_window=window, budget=budget)
+        compiler = PromptCompiler(SimpleNamespace(get=lambda purpose: config))
+        history = [ConversationHistoryEntry(role, text, generation_id=UUID(f["generation_id"]) if role == "assistant" else None)
+                   for r,f in zip(old_results[:2],old_flows[:2],strict=True)
+                   for role,text in [("user",r["user_text"]),("assistant",r["raw_reply"])]]
+        provider = _RecordedProvider(OpenAiCompatibleLlmProvider(model=MODEL, base_url=ENDPOINT,
+                       api_key=key or "dry-run-never-dispatched-key", timeout_seconds=180, request_usage=True), STAGE / "provider-rounds.jsonl", 8)
+        agent = tool_calling.AgentTurnOrchestrator(provider, Gateway(), Router())
+        failed = False
+        for index in [2,3]:
+            current = f"frozen_budget:w{window}:t{index+1}"
+            provider.sample_key, provider.calls, fallback_events = current, [], []
+            request_id = uuid5(NAMESPACE_URL, current)
+            if index == 2:
+                request = replace(decode_request(boundary["request"]), generation_id=request_id,
+                           input_budget=LlmInputBudget(resolve_context_budget(window,budget).input_tokens))
+            else:
+                state = old_results[index]["input_snapshot"]
+                compiled = await compiler.compile(character=character, kernel=CharacterKernelSnapshot.model_validate(state["kernel"]),
+                     plan=ResponsePlan.model_validate(state["plan"]), memory=MemoryContextPacket(token_budget_used=0),
+                     history=tuple(history), user_text=old_results[index]["user_text"],
+                     presentation_profile="detailed_answer", as_of=as_of)
+                request = LlmRequest(request_id, old_results[index]["user_text"], compiled.system_prompt+evaluation_policy,
+                          character_name=character.display_name, context=compiled.context, history=compiled.history,
+                          input_budget=LlmInputBudget(compiled.report.budget), max_output_tokens=8192,
+                          tool_result_max_bytes=131072, tool_choice="auto")
+            save("admitted-requests.jsonl", {"sample_key": current, "request": asdict(request),
+                 "published_history": [(h.role,h.text) for h in history]}, append=True)
+            if failed or not args.execute:
+                save("turns.jsonl", {"sample_key": current, "execution":"unexecuted_after_failed_prior_turn" if failed else "dry_run",
+                     "reply":None}, append=True)
+                continue
+            started = time.monotonic()
+            row = {"sample_key": current, "reply": "", "error_type": None, "protocol_error_code": None}
+            try:
+                if index == 2:
+                    urls = tuple(dict.fromkeys(r.result.data["url"] for r in terminals.values()
+                                  if str(r.generation_id)==old_flows[2]["generation_id"] and r.skill_id=="web.read"))
+                    stream = agent._stream_text_only(request, lambda: None, llm=provider, source_urls=urls, source_context=packet(2))
+                else:
+                    stream = agent.stream(request, session_id=uuid5(NAMESPACE_URL,"frozen-budget-session"),
+                             turn_id=uuid5(NAMESPACE_URL,current+":turn"),ensure_current=lambda:None,
+                             tools=(),source_context=packet(3))
+                async with contextlib.aclosing(stream):
+                    async for text in stream: row["reply"] += text
+                row["execution"]="runtime_fallback" if fallback_events else "provider"
+                if row["execution"]=="runtime_fallback": failed=True
+                history.extend([ConversationHistoryEntry("user",request.user_text),
+                                ConversationHistoryEntry("assistant",row["reply"],generation_id=request_id)])
+            except Exception as error:
+                row.update(execution="failed",error_type=type(error).__name__,protocol_error_code=getattr(error,"code",None))
+                failed=True
+            finally:
+                row.update(elapsed_ms=round((time.monotonic()-started)*1000),runtime_fallback_events=list(fallback_events),
+                           provider_calls=list(provider.calls))
+                save("turns.jsonl",row,append=True)
+        await provider._provider.close()
+    save("exit.json",{"actual_model_http_attempts":http_count,"new_source_http_attempts":0,"hidden_retries":False})
+
+asyncio.run(main())

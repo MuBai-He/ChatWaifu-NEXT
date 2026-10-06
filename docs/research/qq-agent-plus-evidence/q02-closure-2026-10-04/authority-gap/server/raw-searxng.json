@@ -1,0 +1,790 @@
+[
+  {
+    "query": "民航局 充电宝 3C 召回",
+    "maximum": 20,
+    "body_sha256": "3600883d1875b297609a5d8c6cf7220df62fb2fb9dfe9756a2526f7952efb3fd",
+    "retrieved_at": "2026-10-04T11:09:13.948042+00:00",
+    "body": {
+      "query": "民航局 充电宝 3C 召回",
+      "results": [
+        {
+          "template": "default.html",
+          "title": "ESG风险观察｜超120...",
+          "content": "民航局发布禁令，无3C认证充电宝禁乘境内航班.没有3C标识也未被召回的充电宝，还能用吗？",
+          "img_src": "",
+          "iframe_src": "",
+          "audio_src": "",
+          "thumbnail": "",
+          "publishedDate": null,
+          "pubdate": "",
+          "length": null,
+          "views": "",
+          "author": "",
+          "metadata": "",
+          "priority": "",
+          "engines": [
+            "yandex"
+          ],
+          "open_group": false,
+          "close_group": false,
+          "positions": [
+            1
+          ],
+          "score": 1.0,
+          "category": "general",
+          "url": "https://m.dzplus.dzng.com/share/general/0/NEWS2537301LBQXBZWVOEGXE",
+          "engine": "yandex",
+          "parsed_url": [
+            "https",
+            "m.dzplus.dzng.com",
+            "/share/general/0/NEWS2537301LBQXBZWVOEGXE",
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "template": "default.html",
+          "title": "cj.sina.com.cn/articles/view/6192937794/17120bb4202002ijh6?froms...",
+          "content": "近日，民航局发布紧急通知，自6月28日起，禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。 这是一场持续近两个月的召回风波。",
+          "img_src": "",
+          "iframe_src": "",
+          "audio_src": "",
+          "thumbnail": "",
+          "publishedDate": null,
+          "pubdate": "",
+          "length": null,
+          "views": "",
+          "author": "",
+          "metadata": "",
+          "priority": "",
+          "engines": [
+            "yandex"
+          ],
+          "open_group": false,
+          "close_group": false,
+          "positions": [
+            2
+          ],
+          "score": 0.5,
+          "category": "general",
+          "url": "https://cj.sina.com.cn/articles/view/6192937794/17120bb4202002ijh6?froms=ggmp",
+          "engine": "yandex",
+          "parsed_url": [
+            "https",
+            "cj.sina.com.cn",
+            "/articles/view/6192937794/17120bb4202002ijh6",
+            "",
+            "froms=ggmp",
+            ""
+          ]
+        },
+        {
+          "template": "default.html",
+          "title": "news.cnr.cn/native/gd/kx/20250628/t20250628_527232887.shtml",
+          "content": "近日，民航局发布紧急通知，自6月28日起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。 什么是3C标识？ 对于携带充电宝上飞机还有哪些规定？",
+          "img_src": "",
+          "iframe_src": "",
+          "audio_src": "",
+          "thumbnail": "",
+          "publishedDate": null,
+          "pubdate": "",
+          "length": null,
+          "views": "",
+          "author": "",
+          "metadata": "",
+          "priority": "",
+          "engines": [
+            "yandex"
+          ],
+          "open_group": false,
+          "close_group": false,
+          "positions": [
+            3
+          ],
+          "score": 0.3333333333333333,
+          "category": "general",
+          "url": "https://news.cnr.cn/native/gd/kx/20250628/t20250628_527232887.shtml",
+          "engine": "yandex",
+          "parsed_url": [
+            "https",
+            "news.cnr.cn",
+            "/native/gd/kx/20250628/t20250628_527232887.shtml",
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "template": "default.html",
+          "title": "28日起没有3C标识充电宝过不了安检！ 北上广三地机场安检回应",
+          "content": "新京报贝壳财经讯（记者俞金旻）6月26日，民航局发布紧急通知，自6月28日起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝.",
+          "img_src": "",
+          "iframe_src": "",
+          "audio_src": "",
+          "thumbnail": "",
+          "publishedDate": null,
+          "pubdate": "",
+          "length": null,
+          "views": "",
+          "author": "",
+          "metadata": "",
+          "priority": "",
+          "engines": [
+            "yandex"
+          ],
+          "open_group": false,
+          "close_group": false,
+          "positions": [
+            4
+          ],
+          "score": 0.25,
+          "category": "general",
+          "url": "https://m.bjnews.com.cn/detail/1750927590129625.html",
+          "engine": "yandex",
+          "parsed_url": [
+            "https",
+            "m.bjnews.com.cn",
+            "/detail/1750927590129625.html",
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "template": "default.html",
+          "title": "民航局：自6月28...",
+          "content": "民航局：自6月28日起，禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班！",
+          "img_src": "",
+          "iframe_src": "",
+          "audio_src": "",
+          "thumbnail": "",
+          "publishedDate": null,
+          "pubdate": "",
+          "length": null,
+          "views": "",
+          "author": "",
+          "metadata": "",
+          "priority": "",
+          "engines": [
+            "yandex"
+          ],
+          "open_group": false,
+          "close_group": false,
+          "positions": [
+            5
+          ],
+          "score": 0.2,
+          "category": "general",
+          "url": "https://www.fuzhouairport.com.cn/shwzhx/xygg/30968.htm",
+          "engine": "yandex",
+          "parsed_url": [
+            "https",
+            "www.fuzhouairport.com.cn",
+            "/shwzhx/xygg/30968.htm",
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "template": "default.html",
+          "title": "暴雷半年后，充电宝玩家们咋样了？ | 投中网",
+          "content": "半年过去，充电宝行业大变样。 一切的转折点，是2025年6月“多所高校禁用罗马仕充电宝”事件。 随后，民航局“禁携无3C认证充电宝”新规落地，一场召回风暴彻底改变了这个曾经野蛮生长的行业。",
+          "img_src": "",
+          "iframe_src": "",
+          "audio_src": "",
+          "thumbnail": "",
+          "publishedDate": null,
+          "pubdate": "",
+          "length": null,
+          "views": "",
+          "author": "",
+          "metadata": "",
+          "priority": "",
+          "engines": [
+            "yandex"
+          ],
+          "open_group": false,
+          "close_group": false,
+          "positions": [
+            6
+          ],
+          "score": 0.16666666666666666,
+          "category": "general",
+          "url": "https://m.chinaventure.com.cn/news/116-20251124-389012.html",
+          "engine": "yandex",
+          "parsed_url": [
+            "https",
+            "m.chinaventure.com.cn",
+            "/news/116-20251124-389012.html",
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "template": "default.html",
+          "title": "火车站也开始重点检查充电宝：标志清晰的单块额定能量不超过100Wh",
+          "content": "6月26日，民航局发布紧急通知，自6月28日起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。",
+          "img_src": "",
+          "iframe_src": "",
+          "audio_src": "",
+          "thumbnail": "",
+          "publishedDate": null,
+          "pubdate": "",
+          "length": null,
+          "views": "",
+          "author": "",
+          "metadata": "",
+          "priority": "",
+          "engines": [
+            "yandex"
+          ],
+          "open_group": false,
+          "close_group": false,
+          "positions": [
+            7
+          ],
+          "score": 0.14285714285714285,
+          "category": "general",
+          "url": "https://news.ycwb.com/ikinvkmtic/content_53499883.htm",
+          "engine": "yandex",
+          "parsed_url": [
+            "https",
+            "news.ycwb.com",
+            "/ikinvkmtic/content_53499883.htm",
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "template": "default.html",
+          "title": "北京哪个景点不让带充电宝 - 今日头条",
+          "content": "3C认证标准是什么？ 民航局6月26号发布紧急通知，明确从6月28号起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。",
+          "img_src": "",
+          "iframe_src": "",
+          "audio_src": "",
+          "thumbnail": "",
+          "publishedDate": null,
+          "pubdate": "",
+          "length": null,
+          "views": "",
+          "author": "",
+          "metadata": "",
+          "priority": "",
+          "engines": [
+            "yandex"
+          ],
+          "open_group": false,
+          "close_group": false,
+          "positions": [
+            8
+          ],
+          "score": 0.125,
+          "category": "general",
+          "url": "https://www.toutiao.com/zixun/7523806644296419347/",
+          "engine": "yandex",
+          "parsed_url": [
+            "https",
+            "www.toutiao.com",
+            "/zixun/7523806644296419347/",
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "template": "default.html",
+          "title": "充电宝寄存费20...",
+          "content": "充电宝召回型号涉及30多个品牌. 哪些充电宝属于被召回的型号？ 乘客该如何查询？OM10等5款充电宝属于被召回充电宝型号，其中前3款型号与罗马仕今年6月16日宣布召回的3款充电宝型号一致。",
+          "img_src": "",
+          "iframe_src": "",
+          "audio_src": "",
+          "thumbnail": "",
+          "publishedDate": null,
+          "pubdate": "",
+          "length": null,
+          "views": "",
+          "author": "",
+          "metadata": "",
+          "priority": "",
+          "engines": [
+            "yandex"
+          ],
+          "open_group": false,
+          "close_group": false,
+          "positions": [
+            9
+          ],
+          "score": 0.1111111111111111,
+          "category": "general",
+          "url": "https://www.cqnews.net/1/detail/1390234709070315520/app/content_1390234709070315520.html",
+          "engine": "yandex",
+          "parsed_url": [
+            "https",
+            "www.cqnews.net",
+            "/1/detail/1390234709070315520/app/content_1390234709070315520.html",
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "template": "default.html",
+          "title": "男子机场怒摔充电宝，瞬间起火！ 劣质充电宝有多危险",
+          "content": "根据民航局规定，自6月28日起，禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。 新规实施后，不少机场新增了“充电宝核验处置点”。 还有网友发文表示，现场不少充电宝在机场被拦下。",
+          "img_src": "",
+          "iframe_src": "",
+          "audio_src": "",
+          "thumbnail": "",
+          "publishedDate": null,
+          "pubdate": "",
+          "length": null,
+          "views": "",
+          "author": "",
+          "metadata": "",
+          "priority": "",
+          "engines": [
+            "yandex"
+          ],
+          "open_group": false,
+          "close_group": false,
+          "positions": [
+            10
+          ],
+          "score": 0.1,
+          "category": "general",
+          "url": "https://m.voc.com.cn/xhn/news/202507/29976577.html",
+          "engine": "yandex",
+          "parsed_url": [
+            "https",
+            "m.voc.com.cn",
+            "/xhn/news/202507/29976577.html",
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "template": "default.html",
+          "title": "tkww.hk/a/202506/28/AP685f4eaae4b0e169b135a471.html",
+          "content": "大公文匯全媒體報道，日前，為切實保障航空運行安全，中國民航局發布緊急通知，自6月28日起禁止旅客攜帶沒有3C標識、3C標識不清晰、被召回型號. 或批次的充電寶（移動電源）乘坐境內航班。",
+          "img_src": "",
+          "iframe_src": "",
+          "audio_src": "",
+          "thumbnail": "",
+          "publishedDate": null,
+          "pubdate": "",
+          "length": null,
+          "views": "",
+          "author": "",
+          "metadata": "",
+          "priority": "",
+          "engines": [
+            "yandex"
+          ],
+          "open_group": false,
+          "close_group": false,
+          "positions": [
+            11
+          ],
+          "score": 0.09090909090909091,
+          "category": "general",
+          "url": "https://www.tkww.hk/a/202506/28/AP685f4eaae4b0e169b135a471.html",
+          "engine": "yandex",
+          "parsed_url": [
+            "https",
+            "www.tkww.hk",
+            "/a/202506/28/AP685f4eaae4b0e169b135a471.html",
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "template": "default.html",
+          "title": "充电宝行业危情30...",
+          "content": "6月26日，中国民航局发布通知，自 6 月 28 日起禁止旅客携带没有 3C 标识、3C 标识不清晰、被召回型号或批次的充电宝乘坐境内航班。",
+          "img_src": "",
+          "iframe_src": "",
+          "audio_src": "",
+          "thumbnail": "",
+          "publishedDate": null,
+          "pubdate": "",
+          "length": null,
+          "views": "",
+          "author": "",
+          "metadata": "",
+          "priority": "",
+          "engines": [
+            "yandex"
+          ],
+          "open_group": false,
+          "close_group": false,
+          "positions": [
+            12
+          ],
+          "score": 0.08333333333333333,
+          "category": "general",
+          "url": "https://post.smzdm.com/p/ardnx627/",
+          "engine": "yandex",
+          "parsed_url": [
+            "https",
+            "post.smzdm.com",
+            "/p/ardnx627/",
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "template": "default.html",
+          "title": "充电宝上飞机和高铁分别要满足哪些条件？ 看这几张图就明白了 - 21...",
+          "content": "民航局禁止携带. 没有3C标识、 被召回范围的充电宝上机规定. 引发关注.?充电宝上高铁.",
+          "img_src": "",
+          "iframe_src": "",
+          "audio_src": "",
+          "thumbnail": "",
+          "publishedDate": null,
+          "pubdate": "",
+          "length": null,
+          "views": "",
+          "author": "",
+          "metadata": "",
+          "priority": "",
+          "engines": [
+            "yandex"
+          ],
+          "open_group": false,
+          "close_group": false,
+          "positions": [
+            13
+          ],
+          "score": 0.07692307692307693,
+          "category": "general",
+          "url": "https://www.21jingji.com/article/20250702/herald/8ef3587707abf5cd14a405f794a81a1b.html",
+          "engine": "yandex",
+          "parsed_url": [
+            "https",
+            "www.21jingji.com",
+            "/article/20250702/herald/8ef3587707abf5cd14a405f794a81a1b.html",
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "template": "default.html",
+          "title": "有ce标识的风扇能带上飞机吗-抖音",
+          "content": "从6月28日起，民航局禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。 一个视频告诉你，怎样判断你的充电宝能否带上飞机！",
+          "img_src": "",
+          "iframe_src": "",
+          "audio_src": "",
+          "thumbnail": "",
+          "publishedDate": null,
+          "pubdate": "",
+          "length": null,
+          "views": "",
+          "author": "",
+          "metadata": "",
+          "priority": "",
+          "engines": [
+            "yandex"
+          ],
+          "open_group": false,
+          "close_group": false,
+          "positions": [
+            14
+          ],
+          "score": 0.07142857142857142,
+          "category": "general",
+          "url": "https://www.douyin.com/shipin/7529000604644067343",
+          "engine": "yandex",
+          "parsed_url": [
+            "https",
+            "www.douyin.com",
+            "/shipin/7529000604644067343",
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "template": "default.html",
+          "title": "充电宝行业“大地震”，罗马仕与安克创新无不无辜？_ 陀螺科技",
+          "content": "充电板行业的“大地震”，还在继续。 6月26日，民航局发布了一则紧急通知，自6月28日起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。",
+          "img_src": "",
+          "iframe_src": "",
+          "audio_src": "",
+          "thumbnail": "",
+          "publishedDate": null,
+          "pubdate": "",
+          "length": null,
+          "views": "",
+          "author": "",
+          "metadata": "",
+          "priority": "",
+          "engines": [
+            "yandex"
+          ],
+          "open_group": false,
+          "close_group": false,
+          "positions": [
+            15
+          ],
+          "score": 0.06666666666666667,
+          "category": "general",
+          "url": "https://www.tuoluo.cn/article/detail-10123290.html",
+          "engine": "yandex",
+          "parsed_url": [
+            "https",
+            "www.tuoluo.cn",
+            "/article/detail-10123290.html",
+            "",
+            "",
+            ""
+          ]
+        }
+      ],
+      "answers": [],
+      "corrections": [],
+      "infoboxes": [],
+      "suggestions": [],
+      "unresponsive_engines": []
+    }
+  },
+  {
+    "query": "旅客 充电宝 3C 标识 召回 site:caac.gov.cn",
+    "maximum": 20,
+    "body_sha256": "2bbcf2a55b6ff4bf351e035d5d5354fa675ff1bfe069d6488bc7f2a31b2b6a61",
+    "retrieved_at": "2026-10-04T11:09:14.617582+00:00",
+    "body": {
+      "query": "旅客 充电宝 3C 标识 召回 site:caac.gov.cn",
+      "results": [
+        {
+          "template": "default.html",
+          "title": "caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XWZX/XB_DQYW...",
+          "content": "辖区各机场广泛动员，通过广播、电子屏、公告牌、乘机短信等多渠道向旅客传达充电宝新规内容，设置充电宝暂存与自弃点，开设快递服务台，提升旅客处置. 效率。 安排专人现场引导旅客识别充电宝是否合规，提高出行效率。",
+          "img_src": "",
+          "iframe_src": "",
+          "audio_src": "",
+          "thumbnail": "",
+          "publishedDate": null,
+          "pubdate": "",
+          "length": null,
+          "views": "",
+          "author": "",
+          "metadata": "",
+          "priority": "",
+          "engines": [
+            "yandex"
+          ],
+          "open_group": false,
+          "close_group": false,
+          "positions": [
+            1
+          ],
+          "score": 1.0,
+          "category": "general",
+          "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XWZX/XB_DQYW/202507/t20250710_227953.html",
+          "engine": "yandex",
+          "parsed_url": [
+            "https",
+            "www.caac.gov.cn",
+            "/PHONE/GLJ_PHONE/XBGLJ/XB_XWZX/XB_DQYW/202507/t20250710_227953.html",
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "template": "default.html",
+          "title": "caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/DB_DQXW/202507...",
+          "content": "日前民航局发布紧急通知，自6月28日起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。 东北局及辽宁监管局紧急部署，要求辖区单位严格落实卡控政策。 辖区各机场及航司迅速行动，多措 并举保障政策实施。",
+          "img_src": "",
+          "iframe_src": "",
+          "audio_src": "",
+          "thumbnail": "",
+          "publishedDate": null,
+          "pubdate": "",
+          "length": null,
+          "views": "",
+          "author": "",
+          "metadata": "",
+          "priority": "",
+          "engines": [
+            "yandex"
+          ],
+          "open_group": false,
+          "close_group": false,
+          "positions": [
+            2
+          ],
+          "score": 0.5,
+          "category": "general",
+          "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/DBGLJ/DB_DQXW/202507/t20250709_227899.html",
+          "engine": "yandex",
+          "parsed_url": [
+            "https",
+            "www.caac.gov.cn",
+            "/PHONE/GLJ_PHONE/DBGLJ/DB_DQXW/202507/t20250709_227899.html",
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "template": "default.html",
+          "title": "caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT...",
+          "content": "组织了人员话术培训，做好旅客服务指引及解释。 设置了管控充电宝后续处置服务设施，提供了充电宝3C标识、召回型号查询、充电宝暂存等服务，让旅客感受到民航对充电宝的管控是有温度的执法，旅.",
+          "img_src": "",
+          "iframe_src": "",
+          "audio_src": "",
+          "thumbnail": "",
+          "publishedDate": null,
+          "pubdate": "",
+          "length": null,
+          "views": "",
+          "author": "",
+          "metadata": "",
+          "priority": "",
+          "engines": [
+            "yandex"
+          ],
+          "open_group": false,
+          "close_group": false,
+          "positions": [
+            3
+          ],
+          "score": 0.3333333333333333,
+          "category": "general",
+          "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+          "engine": "yandex",
+          "parsed_url": [
+            "https",
+            "www.caac.gov.cn",
+            "/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "template": "default.html",
+          "title": "caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT...",
+          "content": "无3C标识、3C标识不清晰、被召回型号或批次”的充电宝识别出、卡控住；二是要真情服务，在向旅客宣传到位、耐心解释的基础上，尽最大努力为旅客处理.",
+          "img_src": "",
+          "iframe_src": "",
+          "audio_src": "",
+          "thumbnail": "",
+          "publishedDate": null,
+          "pubdate": "",
+          "length": null,
+          "views": "",
+          "author": "",
+          "metadata": "",
+          "priority": "",
+          "engines": [
+            "yandex"
+          ],
+          "open_group": false,
+          "close_group": false,
+          "positions": [
+            4
+          ],
+          "score": 0.25,
+          "category": "general",
+          "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227950.html",
+          "engine": "yandex",
+          "parsed_url": [
+            "https",
+            "www.caac.gov.cn",
+            "/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227950.html",
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "template": "default.html",
+          "title": "宁夏监管局注重充电宝管控与服务并行 保旅客平安温馨出行",
+          "content": "6月28日，是民航局关于“禁止旅客携带无3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班”有关规定执行的首日。",
+          "img_src": "",
+          "iframe_src": "",
+          "audio_src": "",
+          "thumbnail": "",
+          "publishedDate": null,
+          "pubdate": "",
+          "length": null,
+          "views": "",
+          "author": "",
+          "metadata": "",
+          "priority": "",
+          "engines": [
+            "yandex"
+          ],
+          "open_group": false,
+          "close_group": false,
+          "positions": [
+            5
+          ],
+          "score": 0.2,
+          "category": "general",
+          "url": "https://www.caac.gov.cn/local/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+          "engine": "yandex",
+          "parsed_url": [
+            "https",
+            "www.caac.gov.cn",
+            "/local/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+            "",
+            "",
+            ""
+          ]
+        },
+        {
+          "template": "default.html",
+          "title": "中国民用航空局--航空旅行常识",
+          "content": "2.旅客所携带的锂电池、充电宝的标识须全面、清晰且易于辨识。 额定能量超过160Wh的锂电池、充电宝不可携带。",
+          "img_src": "",
+          "iframe_src": "",
+          "audio_src": "",
+          "thumbnail": "",
+          "publishedDate": null,
+          "pubdate": "",
+          "length": null,
+          "views": "",
+          "author": "",
+          "metadata": "",
+          "priority": "",
+          "engines": [
+            "yandex"
+          ],
+          "open_group": false,
+          "close_group": false,
+          "positions": [
+            6
+          ],
+          "score": 0.16666666666666666,
+          "category": "general",
+          "url": "https://www.caac.gov.cn/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html",
+          "engine": "yandex",
+          "parsed_url": [
+            "https",
+            "www.caac.gov.cn",
+            "/INDEX/HLFW/HKLXCS/202303/t20230316_217597.html",
+            "",
+            "",
+            ""
+          ]
+        }
+      ],
+      "answers": [],
+      "corrections": [],
+      "infoboxes": [],
+      "suggestions": [],
+      "unresponsive_engines": []
+    }
+  }
+]

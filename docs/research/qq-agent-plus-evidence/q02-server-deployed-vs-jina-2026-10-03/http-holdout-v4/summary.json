@@ -1,0 +1,35 @@
+{
+  "completed_replies": 0,
+  "provider_rounds_attempted": 5,
+  "provider_error_types": [
+    "RuntimeError"
+  ],
+  "usage": {
+    "prompt_tokens": {
+      "reported_rounds": 4,
+      "attempted_rounds": 5,
+      "known_subtotal": 16745,
+      "complete_total": null
+    },
+    "completion_tokens": {
+      "reported_rounds": 4,
+      "attempted_rounds": 5,
+      "known_subtotal": 1333,
+      "complete_total": null
+    },
+    "total_tokens": {
+      "reported_rounds": 4,
+      "attempted_rounds": 5,
+      "known_subtotal": 19518,
+      "complete_total": null
+    },
+    "reasoning_tokens": {
+      "reported_rounds": 3,
+      "attempted_rounds": 5,
+      "known_subtotal": 1440,
+      "complete_total": null
+    }
+  },
+  "quality_approved": false,
+  "limitation": "First logical turn failed during source revision. Do not treat withheld drafts as delivered answers or mix this implementation with v5."
+}

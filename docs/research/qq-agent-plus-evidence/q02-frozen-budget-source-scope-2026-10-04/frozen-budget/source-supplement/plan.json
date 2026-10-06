@@ -1,0 +1,12 @@
+{
+  "model": "gemini-3.8-flash-high",
+  "repeats": 3,
+  "max_actual_http": 4,
+  "question_and_prior_body_hashes_preserved": true,
+  "only_input_changes": "Actual independently read 2026-08-04 Air China publication supplied as untrusted context and URL added to allowed read_urls; prior draft and revision policy unchanged",
+  "strict_causal_ab": false,
+  "earlier_baseline": "previous three single_text/original_history trials; separate run time and labels",
+  "source_adapter_result_sha256": "79b04bd4139f5622a7965a3b669bd9c35131d6c8ea7b59ed32f98b70dbf887b2",
+  "runtime_skill_execution": false,
+  "q02_approval": false
+}

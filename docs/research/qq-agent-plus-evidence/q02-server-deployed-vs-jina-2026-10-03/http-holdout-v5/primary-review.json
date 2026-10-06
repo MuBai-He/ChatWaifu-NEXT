@@ -1,0 +1,12 @@
+{
+  "reviewer": "primary Codex direct review",
+  "quality_approved": false,
+  "reference": "https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2.2",
+  "notes": [
+    "Two successful reads include the actual normative definition and automatic retry exceptions. Main PUT/POST, client/proxy and repeated-retry distinctions in r0/r2 are consistent with that section. Extra PUT creation/replacement examples were not separately read as the complete section9.3.4.",
+    "r1 selected an actual search result under /v3test/rfc9110.html; Crawl4AI returned500 and the initial answer honestly stated the gap.",
+    "r1:t2 violates the explicit source-only follow-up by supplying general model knowledge after acknowledging no original was available. No external tool ran, but requested evidence scope was not respected.",
+    "All three content-only follow-ups executed no new tools and used two sentences. Subsequent topic switches and farewells also executed no tools. r0:t3 includes an unsupported reference to the user looking at the character and needs presentation review.",
+    "The two successful normative answers are encouraging targeted evidence, not complete Q02 or whole-document verification."
+  ]
+}

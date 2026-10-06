@@ -1,0 +1,53 @@
+{
+  "conclusion": "The temporal scope/condition rewrite problems are already visible in unexposed model drafts; later review does not fully repair them. Candidate Runtime whole-block repetition has separate direct evidence. Replacing the bool alone cannot establish quality.",
+  "independent_or_blind": false,
+  "items": [
+    {
+      "draft_condition_relation_ambiguity": false,
+      "draft_has_generic_unknown_scope": true,
+      "draft_precise_oct4_scope_not_identifiable": true,
+      "draft_sha256": "bfcb78d6eff486eb0887101e827611df7134622a5896ff52fd5be4ce475d9236",
+      "final_raw_frame_sha256": "c517589088f992ecdb15dd3d2f97698fafd1c048539b82ba50db1f4e69f58af8",
+      "finding": "草稿已经将前轮具体时点泛化为特定/后续日期或普通材料外未知；不靠日期正则批准或拒绝。国航草稿也已用正向能确认能量或金属含量，其条件关系歧义先于帧核对。此检查不替换最终答复或整组评分。",
+      "full_text_component_review": true,
+      "published_reply_sha256": "40e39ca06a0f5ce33e7c876bd5d68cd5dfa34b342b49055bda14c4459ca2e9db",
+      "sample_key": "frozen_icao:r0:t4"
+    },
+    {
+      "draft_condition_relation_ambiguity": false,
+      "draft_has_generic_unknown_scope": true,
+      "draft_precise_oct4_scope_not_identifiable": true,
+      "draft_sha256": "a41dc6830248c1f5026933ffbc9480ce320e3758dcb990d9cb11dc20d498e2d0",
+      "final_raw_frame_sha256": "c39da0a83901bcc84a89ffdba6441b22708497fcd7eb9005acf3b187fa97300f",
+      "finding": "草稿已经将前轮具体时点泛化为特定/后续日期或普通材料外未知；不靠日期正则批准或拒绝。国航草稿也已用正向能确认能量或金属含量，其条件关系歧义先于帧核对。此检查不替换最终答复或整组评分。",
+      "full_text_component_review": true,
+      "published_reply_sha256": "d947864831499f16112c7de76d1c5d64e37079e17a7383e7bdfb4d2377fcfb36",
+      "sample_key": "frozen_icao:r1:t4"
+    },
+    {
+      "draft_condition_relation_ambiguity": true,
+      "draft_has_generic_unknown_scope": true,
+      "draft_precise_oct4_scope_not_identifiable": true,
+      "draft_sha256": "86f73236ccae8cc502ef96d13bcfe0f6bf159e459e37062119bd3031094c4496",
+      "final_raw_frame_sha256": "a4917054425016b4a45b1a4ef28c7adac3d10ad8c97e6e8407a8a60cb86057cb",
+      "finding": "草稿已经将前轮具体时点泛化为特定/后续日期或普通材料外未知；不靠日期正则批准或拒绝。国航草稿也已用正向能确认能量或金属含量，其条件关系歧义先于帧核对。此检查不替换最终答复或整组评分。",
+      "full_text_component_review": true,
+      "published_reply_sha256": "4ca9f6fadb518cda18afe61d55cf67a0b38cbd4a9c94ac993771049e275c28ee",
+      "sample_key": "frozen_airchina:r0:t4"
+    },
+    {
+      "draft_condition_relation_ambiguity": true,
+      "draft_has_generic_unknown_scope": true,
+      "draft_precise_oct4_scope_not_identifiable": true,
+      "draft_sha256": "00225e0755a70b1f78ca058757ac364b4c44fa0d90ff0ba3c21744bf6097b192",
+      "final_raw_frame_sha256": "4e984dfaed08a655814daf99228d65716cfbdb44c41bbd5ed256ca8344e20e01",
+      "finding": "草稿已经将前轮具体时点泛化为特定/后续日期或普通材料外未知；不靠日期正则批准或拒绝。国航草稿也已用正向能确认能量或金属含量，其条件关系歧义先于帧核对。此检查不替换最终答复或整组评分。",
+      "full_text_component_review": true,
+      "published_reply_sha256": "2b76e2a73552b153fbea359b87ceaa37da6926bce92e8972ac2afdbe6beee6df",
+      "sample_key": "frozen_airchina:r1:t4"
+    }
+  ],
+  "model_calls": 0,
+  "reply_replacements": 0,
+  "scope": "Read-only attribution across all four final-turn drafts of the complete rejected v39 batch, not a new model experiment or quality replacement"
+}

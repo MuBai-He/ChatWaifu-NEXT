@@ -1,0 +1,1 @@
+{"scope": "one exact replay of the last failed provider payload, no model action or Runtime tool execution", "strict_resume_of_original_scenario": false, "max_http_attempts": 5, "source_payload_sha256": "5c619b17ed139353bc7167733dc8d1b5d9f0a9d368332e6ccb3eea486269e325", "q02_approval": false}

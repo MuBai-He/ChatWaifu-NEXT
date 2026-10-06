@@ -1,0 +1,29 @@
+{
+  "command": [
+    "/home/mubai/chatwaifu-server/source/.venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "/tmp/cw2-q02-source-coverage-v37-eval/services/runtime/tests/test_source_answer_state.py",
+    "/tmp/cw2-q02-source-coverage-v37-eval/services/runtime/tests/test_conversation_source_answer_state.py",
+    "/tmp/cw2-q02-source-coverage-v37-eval/services/runtime/tests/test_llm_response_schema.py",
+    "/tmp/cw2-q02-source-coverage-v37-eval/services/runtime/tests/test_source_answer_frame.py",
+    "/tmp/cw2-q02-source-coverage-v37-eval/services/runtime/tests/test_conversation_source_context.py",
+    "/tmp/cw2-q02-source-coverage-v37-eval/services/runtime/tests/test_tool_calling_agent.py",
+    "/tmp/cw2-q02-source-coverage-v37-eval/services/runtime/tests/test_llm_input_budget.py",
+    "/tmp/cw2-q02-source-coverage-v37-eval/services/runtime/tests/test_llm_tool_protocol.py",
+    "/tmp/cw2-q02-source-coverage-v37-eval/services/runtime/tests/test_source_context_projection.py"
+  ],
+  "exit_code": 0,
+  "test_files": [
+    "test_source_answer_state.py",
+    "test_conversation_source_answer_state.py",
+    "test_llm_response_schema.py",
+    "test_source_answer_frame.py",
+    "test_conversation_source_context.py",
+    "test_tool_calling_agent.py",
+    "test_llm_input_budget.py",
+    "test_llm_tool_protocol.py",
+    "test_source_context_projection.py"
+  ]
+}

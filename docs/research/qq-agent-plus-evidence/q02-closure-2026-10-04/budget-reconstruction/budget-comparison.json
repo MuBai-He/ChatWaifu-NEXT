@@ -1,0 +1,601 @@
+{
+  "arms": [
+    {
+      "window": 32768,
+      "input_allowance": 21370,
+      "native_subtotals": {
+        "prompt_tokens": 66001,
+        "completion_tokens": 3220,
+        "total_tokens": 70983
+      },
+      "turn_latencies_ms": {
+        "frozen_budget:w32768:t3": 14946,
+        "frozen_budget:w32768:t4": 19629
+      },
+      "reference_range": [
+        20920,
+        21221
+      ],
+      "largest_reported_input": 17167,
+      "largest_generated_completion": 885,
+      "omissions": [
+        {
+          "sample_key": "frozen_budget:w32768:t3",
+          "call_id": "5b42b2cf-b025-455b-9c53-18b263b768ae",
+          "history_omitted": [
+            1
+          ],
+          "preambles_omitted": [],
+          "projected_sources": [
+            {
+              "skill_run_id": "6f669d9e-2ced-4563-adef-40fa5c0acd6a",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "e67011f1b2d58d0e614e1654baa19d2e0a532ab4a0cb27bbd9f0081ece7b5f7b"
+            },
+            {
+              "skill_run_id": "986937a6-bea2-426a-9fcc-2306ca58aca7",
+              "skill_id": "web.read",
+              "original_result": "omitted_for_input_budget",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "4b36ccba7784f97b0c8e159e2d4b4f1da27a413717eb3c586c33a89827a03f0f"
+            },
+            {
+              "skill_run_id": "31e44467-3b5c-4281-be0a-e0b57a3bb91d",
+              "skill_id": "web.read",
+              "original_result": "omitted_for_input_budget",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "6bee10d222e8611436968c39b2c29cda1da74aece8aea454180cd61a13796963"
+            },
+            {
+              "skill_run_id": "6bbdd333-93f2-41e9-ad82-5912b9e3d93b",
+              "skill_id": "web.read",
+              "original_result": "omitted_for_input_budget",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "93d6903cf34ee028efb9d7ad0a1c00e1e562899bc4e4de5152a1b117e5410010"
+            },
+            {
+              "skill_run_id": "75e5c5e4-f084-46ab-aacd-42515f48dca2",
+              "skill_id": "web.search",
+              "original_result": "available",
+              "url": null,
+              "body_sha256": "891edaad9825aebfcbf9d90d1ed8944b73c102dda0d6bcca064aef9cefb8f073"
+            }
+          ]
+        },
+        {
+          "sample_key": "frozen_budget:w32768:t3",
+          "call_id": "4a800d41-2df0-4e9b-b4fa-331d1763fdb3",
+          "history_omitted": [
+            1
+          ],
+          "preambles_omitted": [],
+          "projected_sources": [
+            {
+              "skill_run_id": "6f669d9e-2ced-4563-adef-40fa5c0acd6a",
+              "skill_id": "web.read",
+              "original_result": "omitted_for_input_budget",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "e67011f1b2d58d0e614e1654baa19d2e0a532ab4a0cb27bbd9f0081ece7b5f7b"
+            },
+            {
+              "skill_run_id": "986937a6-bea2-426a-9fcc-2306ca58aca7",
+              "skill_id": "web.read",
+              "original_result": "omitted_for_input_budget",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "4b36ccba7784f97b0c8e159e2d4b4f1da27a413717eb3c586c33a89827a03f0f"
+            },
+            {
+              "skill_run_id": "31e44467-3b5c-4281-be0a-e0b57a3bb91d",
+              "skill_id": "web.read",
+              "original_result": "omitted_for_input_budget",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "6bee10d222e8611436968c39b2c29cda1da74aece8aea454180cd61a13796963"
+            },
+            {
+              "skill_run_id": "6bbdd333-93f2-41e9-ad82-5912b9e3d93b",
+              "skill_id": "web.read",
+              "original_result": "omitted_for_input_budget",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "93d6903cf34ee028efb9d7ad0a1c00e1e562899bc4e4de5152a1b117e5410010"
+            },
+            {
+              "skill_run_id": "75e5c5e4-f084-46ab-aacd-42515f48dca2",
+              "skill_id": "web.search",
+              "original_result": "omitted_for_input_budget",
+              "url": null,
+              "body_sha256": "891edaad9825aebfcbf9d90d1ed8944b73c102dda0d6bcca064aef9cefb8f073"
+            }
+          ]
+        },
+        {
+          "sample_key": "frozen_budget:w32768:t4",
+          "call_id": "480b2268-ca79-4fce-8b62-178885b7df3a",
+          "history_omitted": [
+            1,
+            3,
+            5
+          ],
+          "preambles_omitted": [],
+          "projected_sources": [
+            {
+              "skill_run_id": "0f218cf6-fad1-4e0b-9164-eae9218af9f6",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://item.btime.com/41v8i91ponu8e9pnuojftmddbgs",
+              "body_sha256": "550235c04451cde655c35d709ad42a1055e69b2c5485ad864f0a5fa245deb005"
+            },
+            {
+              "skill_run_id": "72973f92-f546-4e7e-8b09-25a5a72221db",
+              "skill_id": "web.search",
+              "original_result": "available",
+              "url": null,
+              "body_sha256": "332ceea438381945c018dd159acaa1bcf74919f6b3229d3dceb393e083b80f4c"
+            },
+            {
+              "skill_run_id": "70826b09-2dcb-4f88-8856-cad223755258",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+              "body_sha256": "7d82173338429bb36ee18626e14b6cee8b6f5221ea22a56240c2b896e4cdae8b"
+            },
+            {
+              "skill_run_id": "d3fa7a18-be34-4f8c-a942-4114f9cc7b4f",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://www.caac.gov.cn/PHONE/XWZX/MHYW/201408/t20140808_13837.html",
+              "body_sha256": "f364304bba48e091363869a211e0e4f4aa76a99382cf269702f560da680f149d"
+            },
+            {
+              "skill_run_id": "3e166e3b-dc2b-4d15-b6ab-f5699ce8aef7",
+              "skill_id": "web.search",
+              "original_result": "available",
+              "url": null,
+              "body_sha256": "451e0cf17f74578bf5efe3d45f2249b320546f716b3bc4e0bd8064e87ad065bd"
+            },
+            {
+              "skill_run_id": "9ae6b264-6a2e-4990-8f44-80ca175bf001",
+              "skill_id": "web.search",
+              "original_result": "available",
+              "url": null,
+              "body_sha256": "96a997b5108fea76577e840c469f451db2991cfa017762c9aba2a723ed1644ce"
+            },
+            {
+              "skill_run_id": "6f669d9e-2ced-4563-adef-40fa5c0acd6a",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "e67011f1b2d58d0e614e1654baa19d2e0a532ab4a0cb27bbd9f0081ece7b5f7b"
+            },
+            {
+              "skill_run_id": "986937a6-bea2-426a-9fcc-2306ca58aca7",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "4b36ccba7784f97b0c8e159e2d4b4f1da27a413717eb3c586c33a89827a03f0f"
+            },
+            {
+              "skill_run_id": "31e44467-3b5c-4281-be0a-e0b57a3bb91d",
+              "skill_id": "web.read",
+              "original_result": "omitted_for_input_budget",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "6bee10d222e8611436968c39b2c29cda1da74aece8aea454180cd61a13796963"
+            },
+            {
+              "skill_run_id": "6bbdd333-93f2-41e9-ad82-5912b9e3d93b",
+              "skill_id": "web.read",
+              "original_result": "omitted_for_input_budget",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "93d6903cf34ee028efb9d7ad0a1c00e1e562899bc4e4de5152a1b117e5410010"
+            },
+            {
+              "skill_run_id": "75e5c5e4-f084-46ab-aacd-42515f48dca2",
+              "skill_id": "web.search",
+              "original_result": "available",
+              "url": null,
+              "body_sha256": "891edaad9825aebfcbf9d90d1ed8944b73c102dda0d6bcca064aef9cefb8f073"
+            }
+          ]
+        },
+        {
+          "sample_key": "frozen_budget:w32768:t4",
+          "call_id": "4ebb5216-b0ad-44dd-8e7c-ed544c8be990",
+          "history_omitted": [
+            1,
+            3,
+            5
+          ],
+          "preambles_omitted": [],
+          "projected_sources": [
+            {
+              "skill_run_id": "0f218cf6-fad1-4e0b-9164-eae9218af9f6",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://item.btime.com/41v8i91ponu8e9pnuojftmddbgs",
+              "body_sha256": "550235c04451cde655c35d709ad42a1055e69b2c5485ad864f0a5fa245deb005"
+            },
+            {
+              "skill_run_id": "72973f92-f546-4e7e-8b09-25a5a72221db",
+              "skill_id": "web.search",
+              "original_result": "available",
+              "url": null,
+              "body_sha256": "332ceea438381945c018dd159acaa1bcf74919f6b3229d3dceb393e083b80f4c"
+            },
+            {
+              "skill_run_id": "70826b09-2dcb-4f88-8856-cad223755258",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+              "body_sha256": "7d82173338429bb36ee18626e14b6cee8b6f5221ea22a56240c2b896e4cdae8b"
+            },
+            {
+              "skill_run_id": "d3fa7a18-be34-4f8c-a942-4114f9cc7b4f",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://www.caac.gov.cn/PHONE/XWZX/MHYW/201408/t20140808_13837.html",
+              "body_sha256": "f364304bba48e091363869a211e0e4f4aa76a99382cf269702f560da680f149d"
+            },
+            {
+              "skill_run_id": "3e166e3b-dc2b-4d15-b6ab-f5699ce8aef7",
+              "skill_id": "web.search",
+              "original_result": "available",
+              "url": null,
+              "body_sha256": "451e0cf17f74578bf5efe3d45f2249b320546f716b3bc4e0bd8064e87ad065bd"
+            },
+            {
+              "skill_run_id": "9ae6b264-6a2e-4990-8f44-80ca175bf001",
+              "skill_id": "web.search",
+              "original_result": "available",
+              "url": null,
+              "body_sha256": "96a997b5108fea76577e840c469f451db2991cfa017762c9aba2a723ed1644ce"
+            },
+            {
+              "skill_run_id": "6f669d9e-2ced-4563-adef-40fa5c0acd6a",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "e67011f1b2d58d0e614e1654baa19d2e0a532ab4a0cb27bbd9f0081ece7b5f7b"
+            },
+            {
+              "skill_run_id": "986937a6-bea2-426a-9fcc-2306ca58aca7",
+              "skill_id": "web.read",
+              "original_result": "omitted_for_input_budget",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "4b36ccba7784f97b0c8e159e2d4b4f1da27a413717eb3c586c33a89827a03f0f"
+            },
+            {
+              "skill_run_id": "31e44467-3b5c-4281-be0a-e0b57a3bb91d",
+              "skill_id": "web.read",
+              "original_result": "omitted_for_input_budget",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "6bee10d222e8611436968c39b2c29cda1da74aece8aea454180cd61a13796963"
+            },
+            {
+              "skill_run_id": "6bbdd333-93f2-41e9-ad82-5912b9e3d93b",
+              "skill_id": "web.read",
+              "original_result": "omitted_for_input_budget",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "93d6903cf34ee028efb9d7ad0a1c00e1e562899bc4e4de5152a1b117e5410010"
+            },
+            {
+              "skill_run_id": "75e5c5e4-f084-46ab-aacd-42515f48dca2",
+              "skill_id": "web.search",
+              "original_result": "omitted_for_input_budget",
+              "url": null,
+              "body_sha256": "891edaad9825aebfcbf9d90d1ed8944b73c102dda0d6bcca064aef9cefb8f073"
+            }
+          ]
+        }
+      ],
+      "fidelity_approved": false
+    },
+    {
+      "window": 65536,
+      "input_allowance": 49864,
+      "native_subtotals": {
+        "prompt_tokens": 87837,
+        "completion_tokens": 4075,
+        "total_tokens": 93296
+      },
+      "turn_latencies_ms": {
+        "frozen_budget:w65536:t3": 15209,
+        "frozen_budget:w65536:t4": 21559
+      },
+      "reference_range": [
+        25753,
+        28397
+      ],
+      "largest_reported_input": 23155,
+      "largest_generated_completion": 1064,
+      "omissions": [
+        {
+          "sample_key": "frozen_budget:w65536:t3",
+          "call_id": "cecbef65-8634-4b09-897d-34a0a212870e",
+          "history_omitted": [],
+          "preambles_omitted": [],
+          "projected_sources": [
+            {
+              "skill_run_id": "6f669d9e-2ced-4563-adef-40fa5c0acd6a",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "e67011f1b2d58d0e614e1654baa19d2e0a532ab4a0cb27bbd9f0081ece7b5f7b"
+            },
+            {
+              "skill_run_id": "986937a6-bea2-426a-9fcc-2306ca58aca7",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "4b36ccba7784f97b0c8e159e2d4b4f1da27a413717eb3c586c33a89827a03f0f"
+            },
+            {
+              "skill_run_id": "31e44467-3b5c-4281-be0a-e0b57a3bb91d",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "6bee10d222e8611436968c39b2c29cda1da74aece8aea454180cd61a13796963"
+            },
+            {
+              "skill_run_id": "6bbdd333-93f2-41e9-ad82-5912b9e3d93b",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "93d6903cf34ee028efb9d7ad0a1c00e1e562899bc4e4de5152a1b117e5410010"
+            },
+            {
+              "skill_run_id": "75e5c5e4-f084-46ab-aacd-42515f48dca2",
+              "skill_id": "web.search",
+              "original_result": "available",
+              "url": null,
+              "body_sha256": "891edaad9825aebfcbf9d90d1ed8944b73c102dda0d6bcca064aef9cefb8f073"
+            }
+          ]
+        },
+        {
+          "sample_key": "frozen_budget:w65536:t3",
+          "call_id": "95905dc1-dd08-4e92-ba3d-6eb1e50b8c0e",
+          "history_omitted": [],
+          "preambles_omitted": [],
+          "projected_sources": [
+            {
+              "skill_run_id": "6f669d9e-2ced-4563-adef-40fa5c0acd6a",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "e67011f1b2d58d0e614e1654baa19d2e0a532ab4a0cb27bbd9f0081ece7b5f7b"
+            },
+            {
+              "skill_run_id": "986937a6-bea2-426a-9fcc-2306ca58aca7",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "4b36ccba7784f97b0c8e159e2d4b4f1da27a413717eb3c586c33a89827a03f0f"
+            },
+            {
+              "skill_run_id": "31e44467-3b5c-4281-be0a-e0b57a3bb91d",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "6bee10d222e8611436968c39b2c29cda1da74aece8aea454180cd61a13796963"
+            },
+            {
+              "skill_run_id": "6bbdd333-93f2-41e9-ad82-5912b9e3d93b",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "93d6903cf34ee028efb9d7ad0a1c00e1e562899bc4e4de5152a1b117e5410010"
+            },
+            {
+              "skill_run_id": "75e5c5e4-f084-46ab-aacd-42515f48dca2",
+              "skill_id": "web.search",
+              "original_result": "available",
+              "url": null,
+              "body_sha256": "891edaad9825aebfcbf9d90d1ed8944b73c102dda0d6bcca064aef9cefb8f073"
+            }
+          ]
+        },
+        {
+          "sample_key": "frozen_budget:w65536:t4",
+          "call_id": "c92d14db-0b7c-4e44-9177-bb6dc4fb5dbb",
+          "history_omitted": [],
+          "preambles_omitted": [],
+          "projected_sources": [
+            {
+              "skill_run_id": "0f218cf6-fad1-4e0b-9164-eae9218af9f6",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://item.btime.com/41v8i91ponu8e9pnuojftmddbgs",
+              "body_sha256": "550235c04451cde655c35d709ad42a1055e69b2c5485ad864f0a5fa245deb005"
+            },
+            {
+              "skill_run_id": "72973f92-f546-4e7e-8b09-25a5a72221db",
+              "skill_id": "web.search",
+              "original_result": "available",
+              "url": null,
+              "body_sha256": "332ceea438381945c018dd159acaa1bcf74919f6b3229d3dceb393e083b80f4c"
+            },
+            {
+              "skill_run_id": "70826b09-2dcb-4f88-8856-cad223755258",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+              "body_sha256": "7d82173338429bb36ee18626e14b6cee8b6f5221ea22a56240c2b896e4cdae8b"
+            },
+            {
+              "skill_run_id": "d3fa7a18-be34-4f8c-a942-4114f9cc7b4f",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://www.caac.gov.cn/PHONE/XWZX/MHYW/201408/t20140808_13837.html",
+              "body_sha256": "f364304bba48e091363869a211e0e4f4aa76a99382cf269702f560da680f149d"
+            },
+            {
+              "skill_run_id": "3e166e3b-dc2b-4d15-b6ab-f5699ce8aef7",
+              "skill_id": "web.search",
+              "original_result": "available",
+              "url": null,
+              "body_sha256": "451e0cf17f74578bf5efe3d45f2249b320546f716b3bc4e0bd8064e87ad065bd"
+            },
+            {
+              "skill_run_id": "9ae6b264-6a2e-4990-8f44-80ca175bf001",
+              "skill_id": "web.search",
+              "original_result": "available",
+              "url": null,
+              "body_sha256": "96a997b5108fea76577e840c469f451db2991cfa017762c9aba2a723ed1644ce"
+            },
+            {
+              "skill_run_id": "6f669d9e-2ced-4563-adef-40fa5c0acd6a",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "e67011f1b2d58d0e614e1654baa19d2e0a532ab4a0cb27bbd9f0081ece7b5f7b"
+            },
+            {
+              "skill_run_id": "986937a6-bea2-426a-9fcc-2306ca58aca7",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "4b36ccba7784f97b0c8e159e2d4b4f1da27a413717eb3c586c33a89827a03f0f"
+            },
+            {
+              "skill_run_id": "31e44467-3b5c-4281-be0a-e0b57a3bb91d",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "6bee10d222e8611436968c39b2c29cda1da74aece8aea454180cd61a13796963"
+            },
+            {
+              "skill_run_id": "6bbdd333-93f2-41e9-ad82-5912b9e3d93b",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "93d6903cf34ee028efb9d7ad0a1c00e1e562899bc4e4de5152a1b117e5410010"
+            },
+            {
+              "skill_run_id": "75e5c5e4-f084-46ab-aacd-42515f48dca2",
+              "skill_id": "web.search",
+              "original_result": "available",
+              "url": null,
+              "body_sha256": "891edaad9825aebfcbf9d90d1ed8944b73c102dda0d6bcca064aef9cefb8f073"
+            }
+          ]
+        },
+        {
+          "sample_key": "frozen_budget:w65536:t4",
+          "call_id": "e22a3dfd-9c75-4119-aa00-6b88f67ce9aa",
+          "history_omitted": [],
+          "preambles_omitted": [],
+          "projected_sources": [
+            {
+              "skill_run_id": "0f218cf6-fad1-4e0b-9164-eae9218af9f6",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://item.btime.com/41v8i91ponu8e9pnuojftmddbgs",
+              "body_sha256": "550235c04451cde655c35d709ad42a1055e69b2c5485ad864f0a5fa245deb005"
+            },
+            {
+              "skill_run_id": "72973f92-f546-4e7e-8b09-25a5a72221db",
+              "skill_id": "web.search",
+              "original_result": "available",
+              "url": null,
+              "body_sha256": "332ceea438381945c018dd159acaa1bcf74919f6b3229d3dceb393e083b80f4c"
+            },
+            {
+              "skill_run_id": "70826b09-2dcb-4f88-8856-cad223755258",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+              "body_sha256": "7d82173338429bb36ee18626e14b6cee8b6f5221ea22a56240c2b896e4cdae8b"
+            },
+            {
+              "skill_run_id": "d3fa7a18-be34-4f8c-a942-4114f9cc7b4f",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://www.caac.gov.cn/PHONE/XWZX/MHYW/201408/t20140808_13837.html",
+              "body_sha256": "f364304bba48e091363869a211e0e4f4aa76a99382cf269702f560da680f149d"
+            },
+            {
+              "skill_run_id": "3e166e3b-dc2b-4d15-b6ab-f5699ce8aef7",
+              "skill_id": "web.search",
+              "original_result": "available",
+              "url": null,
+              "body_sha256": "451e0cf17f74578bf5efe3d45f2249b320546f716b3bc4e0bd8064e87ad065bd"
+            },
+            {
+              "skill_run_id": "9ae6b264-6a2e-4990-8f44-80ca175bf001",
+              "skill_id": "web.search",
+              "original_result": "available",
+              "url": null,
+              "body_sha256": "96a997b5108fea76577e840c469f451db2991cfa017762c9aba2a723ed1644ce"
+            },
+            {
+              "skill_run_id": "6f669d9e-2ced-4563-adef-40fa5c0acd6a",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "e67011f1b2d58d0e614e1654baa19d2e0a532ab4a0cb27bbd9f0081ece7b5f7b"
+            },
+            {
+              "skill_run_id": "986937a6-bea2-426a-9fcc-2306ca58aca7",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "4b36ccba7784f97b0c8e159e2d4b4f1da27a413717eb3c586c33a89827a03f0f"
+            },
+            {
+              "skill_run_id": "31e44467-3b5c-4281-be0a-e0b57a3bb91d",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "6bee10d222e8611436968c39b2c29cda1da74aece8aea454180cd61a13796963"
+            },
+            {
+              "skill_run_id": "6bbdd333-93f2-41e9-ad82-5912b9e3d93b",
+              "skill_id": "web.read",
+              "original_result": "available",
+              "url": "https://raft.github.io/raft.pdf",
+              "body_sha256": "93d6903cf34ee028efb9d7ad0a1c00e1e562899bc4e4de5152a1b117e5410010"
+            },
+            {
+              "skill_run_id": "75e5c5e4-f084-46ab-aacd-42515f48dca2",
+              "skill_id": "web.search",
+              "original_result": "available",
+              "url": null,
+              "body_sha256": "891edaad9825aebfcbf9d90d1ed8944b73c102dda0d6bcca064aef9cefb8f073"
+            }
+          ]
+        }
+      ],
+      "fidelity_approved": false
+    }
+  ],
+  "same_frozen_questions_and_materials": true,
+  "both_t4_use_own_t3_published_reply": true,
+  "independent_32k_budget_prioritization_problem_confirmed": "History indices 1,3,5 omitted in T4; index5 is its own T3 answer. Prior Raft bodies still retained. Omission may contribute; no causal repair claim.",
+  "runtime_original_estimate_report_limitation": "After source reprojection estimated_original_tokens can describe a smaller projection. Complete prefit guard payloads are separately retained and can be counted; do not substitute that scalar for original wire size.",
+  "larger_profile_proves_full_native_64k": false,
+  "maximum_observed_native_input": 23155,
+  "requested_output_cap": 8192,
+  "maximum_observed_completion": 1064,
+  "endpoint_capacity_metadata": "endpoint-metadata.json; no context or output limits advertised",
+  "estimate_bias_percent_range": [
+    21.872516,
+    32.589511
+  ],
+  "internal_limits_not_expanded": {
+    "reader_selected_characters": 6000,
+    "tool_result_max_bytes": 131072,
+    "source_generation_max": 8,
+    "source_receipt_max": 32,
+    "native_source_tool_calls_max": 6,
+    "draft_bytes_max_for_bounded_paths": 65536
+  },
+  "fixed_vs_scaled_offline": "legacy limits remain fixed at larger total windows; this fixture is below those section caps, so identical payloads here cannot establish absence of clipping for larger persona/memory/history inputs.",
+  "remaining_work": [
+    "Preserve relevant latest answer/unknown scope before older unrelated receipt bodies, under same window and permission/cancellation guards; assess retaining erroneous old assistant claims as untrusted data.",
+    "Correct original-estimate metadata independently without changing wire content.",
+    "Retest source-bounded answers after that confirmed selection change; complete input still needs answer-quality acceptance.",
+    "Target actual official-source gaps separately.",
+    "Only after stable fidelity and directed role acceptance run original 864-reply full A/B."
+  ]
+}

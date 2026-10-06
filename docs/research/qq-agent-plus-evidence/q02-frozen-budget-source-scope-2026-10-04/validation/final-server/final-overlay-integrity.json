@@ -1,0 +1,6 @@
+{
+  "services/runtime/src/chatwaifu_runtime/runtime_skills/public_web.py": "dfcc19f4437460cdd76781065ea1a51ed183318c2ae54ef592edf59dd532ce1b",
+  "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py": "9dd64ea4495fec714e5ae7ba9114eb5aebfd54f3b705f7d6bd3f428ea72d4e51",
+  "services/runtime/tests/test_public_web_fallback.py": "0846c4c645a5430f457dc17e485211558231d8d8d7a9f3f631c8ff5723f6641e",
+  "services/runtime/tests/test_tool_calling_agent.py": "73e7fdbac6edeebf9584332f8606ab68773d8769976d348f8dbe0a8357a7b476"
+}

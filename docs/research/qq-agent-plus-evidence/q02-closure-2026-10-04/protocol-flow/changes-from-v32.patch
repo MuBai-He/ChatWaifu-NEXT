@@ -1,0 +1,376 @@
+--- /tmp/cw2-q02-final-types-v32-eval/services/runtime/src/chatwaifu_runtime/providers/contracts.py	2026-10-03 16:35:07.085892200 +0000
++++ /tmp/cw2-q02-protocol-recovery-v34-eval/services/runtime/src/chatwaifu_runtime/providers/contracts.py	2026-10-03 19:54:05.022191762 +0000
+@@ -15,6 +15,30 @@
+     """The selected provider cannot honor a requested structured tool round."""
+ 
+ 
++type LlmToolCallProtocolCode = Literal[
++    "unknown_tool",
++    "malformed_arguments",
++    "arguments_not_object",
++    "duplicate_ids",
++    "incomplete_calls",
++]
++
++
++class LlmToolCallProtocolError(RuntimeError):
++    """A rejected native call batch; only a fixed, nonsecret code crosses adapters."""
++
++    def __init__(self, code: LlmToolCallProtocolCode) -> None:
++        messages = {
++            "unknown_tool": "OpenAI-compatible LLM requested an unknown tool",
++            "malformed_arguments": "OpenAI-compatible LLM returned malformed tool arguments",
++            "arguments_not_object": "OpenAI-compatible LLM tool arguments must be a JSON object",
++            "duplicate_ids": "OpenAI-compatible LLM returned duplicate tool call ids",
++            "incomplete_calls": "OpenAI-compatible LLM ended with no complete tool calls",
++        }
++        super().__init__(messages[code])
++        self.code = code
++
++
+ class LlmImageInputUnavailableError(RuntimeError):
+     """The selected provider cannot honor an image input."""
+ 
+--- /tmp/cw2-q02-final-types-v32-eval/services/runtime/src/chatwaifu_runtime/providers/openai_compatible.py	2026-10-03 16:35:07.086261510 +0000
++++ /tmp/cw2-q02-protocol-recovery-v34-eval/services/runtime/src/chatwaifu_runtime/providers/openai_compatible.py	2026-10-03 19:54:05.023506164 +0000
+@@ -27,6 +27,7 @@
+     LlmTextDelta,
+     LlmToolCall,
+     LlmToolCallingUnavailableError,
++    LlmToolCallProtocolError,
+     LlmToolCallRequested,
+     LlmUsage,
+ )
+@@ -617,13 +618,13 @@
+     for index, item in sorted(parts.items()):
+         name = item.name.strip()
+         if not name or name not in allowed_names:
+-            raise RuntimeError("OpenAI-compatible LLM requested an unknown tool")
++            raise LlmToolCallProtocolError("unknown_tool")
+         try:
+             arguments_value = _strict_json_loads(item.arguments or "{}")
+         except (json.JSONDecodeError, ValueError) as error:
+-            raise RuntimeError("OpenAI-compatible LLM returned malformed tool arguments") from error
++            raise LlmToolCallProtocolError("malformed_arguments") from error
+         if not isinstance(arguments_value, dict):
+-            raise RuntimeError("OpenAI-compatible LLM tool arguments must be a JSON object")
++            raise LlmToolCallProtocolError("arguments_not_object")
+         arguments = cast(JsonObject, arguments_value)
+         call_id = item.call_id.strip()
+         if not call_id:
+@@ -632,11 +633,11 @@
+             ).hexdigest()[:16]
+             call_id = f"call_{digest}"
+         if call_id in call_ids:
+-            raise RuntimeError("OpenAI-compatible LLM returned duplicate tool call ids")
++            raise LlmToolCallProtocolError("duplicate_ids")
+         call_ids.add(call_id)
+         calls.append(LlmToolCall(call_id=call_id, name=name, arguments=arguments))
+     if not calls:
+-        raise RuntimeError("OpenAI-compatible LLM ended with no complete tool calls")
++        raise LlmToolCallProtocolError("incomplete_calls")
+     return tuple(calls)
+ 
+ 
+--- /tmp/cw2-q02-final-types-v32-eval/tools/runtime_source_evaluation.py	2026-10-03 19:05:28.508409300 +0000
++++ /tmp/cw2-q02-protocol-recovery-v34-eval/tools/runtime_source_evaluation.py	2026-10-03 19:54:05.024194002 +0000
+@@ -27,6 +27,7 @@
+     LlmRequest,
+     LlmStreamEvent,
+     LlmTextDelta,
++    LlmToolCallProtocolError,
+     LlmToolCallRequested,
+     LlmUsage,
+ )
+@@ -123,6 +124,7 @@
+             "usage": None,
+             "response_identity": None,
+             "error_type": None,
++            "protocol_error_code": None,
+             "http_status": None,
+         }
+         # Persist the chargeable attempt before dispatch; unfinished attempts still
+@@ -147,6 +149,8 @@
+         except BaseException as error:
+             # Error messages may contain private provider addresses or credentials.
+             call["error_type"] = type(error).__name__
++            if isinstance(error, LlmToolCallProtocolError):
++                call["protocol_error_code"] = error.code
+             # Retain a scalar status without storing SDK objects, URLs, headers or bodies.
+             status = getattr(getattr(error, "response", None), "status_code", None)
+             if type(status) is int and 100 <= status <= 599:
+--- /tmp/cw2-q02-final-types-v32-eval/tools/source_decision_evaluation.py	2026-10-03 19:05:28.507395500 +0000
++++ /tmp/cw2-q02-protocol-recovery-v34-eval/tools/source_decision_evaluation.py	2026-10-03 19:55:57.515746831 +0000
+@@ -30,6 +30,7 @@
+     LlmStreamEvent,
+     LlmTextDelta,
+     LlmToolCall,
++    LlmToolCallProtocolError,
+     LlmToolCallRequested,
+     LlmToolDefinition,
+     LlmToolExchange,
+@@ -505,23 +506,33 @@
+             )
+             calls: list[LlmToolCall] = []
+             terminal: list[LlmResponseCompleted] = []
+-            async for event in self._events(wire):
+-                if isinstance(event, LlmToolCallRequested):
+-                    if len(calls) < 2:
+-                        calls.append(event.call)
+-                elif isinstance(event, LlmResponseCompleted) and len(terminal) < 2:
+-                    terminal.append(event)
+-            error = None
+-            if len(terminal) != 1 or terminal[0].finish_reason != "tool_calls":
+-                error = "missing_native_terminal"
+-            elif len(calls) != 1 or calls[0].name != DECISION_NAME:
+-                error = "exactly_one_known_decision_required"
+-            elif any(
+-                c.call_id == calls[0].call_id for e in request.tool_exchanges for c in e.calls
+-            ):
+-                error = "duplicate_call_id"
+-            elif not _schema_valid(schema, calls[0].arguments):
+-                error = "invalid_schema"
++            error: str | None = None
++            try:
++                async for event in self._events(wire):
++                    if isinstance(event, LlmToolCallRequested):
++                        if len(calls) < 2:
++                            calls.append(event.call)
++                    elif isinstance(event, LlmResponseCompleted) and len(terminal) < 2:
++                        terminal.append(event)
++            except LlmToolCallProtocolError as failure:
++                if failure.code != "unknown_tool":
++                    raise
++                # Nothing from a rejected batch may reach execution. Use the
++                # same generation-wide correction allowance as schema errors.
++                calls.clear()
++                terminal.clear()
++                error = "provider_unknown_tool"
++            if error is None:
++                if len(terminal) != 1 or terminal[0].finish_reason != "tool_calls":
++                    error = "missing_native_terminal"
++                elif len(calls) != 1 or calls[0].name != DECISION_NAME:
++                    error = "exactly_one_known_decision_required"
++                elif any(
++                    c.call_id == calls[0].call_id for e in request.tool_exchanges for c in e.calls
++                ):
++                    error = "duplicate_call_id"
++                elif not _schema_valid(schema, calls[0].arguments):
++                    error = "invalid_schema"
+             if error is None:
+                 decision = cast(dict[str, Any], calls[0].arguments)
+                 sources = decision["read_sources"]
+--- /tmp/cw2-q02-final-types-v32-eval/tools/evaluate_character_scenarios.py	2026-10-03 19:05:28.510008300 +0000
++++ /tmp/cw2-q02-protocol-recovery-v34-eval/tools/evaluate_character_scenarios.py	2026-10-03 19:54:05.026127815 +0000
+@@ -123,7 +123,7 @@
+     turns: list[TurnDefinition]
+ 
+ 
+-TOOL_VERSION = "1.30.0"
++TOOL_VERSION = "1.31.0"
+ 
+ 
+ def _utc_prompt_time(value: datetime) -> datetime:
+--- /dev/null	2026-08-26 19:06:18.443000237 +0000
++++ /tmp/cw2-q02-protocol-recovery-v34-eval/services/runtime/tests/test_llm_tool_protocol.py	2026-10-03 19:55:57.516499757 +0000
+@@ -0,0 +1,48 @@
++"""Malformed native function batches remain atomic and diagnosable."""
++
++import json
++from uuid import uuid4
++
++import httpx2
++import pytest
++from chatwaifu_runtime.providers.contracts import LlmRequest, LlmToolDefinition
++from chatwaifu_runtime.providers.openai_compatible import OpenAiCompatibleLlmProvider
++
++
++@pytest.mark.parametrize(
++    ("name", "arguments", "expected_code"),
++    [
++        ("unadvertised", "{}", "unknown_tool"),
++        ("known", "{", "malformed_arguments"),
++        ("known", "[]", "arguments_not_object"),
++    ],
++)
++async def test_native_protocol_errors_never_publish_partially_valid_batches(
++    name: str, arguments: str, expected_code: str
++) -> None:
++    calls = [
++        {"index": 0, "id": "valid", "function": {"name": "known", "arguments": "{}"}},
++        {"index": 1, "id": "invalid", "function": {"name": name, "arguments": arguments}},
++    ]
++    chunk = {"choices": [{"delta": {"tool_calls": calls}, "finish_reason": "tool_calls"}]}
++    transport = httpx2.MockTransport(
++        lambda _: httpx2.Response(
++            200, content=f"data: {json.dumps(chunk)}\n\ndata: [DONE]\n\n".encode()
++        )
++    )
++    provider = OpenAiCompatibleLlmProvider(
++        base_url="https://provider.example/v1",
++        model="test",
++        api_key=None,
++        timeout_seconds=10,
++        transport=transport,
++    )
++    request = LlmRequest(uuid4(), "Question", "System", tools=(LlmToolDefinition("known", "", {}),))
++    published: list[object] = []
++    with pytest.raises(RuntimeError) as failure:
++        async for event in provider.stream(request):
++            published.append(event)
++    assert getattr(failure.value, "code", None) == expected_code
++    assert not published
++    if name == "unadvertised":
++        assert name not in str(failure.value)
+--- /tmp/cw2-q02-final-types-v32-eval/tools/tests/test_source_decision_evaluation.py	2026-10-03 19:06:37.297192300 +0000
++++ /tmp/cw2-q02-protocol-recovery-v34-eval/tools/tests/test_source_decision_evaluation.py	2026-10-03 19:55:57.516300916 +0000
+@@ -29,11 +29,13 @@
+     LlmStreamEvent,
+     LlmTextDelta,
+     LlmToolCall,
++    LlmToolCallProtocolError,
+     LlmToolCallRequested,
+     LlmToolDefinition,
+     LlmToolExchange,
+     LlmToolResult,
+ )
++from chatwaifu_runtime.providers.openai_compatible import OpenAiCompatibleLlmProvider
+ from chatwaifu_runtime.runtime_skills.agent_router import ProjectedSkillTool
+ 
+ from tools.runtime_source_evaluation import ProviderRequestLimit, _RecordedProvider
+@@ -158,6 +160,135 @@
+     return adapter
+ 
+ 
++def native_response(name: str, args: JsonObject) -> httpx2.Response:
++    chunk = {
++        "choices": [
++            {
++                "delta": {
++                    "tool_calls": [
++                        {
++                            "index": 0,
++                            "id": "native-call",
++                            "function": {"name": name, "arguments": json.dumps(args)},
++                        }
++                    ]
++                },
++                "finish_reason": "tool_calls",
++            }
++        ]
++    }
++    return httpx2.Response(200, content=f"data: {json.dumps(chunk)}\n\ndata: [DONE]\n\n".encode())
++
++
++@pytest.mark.asyncio
++async def test_unknown_native_function_uses_one_correction_and_records_failed_attempt(
++    tmp_path: Path,
++) -> None:
++    wires: list[dict[str, Any]] = []
++
++    def handler(wire: httpx2.Request) -> httpx2.Response:
++        wires.append(json.loads(wire.content))
++        return native_response("previous_search" if len(wires) == 1 else DECISION_NAME, decision())
++
++    raw = OpenAiCompatibleLlmProvider(
++        base_url="https://provider.example/v1",
++        model="test",
++        api_key=None,
++        timeout_seconds=10,
++        transport=httpx2.MockTransport(handler),
++    )
++    recorded = _RecordedProvider(raw, tmp_path / "rounds.jsonl", 2)
++    req = request()
++    adapter = SourceDecisionProvider(recorded)
++    adapter.begin(req.generation_id, projections())
++    published = await collect(adapter, req)
++    assert len(wires) == recorded.used == 2
++    assert adapter.corrections == 1
++    assert adapter.records[0]["validation_error"] == "provider_unknown_tool"
++    assert adapter.records[0]["validated_projection"] is None
++    assert recorded.calls[0]["protocol_error_code"] == "unknown_tool"
++    assert recorded.calls[0]["requested_calls"] == []
++    assert recorded.calls[0]["usage"] is None
++    assert "provider_unknown_tool" in json.dumps(wires[1]["messages"])
++    calls = [event.call for event in published if isinstance(event, LlmToolCallRequested)]
++    assert len(calls) == 1 and calls[0].name == "web_read"
++
++
++@pytest.mark.parametrize("sequence", ["unknown_twice", "unknown_schema", "schema_unknown"])
++@pytest.mark.asyncio
++async def test_protocol_and_schema_errors_share_the_existing_correction_limit(
++    sequence: str,
++) -> None:
++    wires: list[httpx2.Request] = []
++
++    def handler(wire: httpx2.Request) -> httpx2.Response:
++        wires.append(wire)
++        unknown = sequence == "unknown_twice" or (
++            (len(wires) == 1) == (sequence == "unknown_schema")
++        )
++        return native_response("previous_search" if unknown else DECISION_NAME, {})
++
++    raw = OpenAiCompatibleLlmProvider(
++        base_url="https://provider.example/v1",
++        model="test",
++        api_key=None,
++        timeout_seconds=10,
++        transport=httpx2.MockTransport(handler),
++    )
++    req = request()
++    adapter = SourceDecisionProvider(raw)
++    adapter.begin(req.generation_id, projections())
++    with pytest.raises(SourceDecisionRejected):
++        await collect(adapter, req)
++    assert len(wires) == 2 and adapter.corrections == 1
++    assert all(row["validated_projection"] is None for row in adapter.records)
++
++
++@pytest.mark.parametrize("typed", [False, True])
++@pytest.mark.asyncio
++async def test_other_provider_failure_is_not_a_decision_correction(typed: bool) -> None:
++    class Failed(Scripted):
++        async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
++            self.requests.append(request)
++            if typed:
++                raise LlmToolCallProtocolError("malformed_arguments")
++            raise RuntimeError("arbitrary error with private data")
++            yield LlmResponseCompleted("stop")
++
++    req = request()
++    raw = Failed([])
++    adapter = setup(raw, req)
++    with pytest.raises(RuntimeError):
++        await collect(adapter, req)
++    assert len(raw.requests) == 1 and adapter.corrections == 0
++    assert not adapter.records
++
++
++@pytest.mark.asyncio
++async def test_unknown_protocol_correction_still_obeys_raw_dispatch_limit(tmp_path: Path) -> None:
++    attempted: list[httpx2.Request] = []
++
++    def handler(wire: httpx2.Request) -> httpx2.Response:
++        attempted.append(wire)
++        return native_response("previous_search", {})
++
++    raw = OpenAiCompatibleLlmProvider(
++        base_url="https://provider.example/v1",
++        model="test",
++        api_key=None,
++        timeout_seconds=10,
++        transport=httpx2.MockTransport(handler),
++    )
++    recorded = _RecordedProvider(raw, tmp_path / "rounds.jsonl", 1)
++    req = request()
++    adapter = SourceDecisionProvider(recorded)
++    adapter.begin(req.generation_id, projections())
++    with pytest.raises(ProviderRequestLimit):
++        await collect(adapter, req)
++    assert len(attempted) == recorded.used == adapter.corrections == 1
++    assert len(adapter.records) == 1 and adapter.records[0]["validated_projection"] is None
++
++
+ def prior_packet(text: str = "Actual prior ICAO body.") -> SourceContextPacket:
+     now = datetime(2026, 10, 4, tzinfo=UTC)
+     run = SkillRunSnapshot(

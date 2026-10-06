@@ -1,0 +1,39 @@
+{
+  "acceptance": [
+    "Every turn separately classified; no rejected/fallback/unexecuted row treated as model answer",
+    "Inspect full natural-language responses against complete frozen source, explicit questions and actual own prior replies",
+    "Preserve substantive conditions, exceptions, dates, links, source scope and explicitly unresolved later-time scope",
+    "No unsupported causal or regulatory mechanism and no unrequested domestic conditions in ICAO document overview",
+    "Whole-wire/schema/reference estimates, exact omissions, reported usage and HTTP/turn latency separately recorded"
+  ],
+  "actual_conversation": true,
+  "candidate_enabled_only_in_isolated_harness": true,
+  "endpoint": "https://mubai.website:8318/v1",
+  "failure_policy": "Freeze entire candidate result; no prompt/format variants or lowered quality thresholds",
+  "http_attempt_cap": 20,
+  "logical_request_cap": 16,
+  "model": "gemini-3.8-flash-high",
+  "new_persona_rules": false,
+  "not_this_gate": [
+    "Fresh source discovery",
+    "Role directional group",
+    "864-reply three-presentation A/B",
+    "New physical playback"
+  ],
+  "persona": "closure-c1",
+  "persona_sha256": "204644ee525210c1cb253688d7db218a2a2bc3fe6e91bfb3f5d135e9c5e47959",
+  "prior_evidence_reused": [
+    "v33 protocol diagnostics and replay evidence",
+    "v35/v36 completed real source flows",
+    "Frozen capacity/scope controls",
+    "Previously accepted Weixin text and desktop physical playback evidence"
+  ],
+  "production_changes": false,
+  "repeats": 2,
+  "retrieval_calls": 0,
+  "scenarios": 2,
+  "source_origin": "provided",
+  "turns_per_flow": 4,
+  "upstream_evaluator_version": "1.32.1",
+  "version": "v37"
+}

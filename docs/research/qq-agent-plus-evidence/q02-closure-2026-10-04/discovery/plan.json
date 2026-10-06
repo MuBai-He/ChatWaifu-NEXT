@@ -1,0 +1,12 @@
+{
+  "source_path": "isolated SearXNG 360/Yandex + Crawl4AI 0.9.3",
+  "public_dns_resolver": "cloudflare",
+  "model_calls": 0,
+  "queries": [
+    "site:airchina.com.cn \"2026-08-04\" 充电宝",
+    "site:caac.gov.cn 2026 充电宝 携带 规定",
+    "site:raft.github.io raft extended paper election timeout"
+  ],
+  "scope": "direct adapter discovery control, not Runtime permissioned skill receipts or original task continuation",
+  "not_quality_approval": true
+}

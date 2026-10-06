@@ -1,0 +1,134 @@
+{
+  "reviewer": "primary_codex",
+  "blind": false,
+  "scope": "24 saved v4 replies, source traces and factual boundary review",
+  "source_sha256": "811ca98ab54d57c5279a500d4ce1dae921d7eda68db7212cf372b4ec24d3d36b",
+  "release_approved": false,
+  "ratings": {
+    "partial": 10,
+    "pass": 13,
+    "fail": 1
+  },
+  "samples": [
+    {
+      "sample_key": "topic_switch:r0:t1:baseline",
+      "rating": "partial",
+      "reason": "重置计时器的合法 RPC 描述过宽；核心论文关系式与随机化说明基本正确。"
+    },
+    {
+      "sample_key": "topic_switch:r0:t2:baseline",
+      "rating": "pass",
+      "reason": "本样本满足当前请求与场景边界；不据此推论长对话或全部法规。"
+    },
+    {
+      "sample_key": "topic_switch:r0:t3:baseline",
+      "rating": "pass",
+      "reason": "本样本满足当前请求与场景边界；不据此推论长对话或全部法规。"
+    },
+    {
+      "sample_key": "topic_switch:r0:t4:baseline",
+      "rating": "partial",
+      "reason": "偏好可以角色化表达；私底下累时吃甜的暗示真实身体经历。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t1:baseline",
+      "rating": "pass",
+      "reason": "本样本满足当前请求与场景边界；不据此推论长对话或全部法规。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t2:baseline",
+      "rating": "partial",
+      "reason": "实际读取覆盖3C/召回与Wh；回复缺来源链接，并将原文未限定的召回范围收窄为市场监管部门通报。飞行中使用等补充需区分本轮原文与背景。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t3:baseline",
+      "rating": "pass",
+      "reason": "本样本满足当前请求与场景边界；不据此推论长对话或全部法规。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t4:baseline",
+      "rating": "partial",
+      "reason": "100Wh～160Wh 的区间与 ≤100Wh 重叠；只保留召回批次而漏型号；没有来源链接。"
+    },
+    {
+      "sample_key": "topic_switch:r1:t1:baseline",
+      "rating": "partial",
+      "reason": "区分心跳与选举；2 到 5 次仅作示例，但把 RTT 说成心跳底线过强。"
+    },
+    {
+      "sample_key": "topic_switch:r1:t2:baseline",
+      "rating": "pass",
+      "reason": "本样本满足当前请求与场景边界；不据此推论长对话或全部法规。"
+    },
+    {
+      "sample_key": "topic_switch:r1:t3:baseline",
+      "rating": "pass",
+      "reason": "本样本满足当前请求与场景边界；不据此推论长对话或全部法规。"
+    },
+    {
+      "sample_key": "topic_switch:r1:t4:baseline",
+      "rating": "pass",
+      "reason": "本样本满足当前请求与场景边界；不据此推论长对话或全部法规。"
+    },
+    {
+      "sample_key": "detailed_answer:r1:t1:baseline",
+      "rating": "pass",
+      "reason": "本样本满足当前请求与场景边界；不据此推论长对话或全部法规。"
+    },
+    {
+      "sample_key": "detailed_answer:r1:t2:baseline",
+      "rating": "partial",
+      "reason": "实际读取覆盖3C/召回与Wh；回复缺来源链接，并将原文未限定的召回范围收窄为市场监管部门通报。飞行中使用等补充需区分本轮原文与背景。"
+    },
+    {
+      "sample_key": "detailed_answer:r1:t3:baseline",
+      "rating": "pass",
+      "reason": "本样本满足当前请求与场景边界；不据此推论长对话或全部法规。"
+    },
+    {
+      "sample_key": "detailed_answer:r1:t4:baseline",
+      "rating": "partial",
+      "reason": "保留容量分支和召回型号/批次；没有来源链接，博物馆截止时间仍是未核实概括。"
+    },
+    {
+      "sample_key": "topic_switch:r2:t1:baseline",
+      "rating": "fail",
+      "reason": "将 heartbeat interval 插入 broadcastTime 与 electionTimeout 之间，宣称为规范必须满足的关系。"
+    },
+    {
+      "sample_key": "topic_switch:r2:t2:baseline",
+      "rating": "pass",
+      "reason": "本样本满足当前请求与场景边界；不据此推论长对话或全部法规。"
+    },
+    {
+      "sample_key": "topic_switch:r2:t3:baseline",
+      "rating": "pass",
+      "reason": "本样本满足当前请求与场景边界；不据此推论长对话或全部法规。"
+    },
+    {
+      "sample_key": "topic_switch:r2:t4:baseline",
+      "rating": "partial",
+      "reason": "将用户番茄炒蛋放糖泛化为每道菜都放很多糖，没有用户依据。"
+    },
+    {
+      "sample_key": "detailed_answer:r2:t1:baseline",
+      "rating": "pass",
+      "reason": "本样本满足当前请求与场景边界；不据此推论长对话或全部法规。"
+    },
+    {
+      "sample_key": "detailed_answer:r2:t2:baseline",
+      "rating": "partial",
+      "reason": "实际读取覆盖3C/召回与Wh；回复缺来源链接，并将原文未限定的召回范围收窄为市场监管部门通报。飞行中使用等补充需区分本轮原文与背景。"
+    },
+    {
+      "sample_key": "detailed_answer:r2:t3:baseline",
+      "rating": "pass",
+      "reason": "本样本满足当前请求与场景边界；不据此推论长对话或全部法规。"
+    },
+    {
+      "sample_key": "detailed_answer:r2:t4:baseline",
+      "rating": "partial",
+      "reason": "100Wh～160Wh 的区间边界不精确；其余主要条目、雨天时间保留；没有来源链接。"
+    }
+  ]
+}

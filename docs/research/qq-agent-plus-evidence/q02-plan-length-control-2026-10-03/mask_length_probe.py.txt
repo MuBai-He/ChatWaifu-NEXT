@@ -1,0 +1,20 @@
+import hashlib,json,random
+from pathlib import Path
+r=Path('/tmp/cw2-q02-full-prepare/plan-length-control')
+assert json.loads((r/'exit-code.json').read_text())['exit_code']==0
+anchors=json.loads((r/'anchors.json').read_text());rows=[json.loads(x) for x in (r/'results.jsonl').read_text().splitlines()]
+assert len(rows)==len({x['id'] for x in rows})==32
+packets=[];keys=[];rng=random.SystemRandom()
+for a in anchors:
+ items=[x for x in rows if x['anchor_id']==a['anchor_id']];assert len(items)==4;rng.shuffle(items)
+ packet={'anchor_id':a['anchor_id'],'kind':a['kind'],'user_text':a['payload']['messages'][-1]['content'],'review_criteria':a['review_criteria'],'history':a['payload']['messages'][1:-1],'answers':{}}
+ for label,item in zip('ABCD',items,strict=True):
+  packet['answers'][label]=item['reply'];keys.append({'anchor_id':a['anchor_id'],'label':label,'id':item['id']})
+ packets.append(packet)
+for n,data in [('masked.json',packets),('private-key.json',keys)]:
+ p=r/n;assert not p.exists();p.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
+print('Masked',len(packets),'anchors; no mapping revealed')
+for p in packets:
+ if p['kind']=='closure':
+  print('\nANCHOR',p['anchor_id'],'USER',p['user_text'])
+  for k,v in p['answers'].items():print(k,v)

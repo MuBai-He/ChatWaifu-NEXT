@@ -1,0 +1,85 @@
+"""Audit every dispatched attempt, input, omission, and complete reply."""
+import hashlib
+import json
+from collections import Counter
+from datetime import datetime
+from pathlib import Path
+
+from chatwaifu_runtime.providers.input_estimation import count_reference_tokens
+
+ROOT=Path('/tmp/cw2-q02-full-prepare/v28-budget-frozen')
+DATA=ROOT/'download'
+
+def rows(path):
+    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+
+def sha(value):
+    return hashlib.sha256(json.dumps(value,ensure_ascii=False,sort_keys=True).encode()).hexdigest()
+
+def percentile(values,q):
+    data=sorted(values);p=(len(data)-1)*q;i=int(p)
+    return round(data[i]+(data[min(i+1,len(data)-1)]-data[i])*(p-i),2)
+
+def reference(p):
+    projection={k:p[k] for k in ['messages','tools','tool_choice'] if k in p}
+    return count_reference_tokens(json.dumps(projection,ensure_ascii=False,separators=(',',':')))+16*len(p['messages'])+16*len(p.get('tools',[]))
+
+def bodies(p):
+    data=[]
+    for m in p['messages']:
+        if m['role']!='tool':continue
+        v=json.loads(m['content']);v=v.get('executed_result',v);content=v.get('data',{})
+        body=content.get('text')
+        if isinstance(body,str):data.append({'url':content.get('url'),'text_sha256':hashlib.sha256(body.encode()).hexdigest(),'characters':len(body),'truncated':content.get('truncated')})
+    return data
+
+def main():
+    manifest=json.loads((DATA/'artifact-integrity.json').read_text())
+    assert all(hashlib.sha256((DATA/name).read_bytes()).hexdigest()==digest for name,digest in manifest['files'].items())
+    results=rows(DATA/'results.jsonl');attempts=rows(DATA/'attempts.jsonl');journal=rows(DATA/'provider-rounds.jsonl');wires=rows(DATA/'actual-provider-payloads.jsonl')
+    started=[r for r in journal if r['event']=='started'];finished=[r for r in journal if r['event']=='finished']
+    assert len(started)==len(finished)==len(wires)==13
+    assert len({r['call_id'] for r in started})==len(started)
+    assert {r['call_id'] for r in started}=={r['call_id'] for r in finished}
+    assert len(results)==len(attempts)==len({r['key'] for r in results})==9
+    assert {r['key'] for r in results}=={r['key'] for r in attempts}
+    wire_report=[];errors=[];failures=[]
+    for i,(wire,call) in enumerate(zip(wires,started,strict=True)):
+        assert wire['sample_key']==call['sample_key']
+        p=wire['payload'];estimate=reference(p);report=call['input_budget_report']
+        checks={'payload_hash':sha(p)==wire['payload_sha256'],'model':p['model']=='gemini-3.8-flash-high','complete_reference':estimate==report['estimated_input_tokens'],'allowance':estimate<=35617,'output_cap':p['max_tokens']==8192}
+        row={'sample_key':wire['sample_key'],'call_id':call['call_id'],'http_attempt':i+1,'payload_sha256':sha(p),'reference_tokens':estimate,'budget_report':report,'source_body_hashes':bodies(p),'checks':checks}
+        wire_report.append(row)
+        if not all(checks.values()):failures.append(row)
+        usage=finished[i]['usage'];prompt=usage['prompt_tokens']
+        if isinstance(prompt,int) and prompt>0:errors.append(100*(estimate-prompt)/prompt)
+    baselines={stem:json.loads((DATA/f'{stem}-larger-wire.json').read_text()) for stem in ['instant_message-pre_user','single_text-system']}
+    first=[]
+    for result in results:
+        related=[w for w in wires if w['sample_key']==result['key']]
+        expected=json.loads((DATA/'single_text-system-blocked-wire.json').read_text()) if result['arm']=='omitted_history' else baselines[result['case']]
+        assert related[0]['payload']==expected
+        first.append({'sample_key':result['key'],'first_payload_matches_frozen_form':True,'expected_sha256':sha(expected)})
+        assert all(bodies(w['payload'])==bodies(baselines[result['case']]) for w in related)
+    groups={}
+    for case,arm in sorted({(r['case'],r['arm']) for r in results}):
+        group=[r for r in results if (r['case'],r['arm'])==(case,arm)];calls=[c for r in group for c in r['provider_calls']];values={}
+        for name in ['prompt_tokens','completion_tokens','reasoning_tokens','total_tokens']:
+            known=[c['usage'][name] for c in calls if c.get('usage') and c['usage'].get(name) is not None]
+            values[name]={'reported':len(known),'attempts':len(calls),'known_subtotal':sum(known),'complete_total':sum(known) if len(known)==len(calls) else None}
+        groups[f'{case}/{arm}']={'completed':sum(r['reply_complete'] for r in group),'attempts':len(calls),'usage':values,'latency_p50_ms':percentile([r['latency_ms'] for r in group],.5),'latency_p95_ms':percentile([r['latency_ms'] for r in group],.95)}
+    usage={}
+    for name in ['prompt_tokens','completion_tokens','reasoning_tokens','total_tokens']:
+        known=[r['usage'][name] for r in finished if r.get('usage') and r['usage'].get(name) is not None]
+        usage[name]={'reported':len(known),'attempts':len(finished),'known_subtotal':sum(known),'complete_total':sum(known) if len(known)==len(finished) else None}
+    revisions=[w for w in wires if not w['payload'].get('tools')]
+    quality=json.loads((ROOT/'primary-review.json').read_text())
+    assert all(r['reply_complete'] for r in results)
+    assert all(not r['source_execution'] for r in results)
+    assert all(not r['source_wire_budget_failures'] for r in results)
+    assert all(not r['error_type'] for r in finished)
+    final={'scope':'bounded same-frozen-source capacity/history control; no live source discovery or full Q02 pass','actual_http':len(wires),'logical_completed':len(results),'all_tries_accounted':True,'unknown_usage_not_zero':True,'source_tool_execution':False,'all_fixed_source_body_hashes_unchanged':True,'first_payloads':first,'wire_failures':failures,'wire_reports':wire_report,'groups':groups,'provider_usage':usage,'reference_error_percent_min_max':[round(min(errors),4),round(max(errors),4)],'observed_max_provider_prompt_tokens':max(r['usage']['prompt_tokens'] for r in finished),'complete_reference_max':max(r['reference_tokens'] for r in wire_report),'provider_identity_counts':dict(Counter(identity for r in finished for identity in (r['response_identity'] or {}).get('reported_model_ids',[]))),'native_schema_rejections':[{'sample_key':r['key'],'validation_error':d['validation_error']} for r in results for d in r['source_decisions'] if d['validation_error']],'source_scope_quality_pass':quality['quality_pass_count'],'source_scope_quality_reviewed':len(quality['items']),'q02_approved':False,'low_budget_model_comparison_not_available':'Both frozen complete mandatory requests were blocked before dispatch; no low-budget model response invented. The omitted-history arm is explicitly authorized at the larger limit and isolates history only.'}
+    (ROOT/'accounting-and-wire-audit.json').write_text(json.dumps(final,ensure_ascii=False,indent=2)+'\n')
+    print(json.dumps({k:v for k,v in final.items() if k not in ['wire_reports','first_payloads']},ensure_ascii=False,indent=2))
+
+if __name__=='__main__':main()

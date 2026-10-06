@@ -1,0 +1,75 @@
+{
+  "verified_at": "2026-10-05T13:07:25.920782+00:00",
+  "product_commit": "50a30a3",
+  "product_files_matched": 16,
+  "all_unrelated_source_files_matched": true,
+  "source_inventory_files": 1275,
+  "protected_configuration_hashes_matched": true,
+  "unrelated_service_identities_unchanged": 5,
+  "runtime_dependent_https_proxy_restarted": true,
+  "napcat_container_and_process_unchanged": true,
+  "all_previously_ready_connections_ready": true,
+  "connection_readback": [
+    {
+      "provider": "weixin_ilink",
+      "revision": 2,
+      "baseline_status": "error",
+      "current_status": "error",
+      "error_code": "weixin.session_expired"
+    },
+    {
+      "provider": "qq_napcat",
+      "revision": 3,
+      "baseline_status": "ready",
+      "current_status": "ready",
+      "error_code": null
+    },
+    {
+      "provider": "weixin_ilink",
+      "revision": 1,
+      "baseline_status": "ready",
+      "current_status": "ready",
+      "error_code": null
+    }
+  ],
+  "model_routes_unchanged": true,
+  "schema_version": 42,
+  "old_migration_checksums_and_records_preserved": 42,
+  "old_durable_rows_preserved": {
+    "turns": 212,
+    "generations": 110,
+    "channel_turns": 97,
+    "channel_deliveries": 92,
+    "channel_delivery_parts": 113
+  },
+  "sqlite_checks_passed": true,
+  "group_readback": [
+    {
+      "requested_group": true,
+      "ready": true,
+      "same_scene_and_grants": true,
+      "learning_enabled": true,
+      "learned_assets": 0
+    },
+    {
+      "requested_group": false,
+      "ready": true,
+      "same_scene_and_grants": true,
+      "learning_enabled": false,
+      "learned_assets": 0
+    }
+  ],
+  "owner_library_learning_enabled": true,
+  "owner_learned_assets": 0,
+  "web_file_hashes_matched": 7,
+  "served_entry_asset_hashes": {
+    "index.html": "325732501ea4720e6f2da297fa0342d0e1e6e42999698658acafacda33ed2897",
+    "chatwaifu-product.json": "7debe6d19838bca9fc2158fa792b90572309f4a3e80168982c96f7f06d1ccbc7",
+    "assets/index-3kJpNRdj.css": "e6631a82fd055addd71a4ed5fe80becbfce4bb0c2e10466134b4155a81ad255b",
+    "assets/core-SwWLTXZB.js": "dc85f7a86c39d33c35fbe88fd339813a2c05c9ccf25a1bdd8691d7866355dd74",
+    "assets/index-Cg44hXVu.js": "09b5be719815901793c8a936bfc4797f889567c11b4231a00a6f1bfac7c14b21",
+    "assets/event-CWEPUEFL.js": "73796d4f2fcecd8f1a6b6132380077c05bf08ab15963d36e7343959d07dec5be"
+  },
+  "manual_external_messages_sent": 0,
+  "phone_acceptance": "pending"
+}

@@ -1,0 +1,15 @@
+import argparse,hashlib,json,subprocess,urllib.request,urllib.error,ssl
+from pathlib import Path
+parser=argparse.ArgumentParser();parser.add_argument("--output",type=Path,required=True);args=parser.parse_args()
+assert not args.output.exists()
+paths={"production_reader":Path("/home/mubai/chatwaifu-server/source/services/runtime/src/chatwaifu_runtime/runtime_skills/public_web_providers.py"),"production_searxng":Path("/home/mubai/chatwaifu-server/public-web/searxng/settings.yml")}
+out={"sha256":{k:hashlib.sha256(p.read_bytes()).hexdigest() for k,p in paths.items()},"runtime_user_unit":subprocess.check_output(["systemctl","--user","is-active","chatwaifu-runtime.service"],text=True).strip(),"crawl4ai_image_id":subprocess.check_output(["docker","inspect","--format={{.Image}}","cw2-public-web-crawl4ai-1"],text=True).strip(),"health":{}}
+for label,url in {"runtime":"https://127.0.0.1:8765/runtime/health","crawl4ai":"http://127.0.0.1:11235/health"}.items():
+ try:
+  with urllib.request.build_opener(urllib.request.ProxyHandler({}), urllib.request.HTTPSHandler(context=ssl._create_unverified_context())).open(url,timeout=10) as response: out["health"][label]=response.status
+ except urllib.error.HTTPError as error:
+  out["health"][label]=error.code
+assert out["runtime_user_unit"]=="active" and out["health"]["crawl4ai"]==200
+out["runtime_health_scope"]="Unauthenticated endpoint status only; 401 is not authenticated Runtime health acceptance"
+args.output.write_text(json.dumps(out,indent=2)+"\n")
+print(json.dumps(out))

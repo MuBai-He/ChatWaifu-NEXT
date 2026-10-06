@@ -1,0 +1,132 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_____ test_search_after_old_read_requires_a_new_read_before_answer[False] ______
+
+reads_update = False
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("reads_update", [False, True])
+    async def test_search_after_old_read_requires_a_new_read_before_answer(reads_update: bool) -> None:
+        calls = (
+            LlmToolCall("search-old", "public_search", {"query": "base specification"}),
+            LlmToolCall("read-old", "public_read", {"url": "https://example.test/base"}),
+            LlmToolCall("search-update", "public_search", {"query": "subsequent amendments"}),
+        )
+        rounds: list[tuple[LlmStreamEvent, ...]] = [
+            (LlmToolCallRequested(call), LlmResponseCompleted("tool_calls")) for call in calls
+        ]
+        rounds.append((LlmTextDelta("UNREAD_UPDATE_CLAIM"), LlmResponseCompleted("stop")))
+        if reads_update:
+            rounds.extend(
+                [
+                    (
+                        LlmToolCallRequested(
+                            LlmToolCall(
+                                "read-update", "public_read", {"url": "https://example.test/update"}
+                            )
+                        ),
+                        LlmResponseCompleted("tool_calls"),
+                    ),
+                    (LlmTextDelta("verified answer"), LlmResponseCompleted("stop")),
+                ]
+            )
+        else:
+            rounds.append((LlmTextDelta("STILL_UNREAD"), LlmResponseCompleted("stop")))
+        llm = _ScriptedLlm(rounds)
+        gateway = _SourceGateway(
+            {
+                "web.search": _snapshot(
+                    SkillRunState.SUCCEEDED,
+                    data={"results": [{"url": "https://example.test/update"}]},
+                ),
+                "web.read": _snapshot(SkillRunState.SUCCEEDED, data={"text": "source body"}),
+            }
+        )
+        router = _Router(
+            (
+                _SourceProjection("public_search", "web.search"),
+                _SourceProjection("public_read", "web.read"),
+            )
+        )
+        chunks = await _collect(
+            AgentTurnOrchestrator(llm, gateway, router),
+            _request("查询规范后续修订"),
+            uuid4(),
+        )
+>       assert chunks == (["verified answer"] if reads_update else [TOOL_SOURCE_READ_REQUIRED_REPLY])
+E       AssertionError: assert ['UNREAD_UPDATE_CLAIM'] == ['搜索结果只能用于发现来...，因此相关信息尚未核实。']
+E         
+E         At index 0 diff: 'UNREAD_UPDATE_CLAIM' != '搜索结果只能用于发现来源，原文没有成功读取，因此相关信息尚未核实。'
+E         Use -v to get more diff
+
+services/runtime/tests/test_tool_calling_agent.py:778: AssertionError
+______ test_search_after_old_read_requires_a_new_read_before_answer[True] ______
+
+reads_update = True
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("reads_update", [False, True])
+    async def test_search_after_old_read_requires_a_new_read_before_answer(reads_update: bool) -> None:
+        calls = (
+            LlmToolCall("search-old", "public_search", {"query": "base specification"}),
+            LlmToolCall("read-old", "public_read", {"url": "https://example.test/base"}),
+            LlmToolCall("search-update", "public_search", {"query": "subsequent amendments"}),
+        )
+        rounds: list[tuple[LlmStreamEvent, ...]] = [
+            (LlmToolCallRequested(call), LlmResponseCompleted("tool_calls")) for call in calls
+        ]
+        rounds.append((LlmTextDelta("UNREAD_UPDATE_CLAIM"), LlmResponseCompleted("stop")))
+        if reads_update:
+            rounds.extend(
+                [
+                    (
+                        LlmToolCallRequested(
+                            LlmToolCall(
+                                "read-update", "public_read", {"url": "https://example.test/update"}
+                            )
+                        ),
+                        LlmResponseCompleted("tool_calls"),
+                    ),
+                    (LlmTextDelta("verified answer"), LlmResponseCompleted("stop")),
+                ]
+            )
+        else:
+            rounds.append((LlmTextDelta("STILL_UNREAD"), LlmResponseCompleted("stop")))
+        llm = _ScriptedLlm(rounds)
+        gateway = _SourceGateway(
+            {
+                "web.search": _snapshot(
+                    SkillRunState.SUCCEEDED,
+                    data={"results": [{"url": "https://example.test/update"}]},
+                ),
+                "web.read": _snapshot(SkillRunState.SUCCEEDED, data={"text": "source body"}),
+            }
+        )
+        router = _Router(
+            (
+                _SourceProjection("public_search", "web.search"),
+                _SourceProjection("public_read", "web.read"),
+            )
+        )
+        chunks = await _collect(
+            AgentTurnOrchestrator(llm, gateway, router),
+            _request("查询规范后续修订"),
+            uuid4(),
+        )
+>       assert chunks == (["verified answer"] if reads_update else [TOOL_SOURCE_READ_REQUIRED_REPLY])
+E       AssertionError: assert ['UNREAD_UPDATE_CLAIM'] == ['verified answer']
+E         
+E         At index 0 diff: 'UNREAD_UPDATE_CLAIM' != 'verified answer'
+E         Use -v to get more diff
+
+services/runtime/tests/test_tool_calling_agent.py:778: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/pipecat/audio/utils.py:14
+  /Users/mubai/Desktop/CW2/.worktrees/qq-agent-plus-adoption/.venv/lib/python3.12/site-packages/pipecat/audio/utils.py:14: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13
+    import audioop
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED services/runtime/tests/test_tool_calling_agent.py::test_search_after_old_read_requires_a_new_read_before_answer[False]
+FAILED services/runtime/tests/test_tool_calling_agent.py::test_search_after_old_read_requires_a_new_read_before_answer[True]
+2 failed, 94 deselected, 1 warning in 0.23s

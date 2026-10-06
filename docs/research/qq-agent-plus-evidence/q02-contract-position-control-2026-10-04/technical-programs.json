@@ -1,0 +1,74 @@
+[
+  {
+    "anchor_id": "single_text:technical_help:r0:t3:candidate",
+    "label": "A",
+    "code": "import asyncio\n\n\nasync def fetch_data(task_id: int):\n    await asyncio.sleep(0.5)\n    # 模拟偶数任务正常返回，奇数任务抛出异常\n    if task_id % 2 != 0:\n        raise ValueError(f\"Task {task_id} 遇到了错误\")\n    return f\"Task {task_id} 数据获取成功\"\n\n\nasync def main():\n    tasks = [fetch_data(i) for i in range(1, 5)]\n\n    # return_exceptions=True 会捕获异常并作为元素存入结果列表\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    for i, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[失败] 任务 {i} 异常: {type(res).__name__} - {res}\")\n        else:\n            print(f\"[成功] 任务 {i} 结果: {res}\")\n\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n",
+    "expected_stdout": "[失败] 任务 1 异常: ValueError - Task 1 遇到了错误\n[成功] 任务 2 结果: Task 2 数据获取成功\n[失败] 任务 3 异常: ValueError - Task 3 遇到了错误\n[成功] 任务 4 结果: Task 4 数据获取成功\n"
+  },
+  {
+    "anchor_id": "single_text:technical_help:r0:t3:candidate",
+    "label": "B",
+    "code": "import asyncio\n\nasync def fetch_data(item_id: int):\n    # 模拟耗时操作，当 item_id 为 2 时主动抛出异常\n    await asyncio.sleep(0.1)\n    if item_id == 2:\n        raise ValueError(f\"ID {item_id} 数据处理失败\")\n    return f\"ID {item_id} 的处理结果\"\n\nasync def main():\n    tasks = [fetch_data(1), fetch_data(2), fetch_data(3)]\n    \n    # 启用 return_exceptions=True，异常会被当作结果返回，不会中断其它任务\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    # 遍历检查结果类型\n    for i, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"任务 {i} 失败 -> 异常类型: {type(res).__name__}, 信息: {res}\")\n        else:\n            print(f\"任务 {i} 成功 -> 返回值: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n",
+    "expected_stdout": "任务 1 成功 -> 返回值: ID 1 的处理结果\n任务 2 失败 -> 异常类型: ValueError, 信息: ID 2 数据处理失败\n任务 3 成功 -> 返回值: ID 3 的处理结果\n"
+  },
+  {
+    "anchor_id": "single_text:technical_help:r0:t3:candidate",
+    "label": "C",
+    "code": "import asyncio\n\nasync def fetch_data(task_id: int, should_fail: bool = False):\n    await asyncio.sleep(0.5)\n    if should_fail:\n        raise ValueError(f\"Task-{task_id} 执行遇到错误\")\n    return f\"Task-{task_id} 数据加载完成\"\n\nasync def main():\n    # 创建一组任务，其中任务 2 模拟失败\n    tasks = [\n        fetch_data(1),\n        fetch_data(2, should_fail=True),\n        fetch_data(3),\n    ]\n\n    # 关键参数：return_exceptions=True\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    # 遍历结果并使用 isinstance 区分\n    for i, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[错误] 任务 {i} 失败，异常类型为 {type(res).__name__}: {res}\")\n        else:\n            print(f\"[成功] 任务 {i} 返回: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n",
+    "expected_stdout": "[成功] 任务 1 返回: Task-1 数据加载完成\n[错误] 任务 2 失败，异常类型为 ValueError: Task-2 执行遇到错误\n[成功] 任务 3 返回: Task-3 数据加载完成\n"
+  },
+  {
+    "anchor_id": "single_text:technical_help:r0:t3:candidate",
+    "label": "D",
+    "code": "import asyncio\n\nasync def task_success(val: int):\n    await asyncio.sleep(0.1)\n    return f\"数据_{val}\"\n\nasync def task_fail():\n    await asyncio.sleep(0.1)\n    raise ValueError(\"发生网络错误\")\n\nasync def main():\n    # 创建包含成功和失败的任务列表\n    tasks = [\n        task_success(1),\n        task_fail(),\n        task_success(2),\n    ]\n\n    # 设置 return_exceptions=True，异常会被当作返回值收集\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    # 遍历并区分结果\n    for idx, item in enumerate(results):\n        if isinstance(item, Exception):\n            print(f\"任务 {idx} 失败: {type(item).__name__} - {item}\")\n        else:\n            print(f\"任务 {idx} 成功: {item}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n",
+    "expected_stdout": "任务 0 成功: 数据_1\n任务 1 失败: ValueError - 发生网络错误\n任务 2 成功: 数据_2\n"
+  },
+  {
+    "anchor_id": "single_text:technical_help:r0:t3:candidate",
+    "label": "E",
+    "code": "import asyncio\n\nasync def fetch_data(task_id: int):\n    await asyncio.sleep(0.1)\n    if task_id == 2:\n        raise ValueError(f\"任务 {task_id} 处理失败！\")\n    return f\"任务 {task_id} 的数据\"\n\nasync def main():\n    tasks = [fetch_data(1), fetch_data(2), fetch_data(3)]\n    \n    # 设置 return_exceptions=True，异常会被当作结果存入列表\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    for i, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[错误] 任务 {i} 抛出异常: {type(res).__name__} - {res}\")\n        else:\n            print(f\"[成功] 任务 {i} 返回结果: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n",
+    "expected_stdout": "[成功] 任务 1 返回结果: 任务 1 的数据\n[错误] 任务 2 抛出异常: ValueError - 任务 2 处理失败！\n[成功] 任务 3 返回结果: 任务 3 的数据\n"
+  },
+  {
+    "anchor_id": "single_text:technical_help:r0:t3:candidate",
+    "label": "F",
+    "code": "import asyncio\n\n\nasync def fetch_data(task_id: int):\n    await asyncio.sleep(0.1)\n    if task_id == 2:\n        raise ValueError(f\"任务 {task_id} 遇到了错误\")\n    return f\"任务 {task_id} 的数据\"\n\n\nasync def main():\n    tasks = [fetch_data(1), fetch_data(2), fetch_data(3)]\n\n    # 传入 return_exceptions=True\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    # 遍历结果并做类型判断\n    for i, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[{i}] 失败: {type(res).__name__} - {res}\")\n        else:\n            print(f\"[{i}] 成功: {res}\")\n\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n",
+    "expected_stdout": "[1] 成功: 任务 1 的数据\n[2] 失败: ValueError - 任务 2 遇到了错误\n[3] 成功: 任务 3 的数据\n"
+  },
+  {
+    "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+    "label": "A",
+    "code": "import asyncio\n\nasync def fetch_success(task_id: int) -> str:\n    await asyncio.sleep(0.1)\n    return f\"任务 {task_id} 执行成功\"\n\nasync def fetch_fail(task_id: int) -> str:\n    await asyncio.sleep(0.1)\n    raise ValueError(f\"任务 {task_id} 发生了预期的错误\")\n\nasync def main():\n    tasks = [\n        fetch_success(1),\n        fetch_fail(2),\n        fetch_success(3),\n    ]\n\n    # 设置 return_exceptions=True，异常会被当作结果返回，不会中断其它任务\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    # 遍历结果并区分正常值与异常\n    for index, result in enumerate(results, start=1):\n        if isinstance(result, Exception):\n            print(f\"[{index}] 失败: 捕获到异常 {type(result).__name__} -> {result}\")\n        else:\n            print(f\"[{index}] 成功: 返回结果 -> {result}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n",
+    "expected_stdout": null
+  },
+  {
+    "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+    "label": "B",
+    "code": "import asyncio\n\nasync def worker(task_id: int):\n    await asyncio.sleep(0.1)\n    if task_id == 2:\n        raise ValueError(f\"任务 {task_id} 发生错误\")\n    return f\"任务 {task_id} 成功\"\n\nasync def main():\n    # 模拟三个任务，其中任务 2 会抛出异常\n    tasks = [worker(1), worker(2), worker(3)]\n    \n    # 开启 return_exceptions=True\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n    \n    # 遍历结果并区分正常返回值与异常对象\n    for i, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[失败] 任务 {i} 捕获到异常: {type(res).__name__} - {res}\")\n        else:\n            print(f\"[成功] 任务 {i} 返回值: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n",
+    "expected_stdout": "[成功] 任务 1 返回值: 任务 1 成功\n[失败] 任务 2 捕获到异常: ValueError - 任务 2 发生错误\n[成功] 任务 3 返回值: 任务 3 成功\n"
+  },
+  {
+    "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+    "label": "C",
+    "code": "import asyncio\n\nasync def task_success(name: str):\n    await asyncio.sleep(0.1)\n    return f\"任务 {name} 执行成功\"\n\nasync def task_fail(name: str):\n    await asyncio.sleep(0.1)\n    raise ValueError(f\"任务 {name} 抛出了异常\")\n\nasync def main():\n    tasks = [\n        task_success(\"A\"),\n        task_fail(\"B\"),\n        task_success(\"C\"),\n    ]\n\n    # 设置 return_exceptions=True 捕获所有结果\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    # 区分正常返回值与异常对象\n    for i, res in enumerate(results):\n        if isinstance(res, Exception):\n            print(f\"[{i}] 发生异常: {type(res).__name__} -> {res}\")\n        else:\n            print(f\"[{i}] 正常返回: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n",
+    "expected_stdout": "[0] 正常返回: 任务 A 执行成功\n[1] 发生异常: ValueError -> 任务 B 抛出了异常\n[2] 正常返回: 任务 C 执行成功\n"
+  },
+  {
+    "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+    "label": "D",
+    "code": "import asyncio\n\nasync def worker(task_id: int):\n    await asyncio.sleep(0.1)\n    if task_id == 2:\n        raise ValueError(f\"任务 {task_id} 发生异常\")\n    return f\"任务 {task_id} 执行成功\"\n\nasync def main():\n    tasks = [worker(1), worker(2), worker(3)]\n    \n    # 设置 return_exceptions=True，异常会被当作普通结果返回\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    for i, res in enumerate(results, 1):\n        if isinstance(res, Exception):\n            print(f\"[{i}] 捕获到异常: {type(res).__name__} - {res}\")\n        else:\n            print(f\"[{i}] 正常结果: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n",
+    "expected_stdout": "[1] 正常结果: 任务 1 执行成功\n[2] 捕获到异常: ValueError - 任务 2 发生异常\n[3] 正常结果: 任务 3 执行成功\n"
+  },
+  {
+    "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+    "label": "E",
+    "code": "import asyncio\n\nasync def task_success(val):\n    await asyncio.sleep(0.1)\n    return f\"结果: {val}\"\n\nasync def task_fail():\n    await asyncio.sleep(0.1)\n    raise ValueError(\"发生错误\")\n\nasync def main():\n    tasks = [\n        task_success(1),\n        task_fail(),\n        task_success(2),\n    ]\n\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n\n    for idx, res in enumerate(results):\n        if isinstance(res, Exception):\n            print(f\"任务 {idx} 失败，捕获到异常: {type(res).__name__}: {res}\")\n        else:\n            print(f\"任务 {idx} 成功，返回值: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n",
+    "expected_stdout": null
+  },
+  {
+    "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+    "label": "F",
+    "code": "import asyncio\n\nasync def fetch_data(task_id: int):\n    await asyncio.sleep(0.1)\n    if task_id == 2:\n        raise ValueError(f\"任务 {task_id} 发生错误\")\n    return f\"任务 {task_id} 成功返回数据\"\n\nasync def main():\n    tasks = [fetch_data(i) for i in range(1, 4)]\n    \n    # 设置 return_exceptions=True，异常会被当作结果返回，不会中断其它任务\n    results = await asyncio.gather(*tasks, return_exceptions=True)\n    \n    for i, res in enumerate(results, start=1):\n        if isinstance(res, Exception):\n            print(f\"[{i}] 失败: {type(res).__name__} - {res}\")\n        else:\n            print(f\"[{i}] 成功: {res}\")\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n",
+    "expected_stdout": "[1] 成功: 任务 1 成功返回数据\n[2] 失败: ValueError - 任务 2 发生错误\n[3] 成功: 任务 3 成功返回数据\n"
+  }
+]

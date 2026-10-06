@@ -1,0 +1,10 @@
+{
+  "scope": "Same exact original character/source/history/budget; alternate Gemini endpoint aliases advertised by /models; model identity behind aliases is unverified; no production route changes",
+  "models": [
+    "gemini-3.1-pro-low",
+    "gemini-pro-agent"
+  ],
+  "repeats": 3,
+  "source_tools_executed": 0,
+  "release_approved": false
+}

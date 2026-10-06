@@ -1,0 +1,55 @@
+{
+  "reviewer": "Primary Codex agent; author review, not independent or blinded",
+  "q02_approved": false,
+  "scope": "Targeted source fidelity, completeness and technical defects; not full 36-item persona acceptance",
+  "findings": [
+    {
+      "samples": [
+        "detailed_answer:r0:t2:baseline",
+        "detailed_answer:r0:t4:baseline"
+      ],
+      "finding": "Actual read links, recall model/batch OR and capacity branches retained; no unconditional closing guarantee. Scope limited to supplied sources, not all current aviation rules."
+    },
+    {
+      "samples": [
+        "detailed_answer:r1:t2:baseline",
+        "detailed_answer:r1:t4:baseline"
+      ],
+      "finding": "Actual links and capacity branches retained. Some claims grounded only in a read news article, not a newly read original authority regulation; currentness not established."
+    },
+    {
+      "samples": [
+        "detailed_answer:r2:t2:baseline",
+        "detailed_answer:r2:t4:baseline"
+      ],
+      "finding": "Source lacks the <=100Wh branch; answer omits it without explaining the gap. Regulation turn adds uncited nominal-voltage/USB commentary. Keyword coverage alone falsely suggests completeness."
+    },
+    {
+      "samples": [
+        "topic_switch:r0:t1:baseline"
+      ],
+      "finding": "Three-term timing relation is preserved but attributed to safety and availability together; Raft timing affects availability, not safety. Every reset re-randomization also overstated as universally normative."
+    },
+    {
+      "samples": [
+        "topic_switch:r1:t1:baseline",
+        "topic_switch:r2:t1:baseline"
+      ],
+      "finding": "Inserts heartbeat interval into a claimed required Raft timing inequality; unsupported normative relation. No external source reads in these turns."
+    },
+    {
+      "samples": [
+        "technical_help:r0:t2:baseline",
+        "technical_help:r0:t3:baseline",
+        "technical_help:r1:t3:baseline",
+        "technical_help:r2:t2:baseline",
+        "technical_help:r2:t3:baseline"
+      ],
+      "finding": "Five complete Python snippets executed successfully on server; one explicit stdout example matches. Not a proof of cancellation edge cases."
+    }
+  ],
+  "references": [
+    "https://raft.github.io/raft.pdf",
+    "https://docs.python.org/3.12/library/asyncio-task.html#asyncio.gather"
+  ]
+}

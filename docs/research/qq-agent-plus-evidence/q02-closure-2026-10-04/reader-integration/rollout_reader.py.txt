@@ -1,0 +1,178 @@
+"""One guarded reader rollout; private backups stay on server. No model calls."""
+
+import ast
+import hashlib
+import http.client
+import json
+import os
+import re
+import shutil
+import socket
+import ssl
+import stat
+import subprocess
+import time
+import urllib.request
+from datetime import datetime, timezone
+from pathlib import Path
+
+ROOT = Path('/home/mubai/chatwaifu-server/source')
+DEPLOY = Path('/home/mubai/chatwaifu-server/public-web')
+OUT = Path('/tmp/cw2-q02-reader-integration-20261004')
+BACKUP = Path('/home/mubai/chatwaifu-server/backups/q02-reader-20261004')
+MODULE = ROOT / 'services/runtime/src/chatwaifu_runtime/runtime_skills/public_web_providers.py'
+NEW_IMAGE = 'unclecode/crawl4ai@sha256:84751dab794259db05d5bd4e5c766a8041a65f0554326e4516e620abdf2fa18b'
+OLD_SHA = '5a9073cede807269d606b79e80622346970c42c0f6e0d2043f104af511a5ff60'
+NEW_SHA = '9095b832c38f799b90eb1243c06f0690694e78fc9b2535604e5780047e51cf37'
+candidate = OUT / 'patched/services/runtime/src/chatwaifu_runtime/runtime_skills/public_web_providers.py'
+assert not (OUT / 'rollout.json').exists() and not BACKUP.exists()
+assert hashlib.sha256(MODULE.read_bytes()).hexdigest() == OLD_SHA
+assert hashlib.sha256(candidate.read_bytes()).hexdigest() == NEW_SHA
+assert MODULE.stat().st_uid == os.getuid()
+tests = json.loads((OUT / 'regression-run2.json').read_text())
+assert tests[0]['exit_code'] == 1 and '1 failed, 12 passed' in tests[0]['output']
+assert tests[1]['exit_code'] == 0 and '13 passed' in tests[1]['output']
+
+
+def preserved_tree(text):
+    tree = ast.parse(text)
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef) and node.name == 'Crawl4aiReaderClient':
+            node.body = [n for n in node.body if not
+                         (isinstance(n, ast.AsyncFunctionDef) and n.name in {'read', '_read_pdf'})]
+    return ast.dump(tree)
+
+
+assert preserved_tree(MODULE.read_text()) == preserved_tree(candidate.read_text())
+BACKUP.mkdir(parents=True, mode=0o700)
+shutil.copy2(MODULE, BACKUP / 'public_web_providers.py')
+shutil.copy2(DEPLOY / '.env', BACKUP / 'public-web.env')
+os.chmod(BACKUP / 'public-web.env', 0o600)
+env_before = (DEPLOY / '.env').read_text()
+env_lines = env_before.splitlines(keepends=True)
+matched = [i for i, line in enumerate(env_lines) if line.startswith('CRAWL4AI_IMAGE=')]
+assert len(matched) <= 1
+if matched:
+    env_lines[matched[0]] = 'CRAWL4AI_IMAGE=' + NEW_IMAGE + '\n'
+else:
+    if env_lines and not env_lines[-1].endswith('\n'):
+        env_lines[-1] += '\n'
+    env_lines.append('CRAWL4AI_IMAGE=' + NEW_IMAGE + '\n')
+env_after = ''.join(env_lines)
+secret_values = []
+for line in env_lines:
+    if '=' in line and ('TOKEN=' in line or 'SECRET_KEY=' in line):
+        value = line.split('=', 1)[1].strip().strip(chr(34)).strip(chr(39))
+        if value:
+            secret_values.append(value)
+protected = []
+for base in (ROOT / 'characters/default', Path('/home/mubai/.local/share/chatwaifu-server/config')):
+    if base.exists():
+        protected.extend(p for p in base.rglob('*') if p.is_file())
+protected.append(DEPLOY / 'searxng/settings.yml')
+hashes = {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in protected}
+commands = []
+
+
+def command(args, limit=60):
+    proc = subprocess.run(args, cwd=DEPLOY, capture_output=True, text=True, timeout=limit)
+    output = proc.stdout + proc.stderr
+    for value in secret_values:
+        output = output.replace(value, '[REDACTED]')
+    commands.append({'argv': args, 'exit_code': proc.returncode, 'output': output[-3000:]})
+    if proc.returncode:
+        raise RuntimeError('rollout_command_failed')
+
+
+def atomic_copy(data, target):
+    mode = stat.S_IMODE(target.stat().st_mode)
+    temporary = target.with_name(target.name + '.q02-new')
+    assert not temporary.exists()
+    fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
+    try:
+        with os.fdopen(fd, 'wb') as file:
+            file.write(data)
+        os.replace(temporary, target)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+
+
+def health():
+    context = ssl.create_default_context(cafile='/etc/ssl/certs/ca-certificates.crt')
+    with socket.create_connection(('127.0.0.1', 8765), timeout=5) as raw:
+        with context.wrap_socket(raw, server_hostname='mubai.website') as conn:
+            conn.sendall(b'GET /v1/runtime/health HTTP/1.1\r\nHost: mubai.website:18443\r\nConnection: close\r\n\r\n')
+            response = http.client.HTTPResponse(conn)
+            response.begin()
+            body = json.loads(response.read(16384))
+            return {'http': response.status, 'status': body.get('status'),
+                    'database': body.get('database'), 'certificate_verified': True}
+
+
+def crawler_health():
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    with opener.open('http://127.0.0.1:11235/health', timeout=5) as response:
+        body = json.loads(response.read(4096))
+        return {'http': response.status, 'status': body.get('status'), 'version': body.get('version')}
+
+
+report = {'started_at_utc': datetime.now(timezone.utc).isoformat(), 'model_calls': 0,
+          'code_sha256_before': OLD_SHA, 'code_sha256_after_expected': NEW_SHA,
+          'new_crawler_image': NEW_IMAGE, 'backup_private_mode': oct(stat.S_IMODE(BACKUP.stat().st_mode)),
+          'backup_env_mode': oct(stat.S_IMODE((BACKUP / 'public-web.env').stat().st_mode)),
+          'only_reader_class_ast_changed': True, 'rollback_executed': False, 'q02_approval': False}
+try:
+    atomic_copy(env_after.encode(), DEPLOY / '.env')
+    command(['docker', 'compose', 'up', '-d', '--no-deps', '--pull', 'never', 'crawl4ai'])
+    ready = None
+    for _ in range(20):
+        try:
+            ready = crawler_health()
+            if ready['http'] == 200 and ready['status'] == 'ok' and ready['version'] == '0.9.3':
+                break
+        except Exception:
+            pass
+        time.sleep(1)
+    assert ready and ready['http'] == 200 and ready['status'] == 'ok' and ready['version'] == '0.9.3'
+    report['crawler_health'] = ready
+    atomic_copy(candidate.read_bytes(), MODULE)
+    command(['systemctl', '--user', 'restart', 'chatwaifu-runtime.service'])
+    # Bounded service-readiness polling, not generation synchronization/retry.
+    last = None
+    for _ in range(20):
+        try:
+            last = health()
+            if last['http'] == 200 and last['status'] == 'ok' and last['database'] == 'ready':
+                break
+        except Exception:
+            pass
+        time.sleep(1)
+    assert last and last['http'] == 200 and last['status'] == 'ok' and last['database'] == 'ready'
+    report['runtime_health'] = last
+    command(['/home/mubai/chatwaifu-server/source/.venv/bin/python',
+             str(OUT / 'smoke_deployed_reader.py')], limit=75)
+    report['rollout'] = 'functional_reader_checks_passed'
+except Exception as error:
+    report['error_type'] = type(error).__name__
+    atomic_copy((BACKUP / 'public-web.env').read_bytes(), DEPLOY / '.env')
+    atomic_copy((BACKUP / 'public_web_providers.py').read_bytes(), MODULE)
+    report['rollback_executed'] = True
+    try:
+        command(['docker', 'compose', 'up', '-d', '--no-deps', '--pull', 'never', 'crawl4ai'])
+        command(['systemctl', '--user', 'restart', 'chatwaifu-runtime.service'])
+        report['rollback'] = 'restored_source_and_original_reader'
+    except Exception as rollback_error:
+        report['rollback_error_type'] = type(rollback_error).__name__
+    report['rollout'] = 'rejected'
+report['commands'] = commands
+report['protected_file_count'] = len(hashes)
+report['protected_files_unchanged'] = all(
+    hashlib.sha256(Path(p).read_bytes()).hexdigest() == value for p, value in hashes.items())
+report['actual_source_sha256_after'] = hashlib.sha256(MODULE.read_bytes()).hexdigest()
+report['completed_at_utc'] = datetime.now(timezone.utc).isoformat()
+encoded = json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2)
+assert all(value not in encoded for value in secret_values)
+(OUT / 'rollout.json').write_text(encoded + '\n')
+print(json.dumps({k: v for k, v in report.items() if k != 'commands'}), flush=True)
+raise SystemExit(0 if report['rollout'] == 'functional_reader_checks_passed' else 1)

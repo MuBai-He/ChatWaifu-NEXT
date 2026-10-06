@@ -1,0 +1,264 @@
+{
+  "frozen_at": "2026-10-05T07:41:30.143513+00:00",
+  "source": "/home/mubai/chatwaifu-server/releases/qq-quote-20261005/source",
+  "policy": {
+    "schema_version": "1.0",
+    "profile": "instant_message",
+    "max_parts": 3,
+    "preferred_chars_per_part": 30,
+    "soft_max_chars_per_part": 60,
+    "cadence_enabled": true,
+    "min_delay_ms": 800,
+    "max_delay_ms": 3000,
+    "total_cadence_delay_ceiling_ms": 6000,
+    "typing_enabled": false,
+    "stickers_enabled": true,
+    "bypass_long_form": true,
+    "version": 2
+  },
+  "samples": [
+    {
+      "external_message_id": "714289125",
+      "accepted_at": "2026-10-05T07:34:34.011137+00:00",
+      "canonical": "桌饺……？把饺子直接倒在桌上吃吗，感觉怪怪的……",
+      "provider_output_matches_canonical": true,
+      "delivered_parts": [
+        {
+          "ordinal": 0,
+          "text": "桌饺……？把饺子直接倒在桌上吃吗，感觉怪怪的……",
+          "receipt_present": true
+        }
+      ],
+      "candidate_parts": [
+        "桌饺……？",
+        "把饺子直接倒在桌上吃吗，感觉怪怪的……"
+      ],
+      "candidate_char_counts": [
+        5,
+        19
+      ],
+      "candidate_delays_ms": [
+        1225,
+        0
+      ],
+      "candidate_fallback": null,
+      "canonical_unchanged": true
+    },
+    {
+      "external_message_id": "484189299",
+      "accepted_at": "2026-10-05T07:33:39.610937+00:00",
+      "canonical": "你怎么还在纠结这个呀……！真是拿你没办法。",
+      "provider_output_matches_canonical": true,
+      "delivered_parts": [
+        {
+          "ordinal": 0,
+          "text": "你怎么还在纠结这个呀……！真是拿你没办法。",
+          "receipt_present": true
+        }
+      ],
+      "candidate_parts": [
+        "你怎么还在纠结这个呀……！",
+        "真是拿你没办法。"
+      ],
+      "candidate_char_counts": [
+        13,
+        8
+      ],
+      "candidate_delays_ms": [
+        1505,
+        0
+      ],
+      "candidate_fallback": null,
+      "canonical_unchanged": true
+    },
+    {
+      "external_message_id": "287724672",
+      "accepted_at": "2026-10-05T07:33:32.068839+00:00",
+      "canonical": "就算人家不在意，我也不会跟着你胡闹的啦……",
+      "provider_output_matches_canonical": true,
+      "delivered_parts": [
+        {
+          "ordinal": 0,
+          "text": "就算人家不在意，我也不会跟着你胡闹的啦……",
+          "receipt_present": true
+        }
+      ],
+      "candidate_parts": [
+        "就算人家不在意，我也不会跟着你胡闹的啦……"
+      ],
+      "candidate_char_counts": [
+        21
+      ],
+      "candidate_delays_ms": [
+        0
+      ],
+      "candidate_fallback": "no_natural_boundaries",
+      "canonical_unchanged": true
+    },
+    {
+      "external_message_id": "513041999",
+      "accepted_at": "2026-10-05T07:33:14.960834+00:00",
+      "canonical": "都说了不要乱给人家安这种设定啦……小心当事人来找你算账哦！",
+      "provider_output_matches_canonical": true,
+      "delivered_parts": [
+        {
+          "ordinal": 0,
+          "text": "都说了不要乱给人家安这种设定啦……小心当事人来找你算账哦！",
+          "receipt_present": true
+        }
+      ],
+      "candidate_parts": [
+        "都说了不要乱给人家安这种设定啦……",
+        "小心当事人来找你算账哦！"
+      ],
+      "candidate_char_counts": [
+        17,
+        12
+      ],
+      "candidate_delays_ms": [
+        1695,
+        0
+      ],
+      "candidate_fallback": null,
+      "canonical_unchanged": true
+    },
+    {
+      "external_message_id": "1057133350",
+      "accepted_at": "2026-10-05T07:30:28.388226+00:00",
+      "canonical": "才不要大声喊呢！我是绫地宁宁，他们也才不是你说的那样啦。",
+      "provider_output_matches_canonical": true,
+      "delivered_parts": [
+        {
+          "ordinal": 0,
+          "text": "才不要大声喊呢！我是绫地宁宁，他们也才不是你说的那样啦。",
+          "receipt_present": true
+        }
+      ],
+      "candidate_parts": [
+        "才不要大声喊呢！",
+        "我是绫地宁宁，他们也才不是你说的那样啦。"
+      ],
+      "candidate_char_counts": [
+        8,
+        20
+      ],
+      "candidate_delays_ms": [
+        1330,
+        0
+      ],
+      "candidate_fallback": null,
+      "canonical_unchanged": true
+    },
+    {
+      "external_message_id": "465557717",
+      "accepted_at": "2026-10-05T07:29:28.631571+00:00",
+      "canonical": "记是记下了啦……但等大家来找你算账的时候我可不管哦。",
+      "provider_output_matches_canonical": true,
+      "delivered_parts": [
+        {
+          "ordinal": 0,
+          "text": "记是记下了啦……但等大家来找你算账的时候我可不管哦。",
+          "receipt_present": true
+        }
+      ],
+      "candidate_parts": [
+        "记是记下了啦……",
+        "但等大家来找你算账的时候我可不管哦。"
+      ],
+      "candidate_char_counts": [
+        8,
+        18
+      ],
+      "candidate_delays_ms": [
+        1380,
+        0
+      ],
+      "candidate_fallback": null,
+      "canonical_unchanged": true
+    },
+    {
+      "external_message_id": "1384576341",
+      "accepted_at": "2026-10-05T07:29:17.079317+00:00",
+      "canonical": "……为什么这么执着这个设定呀，大家听到真的不会抗议吗？",
+      "provider_output_matches_canonical": true,
+      "delivered_parts": [
+        {
+          "ordinal": 0,
+          "text": "……为什么这么执着这个设定呀，大家听到真的不会抗议吗？",
+          "receipt_present": true
+        }
+      ],
+      "candidate_parts": [
+        "……为什么这么执着这个设定呀，大家听到真的不会抗议吗？"
+      ],
+      "candidate_char_counts": [
+        27
+      ],
+      "candidate_delays_ms": [
+        0
+      ],
+      "candidate_fallback": "no_natural_boundaries",
+      "canonical_unchanged": true
+    },
+    {
+      "external_message_id": "788122952",
+      "accepted_at": "2026-10-05T07:29:08.002625+00:00",
+      "canonical": "诶？我没有不尊重大家啦！只是在解释我自己不是而已……",
+      "provider_output_matches_canonical": true,
+      "delivered_parts": [
+        {
+          "ordinal": 0,
+          "text": "诶？我没有不尊重大家啦！只是在解释我自己不是而已……",
+          "receipt_present": true
+        }
+      ],
+      "candidate_parts": [
+        "诶？",
+        "我没有不尊重大家啦！",
+        "只是在解释我自己不是而已……"
+      ],
+      "candidate_char_counts": [
+        2,
+        10,
+        14
+      ],
+      "candidate_delays_ms": [
+        1120,
+        1400,
+        0
+      ],
+      "candidate_fallback": null,
+      "canonical_unchanged": true
+    },
+    {
+      "external_message_id": "984059081",
+      "accepted_at": "2026-10-05T07:28:52.301626+00:00",
+      "canonical": "怎么又变回去了……！都说了不是啦，别一直逗我了。",
+      "provider_output_matches_canonical": true,
+      "delivered_parts": [
+        {
+          "ordinal": 0,
+          "text": "怎么又变回去了……！都说了不是啦，别一直逗我了。",
+          "receipt_present": true
+        }
+      ],
+      "candidate_parts": [
+        "怎么又变回去了……！",
+        "都说了不是啦，别一直逗我了。"
+      ],
+      "candidate_char_counts": [
+        10,
+        14
+      ],
+      "candidate_delays_ms": [
+        1400,
+        0
+      ],
+      "candidate_fallback": null,
+      "canonical_unchanged": true
+    }
+  ],
+  "new_model_requests": 0,
+  "manual_external_sends": 0,
+  "scope": "presentation-only replay of frozen canonical replies, no new model generation or external sends"
+}

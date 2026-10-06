@@ -1,0 +1,45 @@
+"""Read-only frozen-stage audit; optionally compare current code/docs."""
+import argparse
+import hashlib
+import json
+from pathlib import Path
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--check-current", action="store_true")
+args = parser.parse_args()
+phase = Path(__file__).resolve().parent
+root = next(p for p in phase.parents if (p / "services/runtime/src").is_dir())
+
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+manifest = json.loads((phase / "manifest.json").read_text())
+for rel, sha in manifest.items():
+    assert digest(phase / rel) == sha, rel
+actual = {str(p.relative_to(phase)) for p in phase.rglob("*")
+          if p.is_file() and p.name != "manifest.json"
+          and not any(part.startswith(".") or part == "__pycache__" for part in p.relative_to(phase).parts)}
+assert actual == manifest.keys()
+code = json.loads((phase / "code-sha256.json").read_text())
+assert json.loads((phase / "server-checks.json").read_text())["selected_code_sha256"] == code
+for rel, sha in code.items():
+    assert digest(phase / "candidate-code" / (rel.replace("/", "__") + ".txt")) == sha
+    if args.check_current:
+        assert digest(root / rel) == sha, rel
+if args.check_current:
+    for saved in (phase / "documentation-snapshot").glob("*.txt"):
+        rel = saved.name.removesuffix(".txt").replace("__", "/")
+        assert digest(root / rel) == digest(saved), rel
+previous = phase.parent / "autonomous-discovery"
+assert digest(previous / "manifest.json") == (
+    "ece42e11d6caa6031260f77ab5b9daa634794fa11f8e5915b949cbcf1a1d9274")
+for rel, sha in json.loads((previous / "manifest.json").read_text()).items():
+    assert digest(previous / rel) == sha, rel
+checks = json.loads((phase / "software-checks.json").read_text())
+assert checks["local_tests"] == checks["server_tests"] == 422
+assert checks["source_policy_ast_unchanged"] and checks["new_model_http"] == 0
+assert not json.loads((phase / "decision.json").read_text())["q02_approval"]
+print(json.dumps({"audit": "passed", "entries": len(manifest), "previous_v41": "unchanged",
+                  "check_current": args.check_current, "q02_approval": False}))

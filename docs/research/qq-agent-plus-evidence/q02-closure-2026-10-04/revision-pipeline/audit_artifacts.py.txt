@@ -1,0 +1,163 @@
+"""Read-only provenance audit; no model/service calls or semantic approval.
+
+--write-report creates the first report before the manifest is frozen.
+--check-current additionally checks the current checkout; otherwise old frozen
+versions remain auditable after later authorized changes.
+"""
+
+import argparse
+import hashlib
+import json
+from collections import Counter
+from pathlib import Path
+
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def load(path):
+    return json.loads(path.read_text())
+
+
+def rows(path):
+    return [json.loads(line) for line in path.read_text().splitlines() if line]
+
+
+def canonical_digest(value):
+    return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--write-report", action="store_true")
+parser.add_argument("--check-current", action="store_true")
+args = parser.parse_args()
+phase = Path(__file__).resolve().parent
+root = phase.parent
+repo = phase.parents[4]
+code = load(phase / "candidate-sha256.json")
+for rel, expected in code["files"].items():
+    assert digest(phase / "candidate-code" / (rel.replace("/", "__") + ".txt")) == expected, rel
+    if args.check_current:
+        assert digest(repo / rel) == expected, rel
+assert digest(phase / "run_pipeline.py.txt") == code["run_script_sha256"]
+for rel, expected in load(phase / "before-code-sha256.json")["files"].items():
+    assert digest(phase / "before-code" / (rel.replace("/", "__") + ".txt")) == expected, rel
+for rel, expected in load(phase / "document-sha256.json")["files"].items():
+    assert digest(phase / "final-documents" / (rel.replace("/", "__") + ".txt")) == expected, rel
+    if args.check_current:
+        assert digest(repo / rel) == expected, rel
+
+previous = load(phase / "prior-manifest.json")["files"]
+for rel, expected in previous.items():
+    source = phase / "prior-documents/README.md.txt" if rel == "README.md" else root / rel
+    assert digest(source) == expected, rel
+sources = load(phase / "frozen-sources.json")
+for source in sources.values():
+    assert hashlib.sha256(source["text"].encode()).hexdigest() == source["text_sha256"]
+for name in ("frozen-sources.json", "fixtures.json", "budget.json"):
+    assert digest(phase / name) == digest(phase / "live" / name), name
+admission = load(phase / "live/admission.json")
+assert admission["persona_sha256"] == digest(phase / "persona.md")
+assert admission["pipeline_version"] == "v38" and admission["usage_requested"]
+assert not admission["dry_run"] and not admission["production_changed"]
+assert admission["search_provider"] == "searxng" and admission["reader_provider"] == "crawl4ai"
+assert admission["public_read_dns_resolver"] == "cloudflare"
+
+replies = rows(phase / "live/results.jsonl")
+rounds = rows(phase / "live/provider-rounds.jsonl")
+payloads = rows(phase / "live/actual-provider-payloads.jsonl")
+http = rows(phase / "live/http-outcomes.jsonl")
+assert len(replies) == 16 and len(rounds) == len(payloads) == len(http) == 32
+keys = {f"frozen_{source}:r{repeat}:t{turn}" for source in ("icao", "airchina")
+        for repeat in range(2) for turn in range(1, 5)}
+reply_by_key = {row["sample_key"]: row for row in replies}
+assert set(reply_by_key) == keys
+assert Counter((row["sample_key"], row["phase"]) for row in rounds) == Counter(
+    (key, label) for key in keys for label in ("draft", "final_frame"))
+assert {row["logical_request"] for row in rounds} == set(range(1, 33))
+assert {row["http_attempt"] for row in http} == set(range(1, 33))
+for row in replies:
+    assert row["execution"] == row["state"] == "completed"
+    assert row["reply_origin"] == "provider_frame_rendered" and row["error_code"] is None
+for row in payloads:
+    payload = row["payload"]
+    assert canonical_digest(payload) == row["payload_sha256"]
+    assert payload["model"] == admission["model"] == "gemini-3.8-flash-high"
+    assert payload["max_tokens"] == 8192
+    assert payload["stream_options"] == {"include_usage": True}
+    assert bool(payload.get("response_format")) == (row["phase"] == "final_frame")
+    documents = []
+    for message in payload["messages"]:
+        content = message.get("content", "")
+        if isinstance(content, str) and content.startswith("[SOURCE ANSWER MATERIAL 1.0]\n"):
+            documents.extend(json.loads(content.split("\n", 1)[1])["documents"])
+    source = sources[row["source_key"]]
+    assert len(documents) == 1 and documents[0]["text"] == source["text"]
+    assert documents[0]["body_sha256"] == source["body_sha256"]
+    scenario, repeat, turn = row["sample_key"].split(":")
+    prior = [reply_by_key[f"{scenario}:{repeat}:t{index}"]["reply_text"]
+             for index in range(1, int(turn[1:]))]
+    assert row["prior_replies"] == prior
+    assert all({"role": "assistant", "content": reply} in payload["messages"] for reply in prior)
+for row in rounds:
+    assert row["error_type"] is None and row["terminal"]["finish_reason"] == "stop"
+    assert row["terminal"]["usage"] is not None
+    budget = row["input_budget_report"]
+    assert not budget["omitted_history_indices"] and not budget["omitted_tool_preamble_indices"]
+    assert row["reference_input_tokens"] <= budget["estimated_token_limit"] == 21370
+assert all(row["status"] == 200 and row["error_type"] is None for row in http)
+totals = {key: sum(row["terminal"]["usage"][key] for row in rounds)
+          for key in ("prompt_tokens", "completion_tokens", "total_tokens")}
+assert totals == {"prompt_tokens": 148367, "completion_tokens": 12207, "total_tokens": 210056}
+account = load(phase / "live/accounting.json")
+assert account["reported_usage_calls"] == 32 and not account["whole_input_omissions"]
+gaps = load(phase / "live/flow-integrity.json")["gap_checks"]
+assert len(gaps) == 5 and all(row["prior_declared_gap_on_wire"] and
+                            row["statement_present_in_published_reply"] and
+                            row["retained_completed_gap"] for row in gaps)
+scope_rows = load(phase / "scope-state-evidence.json")["items"]
+assert len(scope_rows) == 4
+for scope in scope_rows:
+    raw = next(row["raw_frame"] for row in rounds
+               if row["phase"] == "final_frame" and row["sample_key"] == scope["sample_key"])
+    assert hashlib.sha256(raw.encode()).hexdigest() == scope["raw_frame_sha256"]
+    assert json.loads(raw)["new_gaps"] == scope["new_gaps"] == []
+review = load(phase / "primary-review.json")
+assert not review["independent_or_blind_review"] and not review["q02_approval"]
+assert len(review["items"]) == 16 and {row["sample_key"] for row in review["items"]} == keys
+assert Counter(row["grade"] for row in review["items"]) == {"complete": 13, "partial": 3}
+for row in review["items"]:
+    text = reply_by_key[row["sample_key"]]["reply_text"]
+    assert hashlib.sha256(text.encode()).hexdigest() == row["reply_sha256"]
+decision = load(phase / "decision.json")
+assert not decision["q02_approval"] and not decision["production_adopted"]
+assert decision["source_quality_gate"] == "rejected"
+assert all(value == "not_run_for_this_candidate" for value in decision["later_gates"].values())
+server = load(phase / "server-final-status.json")
+assert not server["pending_q02_processes"]
+assert server["live_exit"]["exit_code"] == server["dry_exit"]["exit_code"] == 0
+assert server["dry_admission"]["dry_run"]
+assert not load(phase / "post-run-integrity-privacy.json")["credential_leaks"]
+assert all(load(phase / "post-run-integrity-privacy.json")["post_run_source_checks"].values())
+assert "312 passed" in (phase / "local-regression-final.log").read_text()
+assert "286 passed" in (phase / "server-tests.log").read_text()
+report = {"new_model_calls": 0, "quality_approval": False, "frozen_code_files": len(code["files"]),
+          "prior_artifact_files": len(previous), "prior_artifacts_unchanged_in_place": len(previous) - 1,
+          "prior_root_readme_preserved": True, "complete_flows": 4, "final_provider_replies": 16,
+          "actual_model_http_attempts": 32, "known_usage_calls": 32, "whole_input_omissions": 0,
+          "known_generic_gap_controls": 5, "t3_frames_without_new_scope_gap": 4,
+          "review_complete": 13, "review_partial": 3, "raw_replies_replaced": 0,
+          "candidate_rejected": True, "no_pending_q02_server_processes": True,
+          "current_checkout_check_optional": True}
+out = phase / "final-artifact-audit.json"
+if args.write_report:
+    assert not out.exists(), "Preserve the initial report"
+    out.write_text(json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2) + "\n")
+else:
+    assert load(out) == report
+    manifest = load(phase / "manifest.json")
+    actual = {str(path.relative_to(phase)): digest(path) for path in phase.rglob("*")
+              if path.is_file() and path != phase / "manifest.json"}
+    assert actual == manifest["files"]
+print(json.dumps(report, ensure_ascii=False, sort_keys=True))

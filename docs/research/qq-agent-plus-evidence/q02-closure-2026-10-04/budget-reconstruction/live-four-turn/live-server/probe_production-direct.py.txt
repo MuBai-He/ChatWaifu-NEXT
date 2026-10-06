@@ -1,0 +1,11 @@
+import argparse,hashlib,json,subprocess,urllib.request
+from pathlib import Path
+parser=argparse.ArgumentParser();parser.add_argument("--output",type=Path,required=True);args=parser.parse_args()
+assert not args.output.exists()
+paths={"production_reader":Path("/home/mubai/chatwaifu-server/source/services/runtime/src/chatwaifu_runtime/runtime_skills/public_web_providers.py"),"production_searxng":Path("/home/mubai/chatwaifu-server/public-web/searxng/settings.yml")}
+out={"sha256":{k:hashlib.sha256(p.read_bytes()).hexdigest() for k,p in paths.items()},"runtime_user_unit":subprocess.check_output(["systemctl","--user","is-active","chatwaifu-runtime.service"],text=True).strip(),"crawl4ai_image_id":subprocess.check_output(["docker","inspect","--format={{.Image}}","cw2-public-web-crawl4ai-1"],text=True).strip(),"health":{}}
+for label,url in {"runtime":"http://127.0.0.1:8765/health","crawl4ai":"http://127.0.0.1:11235/health"}.items():
+ with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(url,timeout=10) as response: out["health"][label]=response.status
+assert out["runtime_user_unit"]=="active" and all(v==200 for v in out["health"].values())
+args.output.write_text(json.dumps(out,indent=2)+"\n")
+print(json.dumps(out))

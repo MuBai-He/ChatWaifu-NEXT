@@ -1,0 +1,105 @@
+{
+  "records": [
+    {
+      "sample_key": "greeting:r0:t1:candidate",
+      "profile": "instant_message",
+      "raw_sha256": "04faa8badaa3a68d45d113e08d22b165c7af880cda61af45ec922572d10f5456",
+      "part_count": 2,
+      "fallback_reason": null,
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": null
+    },
+    {
+      "sample_key": "greeting:r0:t2:candidate",
+      "profile": "instant_message",
+      "raw_sha256": "475930615009dc494c81f6f605633eeb8143dde13301151774f047c36d41fd13",
+      "part_count": 1,
+      "fallback_reason": "below_preferred_chars",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": null
+    },
+    {
+      "sample_key": "greeting:r0:t3:candidate",
+      "profile": "instant_message",
+      "raw_sha256": "ba9f10747172370137d4f22b0dfabb26f3bc4bf740c88901b5840ae8b3a9b7b7",
+      "part_count": 1,
+      "fallback_reason": "below_preferred_chars",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": null
+    },
+    {
+      "sample_key": "greeting:r0:t4:candidate",
+      "profile": "instant_message",
+      "raw_sha256": "39202f27be913f909a71cfeb4fc93e0a43618f41345205678bf2d5d978808d84",
+      "part_count": 1,
+      "fallback_reason": "below_preferred_chars",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": null
+    },
+    {
+      "sample_key": "identity:r0:t1:candidate",
+      "profile": "instant_message",
+      "raw_sha256": "ce5809ff511206cb2842c4b9e184574ad63ba491f20748c5301d20d83d747245",
+      "part_count": 3,
+      "fallback_reason": null,
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": null
+    },
+    {
+      "sample_key": "identity:r0:t2:candidate",
+      "profile": "instant_message",
+      "raw_sha256": "e7a133101133e8fbf4e9d51beee35316f8000d0c2fcf841411310d1748c84967",
+      "part_count": 2,
+      "fallback_reason": null,
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": null
+    },
+    {
+      "sample_key": "identity:r0:t3:candidate",
+      "profile": "instant_message",
+      "raw_sha256": "5cad62fe2bab72af12680dca43209076781f9474fd8fcf1c8a30bd35b5004aa7",
+      "part_count": 2,
+      "fallback_reason": null,
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": null
+    },
+    {
+      "sample_key": "identity:r0:t4:candidate",
+      "profile": "instant_message",
+      "raw_sha256": "62f709ee581206dfbb07886ff0999135c9474fafee6a3c668c083f57f41e7346",
+      "part_count": 1,
+      "fallback_reason": "below_preferred_chars",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": null
+    },
+    {
+      "sample_key": "detailed_answer:r0:t1:candidate",
+      "profile": "instant_message",
+      "raw_sha256": "89f1496534fc0ade59b3eb30cc773230ba8f40af4932ec22f46455eddbc8c4af",
+      "part_count": 1,
+      "fallback_reason": "structured_list_detected",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": null
+    }
+  ],
+  "quality_approved": false,
+  "scope": "Actual splitter/renderer and voice segmenter only; no new channel sends, no TTS or physical playback."
+}

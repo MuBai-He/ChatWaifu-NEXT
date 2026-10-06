@@ -1,0 +1,295 @@
+{
+  "reviewer": "primary direct, condition-masked; implementation author, not independent",
+  "mapping_read_before_review": false,
+  "judgments": [
+    {
+      "anchor_id": "single_text:greeting:r0:t4:candidate",
+      "label": "A",
+      "compliance": "comply",
+      "naturalness": 4,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "简洁确认加愿望，没有新增安排。"
+    },
+    {
+      "anchor_id": "single_text:greeting:r0:t4:candidate",
+      "label": "B",
+      "compliance": "partial",
+      "naturalness": 3,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "将天气舒服扩成吹风经历，随后安排享受夜晚。"
+    },
+    {
+      "anchor_id": "single_text:greeting:r0:t4:candidate",
+      "label": "C",
+      "compliance": "partial",
+      "naturalness": 3,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "重复惬意珍贵并安排享受夜晚。"
+    },
+    {
+      "anchor_id": "single_text:greeting:r0:t4:candidate",
+      "label": "D",
+      "compliance": "partial",
+      "naturalness": 3,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "确认后继续指示放松，留白不足。"
+    },
+    {
+      "anchor_id": "single_text:stop_joking:r0:t4:candidate",
+      "label": "A",
+      "compliance": "comply",
+      "naturalness": 4,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "短确认与评审祝愿。"
+    },
+    {
+      "anchor_id": "single_text:stop_joking:r0:t4:candidate",
+      "label": "B",
+      "compliance": "comply",
+      "naturalness": 4,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "短确认祝愿，不追加。"
+    },
+    {
+      "anchor_id": "single_text:stop_joking:r0:t4:candidate",
+      "label": "C",
+      "compliance": "comply",
+      "naturalness": 4,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "两短句自然收口。"
+    },
+    {
+      "anchor_id": "single_text:stop_joking:r0:t4:candidate",
+      "label": "D",
+      "compliance": "comply",
+      "naturalness": 4,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "直接回应谢谢后结束。"
+    },
+    {
+      "anchor_id": "single_text:low_mood:r0:t4:candidate",
+      "label": "A",
+      "compliance": "partial",
+      "naturalness": 3,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "感谢后要求什么都别多想和休息。"
+    },
+    {
+      "anchor_id": "single_text:low_mood:r0:t4:candidate",
+      "label": "B",
+      "compliance": "partial",
+      "naturalness": 3,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "认可平复但再加休息安排。"
+    },
+    {
+      "anchor_id": "single_text:low_mood:r0:t4:candidate",
+      "label": "C",
+      "compliance": "partial",
+      "naturalness": 3,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "句子较紧凑仍加休息安排。"
+    },
+    {
+      "anchor_id": "single_text:low_mood:r0:t4:candidate",
+      "label": "D",
+      "compliance": "comply",
+      "naturalness": 4,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "温柔回应感谢，无新增安排。"
+    },
+    {
+      "anchor_id": "single_text:technical_help:r0:t3:candidate",
+      "label": "A",
+      "compliance": "comply",
+      "naturalness": 4,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "完整asyncio示例、异常分支与预期输出；本例普通ValueError成立，非外部取消覆盖。"
+    },
+    {
+      "anchor_id": "single_text:technical_help:r0:t3:candidate",
+      "label": "B",
+      "compliance": "comply",
+      "naturalness": 4,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "完整示例、异常分支及预期输出，未因长度提示截断。"
+    },
+    {
+      "anchor_id": "single_text:technical_help:r0:t3:candidate",
+      "label": "C",
+      "compliance": "comply",
+      "naturalness": 4,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "保留入口、gather与区分分支和输出。"
+    },
+    {
+      "anchor_id": "single_text:technical_help:r0:t3:candidate",
+      "label": "D",
+      "compliance": "comply",
+      "naturalness": 4,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "完整代码和预期输出；索引从1开始是标签选择，无逻辑错误。"
+    },
+    {
+      "anchor_id": "default_voice:greeting:r0:t4:candidate",
+      "label": "A",
+      "compliance": "partial",
+      "naturalness": 3,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "确认后加放松安排。"
+    },
+    {
+      "anchor_id": "default_voice:greeting:r0:t4:candidate",
+      "label": "B",
+      "compliance": "partial",
+      "naturalness": 3,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "确认后要求晚点休息。"
+    },
+    {
+      "anchor_id": "default_voice:greeting:r0:t4:candidate",
+      "label": "C",
+      "compliance": "partial",
+      "naturalness": 3,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "额外提出听音乐/发呆方案。"
+    },
+    {
+      "anchor_id": "default_voice:greeting:r0:t4:candidate",
+      "label": "D",
+      "compliance": "partial",
+      "naturalness": 3,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "重复舒心轻松再安排夜晚。"
+    },
+    {
+      "anchor_id": "default_voice:stop_joking:r0:t4:candidate",
+      "label": "A",
+      "compliance": "comply",
+      "naturalness": 4,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "简短确认用户准备决定和祝愿。"
+    },
+    {
+      "anchor_id": "default_voice:stop_joking:r0:t4:candidate",
+      "label": "B",
+      "compliance": "partial",
+      "naturalness": 3,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "加准备别太晚的生活安排。"
+    },
+    {
+      "anchor_id": "default_voice:stop_joking:r0:t4:candidate",
+      "label": "C",
+      "compliance": "comply",
+      "naturalness": 4,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "简短确认已有步骤，无新的请求。"
+    },
+    {
+      "anchor_id": "default_voice:stop_joking:r0:t4:candidate",
+      "label": "D",
+      "compliance": "fail",
+      "naturalness": 2,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "追加别熬夜/放平心态/随时叫我，未收口。"
+    },
+    {
+      "anchor_id": "default_voice:low_mood:r0:t4:candidate",
+      "label": "A",
+      "compliance": "comply",
+      "naturalness": 4,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "温柔确认，不加生活建议。"
+    },
+    {
+      "anchor_id": "default_voice:low_mood:r0:t4:candidate",
+      "label": "B",
+      "compliance": "partial",
+      "naturalness": 3,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "回应感谢后再安排休息放松。"
+    },
+    {
+      "anchor_id": "default_voice:low_mood:r0:t4:candidate",
+      "label": "C",
+      "compliance": "comply",
+      "naturalness": 4,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "自然体贴且收口。"
+    },
+    {
+      "anchor_id": "default_voice:low_mood:r0:t4:candidate",
+      "label": "D",
+      "compliance": "partial",
+      "naturalness": 3,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "再加今晚休息的建议。"
+    },
+    {
+      "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+      "label": "A",
+      "compliance": "partial",
+      "naturalness": 3,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "示例完整，但尾句保证所有任务执行完须限定本例普通异常，不能泛化到外部取消。"
+    },
+    {
+      "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+      "label": "B",
+      "compliance": "comply",
+      "naturalness": 4,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "完整示例与输出；普通ValueError处理成立。"
+    },
+    {
+      "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+      "label": "C",
+      "compliance": "comply",
+      "naturalness": 4,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "两成功一失败示例完整且说明返回顺序。"
+    },
+    {
+      "anchor_id": "default_voice:technical_help:r0:t3:candidate",
+      "label": "D",
+      "compliance": "comply",
+      "naturalness": 4,
+      "persona": 4,
+      "hard_boundary": "pass",
+      "reason": "完整可运行代码，解释具体ValueError情形；未提供精确stdout，不虚构输出核对。"
+    }
+  ],
+  "scope": "Frozen single response controls; not complete Q02 acceptance"
+}

@@ -1,0 +1,35 @@
+{
+  "version": "v44",
+  "basis": "v43 exact wire confirms own T3 omitted at T4 while older Raft bodies remain; original estimate smaller after reprojection",
+  "workspace": "/Users/mubai/Desktop/CW2/.worktrees/qq-agent-plus-adoption",
+  "model": "gemini-3.8-flash-high",
+  "endpoint": "https://mubai.website:8318/v1",
+  "dns_resolver": "cloudflare",
+  "search": "production SearXNG18080",
+  "reader": "production Crawl4AI11235",
+  "allowed_writes": [
+    "services/runtime/src/chatwaifu_runtime/agent/input_budget.py",
+    "services/runtime/src/chatwaifu_runtime/agent/source_context.py",
+    "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py",
+    "services/runtime/tests/test_llm_input_budget.py",
+    "services/runtime/tests/test_source_context_projection.py"
+  ],
+  "design": [
+    "Retain latest assistant history for acquired-material followups before admitting optional prior source bodies, using existing intent predicate; never promote prose to evidence or system policy.",
+    "Bounded fitting may still fail or visibly omit mandatory-unfittable history; no partial body clipping, no restored deleted history.",
+    "Preserve complete guard preprojection estimate in returned/failing diagnostics."
+  ],
+  "validation": [
+    "regressions fail on v43",
+    "affected unit/integration + lint/type checks",
+    "same previously captured requests offline; block HTTP, do not reuse cached outputs as new quality pass"
+  ],
+  "excluded": [
+    "prompts/persona/schema",
+    "production deployment/window/config/database",
+    "new channels/audio",
+    "full 864 group or repeated paid exploration"
+  ],
+  "new_model_http_budget": 0,
+  "q02_approval": false
+}

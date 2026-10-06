@@ -1,0 +1,59 @@
+{
+  "scope": "Nine same-evidence final-answer controls, no tools executed",
+  "release_approved": false,
+  "primary_review": "All nine lack actual source URLs; removing schemas/closing phase did not establish improvement. Conditional scopes and unsupported generalizations remain.",
+  "teardown_warning": "After all nine completed and process exit 0, httpcore2 async-generator shutdown printed RuntimeError: generator did not stop after athrow(); not treated as clean transport teardown. Reproduction pending.",
+  "arms": {
+    "native_auto": {
+      "completed": 3,
+      "stop_count": 3,
+      "source_url_count": 0,
+      "new_tool_requests": 0,
+      "latency_ms": [
+        4959,
+        8724,
+        11189
+      ],
+      "provider_usage": {
+        "prompt_tokens": 34719,
+        "completion_tokens": 1281,
+        "reasoning_tokens": 994,
+        "total_tokens": 36994
+      }
+    },
+    "no_schema": {
+      "completed": 3,
+      "stop_count": 3,
+      "source_url_count": 0,
+      "new_tool_requests": 0,
+      "latency_ms": [
+        5529,
+        8736,
+        5615
+      ],
+      "provider_usage": {
+        "prompt_tokens": 32163,
+        "completion_tokens": 1232,
+        "reasoning_tokens": 1518,
+        "total_tokens": 34913
+      }
+    },
+    "closed_phase": {
+      "completed": 3,
+      "stop_count": 3,
+      "source_url_count": 0,
+      "new_tool_requests": 0,
+      "latency_ms": [
+        5571,
+        5568,
+        9283
+      ],
+      "provider_usage": {
+        "prompt_tokens": 32361,
+        "completion_tokens": 1178,
+        "reasoning_tokens": 1028,
+        "total_tokens": 34567
+      }
+    }
+  }
+}

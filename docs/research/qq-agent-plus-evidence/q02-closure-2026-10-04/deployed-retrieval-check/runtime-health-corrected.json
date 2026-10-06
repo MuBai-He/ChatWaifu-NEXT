@@ -1,0 +1,29 @@
+{
+  "scheme": "https",
+  "connect_address": "127.0.0.1:8765",
+  "tls_server_name": "mubai.website",
+  "path": "/v1/runtime/health",
+  "certificate_verification": true,
+  "initial_probe_used_wrong_scheme_and_path": true,
+  "http": 200,
+  "body": {
+    "status": "ok",
+    "version": "0.1.0",
+    "database": "ready",
+    "subscribers": 3,
+    "dropped_events": 0,
+    "providers": {
+      "llm": "openai_compatible",
+      "tts": "gpt_sovits",
+      "stt": "faster_whisper_worker"
+    },
+    "resources": {
+      "state": "sleeping",
+      "idle_seconds": 84507,
+      "sleep_count": 1,
+      "last_sleep_at": "2026-10-03T05:39:36.747438Z",
+      "last_wake_at": null
+    }
+  },
+  "observed_at_utc": "2026-10-04T04:58:03.574419+00:00"
+}

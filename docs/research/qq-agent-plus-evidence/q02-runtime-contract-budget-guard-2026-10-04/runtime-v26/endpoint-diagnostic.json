@@ -1,0 +1,23 @@
+[
+  {
+    "probe": "model_inventory",
+    "at_utc": "2026-10-03T17:03:35.024682+00:00",
+    "http_status": 200,
+    "requested_model_present": true,
+    "model_count": 20
+  },
+  {
+    "probe": "minimal_completion",
+    "at_utc": "2026-10-03T17:03:35.064328+00:00",
+    "http_status": 200,
+    "reported_model": "gemini-3.8-flash-control",
+    "usage": {
+      "completion_tokens": 91,
+      "total_tokens": 96,
+      "prompt_tokens": 5,
+      "completion_tokens_details": {
+        "reasoning_tokens": 90
+      }
+    }
+  }
+]

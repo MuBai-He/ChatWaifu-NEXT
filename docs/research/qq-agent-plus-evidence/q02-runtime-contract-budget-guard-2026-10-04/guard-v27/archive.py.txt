@@ -1,0 +1,21 @@
+import hashlib,json,tarfile
+from pathlib import Path
+stage=Path('/tmp/cw2-q02-v27-budget-guard-20261004');root=Path('/tmp/cw2-q02-budget-guard-v27-eval')
+assert (stage/'focused-probe-exit.json').exists()
+keys=[json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']]
+for line in Path('/home/mubai/.local/share/chatwaifu-server/config/public-web.env').read_text().splitlines():
+ if '=' in line:
+  k,v=line.split('=',1)
+  if any(s in k for s in ['TOKEN','API_KEY','SECRET']) and v.strip():keys.append(v.strip().strip(chr(34)).strip(chr(39)))
+m=json.loads((stage/'overlay.json').read_text())['sha256'];assert all(hashlib.sha256((root/n).read_bytes()).hexdigest()==h for n,h in m.items())
+files=[p for p in stage.rglob('*') if p.is_file() and p.suffix in {'.json','.jsonl','.log','.py','.txt'} and 'isolated_db' not in p.parts and p.name!='artifact-integrity.json']
+manifest={'configured_credentials_absent':True,'overlay_source_hashes_match':True,'files':{}}
+for p in files:
+ raw=p.read_bytes();assert all(k.encode() not in raw for k in keys if k)
+ manifest['files'][str(p.relative_to(stage))]={'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)}
+(stage/'artifact-integrity.json').write_text(json.dumps(manifest,indent=2)+'\n');files.append(stage/'artifact-integrity.json')
+with tarfile.open(stage/'artifacts.tar.gz','w:gz') as archive:
+ for p in files:archive.add(p,arcname=str(p.relative_to(stage)))
+for p in sorted((stage/'results').glob('*/results.jsonl')):
+ for line in p.read_text().splitlines():
+  r=json.loads(line);print(json.dumps({'case':p.parent.name,'reply':r['raw_reply'],'origin':r['runtime_source_trace']['reply_origin'],'budget_failures':r['runtime_source_trace']['source_wire_budget_failures']},ensure_ascii=False))

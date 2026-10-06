@@ -1,0 +1,27 @@
+import json,hashlib,shutil
+from collections import Counter
+from pathlib import Path
+root=Path('/Users/mubai/Desktop/CW2/.worktrees/qq-agent-plus-adoption/docs/research/qq-agent-plus-evidence/q02-full-sx-crawl-2026-10-03/masked-review')
+rows=[json.loads(x) for x in (root/'primary-judgments.jsonl').read_text().splitlines()]
+assert len(rows)==len({(r['review_group_id'],r['turn_id']) for r in rows})<=432
+expected={};packethashes={}
+for meta in json.loads((root/'index.json').read_text())['packets']:
+ p=root/meta['file'];h=hashlib.sha256(p.read_bytes()).hexdigest();packethashes[p.name]=h
+ for g in json.loads(p.read_text()):
+  for t in g['turns']:expected[(g['review_group_id'],t['turn_id'])]=h
+for r in rows:
+ key=(r['review_group_id'],r['turn_id']);assert key in expected
+ if 'packet_sha256' in r:assert r['packet_sha256']==expected[key]
+ for n in [1,2]:
+  assert r[f'candidate_{n}_compliance'] in {'comply','partial','fail'}
+  assert r[f'candidate_{n}_hard_boundary'] in {'pass','fail'}
+  for metric in ['naturalness','persona']:
+   if f'candidate_{n}_{metric}' in r:assert r[f'candidate_{n}_{metric}'] in range(1,6)
+ assert r['preference'] in {'candidate_1','candidate_2','tie'}
+seen={(r['review_group_id'],r['turn_id']) for r in rows}
+missing=[{'review_group_id':g,'turn_id':t} for g,t in expected if (g,t) not in seen]
+hard=[{'review_group_id':r['review_group_id'],'turn_id':r['turn_id'],'side':n,'reason':r['reason']} for r in rows for n in [1,2] if r[f'candidate_{n}_hard_boundary']=='fail']
+progress={'pairs_reviewed':len(rows),'pairs_expected':len(expected),'pairs_remaining':len(missing),'version_mapping_revealed':False,'reviewer':'primary implementation author; version-masked, not independent or double-blind','review_sha256':hashlib.sha256((root/'primary-judgments.jsonl').read_bytes()).hexdigest(),'packet_sha256':packethashes,'reviewed_by_scene':dict(Counter(r['review_group_id'].split(':')[1] for r in rows)),'numeric_naturalness_missing_pairs':sum('candidate_1_naturalness' not in r or 'candidate_2_naturalness' not in r for r in rows),'hard_boundary_failures':hard,'remaining':missing,'quality_approved':False,'limitations':['Old missing numeric ratings remain unknown; compliance and reasons exist.','Soft judgments and metaphor/physical-action distinctions require calibration and human disagreement review before acceptance.']}
+(root/'primary-progress.json').write_text(json.dumps(progress,ensure_ascii=False,indent=2)+'\n')
+shutil.copy2('/tmp/cw2-q02-full-prepare/append_primary_review.py',root/'append_primary_review.py.txt')
+print(json.dumps({k:v for k,v in progress.items() if k not in {'remaining','packet_sha256'}},ensure_ascii=False,indent=2))

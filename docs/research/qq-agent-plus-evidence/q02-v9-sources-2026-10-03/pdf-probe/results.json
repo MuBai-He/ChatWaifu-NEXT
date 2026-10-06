@@ -1,0 +1,107 @@
+[
+  {
+    "label": "html",
+    "arguments": {
+      "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+      "focus": "3C",
+      "dns_resolver": "cloudflare",
+      "fresh": true,
+      "max_characters": 6000
+    },
+    "result": {
+      "url": "https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html",
+      "provider": "crawl4ai",
+      "title": "",
+      "text": "西北地区管理局 - 工作动态\n菜单\n\n**宁夏监管局注重充电宝管控与服务并行 保旅客平安温馨出行**\n来源：地区管理局 2025-07-10 16:57\n6月28日，是民航局关于“禁止旅客携带无3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班”有关规定执行的首日。为确保充电宝管控工作有力有效，让旅客理解和配合，宁夏监管局积极行动，多举措保障旅客平安温馨出行。\n一是迅速响应“早部署”，根据民航局电报要求，第一时间组织召开了宁夏辖区旅客携带充电宝乘机安全专题工作会，明确各单位、各机场工作职责，细化管控措施，李天宇副局长从提高政治站位、加强组织领导、强化协同配合、落实宣传告知及开展应急处置等五个方面，提出了具体工作要求；二是提前督导“保落实”，新规执行前一天，监管局现场督导机场各项工作的推进情况，机场公司迅速响应，对各部门工作内容、流程、设施等进行了梳理，制定工作落实清单，并从制度层面明确了工作推进方案，确保措施落实到位；三是现场检查“看效果”，28日当天，监管局局领导带队，对银川机场充电宝管控措施落实情况开展了现场检查。辖区机场在旅客乘机的相关环节进行了多形式宣传告知，在社媒、公众平台、旅客班车和航站楼内广而告之。组织了人员话术培训，做好旅客服务指引及解释。设置了管控充电宝后续处置服务设施，提供了充电宝3C标识、召回型号查询、充电宝暂存等服务，让旅客感受到民航对充电宝的管控是有温度的执法，旅客对政策的理解度和配合度较好，保障现场秩序井然。\n下一步，宁夏监管局将持续加强对此项工作的督导检查力度，进一步完善服务流程、话术培训、应急处置等保障措施工作，杜绝输出风险、管控输入风险，确保各项保障措施有效落实。\n[首页](https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/)丨[导航](https://www.caac.gov.cn/PHONE/GLJ_PHONE/XBGLJ/XB_XXGK/XB_GZDT/202507/t20250710_227949.html)丨[电脑版](http://xb.caac.gov.cn/index.html)\n版权所有：中国民用航空局",
+      "retrieved_at": "2026-10-03T10:01:42.097448+00:00",
+      "content_type": "text/plain",
+      "body_sha256": "7d82173338429bb36ee18626e14b6cee8b6f5221ea22a56240c2b896e4cdae8b",
+      "total_characters": 919,
+      "text_offset": 0,
+      "truncated": false,
+      "focus_matched": true,
+      "dns_resolver": "cloudflare",
+      "extraction_method": "plain_text",
+      "document_characters": 919,
+      "links": [],
+      "links_requested": false,
+      "links_truncated": false,
+      "links_scope": "selected_source",
+      "read_url_schemes": [
+        "https"
+      ]
+    },
+    "ok": true,
+    "latency_ms": 4056
+  },
+  {
+    "label": "pdf-timing",
+    "arguments": {
+      "url": "https://raft.github.io/raft.pdf",
+      "focus": "broadcastTime",
+      "dns_resolver": "cloudflare",
+      "fresh": true,
+      "max_characters": 6000
+    },
+    "result": {
+      "url": "https://raft.github.io/raft.pdf",
+      "provider": "crawl4ai",
+      "title": "In Search of an Understandable Consensus Algorithm",
+      "text": "f Raft where timing is most critical. Raft will be able to elect and maintain a steady leader as long as the system satisﬁes the follow ing timing requirement: broadcastTime ≪ electionTimeout ≪ MTBF In this inequality broadcastTime is the average time it takes a server to send RPCs in parallel to every server in the cluster and receive their responses; electionTime out is the election timeout described in Section 5.2; and MTBF is the average time between failures for a single server. The broadcast time should be an order of mag nitude less than the election timeout so that leaders can reliably send the heartbeat messages required to keep fol lowers from starting elections; given the randomized ap proach used for election timeouts, this inequality also makes split votes unlikely. The election timeout should be a few orders of magnitude less than MTBF so that the sys tem makes steady progress. When the leader crashes, the system will be unavailable for roughly the election time out; we would like this to represent only a small fraction of overall time. The broadcast time and MTBF are properties of the un derlying system, while the election timeout is something we must choose. Raft’s RPCs typically require the recip ient to persist information to stable storage, so the broad cast time may range from 0.5ms to 20ms, depending on storage technology. As a result, the election timeout is likely to be somewhere between 10ms and 500ms. Typical\n* * *\n## _Figure 10: Switching directly from one conﬁguration to an-_\nother is unsafe because different servers will switch at dif\n* * *\nferent times. In this example, the cluster grows from three servers to ﬁve. Unfortunately, there is a point in time where two different leaders can be elected for the same term, one with a majority of the old conﬁguration ( Cold) and another with a majority of the new conﬁguration ( Cnew). server MTBFs are several months or more, which easily satisﬁes the timing requirement.\n* * *\n## _6 Cluster membership changes_\nUp until now we have assumed that the cluster conﬁg\n* * *\nuration (the set of servers participating in the consensus algorithm) is ﬁxed. In practice, it will occasionally be nec essary to change the conﬁguration, for example to replace servers when they fail or to change the degree of replica tion. Although this can be done by taking the entire cluster off-line, updating conﬁguration ﬁles, and then restarting the cluster, this would leave the cluster unavailable dur ing the changeover. In addition, if there are any manual steps, they risk operator error. In order to avoid these is sues, we decided to automate conﬁguration changes and incorporate them into the Raft consensus algorithm. For the conﬁguration change mechanism to be safe, there must be no point during the transition where it is possible for two leaders to be elected for the same term. Unfortunately, any approach where servers switch directly from the old conﬁguration to the new conﬁgura tion is unsafe. It isn’t possible to atomically switch all of the servers at once, so the cluster can potentially split int o two independent majorities during the transition (see Fig ure 10). In order to ensure safety, conﬁguration changes must use a two-phase approach. There are a variety of ways to implement the two phases. For example, some systems (e.g., [22]) use the ﬁrst phase to disable the old conﬁgura tion so it cannot process client requests; then the second phase enables the new conﬁguration. In Raft the cluster ﬁrst switches to a transitional conﬁguration we call joint consensus; once the joint consensus has been committed, the system then transitions to the new conﬁguration. The joint consensus combines both the old and new conﬁgu rations: • Log entries are replicated to all servers in both con ﬁgurations. 10\n* * *\n##  _Figure 11: Timeline for a conﬁguration change. Dashed lines_\nshow conﬁguration entries that have been created but not\n* * *\ncommitted, and solid lines show the latest committed conﬁgu ration entry. The leader ﬁrst creates the Cold,new conﬁguration entry in its log and commits it to Cold,new (a majority of Cold and a majority of Cnew). Then it creates the Cnew entry and commits it to a majority of Cnew. There is no point in time in which Cold and Cnew can both make decisions independently. • Any server from either conﬁguration may serve as leader. • Agreement (for elections and entry commitment) re quires separate majorities from both the old and new conﬁgurations. The joint consensus allows individual servers to transition between conﬁgurations at different times without com promising safety. Furthermore, joint consensus allows the cluster to continue servicing client requests throughout the conﬁguration change. Cluster conﬁgurations are stored and communicated using special entries in the replicated log; Figure 11 illus trates the conﬁguration change process. When the leader receives a request to change the conﬁguration from Cold to Cnew, it stores the conﬁguration for joint consensus (Cold,new in the ﬁgure) as a log entry and replicates that entry using the mechanisms described previously. Once a given server adds the new conﬁguration entry to its log, it uses that conﬁguration for all future decisions (a server always uses the latest conﬁguration in its log, regardless of whether the entry is committed). This means that the leader will use the rules of Cold,new to determine when the log entry for Cold,new is committed. If the leader crashes, a new leader may be chosen under either Cold or Cold,new, depending on whether the winning candidate has received Cold,new. In any case, Cnew cannot make unilateral deci sions during this period. Once Cold,new has been committed, neither Cold nor Cnew can make decisions without approval of the other, and the Leader Completeness Property ensures that only servers with the Cold,new log entry can be elected as leader. It is now safe for the leader to create a log entry describing Cnew and replicate it t",
+      "retrieved_at": "2026-10-03T10:01:47.537759+00:00",
+      "content_type": "text/plain",
+      "body_sha256": "83383ec93ee021d51f70903337f03902516b492ac7f28f234e9819b035924ad4",
+      "total_characters": 91168,
+      "text_offset": 47487,
+      "truncated": true,
+      "focus_matched": true,
+      "dns_resolver": "cloudflare",
+      "extraction_method": "plain_text",
+      "document_characters": 91168,
+      "links": [],
+      "links_requested": false,
+      "links_truncated": false,
+      "links_scope": "selected_source",
+      "read_url_schemes": [
+        "https"
+      ]
+    },
+    "ok": true,
+    "latency_ms": 5446
+  },
+  {
+    "label": "pdf-election",
+    "arguments": {
+      "url": "https://raft.github.io/raft.pdf",
+      "focus": "5.2 Leader election",
+      "dns_resolver": "cloudflare",
+      "fresh": true,
+      "max_characters": 6000
+    },
+    "result": {
+      "url": "https://raft.github.io/raft.pdf",
+      "provider": "crawl4ai",
+      "title": "In Search of an Understandable Consensus Algorithm",
+      "text": "ring snapshots between servers. Servers retry RPCs if they do not receive a re sponse in a timely manner, and they issue RPCs in parallel for best performance. 5.2 Leader election Raft uses a heartbeat mechanism to trigger leader elec tion. When servers start up, they begin as followers. A server remains in follower state as long as it receives valid 5\n* * *\nRPCs from a leader or candidate. Leaders send periodic heartbeats (AppendEntries RPCs that carry no log entries) to all followers in order to maintain their authority. If a follower receives no communication over a period of time called the election timeout, then it assumes there is no vi able leader and begins an election to choose a new leader. To begin an election, a follower increments its current term and transitions to candidate state. It then votes for itself and issues RequestV ote RPCs in parallel to each of the other servers in the cluster. A candidate continues in this state until one of three things happens: (a) it wins the election, (b) another server establishes itself as leader, or (c) a period of time goes by with no winner. These out comes are discussed separately in the paragraphs below. A candidate wins an election if it receives votes from a majority of the servers in the full cluster for the same term. Each server will vote for at most one candidate in a given term, on a ﬁrst-come-ﬁrst-served basis (note: Sec tion 5.4 adds an additional restriction on votes). The ma jority rule ensures that at most one candidate can win the election for a particular term (the Election Safety Prop erty in Figure 3). Once a candidate wins an election, it becomes leader. It then sends heartbeat messages to all of the other servers to establish its authority and prevent new elections. While waiting for votes, a candidate may receive an AppendEntries RPC from another server claiming to be leader. If the leader’s term (included in its RPC) is at least as large as the candidate’s current term, then the candidate recognizes the leader as legitimate and returns to follower state. If the term in the RPC is smaller than the candidate’s current term, then the candidate rejects the RPC and con tinues in candidate state. The third possible outcome is that a candidate neither wins nor loses the election: if many followers become candidates at the same time, votes could be split so that no candidate obtains a majority. When this happens, each candidate will time out and start a new election by incre menting its term and initiating another round of Request V ote RPCs. However, without extra measures split votes could repeat indeﬁnitely. Raft uses randomized election timeouts to ensure that split votes are rare and that they are resolved quickly. To prevent split votes in the ﬁrst place, election timeouts are chosen randomly from a ﬁxed interval (e.g., 150–300ms). This spreads out the servers so that in most cases only a single server will time out; it wins the election and sends heartbeats before any other servers time out. The same mechanism is used to handle split votes. Each candidate restarts its randomized election timeout at the start of an election, and it waits for that timeout to elapse before starting the next election; this reduces the likelihood of another split vote in the new election. Section 9.3 shows that this approach elects a leader rapidly.\n* * *\n## _Figure 6: Logs are composed of entries, which are numbered_\nsequentially. Each entry contains the term in which it was\n* * *\ncreated (the number in each box) and a command for the state machine. An entry is considered committed if it is safe for that entry to be applied to state machines. Elections are an example of how understandability guided our choice between design alternatives. Initially we planned to use a ranking system: each candidate was assigned a unique rank, which was used to select between competing candidates. If a candidate discovered another candidate with higher rank, it would return to follower state so that the higher ranking candidate could more eas ily win the next election. We found that this approach created subtle issues around availability (a lower-ranked server might need to time out and become a candidate again if a higher-ranked server fails, but if it does so too soon, it can reset progress towards electing a leader). We made adjustments to the algorithm several times, but after each adjustment new corner cases appeared. Eventually we concluded that the randomized retry approach is more obvious and understandable. 5.3 Log replication Once a leader has been elected, it begins servicing client requests. Each client request contains a command to be executed by the replicated state machines. The leader appends the command to its log as a new entry, then is sues AppendEntries RPCs in parallel to each of the other servers to replicate the entry. When the entry has been safely replicated (as described below), the leader applies the entry to its state machine and returns the result of that execution to the client. If followers crash or run slowly, or if network packets are lost, the leader retries Append Entries RPCs indeﬁnitely (even after it has responded to the client) until all followers eventually store all log en tries. Logs are organized as shown in Figure 6. Each log en try stores a state machine command along with the term number when the entry was received by the leader. The term numbers in log entries are used to detect inconsis tencies between logs and to ensure some of the properties in Figure 3. Each log entry also has an integer index iden 6\n* * *\n## tifying its position in the log.\nThe leader decides when it is safe to apply a log en try to the state machines; such an entry is called commit ted. Raft guarantees that committed entries are durable and will eventually be executed by all of the available state machines. A log entry is committed once the leader that created the entry has replicated it on a majority of the servers (e.g., entry 7 in ",
+      "retrieved_at": "2026-10-03T10:01:55.019043+00:00",
+      "content_type": "text/plain",
+      "body_sha256": "98ca92175f539b07ec7c874d53920fd357f7586a770a9dabf1f02ab44b2b0e64",
+      "total_characters": 91168,
+      "text_offset": 24487,
+      "truncated": true,
+      "focus_matched": true,
+      "dns_resolver": "cloudflare",
+      "extraction_method": "plain_text",
+      "document_characters": 91168,
+      "links": [],
+      "links_requested": false,
+      "links_truncated": false,
+      "links_scope": "selected_source",
+      "read_url_schemes": [
+        "https"
+      ]
+    },
+    "ok": true,
+    "latency_ms": 7479
+  }
+]

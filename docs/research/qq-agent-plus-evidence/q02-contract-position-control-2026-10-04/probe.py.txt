@@ -1,0 +1,55 @@
+import asyncio, copy, hashlib, json, time
+from datetime import datetime, timezone
+from pathlib import Path
+import httpx
+ROOT=Path('/tmp/cw2-q02-contract-position-20261004')
+CONDITIONS=['current_single','split_pre_history','split_post_history']
+def stamp():return datetime.now(timezone.utc).isoformat()
+def append(name,value):
+ with (ROOT/name).open('a') as f:f.write(json.dumps(value,ensure_ascii=False)+'\n')
+def payload_for(anchor,condition):
+ payload=copy.deepcopy(anchor['payload']);messages=payload['messages']
+ assert messages[0]['role']=='system' and messages[-1]['role']=='user'
+ text=messages[0]['content'];marker='\n\n[OUTPUT CONTRACT]\n'
+ assert text.count(marker)==1
+ prefix,tail=text.split(marker)
+ policy_marker='\nPublic source tools use an evaluation-only permission policy.'
+ assert tail.count(policy_marker)==1
+ contract,policy_tail=tail.split(policy_marker)
+ rest={'role':'system','content':prefix+policy_marker+policy_tail}
+ output={'role':'system','content':'[OUTPUT CONTRACT]\n'+contract}
+ if condition=='split_pre_history':payload['messages']=[rest,output,*messages[1:]]
+ elif condition=='split_post_history':payload['messages']=[rest,*messages[1:-1],output,messages[-1]]
+ else:assert condition=='current_single'
+ return payload
+async def main():
+ ROOT.mkdir(exist_ok=True)
+ anchors=json.loads((ROOT/'anchors.json').read_text());assert len(anchors)==8
+ assert not (ROOT/'attempts.jsonl').exists(),'Inspect existing work; do not duplicate the batch'
+ secret=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+ async with httpx.AsyncClient(timeout=90,trust_env=False) as client:
+  for index,anchor in enumerate(anchors):
+   rotated=CONDITIONS[index%3:]+CONDITIONS[:index%3];order=rotated+list(reversed(rotated))
+   for sequence,condition in enumerate(order):
+    payload=payload_for(anchor,condition);assert payload['model']=='gemini-3.8-flash-high' and not payload.get('tools') and payload['stream'] is False
+    body=json.dumps(payload,ensure_ascii=False,separators=(',',':')).encode();assert secret.encode() not in body
+    item={'id':f"{anchor['anchor_id']}:{sequence}",'anchor_id':anchor['anchor_id'],'sequence':sequence,'condition':condition,'repetition':int(sequence>=3),'started_at':stamp(),'payload_sha256':hashlib.sha256(body).hexdigest()}
+    append('attempts.jsonl',dict(item,event='started'));append('actual-requests.jsonl',dict(item,payload=payload));started=time.perf_counter()
+    try:
+     response=await client.post('https://mubai.website:8318/v1/chat/completions',headers={'Authorization':f'Bearer {secret}','Content-Type':'application/json'},content=body)
+     response.raise_for_status();data=response.json();choice=data['choices'][0];message=choice['message'];reply=message.get('content')
+     assert isinstance(reply,str) and reply.strip() and not message.get('tool_calls')
+     model=data.get('model');assert model is None or isinstance(model,str) and len(model)<=256 and model.isprintable()
+     u=data.get('usage');usage=None
+     if isinstance(u,dict):
+      usage={k:u.get(k) for k in ['prompt_tokens','completion_tokens','total_tokens']};details=u.get('completion_tokens_details') or {};usage['reasoning_tokens']=details.get('reasoning_tokens') if isinstance(details,dict) else None
+     record=dict(item,event='finished',latency_ms=round((time.perf_counter()-started)*1000),finished_at=stamp(),http_status=response.status_code,reported_model=model,usage=usage,reply=reply,finish_reason=choice.get('finish_reason'))
+     assert secret not in json.dumps(record)
+     append('results.jsonl',record);append('attempts.jsonl',{k:v for k,v in record.items() if k!='reply'})
+    except Exception as exc:
+     append('attempts.jsonl',dict(item,event='failed',error_type=type(exc).__name__,latency_ms=round((time.perf_counter()-started)*1000)))
+     raise RuntimeError(type(exc).__name__) from None
+   print(json.dumps({'completed_anchor':anchor['anchor_id'],'requests_completed':(index+1)*6}),flush=True)
+try:asyncio.run(main())
+except BaseException:(ROOT/'exit-code.json').write_text(json.dumps({'exit_code':1})+'\n');raise
+else:(ROOT/'exit-code.json').write_text(json.dumps({'exit_code':0})+'\n')

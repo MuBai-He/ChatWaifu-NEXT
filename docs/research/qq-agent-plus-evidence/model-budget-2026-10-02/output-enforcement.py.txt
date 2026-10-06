@@ -1,0 +1,15 @@
+import asyncio,json,time
+from datetime import UTC,datetime
+import study as s
+import httpx2
+from chatwaifu_runtime.providers.openai_compatible import openai_compatible_endpoint
+async def main():
+ s.check_freeze();url,key=s.owner_route()
+ async with httpx2.AsyncClient(timeout=90) as client:
+  for model in ['gemini-3.1-flash-lite','gemini-3.8-flash-high']:
+   for field,limit in [('max_tokens',1),('max_completion_tokens',1),('max_tokens',4096)]:
+    payload={'model':model,'messages':[{'role':'user','content':'请依次输出从 1 到 20 的整数，用逗号隔开，不添加解释。'}],'stream':False,field:limit}
+    start=time.perf_counter();r=await client.post(openai_compatible_endpoint(url,'chat/completions'),headers={'Authorization':f'Bearer {key}'},json=payload)
+    data=r.json();record={'model':model,'requested_field':field,'requested_limit':limit,'status':r.status_code,'usage':data.get('usage'),'choices':data.get('choices') if r.status_code==200 else None,'response_model':data.get('model'),'elapsed_ms':round((time.perf_counter()-start)*1000),'observed_at':datetime.now(UTC).isoformat()}
+    s.append('output-enforcement.jsonl',record);print(json.dumps(record,ensure_ascii=False),flush=True)
+asyncio.run(main())

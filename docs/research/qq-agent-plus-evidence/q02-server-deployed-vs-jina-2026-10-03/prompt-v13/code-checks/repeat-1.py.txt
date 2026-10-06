@@ -1,0 +1,29 @@
+import asyncio
+
+async def fetch_success(task_id: int):
+    await asyncio.sleep(0.5)
+    return f"任务 {task_id} 成功"
+
+async def fetch_fail(task_id: int):
+    await asyncio.sleep(0.2)
+    raise ValueError(f"任务 {task_id} 发生错误")
+
+async def main():
+    tasks = [
+        fetch_success(1),
+        fetch_fail(2),
+        fetch_success(3),
+    ]
+
+    # 设置 return_exceptions=True
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    # 遍历结果并区分
+    for idx, res in enumerate(results, start=1):
+        if isinstance(res, Exception):
+            print(f"[{idx}] 捕获到异常: {type(res).__name__} - {res}")
+        else:
+            print(f"[{idx}] 执行成功: {res}")
+
+if __name__ == "__main__":
+    asyncio.run(main())

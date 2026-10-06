@@ -1,0 +1,27 @@
+{
+  "same_four_model_fixture_classifications": true,
+  "new_model_requests": 0,
+  "model_batch_remains_frozen_v30": true,
+  "checks": [
+    {
+      "turn_id": 1,
+      "v30_requirements": [],
+      "final_requirements": []
+    },
+    {
+      "turn_id": 2,
+      "v30_requirements": [],
+      "final_requirements": []
+    },
+    {
+      "turn_id": 3,
+      "v30_requirements": [],
+      "final_requirements": []
+    },
+    {
+      "turn_id": 4,
+      "v30_requirements": [],
+      "final_requirements": []
+    }
+  ]
+}

@@ -1,0 +1,1076 @@
+[
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:current:2",
+    "data": {
+      "id": "IX6-aq7XDNmM1e8Pto7huQY",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:current:2",
+    "data": {
+      "id": "IX6-aq7XDNmM1e8Pto7huQY",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": null,\n  \"reason\": \"在现有的对话历史中，并未",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:current:2",
+    "data": {
+      "id": "IX6-aq7XDNmM1e8Pto7huQY",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "包含关于合成档案编号的任何记录或上下文信息。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:current:2",
+    "data": {
+      "id": "IX6-aq7XDNmM1e8Pto7huQY",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 36,
+        "total_tokens": 1644,
+        "prompt_tokens": 1608
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:current:1",
+    "data": {
+      "id": "I36-atvwG7n92roP2oeZwAM",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:current:1",
+    "data": {
+      "id": "I36-atvwG7n92roP2oeZwAM",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": null,\n  \"reason\": \"提供的历史记录中未",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:current:1",
+    "data": {
+      "id": "I36-atvwG7n92roP2oeZwAM",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "包含关于合成档案编号的信息。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:current:1",
+    "data": {
+      "id": "I36-atvwG7n92roP2oeZwAM",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 28,
+        "total_tokens": 1636,
+        "prompt_tokens": 1608
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:whole_request_history:window_only:0",
+    "data": {
+      "id": "IX6-aoT8Iu2g0-kP_KD2oQk",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n  \"fact\": \"WIRE-7528\",\n  \"reason\": \"前",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:whole_request_history:window_only:0",
+    "data": {
+      "id": "IX6-aoT8Iu2g0-kP_KD2oQk",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "文末尾明确记录档案编号为 WIRE-7528。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:whole_request_history:window_only:0",
+    "data": {
+      "id": "IX6-aoT8Iu2g0-kP_KD2oQk",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 38,
+        "total_tokens": 11046,
+        "prompt_tokens": 10596,
+        "completion_tokens_details": {
+          "reasoning_tokens": 412
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:whole_request_history:window_only:2",
+    "data": {
+      "id": "IH6-asWbHa732roPvsH1wQM",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "```json",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:whole_request_history:window_only:2",
+    "data": {
+      "id": "IH6-asWbHa732roPvsH1wQM",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "\n{\n  \"fact\": \"WIRE-7528\",\n  \"reason\": \"前文助手",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:whole_request_history:window_only:2",
+    "data": {
+      "id": "IH6-asWbHa732roPvsH1wQM",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "消息末尾明确记录了“档案编号为 WIRE-7528”。\"\n}\n```",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:whole_request_history:window_only:2",
+    "data": {
+      "id": "IH6-asWbHa732roPvsH1wQM",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 48,
+        "total_tokens": 10970,
+        "prompt_tokens": 10596,
+        "completion_tokens_details": {
+          "reasoning_tokens": 326
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:window_only:1",
+    "data": {
+      "id": "Jn6-atHLE_7G0-kPttWTqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:window_only:1",
+    "data": {
+      "id": "Jn6-atHLE_7G0-kPttWTqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": \"WIRE-7528\",\n  \"reason\": \"",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:window_only:1",
+    "data": {
+      "id": "Jn6-atHLE_7G0-kPttWTqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "合成档案末尾明确注明了档案编号为 WIRE-7528。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:window_only:1",
+    "data": {
+      "id": "Jn6-atHLE_7G0-kPttWTqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 39,
+        "total_tokens": 10635,
+        "prompt_tokens": 10596
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:current:0",
+    "data": {
+      "id": "J36-apv4Lf7G0-kPttWTqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:current:0",
+    "data": {
+      "id": "J36-apv4Lf7G0-kPttWTqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": null,\n  \"reason\": \"在现有的对话历史与",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:current:0",
+    "data": {
+      "id": "J36-apv4Lf7G0-kPttWTqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "运行上下文约束中，没有提供任何关于合成档案编号的信息。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:current:0",
+    "data": {
+      "id": "J36-apv4Lf7G0-kPttWTqAo",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 36,
+        "total_tokens": 1644,
+        "prompt_tokens": 1608
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:whole_request_history:current:1",
+    "data": {
+      "id": "J36-aqfhE6Ow2roPqv-yoAc",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n  \"fact\": null,\n  \"reason\": \"历史记录中",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:whole_request_history:current:1",
+    "data": {
+      "id": "J36-aqfhE6Ow2roPqv-yoAc",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "早前的助手回复已被省略，未提供任何合成档案编号。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:whole_request_history:current:1",
+    "data": {
+      "id": "J36-aqfhE6Ow2roPqv-yoAc",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 33,
+        "total_tokens": 1977,
+        "prompt_tokens": 1608,
+        "completion_tokens_details": {
+          "reasoning_tokens": 336
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:whole_request_history:current:0",
+    "data": {
+      "id": "KH6-araLB4_32roP-5XT2Qk",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n  \"fact\": null,\n  \"reason\": \"提供的历史记录中先前的助手消息",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:whole_request_history:current:0",
+    "data": {
+      "id": "KH6-araLB4_32roP-5XT2Qk",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "已被省略，未包含任何关于合成档案编号的信息。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:whole_request_history:current:0",
+    "data": {
+      "id": "KH6-araLB4_32roP-5XT2Qk",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 36,
+        "total_tokens": 2058,
+        "prompt_tokens": 1608,
+        "completion_tokens_details": {
+          "reasoning_tokens": 414
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:window_only:2",
+    "data": {
+      "id": "LH6-auChMPy32roP69PosQY",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:window_only:2",
+    "data": {
+      "id": "LH6-auChMPy32roP69PosQY",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": \"WIRE-7528\",\n  \"reason\": \"",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:window_only:2",
+    "data": {
+      "id": "LH6-auChMPy32roP69PosQY",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "在给出的合成档案信息中，明确记录了该档案的编号为 WIRE-7528。\"\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:window_only:2",
+    "data": {
+      "id": "LH6-auChMPy32roP69PosQY",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:window_only:2",
+    "data": {
+      "id": "LH6-auChMPy32roP69PosQY",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 45,
+        "total_tokens": 10641,
+        "prompt_tokens": 10596,
+        "prompt_tokens_details": {
+          "cached_tokens": 8164
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:whole_request_history:current:2",
+    "data": {
+      "id": "Kn6-aqvXBYe32roP94-FkAU",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "```json\n{\n  \"fact\": null,\n  \"reason\": \"历史",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:whole_request_history:current:2",
+    "data": {
+      "id": "Kn6-aqvXBYe32roP94-FkAU",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "记录中先前的助手消息已被省略，未提供任何合成档案编号的具体内容。\"\n}\n```",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:whole_request_history:current:2",
+    "data": {
+      "id": "Kn6-aqvXBYe32roP94-FkAU",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 40,
+        "total_tokens": 2181,
+        "prompt_tokens": 1608,
+        "completion_tokens_details": {
+          "reasoning_tokens": 533
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:whole_request_history:window_only:1",
+    "data": {
+      "id": "K36-at3VE6m40-kPrsio6QE",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "```json\n{",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:whole_request_history:window_only:1",
+    "data": {
+      "id": "K36-at3VE6m40-kPrsio6QE",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "\n  \"fact\": \"WIRE-7528\",\n  \"reason\": \"前文记录末尾明确提及",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:whole_request_history:window_only:1",
+    "data": {
+      "id": "K36-at3VE6m40-kPrsio6QE",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "档案编号为 WIRE-7528。\"\n}\n```",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.8-flash-high:whole_request_history:window_only:1",
+    "data": {
+      "id": "K36-at3VE6m40-kPrsio6QE",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.8-flash-control",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 44,
+        "total_tokens": 10939,
+        "prompt_tokens": 10596,
+        "completion_tokens_details": {
+          "reasoning_tokens": 299
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 8162
+        }
+      }
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:window_only:0",
+    "data": {
+      "id": "Ln6-asTdLuLTrfcPxcjbuQM",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "{\n",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:window_only:0",
+    "data": {
+      "id": "Ln6-asTdLuLTrfcPxcjbuQM",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "  \"fact\": \"WIRE-7528\",\n  \"reason\": \"",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:window_only:0",
+    "data": {
+      "id": "Ln6-asTdLuLTrfcPxcjbuQM",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "依据历史记录末尾处提供的明确文本，档案编号即为 WIRE-7528。\"\n}",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": null,
+          "native_finish_reason": null
+        }
+      ]
+    }
+  },
+  {
+    "key": "gemini-3.1-flash-lite:whole_request_history:window_only:0",
+    "data": {
+      "id": "Ln6-asTdLuLTrfcPxcjbuQM",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gemini-3.1-flash-lite",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": null,
+            "tool_calls": null
+          },
+          "finish_reason": "stop",
+          "native_finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "completion_tokens": 43,
+        "total_tokens": 10639,
+        "prompt_tokens": 10596
+      }
+    }
+  }
+]

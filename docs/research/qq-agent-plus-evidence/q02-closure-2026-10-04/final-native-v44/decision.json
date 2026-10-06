@@ -1,0 +1,54 @@
+{
+  "code_version": "v44",
+  "frozen_persona": "unchanged prior closure-c1 evaluation persona; never made production default",
+  "approved_q02": false,
+  "new_role_candidate_adopted": false,
+  "source_answer_candidate_adopted": false,
+  "new_role_directed_validation_executed": false,
+  "original_full_864_reply_432_pair_three_presentation_gate_executed": false,
+  "native_four_logical_turns_executed": 4,
+  "native_model_publications": 3,
+  "native_runtime_fallbacks": 1,
+  "native_checker_rejections": 0,
+  "native_unexecuted_turns": 0,
+  "native_T3_review_stage_http": 0,
+  "frozen_control_model_publications": 2,
+  "frozen_control_quality_counts": {
+    "complete": 0,
+    "partial": 2
+  },
+  "actual_new_model_http": 18,
+  "actual_new_control_source_http": 0,
+  "initial_setup_failures_model_http": 0,
+  "manual_model_resampling_or_replacement": false,
+  "new_prompt_rules": 0,
+  "new_persona_rules": 0,
+  "code_changes_since_v44_freeze": 0,
+  "production_changes_this_stage": false,
+  "model": "gemini-3.8-flash-high",
+  "endpoint": "https://mubai.website:8318/v1",
+  "search": "server production SearXNG18080",
+  "reader": "server production Crawl4AI11235",
+  "public_read_dns": "cloudflare",
+  "builtin_fallback": false,
+  "agy": false,
+  "native_provider_limits_known": false,
+  "new_operating_profile_is_error_bound": false,
+  "blockers": [
+    "Configured estimated input allowance blocks T3 review at 21683/21370; exact-wire operating control succeeds at22341 without quality approval.",
+    "Current/nationwide source coverage remains scoped, not proven exhaustive; guide lacks visible publication date.",
+    "Withheld/reviewed models retain unsupported precise source bibliography; full-input T4 repeats unsupported dates.",
+    "Role hard-boundary/degeneration candidate and full original A/B remain behind source/fidelity stability gates."
+  ],
+  "valid_acceptance_reused": [
+    "Prior protocol/unknown-tool/correction/cancellation/permission and complete four-turn flow evidence at its recorded scope.",
+    "Reader HTML/PDF component deployment and read validation.",
+    "Weixin text delivery and desktop TTS/playback ACK/user-heard confirmation at original recorded scope."
+  ],
+  "next_dependency_order": [
+    "Keep confirmed runtime fixes and unchanged evidence; decide an operating budget profile only from admitted input/native measurements, without automatic production enlargement.",
+    "Resolve actual source/date/current-coverage gaps explicitly, separate from frozen-source model grading.",
+    "Choose one source-bound answer-fidelity approach for existing exact failures, before another directed test; no accumulated prompt synonyms/fields/resampling.",
+    "Only after stability, freeze one role candidate, directed hard-boundary/degeneration validation, then unchanged full864 gate."
+  ]
+}

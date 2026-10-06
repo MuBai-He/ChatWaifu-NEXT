@@ -1,0 +1,159 @@
+"""Read-only frozen evidence audit; not a model run or semantic quality judge."""
+
+import argparse
+import hashlib
+import json
+from collections import Counter
+from pathlib import Path
+
+
+def load(path):
+    return json.loads(path.read_text())
+
+
+def rows(path):
+    return [json.loads(line) for line in path.read_text().splitlines() if line]
+
+
+def sha(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def text_sha(text):
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--write-report", action="store_true")
+parser.add_argument("--check-current", action="store_true")
+args = parser.parse_args()
+phase = Path(__file__).resolve().parent
+root = phase.parent
+repo = phase.parents[4]
+candidate = load(phase / "candidate-sha256.json")["files"]
+source_tree = load(phase / "live/source-tree-manifest.json")["files"]
+for rel, digest in candidate.items():
+    snapshot = phase / "candidate-code" / (rel.replace("/", "__") + ".txt")
+    assert sha(snapshot) == digest
+    assert load(phase / "live/server-preflight.json")["server_source_sha256"][rel] == digest
+    assert source_tree[rel] == digest
+    if args.check_current:
+        assert sha(repo / rel) == digest
+policy = "services/runtime/src/chatwaifu_runtime/agent/source_answer.py"
+assert load(phase / "plan.json")["before_sha256"][policy] == candidate[policy]
+assert sha(phase / "before-code" / (policy.replace("/", "__") + ".txt")) == candidate[policy]
+for rel, digest in load(phase / "control-code-sha256.json").items():
+    assert sha(phase / "control-code" / (rel.replace("/", "__") + ".txt")) == digest
+    assert source_tree[rel] == digest
+    if args.check_current:
+        assert sha(repo / rel) == digest
+previous_counts = {}
+for group, digest in load(phase / "prior-versions.json").items():
+    prior = root / group
+    assert sha(prior / "manifest.json") == digest
+    files = load(prior / "manifest.json")["files"]
+    for rel, expected in files.items():
+        assert sha(prior / rel) == expected, (group, rel)
+    previous_counts[group] = len(files)
+for rel, digest in load(phase / "document-sha256.json").items():
+    assert sha(phase / "final-documents" / (rel.replace("/", "__") + ".txt")) == digest
+    if args.check_current:
+        assert sha(repo / rel) == digest
+for name in ("fixtures.json", "frozen-sources.json", "budget.json"):
+    assert load(phase / name) == load(phase / "live" / name)
+assert (phase / "persona.md").read_bytes() == (root / "candidate-one/persona.md").read_bytes()
+assert (
+    sha(phase / "persona.md") == "204644ee525210c1cb253688d7db218a2a2bc3fe6e91bfb3f5d135e9c5e47959"
+)
+assert (phase / "run_natural_provided.py.txt").read_bytes() == (
+    phase / "live/run_natural_provided.py"
+).read_bytes()
+after = load(phase / "live/source-tree-after.json")
+assert after["source_entries"] == len(source_tree) == 413
+assert not after["changed_paths"] and not after["matching_active_model_runners"]
+software = load(phase / "software-checks.json")
+assert software["local_after"] == software["server_after"] == "265 passed"
+assert not software["production_changed"] and software["policy_file_unchanged"]
+assert not software["frames_enabled"] and not software["default_persona_changed"]
+assert "265 passed" in (phase / "tests-final.log").read_text()
+assert "265 passed" in (phase / "live/server-tests.log").read_text()
+account = load(phase / "live/accounting.json")
+assert account["actual_http_attempts"] == account["logical_requests"] == 32
+assert account["reported_usage_calls"] == 32 and not account["unknown_usage_logical_calls"]
+assert account["provider_published_replies"] == 16 and not account["quality_approval"]
+integrity = load(phase / "live/flow-integrity.json")
+assert len(integrity["wire_checks"]) == 32 and len(integrity["publication_checks"]) == 16
+assert all(
+    not row["runtime_appended_or_rewrote_final_text"] for row in integrity["publication_checks"]
+)
+results = {row["sample_key"]: row for row in rows(phase / "live/results.jsonl")}
+review = load(phase / "primary-review.json")
+assert len(review["items"]) == 16 and not review["q02_approval"]
+for item in review["items"]:
+    assert item["full_text_reviewed"] and item["review_type"] == "primary_author_unblinded"
+    assert text_sha(results[item["sample_key"]]["reply_text"]) == item["reply_sha256"]
+assert (
+    dict(Counter(row["grade"] for row in review["items"]))
+    == review["summary"]
+    == {"complete": 14, "partial": 2}
+)
+component = load(phase / "component-review.json")
+rounds = [
+    row
+    for row in rows(phase / "live/provider-rounds.jsonl")
+    if row["sample_key"] == component["sample_key"]
+]
+assert [row["phase"] for row in rounds] == ["draft", "review"]
+assert text_sha(rounds[0]["raw_text"]) == component["draft_sha256"]
+assert (
+    text_sha(rounds[1]["raw_text"]) == component["review_sha256"] == component["published_sha256"]
+)
+assert (
+    component["runtime_final_text_equal_to_review"]
+    and not component["runtime_appended_or_rewrote_review"]
+)
+assert not component["draft_as_fallback_adopted"] and not component["later_t4_replaces_failed_t3"]
+decision = load(phase / "decision.json")
+assert not decision["q02_approval"] and not decision["whole_version_adopted"]
+assert not decision["production_deployed"] and not decision["full_ab_started"]
+assert not decision["frames_enabled"] and not decision["prompt_or_persona_rules_added"]
+cumulative = load(phase / "cumulative-accounting.json")
+assert cumulative["cumulative_actual_http_attempts"] == 185 + 32 == 217
+assert cumulative["cumulative_known_usage_calls"] == 166 + 32 == 198
+assert (
+    cumulative["cumulative_unknown_usage_calls"] == 19 and not cumulative["unknown_rows_backfilled"]
+)
+report = {
+    "actual_model_http": 32,
+    "complete_flows": 4,
+    "provider_published_replies": 16,
+    "wire_payloads_bound": 32,
+    "raw_review_published_exactly": 16,
+    "primary_grades": review["summary"],
+    "semantic_quality_auto_approval": False,
+    "q02_approval": False,
+    "production_deployment": False,
+    "prompt_or_persona_rules_added": False,
+    "isolated_python_source_entries": 413,
+    "isolated_source_unchanged_after_run": True,
+    "prior_frozen_entries_unchanged": previous_counts,
+    "documents_snapshotted": len(load(phase / "document-sha256.json")),
+    "cumulative_model_http": 217,
+    "cumulative_unknown_usage_calls": 19,
+    "live_search_read_tts_channel_calls": 0,
+    "pending_model_runners": 0,
+    "current_checkout_check_optional": True,
+}
+out = phase / "final-artifact-audit.json"
+if args.write_report:
+    assert not out.exists()
+    out.write_text(json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2) + "\n")
+else:
+    assert load(out) == report
+    actual = {
+        str(p.relative_to(phase)): sha(p)
+        for p in phase.rglob("*")
+        if p.is_file() and p != phase / "manifest.json"
+    }
+    assert actual == load(phase / "manifest.json")["files"]
+print(json.dumps(report, ensure_ascii=False, sort_keys=True))

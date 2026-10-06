@@ -1,0 +1,62 @@
+"""One existing Runtime revision over each saved failed checklist; no new rules/tools."""
+import asyncio,contextlib,hashlib,json,sys,time
+from dataclasses import replace
+from pathlib import Path
+from uuid import UUID,uuid5,NAMESPACE_URL
+ROOT=Path('/tmp/cw2-q02-source-companion-v35-eval')
+STAGE=Path('/tmp/cw2-q02-deictic-revision-20261004')
+INPUT=Path('/tmp/cw2-q02-closure-candidate-one-20261004')
+sys.path[:0]=[str(ROOT/'services/runtime/src'),str(ROOT/'packages/protocol-python/src'),str(ROOT/'packages/model-worker-sdk-python/src'),'/tmp/cw2-q02-eval-deps',str(ROOT)]
+import httpx2
+from chatwaifu_runtime.agent.input_budget import fit_input_budget
+from chatwaifu_runtime.agent.source_answer import source_answer_revision_prompt
+from chatwaifu_runtime.providers.contracts import LlmRequest,LlmInputBudget,LlmTextDelta,LlmResponseCompleted,LlmToolCallRequested
+from chatwaifu_runtime.providers.openai_compatible import OpenAiCompatibleLlmProvider,build_messages,build_chat_completions_payload
+from tools.runtime_source_evaluation import _RecordedProvider
+KEY=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+assert not (STAGE/'admission.json').exists(), 'Inspect existing invocation before retry'
+STAGE.mkdir(mode=0o700,exist_ok=True)
+results=[json.loads(l) for l in (INPUT/'results/results.jsonl').read_text().splitlines()]
+wires={w['generation_id']:w for w in (json.loads(l) for l in (INPUT/'actual-provider-payloads.jsonl').read_text().splitlines())}
+sources=json.loads((INPUT/'frozen-sources.json').read_text())
+failed=[r for r in results if r['scenario_id']=='frozen_airchina' and r['turn_id']==4]
+assert len(failed)==2
+
+def append(name,row):
+ text=json.dumps(row,ensure_ascii=False,default=str);assert KEY not in text
+ with (STAGE/name).open('a') as f:f.write(text+'\n')
+append('admission.json',{'model':'gemini-3.8-flash-high','provider_streams_max':4,'actual_http_max':8,'original_policy_sha256':hashlib.sha256(source_answer_revision_prompt('X',('https://example.org',)).encode()).hexdigest(),'scope':'same frozen failed payload/draft with existing production source-answer revision only; not live skill receipt or complete flow','new_prompt_rules':False,'production_changed':False,'q02_approved':False})
+http_count=0;current='';original_stream=httpx2.AsyncClient.stream
+
+def capture(self,method,url,**kwargs):
+ global http_count
+ if method.upper()=='POST' and str(url).endswith('/chat/completions'):
+  assert http_count<8;http_count+=1;body=kwargs['json'];assert body['model']=='gemini-3.8-flash-high'
+  append('actual-provider-payloads.jsonl',{'key':current,'attempt':http_count,'payload':body,'payload_sha256':hashlib.sha256(json.dumps(body,ensure_ascii=False,sort_keys=True).encode()).hexdigest()})
+ return original_stream(self,method,url,**kwargs)
+httpx2.AsyncClient.stream=capture
+async def main():
+ global current
+ provider=OpenAiCompatibleLlmProvider(base_url='https://mubai.website:8318/v1',model='gemini-3.8-flash-high',api_key=KEY,timeout_seconds=180,request_usage=True)
+ recorded=_RecordedProvider(provider,STAGE/'provider-rounds.jsonl',4)
+ for r in failed:
+  p=wires[str(uuid5(NAMESPACE_URL,r['sample_key']))]['payload'];messages=p['messages'];assert messages[-1]['role']=='user'
+  base=LlmRequest(UUID(wires[str(uuid5(NAMESPACE_URL,r['sample_key']))]['generation_id']),messages[-1]['content'],messages[0]['content'],history=tuple((m['role'],m['content']) for m in messages[1:-1]),input_budget=LlmInputBudget(21370),max_output_tokens=8192)
+  assert build_chat_completions_payload('gemini-3.8-flash-high',base,build_messages(base))=={k:v for k,v in p.items() if k!='stream_options'}
+  for repeat in range(2):
+   current=f"{r['sample_key']}:existing_revision:r{repeat}";recorded.sample_key=current
+   request=fit_input_budget(replace(base,continuation_system_prompt=source_answer_revision_prompt(r['raw_reply'],(sources['airchina']['url'],))))
+   assert request.history==base.history and request.user_text==base.user_text
+   before=time.monotonic();row={'key':current,'reply':'','complete':False,'original_payload_sha256':wires[str(uuid5(NAMESPACE_URL,r['sample_key']))]['payload_sha256'],'draft_sha256':hashlib.sha256(r['raw_reply'].encode()).hexdigest()}
+   try:
+    stream=recorded.stream(request)
+    async with contextlib.aclosing(stream):
+     async for e in stream:
+      if isinstance(e,LlmTextDelta):row['reply']+=e.text
+      elif isinstance(e,LlmToolCallRequested):raise RuntimeError('No tool execution allowed')
+      elif isinstance(e,LlmResponseCompleted):row['complete']=e.finish_reason=='stop' and bool(row['reply'].strip())
+   except Exception as e:row['error_type']=type(e).__name__
+   row['latency_ms']=round((time.monotonic()-before)*1000);append('results.jsonl',row)
+   print(json.dumps({k:row.get(k) for k in ['key','complete','error_type','latency_ms']}),flush=True)
+ append('exit.json',{'exit_code':0,'actual_http':http_count})
+asyncio.run(main())

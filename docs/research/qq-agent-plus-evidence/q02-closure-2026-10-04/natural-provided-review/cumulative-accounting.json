@@ -1,0 +1,18 @@
+{
+  "cumulative_actual_http_attempts": 217,
+  "cumulative_known_usage_calls": 198,
+  "cumulative_unknown_usage_calls": 19,
+  "current_actual_http_attempts": 32,
+  "is_full_usage_or_cost": false,
+  "known_usage_subtotals": {
+    "completion_tokens": 72478,
+    "prompt_tokens": 1078381,
+    "total_tokens": 1311861
+  },
+  "offline_reviews_counted_as_model_calls": false,
+  "previous_actual_http_attempts": 185,
+  "previous_known_usage_calls": 166,
+  "previous_unknown_usage_calls": 19,
+  "unknown_rows_backfilled": false,
+  "usd_cost": null
+}

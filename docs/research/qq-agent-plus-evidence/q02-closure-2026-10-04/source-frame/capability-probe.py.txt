@@ -1,0 +1,43 @@
+"""Bounded capability check; not answer-quality acceptance."""
+import asyncio, hashlib, json, sys, time
+from pathlib import Path
+ROOT=Path('/tmp/cw2-q02-deictic-v36-eval')
+sys.path[:0]=['/tmp/cw2-q02-eval-deps',str(ROOT/'services/runtime/src')]
+import httpx2
+from jsonschema import validate
+STAGE=Path('/tmp/cw2-q02-source-frame-capability-20261004')
+assert not (STAGE/'admission.json').exists(), 'Inspect the existing invocation, do not duplicate'
+STAGE.mkdir(mode=0o700,exist_ok=True)
+key=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+def save(name, row):
+ text=json.dumps(row,ensure_ascii=False,default=str)
+ assert key not in text
+ with (STAGE/name).open('a') as f:f.write(text+'\n')
+save('admission.json',{'model':'gemini-3.8-flash-high','endpoint':'https://mubai.website:8318/v1','http_limit':2,'scope':'json_schema wire capability only','production_changed':False})
+async def main():
+ for i in range(2):
+  schema={'type':'object','properties':{'schema_version':{'type':'string','enum':['1.0']},'marker':{'type':'string','enum':[f'frame-{i}']},'answer':{'type':'string'},'evidence_gaps':{'type':'array','items':{'type':'string'}}},'required':['schema_version','marker','answer','evidence_gaps'],'additionalProperties':False}
+  payload={'model':'gemini-3.8-flash-high','messages':[{'role':'user','content':'只知道这份示例材料说“每人最多两个”，没有发布日期和适用主体。简要说明材料说了什么，以及缺少哪些依据。'}],'stream':True,'max_tokens':2048,'stream_options':{'include_usage':True},'response_format':{'type':'json_schema','json_schema':{'name':'source_answer_frame_v1','strict':True,'schema':schema}}}
+  save('payloads.jsonl',{'case':i,'payload':payload,'sha256':hashlib.sha256(json.dumps(payload,ensure_ascii=False,sort_keys=True).encode()).hexdigest()})
+  before=time.monotonic();row={'case':i,'status':None,'reply':'','finish_reason':None,'usage':None,'reported_model_ids':[],'schema_valid':False}
+  try:
+   async with httpx2.AsyncClient(timeout=120) as client:
+    async with client.stream('POST','https://mubai.website:8318/v1/chat/completions',headers={'Authorization':f'Bearer {key}'},json=payload) as response:
+     row['status']=response.status_code
+     response.raise_for_status()
+     async for line in response.aiter_lines():
+      if not line.startswith('data:'):continue
+      data=line[5:].strip()
+      if data=='[DONE]':continue
+      packet=json.loads(data)
+      if packet.get('usage') is not None:row['usage']=packet['usage']
+      if packet.get('model') and packet['model'] not in row['reported_model_ids']:row['reported_model_ids'].append(packet['model'])
+      for choice in packet.get('choices',[]):
+       row['reply']+=choice.get('delta',{}).get('content') or ''
+       if choice.get('finish_reason') is not None:row['finish_reason']=choice['finish_reason']
+   parsed=json.loads(row['reply']);validate(parsed,schema);row['schema_valid']=True
+  except Exception as exc:row['error_type']=type(exc).__name__
+  row['latency_ms']=round((time.monotonic()-before)*1000);save('results.jsonl',row)
+  print(json.dumps({k:row.get(k) for k in ['case','status','finish_reason','schema_valid','error_type','latency_ms']}),flush=True)
+ save('exit.json',{'terminal':True,'http_attempts':2})
+asyncio.run(main())

@@ -1,0 +1,58 @@
+import hashlib,json,random,re,unicodedata
+from collections import defaultdict
+from pathlib import Path
+from jsonschema import Draft202012Validator
+root=Path('/tmp/cw2-q02-full-prepare/cw2-q02-grounded-answer-probe-20261003')
+rows=[json.loads(s) for s in (root/'results.jsonl').read_text().splitlines()]
+assert len(rows)==18 and len({r['key'] for r in rows})==18
+
+def norm(s):return re.sub(r'\s+',' ',unicodedata.normalize('NFKC',s)).strip()
+def bodies(request):
+ result={}
+ for m in request['messages']:
+  if m['role']!='tool':continue
+  try:d=json.loads(m['content'])
+  except (TypeError,ValueError):continue
+  d=d.get('executed_result',d)
+  if d.get('ok') is True and isinstance(d.get('data'),dict):
+   data=d['data']
+   if data.get('url') and data.get('text'):result.setdefault(data['url'],[]).append(data['text'])
+ return result
+
+audit=[];masked=[];usage=defaultdict(lambda:defaultdict(int))
+for r in rows:
+ response=r.get('response',{});choices=response.get('choices',[]);message=choices[0].get('message',{}) if choices else {}
+ entry={'key':r['key'],'http_status':r.get('http_status'),'format_valid':False,'quotes':[],'latency_ms':r['latency_ms']}
+ data={};answer=''
+ if r['arm']=='original':
+  answer=message.get('content','');entry['format_valid']=bool(answer) and not message.get('tool_calls')
+ else:
+  calls=message.get('tool_calls',[])
+  if len(calls)==1 and calls[0].get('function',{}).get('name')=='cw2_grounded_answer_v1':
+   try:data=json.loads(calls[0]['function']['arguments'])
+   except (KeyError,ValueError):pass
+   schema=r['request']['tools'][0]['function']['parameters']
+   entry['format_valid']=Draft202012Validator(schema).is_valid(data)
+   answer=data.get('answer','')
+ if r['arm']=='grounded':
+  source=bodies(r['request'])
+  for i,claim in enumerate(data.get('supported_claims',[])):
+   for evidence in claim.get('evidence',[]):
+    url=evidence.get('url','');quote=evidence.get('exact_quote','');texts=source.get(url,[])
+    entry['quotes'].append({'claim_index':i,'known_read_url':url in source,'literal_match':any(quote in text for text in texts),'unicode_whitespace_match':any(norm(quote) in norm(text) for text in texts),'claim':claim.get('claim'),'url':url,'quote':quote})
+  entry['unverified_gaps']=data.get('unverified_gaps')
+ entry['body_lengths']={u:[len(s) for s in ss] for u,ss in bodies(r['request']).items()}
+ audit.append(entry)
+ masked.append({'key':r['key'],'case':r['label'],'answer':answer})
+ for k,v in response.get('usage',{}).items():
+  if isinstance(v,int):usage[r['arm']][k]+=v
+random.Random(24419).shuffle(masked)
+maskmap={};review=[]
+for i,r in enumerate(masked,1):
+ label=f'm{i:02d}';maskmap[label]=r.pop('key');r['id']=label;review.append(r)
+(root/'mechanical-audit.json').write_text(json.dumps({'quality_approved':False,'quotes_are_not_entailment':True,'items':audit,'raw_provider_usage_by_arm':usage},ensure_ascii=False,indent=2)+'\n')
+(root/'masked-answers.json').write_text(json.dumps(review,ensure_ascii=False,indent=2)+'\n')
+(root/'mask-key.json').write_text(json.dumps(maskmap,indent=2)+'\n')
+for case in ['raft','regulations']:
+ (root/(case+'-masked.txt')).write_text('\n\n'.join(r['id']+'\n'+r['answer'] for r in review if r['case']==case))
+print(json.dumps({'requests':len(rows),'http200':sum(r.get('http_status')==200 for r in rows),'blinded_answers':len(review)}))

@@ -1,0 +1,24 @@
+{
+  "cases": [
+    {
+      "case": "whole_source_omission",
+      "detected": true,
+      "exit_code": 1,
+      "raw_frozen_files_modified": false
+    },
+    {
+      "case": "published_text_rewritten",
+      "detected": true,
+      "exit_code": 1,
+      "raw_frozen_files_modified": false
+    },
+    {
+      "case": "usage_receipt_missing",
+      "detected": true,
+      "exit_code": 1,
+      "raw_frozen_files_modified": false
+    }
+  ],
+  "model_calls": 0,
+  "semantic_quality_approval": false
+}

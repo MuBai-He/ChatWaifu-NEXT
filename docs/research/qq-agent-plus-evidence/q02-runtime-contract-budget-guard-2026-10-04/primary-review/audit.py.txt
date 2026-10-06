@@ -1,0 +1,58 @@
+import hashlib,json,math
+from collections import Counter
+from datetime import datetime
+from pathlib import Path
+from chatwaifu_runtime.providers.input_estimation import count_reference_tokens
+root=Path('/tmp/cw2-q02-full-prepare/v26-contract-runtime/final-download')
+def rows(path):return [json.loads(l) for l in path.read_text().splitlines()] if path.exists() else []
+def percentile(values,q):
+    if not values:return None
+    ordered=sorted(values);p=(len(values)-1)*q;i=int(p);return round(ordered[i]+(ordered[min(i+1,len(values)-1)]-ordered[i])*(p-i),2)
+records=[];totals=[];attempts=[];errors=[];omissions=[];missing=[];failures=[];incoming=[]
+for output in sorted((root/'results').glob('*/*')):
+    group=f'{output.parent.name}/{output.name}';replies=rows(output/'results.jsonl');totals.extend(replies)
+    planned={f'{s["id"]}:r0:t{t["turn_id"]}:candidate' for s in json.loads((root/f'fixtures-{output.parent.name}.json').read_text()) for t in s['turns']}
+    missing.extend({'group':group,'key':key} for key in sorted(planned-{r['sample_key'] for r in replies}))
+    journal=rows(output/'provider-rounds.jsonl');started=[r for r in journal if r['event']=='started'];finished={r['call_id']:r for r in journal if r['event']=='finished'}
+    attempts.extend(finished.values());wire=rows(output/'actual-provider-payloads.jsonl')
+    call_for_wire=[]
+    for w in wire:
+        moment=datetime.fromisoformat(w['captured_at_utc']);eligible=[r for r in started if datetime.fromisoformat(r['started_at'])<=moment]
+        assert eligible
+        call=max(eligible,key=lambda r:datetime.fromisoformat(r['started_at']));payload=w['payload'];messages=payload['messages'];checks={}
+        checks['model']=payload['model']=='gemini-3.8-flash-high'
+        checks['wire_hash']=hashlib.sha256(json.dumps(payload,ensure_ascii=False,sort_keys=True).encode()).hexdigest()==w['payload_sha256']
+        checks['system_hash']=hashlib.sha256(messages[0]['content'].encode()).hexdigest()==call['system_prompt_sha256']
+        pre=call['pre_user_system_prompt_sha256'];matches=[i for i,m in enumerate(messages) if m['role']=='system' and isinstance(m['content'],str) and hashlib.sha256(m['content'].encode()).hexdigest()==pre] if pre else []
+        if pre:checks['pre_user_order']=len(matches)==1 and messages[matches[0]+1]['role']=='user'
+        continuation=call['continuation_system_prompt_sha256']
+        if continuation:checks['continuation_order']=messages[-1]['role']=='system' and hashlib.sha256(messages[-1]['content'].encode()).hexdigest()==continuation
+        projection={k:payload[k] for k in ['messages','tools','tool_choice'] if k in payload}
+        reference=count_reference_tokens(json.dumps(projection,ensure_ascii=False,separators=(',',':')))+16*len(messages)+16*len(payload.get('tools',[]))
+        report=call['input_budget_report'];checks['complete_reference']=reference==report['estimated_input_tokens'];checks['input_allowance']=reference<=report['estimated_token_limit']
+        expected=[]
+        for e in call['input_tool_exchanges']:
+            expected.append({'role':'assistant','content':e['assistant_text'] or None,'tool_calls':[{'id':c['call_id'],'type':'function','function':{'name':c['name'],'arguments':json.dumps(c['arguments'],ensure_ascii=False,separators=(',',':'))}} for c in e['calls']]})
+            expected.extend({'role':'tool','tool_call_id':r['call_id'],'content':json.dumps(r['content'],ensure_ascii=False,separators=(',',':'))} for r in e['results'])
+        actual=[m for m in messages if m['role']=='tool' or 'tool_calls' in m];checks['complete_tool_results']=actual==expected
+        record={'group':group,'call_id':call['call_id'],'sample_key':call['sample_key'],'reference_tokens':reference,'checks':checks,'payload_sha256':w['payload_sha256']}
+        records.append(record)
+        if not all(checks.values()):failures.append(record)
+    for c in finished.values():
+        report=c['input_budget_report'];p=(c.get('usage') or {}).get('prompt_tokens')
+        if isinstance(p,int) and p>0:errors.append(round(100*(report['estimated_input_tokens']-p)/p,4))
+        if report['omitted_history_indices'] or report['omitted_tool_preamble_indices']:omissions.append({'group':group,'call_id':c['call_id'],'report':report})
+    for r in rows(output/'incomplete.jsonl'):
+        if r['reason']!='InputBudgetExceeded':continue
+        trace=r['runtime_source_trace'];last=trace['provider_calls'][-1];sent={p['call_id'] for e in last['input_tool_exchanges'] for p in e['results']}
+        for run in trace['tool_runs']:
+            if run.get('provider_tool_call_id') in sent:continue
+            data=(run.get('result') or {}).get('data',{});text=data.get('text')
+            incoming.append({'group':group,'key':r['sample_key'],'skill_id':run['skill_id'],'state':run['state'],'url':data.get('url'),'source_text_characters':len(text) if isinstance(text,str) else 0,'text_sha256':hashlib.sha256(text.encode()).hexdigest() if isinstance(text,str) else None,'truncated':data.get('truncated'),'focus_matched':data.get('focus_matched'),'error_code':(run.get('error') or {}).get('code'),'not_in_last_provider_input':True})
+usage={}
+for key in ['prompt_tokens','completion_tokens','total_tokens','reasoning_tokens']:
+    known=[r['usage'][key] for r in attempts if r.get('usage') and r['usage'].get(key) is not None]
+    usage[key]={'reported_attempts':len(known),'attempts':len(attempts),'known_subtotal':sum(known),'complete_total':sum(known) if len(known)==len(attempts) else None}
+output={'scope':'v26 trajectory control; reference/wire checks are not quality approval; no full Q02 acceptance','logical_completed':len(totals),'logical_planned':72,'missing':missing,'actual_http_requests':len(records),'provider_finished':len(attempts),'provider_errors':dict(Counter(r['error_type'] for r in attempts if r['error_type'])),'all_attempt_usage':usage,'latency_p50_ms':percentile([r['latency_ms'] for r in totals],.5),'latency_p95_ms':percentile([r['latency_ms'] for r in totals],.95),'reference_error_percent_min_max':[min(errors),max(errors)],'reference_error_sample_count':len(errors),'wire_failures':failures,'omissions':omissions,'not_sent_after_budget_failure':incoming,'actual_wire_records':records,'primary_reviewed':21,'other_completed_quality_unreviewed':len(totals)-21,'quality_approved':False}
+(root/'accounting-and-wire-audit.json').write_text(json.dumps(output,ensure_ascii=False,indent=2)+'\n')
+print(json.dumps({k:v for k,v in output.items() if k not in ['actual_wire_records','not_sent_after_budget_failure','omissions']},ensure_ascii=False,indent=2))

@@ -1,0 +1,19 @@
+{
+  "scope": "Diagnostic-only 2x2 ablation: full character versus safety/time/tool-policy; native tool messages versus untrusted user source messages. All arms omit tools schemas; no tools execute. Source result JSON stays byte-identical. Not a production behavior change or release approval.",
+  "model": "gemini-3.8-flash-high",
+  "repeats": 3,
+  "arms": [
+    "character_native",
+    "character_source_user",
+    "neutral_native",
+    "neutral_source_user"
+  ],
+  "source_result_json_sha256": [
+    "7da93048a53298f4dc348b1c4e19e33a913782e337814a14fcfd4b67eff1a39d",
+    "e4fd143f394c233d19547a99593e614d30bc9b97ca3bd47f00e6f59bc856e20b",
+    "80ed28429ce93100a2e38dafe24915f0adabd64f050d6631bbf4cbba7ae7fd29"
+  ],
+  "source_capture_sha256": "b60895ab8b9a8dae6990e99aa51f1323f1ce4caea691ebdb1ab64fa7f441ff6b",
+  "source_tools_executed": 0,
+  "release_approved": false
+}

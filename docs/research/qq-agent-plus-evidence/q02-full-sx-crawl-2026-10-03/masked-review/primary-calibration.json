@@ -1,0 +1,75 @@
+{
+  "mapping_revealed": false,
+  "reviewer": "primary implementation author, version-masked; not independent/double-blind",
+  "overrides": [
+    {
+      "review_group_id": "instant_message:identity:r0",
+      "turn_id": 4,
+      "original_row_sha256": "841f14064a297a3cd09a33dd3e9a29d67640460d5bd6ebd451030788cb8eb1cb",
+      "packet_sha256": "61c62e165eab3be837a5eecd14ad8e50bab36325cdb9aa7c425177f5739534a9",
+      "previous": {
+        "candidate_1_compliance": "partial",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "1追加泛化聊天邀请，2直接闭环。"
+      },
+      "updates": {
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_naturalness": 4,
+        "candidate_2_naturalness": 4,
+        "preference": "candidate_2"
+      },
+      "reason": "在揭示映射前重读九组身份第四轮；本场景允许自然过渡，没有明确结束指令，邀请不单独降低任务符合度；自然度和偏好保留冗长/额外问题差异。"
+    },
+    {
+      "review_group_id": "single_text:identity:r0",
+      "turn_id": 4,
+      "original_row_sha256": "7d2bb977bcae3a28e2dbeaed72022db1b9ce01ee45fbed07c5a961bc1700e604",
+      "packet_sha256": "728d20f33d0f9f935329765ded0f4c44b51a8c17bd00d03e3e00f9729a868363",
+      "previous": {
+        "candidate_1_compliance": "partial",
+        "candidate_2_compliance": "fail",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "均再邀继续聊；2在用户确认后直接另起问句。"
+      },
+      "updates": {
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_naturalness": 3,
+        "candidate_2_naturalness": 3,
+        "preference": "candidate_1"
+      },
+      "reason": "在揭示映射前重读九组身份第四轮；本场景允许自然过渡，没有明确结束指令，邀请不单独降低任务符合度；自然度和偏好保留冗长/额外问题差异。"
+    },
+    {
+      "review_group_id": "default_voice:identity:r0",
+      "turn_id": 4,
+      "original_row_sha256": "1bd5062449628bea610a05d0ebf27b0013a1242f974762b4c06902a3f2d53bcd",
+      "packet_sha256": "9d7b4934af4fae9c1c73cf8e001b3037745d5d337a41a7d8693ec522572d96e7",
+      "previous": {
+        "candidate_1_compliance": "partial",
+        "candidate_2_compliance": "partial",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "均追加通用帮忙邀请，未自然停在确认。"
+      },
+      "updates": {
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_naturalness": 3,
+        "candidate_2_naturalness": 3,
+        "preference": "tie"
+      },
+      "reason": "在揭示映射前重读九组身份第四轮；本场景允许自然过渡，没有明确结束指令，邀请不单独降低任务符合度；自然度和偏好保留冗长/额外问题差异。"
+    }
+  ],
+  "persona_numeric_values_usable": false,
+  "persona_exclusion_reason": "Append helper supplied a constant 4 rather than explicit per-item measurements.",
+  "quality_approved": false
+}

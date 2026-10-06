@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "identity": {
+    "tool": "evaluate_character_scenarios",
+    "version": "1.2.0",
+    "fixtures_hash": "1a2281443a1c0fc5",
+    "provider": "openai_compatible",
+    "model": "claude-opus-4-6-thinking",
+    "repeats": 3,
+    "base_url_hash": "937c7a5a291b7e56",
+    "input_usd_per_million": null,
+    "output_usd_per_million": null,
+    "pricing_source": null,
+    "cost_policy": "no_cost_ceiling",
+    "cost_ceiling": null,
+    "variants": {
+      "baseline_v3": {
+        "hash": "7f9daf3c6cefd57f"
+      },
+      "candidate_v4": {
+        "hash": "3ab060352dcb8e25"
+      }
+    }
+  },
+  "source_partitions": [
+    {
+      "batch": 1,
+      "path": "results.jsonl",
+      "sha256": "b2a8d850573bf1893f8d66008101ddae07560ef3a9d2c0188cb53b244074d95b",
+      "samples": 96
+    },
+    {
+      "batch": 2,
+      "path": "results.jsonl",
+      "sha256": "d5bc9b13c32edf6758ad02492c94b128c6a90c26380ad6a4ab8d5d0c8837f83b",
+      "samples": 96
+    },
+    {
+      "batch": 3,
+      "path": "results.jsonl",
+      "sha256": "978c63c46c3e0e21e5f7a11cc827db8e8a490857981dfdc96c5a066793046314",
+      "samples": 96
+    }
+  ],
+  "source_created_at": [
+    "2026-09-30T09:22:19.354136+00:00",
+    "2026-09-30T09:22:19.685586+00:00",
+    "2026-09-30T09:22:19.976407+00:00"
+  ],
+  "complete": true,
+  "release_approved": false
+}

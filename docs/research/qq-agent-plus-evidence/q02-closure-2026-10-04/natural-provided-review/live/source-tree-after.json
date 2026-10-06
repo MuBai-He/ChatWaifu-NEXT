@@ -1,0 +1,8 @@
+{
+  "changed_paths": [],
+  "matching_active_model_runners": [],
+  "model_calls": 0,
+  "root": "/tmp/cw2-q02-natural-provided-v40-eval",
+  "scope": "read-only SHA comparison after live run; source entries are Python files in isolated root, not production rollout",
+  "source_entries": 413
+}

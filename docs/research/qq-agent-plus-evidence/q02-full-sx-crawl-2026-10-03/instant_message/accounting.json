@@ -1,0 +1,171 @@
+{
+  "logical_completed": 288,
+  "expected_logical": 288,
+  "unique_completed": 288,
+  "provider_started": 342,
+  "provider_finished": 342,
+  "provider_unfinished": 0,
+  "actual_http_requests": 342,
+  "unmatched_http_requests": [],
+  "provider_attempts_without_wire": [],
+  "http_model_ids": [
+    "gemini-3.8-flash-high"
+  ],
+  "models_correct": true,
+  "all_attempt_usage": {
+    "prompt_tokens": {
+      "attempts": 342,
+      "reported_attempts": 342,
+      "known_subtotal": 1103254,
+      "complete_total": 1103254
+    },
+    "completion_tokens": {
+      "attempts": 342,
+      "reported_attempts": 342,
+      "known_subtotal": 45314,
+      "complete_total": 45314
+    },
+    "total_tokens": {
+      "attempts": 342,
+      "reported_attempts": 342,
+      "known_subtotal": 1298667,
+      "complete_total": 1298667
+    },
+    "reasoning_tokens": {
+      "attempts": 342,
+      "reported_attempts": 300,
+      "known_subtotal": 150099,
+      "complete_total": null
+    }
+  },
+  "provider_errors": {},
+  "incomplete_records": 0,
+  "still_missing_samples": [],
+  "paired_samples": 144,
+  "paired_input_mismatches": [],
+  "reply_origins": {
+    "provider": 279,
+    "runtime_fallback": 9
+  },
+  "reply_finish_reasons": {
+    "stop": 279,
+    "other": 9
+  },
+  "latency": {
+    "count": 288,
+    "p50_ms": 4461,
+    "p95_ms": 17196
+  },
+  "variants": {
+    "baseline": {
+      "logical_completed": 144,
+      "all_attempt_usage": {
+        "prompt_tokens": {
+          "attempts": 172,
+          "reported_attempts": 172,
+          "known_subtotal": 584062,
+          "complete_total": 584062
+        },
+        "completion_tokens": {
+          "attempts": 172,
+          "reported_attempts": 172,
+          "known_subtotal": 23219,
+          "complete_total": 23219
+        },
+        "total_tokens": {
+          "attempts": 172,
+          "reported_attempts": 172,
+          "known_subtotal": 686736,
+          "complete_total": 686736
+        },
+        "reasoning_tokens": {
+          "attempts": 172,
+          "reported_attempts": 155,
+          "known_subtotal": 79455,
+          "complete_total": null
+        }
+      },
+      "latency": {
+        "count": 144,
+        "p50_ms": 4554,
+        "p95_ms": 17196
+      },
+      "scenarios": {
+        "greeting": 12,
+        "teasing": 12,
+        "correction": 12,
+        "stop_joking": 12,
+        "technical_help": 12,
+        "low_mood": 12,
+        "goodbye": 12,
+        "identity": 12,
+        "verbose_history_pressure": 12,
+        "topic_switch": 12,
+        "insufficient_shared_history": 12,
+        "detailed_answer": 12
+      }
+    },
+    "candidate": {
+      "logical_completed": 144,
+      "all_attempt_usage": {
+        "prompt_tokens": {
+          "attempts": 170,
+          "reported_attempts": 170,
+          "known_subtotal": 519192,
+          "complete_total": 519192
+        },
+        "completion_tokens": {
+          "attempts": 170,
+          "reported_attempts": 170,
+          "known_subtotal": 22095,
+          "complete_total": 22095
+        },
+        "total_tokens": {
+          "attempts": 170,
+          "reported_attempts": 170,
+          "known_subtotal": 611931,
+          "complete_total": 611931
+        },
+        "reasoning_tokens": {
+          "attempts": 170,
+          "reported_attempts": 145,
+          "known_subtotal": 70644,
+          "complete_total": null
+        }
+      },
+      "latency": {
+        "count": 144,
+        "p50_ms": 4187,
+        "p95_ms": 13442
+      },
+      "scenarios": {
+        "greeting": 12,
+        "teasing": 12,
+        "correction": 12,
+        "stop_joking": 12,
+        "technical_help": 12,
+        "low_mood": 12,
+        "goodbye": 12,
+        "identity": 12,
+        "verbose_history_pressure": 12,
+        "topic_switch": 12,
+        "insufficient_shared_history": 12,
+        "detailed_answer": 12
+      }
+    }
+  },
+  "source_outcomes": {
+    "web.search:succeeded": 9,
+    "web.read:failed": 6,
+    "web.read:succeeded": 6,
+    "web.search:failed": 6
+  },
+  "history_omissions": 0,
+  "tool_preamble_omissions": 0,
+  "quality_approved": false,
+  "quality_status": "requires direct version-masked and factual review; these are accounting checks only",
+  "reference_estimation_error_pct_range": [
+    -26.225798340457633,
+    45.79124579124579
+  ]
+}

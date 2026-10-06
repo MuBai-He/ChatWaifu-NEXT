@@ -1,0 +1,11 @@
+{
+  "version": "v41 evaluator1.33.0 + unchanged v40 Runtime / closure-c1",
+  "q02_passed": false,
+  "dns_evaluator_implementation": "retained; actual configuration enforced, original requested/effective values separately recorded; no prompt change",
+  "deployment": "no production code/config/service changes; production reader/Sear fingerprints and user runtime state unchanged",
+  "stage_result": "S1 discovery/read partly successful, end-to-end source-answer flow rejected:1model reply/3Runtime fallback; no process RuntimeError or checker rejection, zero unexecuted Runtime turns; T4 provider not dispatched",
+  "quality_gate": "v40 14complete/2partial and rejected candidate remain; current S1 is not frozen-corpus improvement evidence",
+  "retries_or_replacement_samples": false,
+  "actual_model_http": 15,
+  "next_dependency": "deterministic explicit prior-material/no-new-retrieval intent defect; separately reproduce optional-decision mandatory overhead at budget boundary. No new prompt, no larger budget and no full A/B until upstream stable."
+}

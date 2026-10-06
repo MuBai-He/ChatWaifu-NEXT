@@ -1,0 +1,12 @@
+{
+  "accepted": true,
+  "tool_version": "1.2.0",
+  "fixture_sha256": "1a2281443a1c0fc50488bb6f21ddd552cdc3ba18fed96f4dba43c1ca176beaad",
+  "unique_samples": 288,
+  "independent_oracle_turns": 48,
+  "familiar_samples": 168,
+  "acquaintance_samples": 120,
+  "persona_sha256": "3ab060352dcb8e25eed5c0b729905f0d5f0eab51c2afef091440c0c38f0cb808",
+  "compiler_sha256": "7c85a6ef6515d89c57236ead09546d0e6d536d102c38e62b090a1ce47fd45194",
+  "demo_is_quality_evidence": false
+}

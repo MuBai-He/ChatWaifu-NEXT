@@ -1,0 +1,48 @@
+{
+  "created_at": "2026-10-03T10:16:57.033162+00:00",
+  "identity": {
+    "tool": "evaluate_character_scenarios",
+    "version": "1.22.1",
+    "prompt_as_of": "2026-10-03T04:15:00+00:00",
+    "state_time": "2026-01-01T00:00:00+00:00",
+    "fixtures_hash": "89d99c08ddd9a7b5",
+    "provider": "openai_compatible",
+    "model": "gemini-3.8-flash-high",
+    "context_window": 32768,
+    "model_budget": {
+      "version": "1.0",
+      "input_token_limit": null,
+      "output_token_limit": null,
+      "output_reserve_tokens": 8192,
+      "max_output_tokens": 8192,
+      "estimate_margin_ratio": 0.15,
+      "section_policy": "scaled",
+      "history_turn_limit": 32,
+      "memory_candidate_limit": 24,
+      "tool_result_max_bytes": 131072
+    },
+    "repeats": 1,
+    "base_url_hash": "937c7a5a291b7e56",
+    "input_usd_per_million": null,
+    "output_usd_per_million": null,
+    "pricing_source": null,
+    "cost_policy": "no_cost_ceiling",
+    "cost_ceiling": null,
+    "variants": {
+      "candidate": {
+        "hash": "5dde07c1f242dc1d"
+      }
+    },
+    "source_snapshot_projection": "disabled_for_runtime_source_tools",
+    "execution_path": "runtime_source_tools",
+    "runtime_source_config": {
+      "permission_policy": "allow_once",
+      "dns_resolver": "cloudflare",
+      "search_provider": "searxng",
+      "reader_provider": "crawl4ai",
+      "firecrawl_allow_anonymous": false,
+      "max_provider_requests": 96,
+      "implementation_sha256": "5e40e3bc2e16a137724c061af91549c919a9fbeb03793bf75d6123228cdaf92e"
+    }
+  }
+}

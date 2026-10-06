@@ -1,0 +1,52 @@
+{
+  "scope": "Direct unmasked primary review of all 8 v14 single-text turns and tool receipts. One repetition; not causal proof of improvement/regression.",
+  "quality_approved": false,
+  "turns": [
+    {
+      "sample_key": "topic_switch:r0:t1:candidate",
+      "status": "fail",
+      "notes": "Only search succeeded; no original read. Runtime correctly returned unverified fallback, but requested technical answer was not completed."
+    },
+    {
+      "sample_key": "topic_switch:r0:t2:candidate",
+      "status": "partial",
+      "notes": "Follows food topic, but unnecessarily comments on topic switch; verbose."
+    },
+    {
+      "sample_key": "topic_switch:r0:t3:candidate",
+      "status": "partial",
+      "notes": "Relevant light teasing with no refusal, but longer than the short casual target."
+    },
+    {
+      "sample_key": "topic_switch:r0:t4:candidate",
+      "status": "pass",
+      "notes": "Answers sweet/salty preference, continues appropriate fictional character tone."
+    },
+    {
+      "sample_key": "detailed_answer:r0:t1:candidate",
+      "status": "fail",
+      "notes": "Required three categories x three suggestions present. Volunteers unverified overgeneralization that aviation generally requires <=100Wh; no source tool call on this turn."
+    },
+    {
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "status": "fail",
+      "notes": "Five searches and one old original read consume the six-call budget. Newer 3C notice was found in final search but not read. Queries use 2024/2025 despite trusted Runtime year 2026. Runtime correctly withheld unverified answer, not task completion."
+    },
+    {
+      "sample_key": "detailed_answer:r0:t3:candidate",
+      "status": "partial",
+      "notes": "Both plans include activity/time/precautions; unverified generalized 16:30-17:00 admission cutoff added."
+    },
+    {
+      "sample_key": "detailed_answer:r0:t4:candidate",
+      "status": "partial",
+      "notes": "Categories and old-source rules retained, with explicit newer-rule verification caveat. Drops both indoor activity durations and collapses alternatives. Repeats unverified admission time. No history/tool preamble trimming, so these omissions are model synthesis behavior."
+    }
+  ],
+  "next_evidence_needed": [
+    "Separate source-selection/query-planning failure from excerpt interpretation.",
+    "Resolve independent fixed search result cap / read-call scheduling without injecting known scenario answers.",
+    "Prevent non-requested legal conditions in ordinary trip advice.",
+    "Retest complete retained history synthesis before three-presentation paired acceptance."
+  ]
+}

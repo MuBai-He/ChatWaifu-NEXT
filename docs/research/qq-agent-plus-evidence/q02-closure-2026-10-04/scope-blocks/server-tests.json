@@ -1,0 +1,21 @@
+{
+  "command": [
+    "/home/mubai/chatwaifu-server/source/.venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "/tmp/cw2-q02-scope-blocks-v39-eval/services/runtime/tests/test_source_answer_state.py",
+    "/tmp/cw2-q02-scope-blocks-v39-eval/services/runtime/tests/test_conversation_source_answer_state.py",
+    "/tmp/cw2-q02-scope-blocks-v39-eval/services/runtime/tests/test_llm_response_schema.py",
+    "/tmp/cw2-q02-scope-blocks-v39-eval/services/runtime/tests/test_source_answer_frame.py",
+    "/tmp/cw2-q02-scope-blocks-v39-eval/services/runtime/tests/test_source_scope_blocks.py",
+    "/tmp/cw2-q02-scope-blocks-v39-eval/services/runtime/tests/test_conversation_source_context.py",
+    "/tmp/cw2-q02-scope-blocks-v39-eval/services/runtime/tests/test_tool_calling_agent.py",
+    "/tmp/cw2-q02-scope-blocks-v39-eval/services/runtime/tests/test_llm_input_budget.py",
+    "/tmp/cw2-q02-scope-blocks-v39-eval/services/runtime/tests/test_llm_tool_protocol.py",
+    "/tmp/cw2-q02-scope-blocks-v39-eval/services/runtime/tests/test_source_context_projection.py",
+    "/tmp/cw2-q02-scope-blocks-v39-eval/services/runtime/tests/test_source_review_pipeline.py"
+  ],
+  "exit_code": 0,
+  "source_checks": 28
+}

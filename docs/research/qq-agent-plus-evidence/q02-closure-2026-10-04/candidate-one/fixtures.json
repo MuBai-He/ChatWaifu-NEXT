@@ -1,0 +1,140 @@
+[
+  {
+    "id": "frozen_icao",
+    "name": "冻结真实资料 icao",
+    "description": "独立回答能力与跨轮保真控制；不是实时检索或完整Q02验收",
+    "initial_state": {
+      "relationship_stage": "familiar",
+      "interaction_count": 6,
+      "familiarity": 0.38,
+      "trust": 0.35,
+      "affinity": 0.35,
+      "comfort": 0.35,
+      "recent_tension": 0.0,
+      "valence": 0.2,
+      "arousal": 0.3
+    },
+    "synthetic_memory": [],
+    "seed_history": [],
+    "presentation_profile": "detailed_answer",
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "只依据提供的 ICAO 冻结公告，说明它的发布日期、生效日期、充电宝数量限制、机上充电限制和适用范围。不要联网。",
+        "expected_behavior": [
+          "忠实回答当前问题并保留资料适用范围"
+        ],
+        "forbidden_behavior": [
+          "将未核实范围说成已核实",
+          "引入所给正文无法支持的事实"
+        ],
+        "review_criteria": "作者逐条阅读完整答复和冻结原文；不以关键词或HTTP成功通过"
+      },
+      {
+        "turn_id": 2,
+        "user_text": "这份 ICAO 公告是否对100Wh和160Wh给出了具体携带分档？只依据提供的公告回答，没写就说明没写。",
+        "expected_behavior": [
+          "忠实回答当前问题并保留资料适用范围"
+        ],
+        "forbidden_behavior": [
+          "将未核实范围说成已核实",
+          "引入所给正文无法支持的事实"
+        ],
+        "review_criteria": "作者逐条阅读完整答复和冻结原文；不以关键词或HTTP成功通过"
+      },
+      {
+        "turn_id": 3,
+        "user_text": "仅凭这份 ICAO 公告，能直接证明截至2026年10月4日所有中国境内航班都实施相同数量限制吗？区分材料能证明的内容与未核实的范围，不要联网。",
+        "expected_behavior": [
+          "忠实回答当前问题并保留资料适用范围"
+        ],
+        "forbidden_behavior": [
+          "将未核实范围说成已核实",
+          "引入所给正文无法支持的事实"
+        ],
+        "review_criteria": "作者逐条阅读完整答复和冻结原文；不以关键词或HTTP成功通过"
+      },
+      {
+        "turn_id": 4,
+        "user_text": "将这份 ICAO 公告整理为三条清单，保留日期、来源链接、数量、禁止行为、机组例外及不能据此证明的适用范围。",
+        "expected_behavior": [
+          "忠实回答当前问题并保留资料适用范围"
+        ],
+        "forbidden_behavior": [
+          "将未核实范围说成已核实",
+          "引入所给正文无法支持的事实"
+        ],
+        "review_criteria": "作者逐条阅读完整答复和冻结原文；不以关键词或HTTP成功通过"
+      }
+    ]
+  },
+  {
+    "id": "frozen_airchina",
+    "name": "冻结真实资料 airchina",
+    "description": "独立回答能力与跨轮保真控制；不是实时检索或完整Q02验收",
+    "initial_state": {
+      "relationship_stage": "familiar",
+      "interaction_count": 6,
+      "familiarity": 0.38,
+      "trust": 0.35,
+      "affinity": 0.35,
+      "comfort": 0.35,
+      "recent_tension": 0.0,
+      "valence": 0.2,
+      "arousal": 0.3
+    },
+    "synthetic_memory": [],
+    "seed_history": [],
+    "presentation_profile": "detailed_answer",
+    "turns": [
+      {
+        "turn_id": 1,
+        "user_text": "只依据提供的国航冻结提示，整理它的发布日期、充电宝携带条件和适用范围。不要联网。",
+        "expected_behavior": [
+          "忠实回答当前问题并保留资料适用范围"
+        ],
+        "forbidden_behavior": [
+          "将未核实范围说成已核实",
+          "引入所给正文无法支持的事实"
+        ],
+        "review_criteria": "作者逐条阅读完整答复和冻结原文；不以关键词或HTTP成功通过"
+      },
+      {
+        "turn_id": 2,
+        "user_text": "根据这份国航提示，100Wh及以下也最多带两块吗？超过100Wh至160Wh又有哪些要求？",
+        "expected_behavior": [
+          "忠实回答当前问题并保留资料适用范围"
+        ],
+        "forbidden_behavior": [
+          "将未核实范围说成已核实",
+          "引入所给正文无法支持的事实"
+        ],
+        "review_criteria": "作者逐条阅读完整答复和冻结原文；不以关键词或HTTP成功通过"
+      },
+      {
+        "turn_id": 3,
+        "user_text": "仅凭这份国航提示，能证明所有中国境内航空公司截至2026年10月4日都实施完全相同的限制吗？说明材料能证明和不能证明的部分，不要联网。",
+        "expected_behavior": [
+          "忠实回答当前问题并保留资料适用范围"
+        ],
+        "forbidden_behavior": [
+          "将未核实范围说成已核实",
+          "引入所给正文无法支持的事实"
+        ],
+        "review_criteria": "作者逐条阅读完整答复和冻结原文；不以关键词或HTTP成功通过"
+      },
+      {
+        "turn_id": 4,
+        "user_text": "将这份国航提示整理为三条出发前检查清单，保留实质携带限制、来源日期与链接和适用范围。",
+        "expected_behavior": [
+          "忠实回答当前问题并保留资料适用范围"
+        ],
+        "forbidden_behavior": [
+          "将未核实范围说成已核实",
+          "引入所给正文无法支持的事实"
+        ],
+        "review_criteria": "作者逐条阅读完整答复和冻结原文；不以关键词或HTTP成功通过"
+      }
+    ]
+  }
+]

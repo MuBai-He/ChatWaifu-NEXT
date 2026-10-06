@@ -1,0 +1,30 @@
+{
+  "boundary_evidence": [
+    "unsupported schemas do not downgrade to prose",
+    "partial/nonterminal/oversized/late-after-terminal output rejected before publication",
+    "provider generator closed on cancellation",
+    "provisional gap state not cached after publication failure or cancellation",
+    "reset waits for completion and then clears cache; stop during commit cannot repopulate it",
+    "completed/repository/prepared-history identity bound; redacted/foreign-session/model-route state excluded",
+    "whole budget includes schema and retained gap input; truthful explicit Runtime fallback"
+  ],
+  "code_review": "Implementation author reviewed 8 actual v36-to-v37 diffs and new modules/tests; not an independent agent review",
+  "controlled_fixture_flow_completed": 16,
+  "controlled_fixture_flow_live_calls": 0,
+  "diff_check": "passed",
+  "local_tests": 298,
+  "no_agy_invocations": true,
+  "preexisting_worktree_changes_preserved": true,
+  "pyright_errors": 0,
+  "quality_api_flow_completed": 16,
+  "ruff_check": "passed",
+  "ruff_format_check": "22 Python files already formatted; frozen code unchanged",
+  "server_tests": 278,
+  "test_setup_errors_not_product_defects": [
+    "Initial vision MagicMock omitted new constructor default; fixture updated",
+    "One reset test held completion while synchronously waiting for reset; fixed using explicit completion/reset events",
+    "First runner dry controls exposed supplied-date nouns routed as publish verbs and a nonexistent events generation_id column; selectors/harness corrected before live calls",
+    "Quality runner omitted include_usage; original quality samples kept, telemetry flag corrected separately"
+  ],
+  "usage_controls": 2
+}

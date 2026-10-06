@@ -1,0 +1,27 @@
+import hashlib, json, math, sys
+from collections import Counter
+from pathlib import Path
+root = Path(sys.argv[1])
+rows = [json.loads(x) for x in (root/'results.jsonl').read_text().splitlines()]
+calls = [c for r in rows for c in r['runtime_source_trace']['provider_calls']]
+wire = [json.loads(x)['payload'] for x in (root/'actual-provider-payloads.jsonl').read_text().splitlines()]
+usage = {}
+for key in ['prompt_tokens','completion_tokens','reasoning_tokens','total_tokens']:
+    vals = [(c.get('usage') or {}).get(key) for c in calls]
+    known = [v for v in vals if v is not None]
+    usage[key] = {'reported_rounds':len(known),'total_rounds':len(vals),'known_subtotal':sum(known),'complete_total':sum(known) if len(known)==len(vals) else None}
+def latency(vals):
+    vals=sorted(vals)
+    return {'n':len(vals),'p50_nearest_rank_ms': vals[math.ceil(len(vals)*.5)-1], 'p95_nearest_rank_ms':vals[math.ceil(len(vals)*.95)-1]}
+pairs=[]
+for c in calls:
+    actual=(c.get('usage') or {}).get('prompt_tokens')
+    report=c.get('input_budget_report') or {}
+    estimate=report.get('estimated_input_tokens')
+    pairs.append({'sample_key':c['sample_key'],'call_id':c['call_id'],'actual_prompt_tokens':actual,'reference_estimated_tokens':estimate,'relative_error_pct':round((estimate-actual)/actual*100,3) if actual and estimate is not None else None,'omitted_history_indices':report.get('omitted_history_indices'),'omitted_tool_preamble_indices':report.get('omitted_tool_preamble_indices')})
+verification={'reply_count':len(rows),'unique_samples':len({r['sample_key'] for r in rows}),'provider_calls':len(calls),'actual_http_requests':len(wire),'all_system_hashes_match':len(calls)==len(wire) and all(hashlib.sha256(w['messages'][0]['content'].encode()).hexdigest()==c['system_prompt_sha256'] for w,c in zip(wire,calls)),'models': sorted({w['model'] for w in wire}),'reply_finish_reasons':dict(Counter(str(r['finish_reason']) for r in rows)),'provider_error_types': dict(Counter(str(c.get('error_type')) for c in calls))}
+revisions=[c for w,c in zip(wire,calls) if '<runtime_source_answer_revision>' in w['messages'][0]['content']]
+summary={'usage':usage,'reply_latency':latency([r['latency_ms'] for r in rows]),'revision_latency':latency([c['latency_ms'] for c in revisions]) if revisions else None,'tool_outcomes':dict(Counter(r['skill_id']+':'+r['state'] for x in rows for r in x['runtime_source_trace']['tool_runs'])),'max_actual_input':max(p['actual_prompt_tokens'] or 0 for p in pairs),'max_reference_estimate':max(p['reference_estimated_tokens'] or 0 for p in pairs),'reference_error_pct_range':[min(p['relative_error_pct'] for p in pairs if p['relative_error_pct'] is not None),max(p['relative_error_pct'] for p in pairs if p['relative_error_pct'] is not None)],'history_omission_count':sum(len(p['omitted_history_indices'] or []) for p in pairs),'tool_preamble_omission_count':sum(len(p['omitted_tool_preamble_indices'] or []) for p in pairs),'quality_approved':False}
+for name,obj in [('verification.json',verification),('summary.json',summary),('input-estimation-pairs.json',pairs)]:
+    (root/name).write_text(json.dumps(obj,ensure_ascii=False,indent=2)+'\n')
+print(json.dumps({'verification':verification,'summary':summary},ensure_ascii=False,indent=2))

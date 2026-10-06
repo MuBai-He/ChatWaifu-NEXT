@@ -1,0 +1,21 @@
+{
+  "dollar_cost": null,
+  "known_usage_calls": 166,
+  "metadata_get_requests_counted_as_model_calls": false,
+  "new_model_http_attempts": 32,
+  "old_unknown_usage_backfilled": false,
+  "prior_model_http_attempts": 153,
+  "supplier_completion_tokens_reported_subtotal": 57160,
+  "supplier_prompt_tokens_reported_subtotal": 922040,
+  "supplier_total_tokens_reported_subtotal": 1125274,
+  "this_phase": {
+    "completion_tokens": 13928,
+    "prompt_tokens": 157807,
+    "reasoning_reported_calls": 25,
+    "reasoning_reported_subtotal": 39314,
+    "reasoning_unknown_calls": 7,
+    "total_tokens": 211049
+  },
+  "total_model_http_attempts": 185,
+  "unknown_usage_calls": 19
+}

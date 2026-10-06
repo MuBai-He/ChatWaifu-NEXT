@@ -1,0 +1,88 @@
+"""Read-only S1 gap control over deployed services; no model or hidden queries."""
+import asyncio
+import hashlib
+import json
+import sys
+import time
+from datetime import UTC, datetime
+from pathlib import Path
+from urllib.parse import urlsplit
+
+ROOT=Path('/tmp/cw2-q02-history-candidate-v44-eval')
+OUT=Path('/tmp/cw2-q02-authority-gap-v44-20261004')
+sys.path[:0]=[str(ROOT/'services/runtime/src'),str(ROOT/'packages/protocol-python/src'),
+              str(ROOT/'packages/model-worker-sdk-python/src'),'/tmp/cw2-q02-eval-deps',str(ROOT)]
+from pydantic import SecretStr
+from chatwaifu_runtime.config.settings import PublicWebConfig
+from chatwaifu_runtime.runtime_skills.public_web import PublicWebReader
+from chatwaifu_runtime.runtime_skills.public_web_search import PublicWebSearch
+from chatwaifu_runtime.runtime_skills.public_web_providers import SearxngSearchClient
+from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
+
+assert not (OUT/'admission.json').exists()
+settings={}
+for line in Path('/home/mubai/.local/share/chatwaifu-server/config/public-web.env').read_text().splitlines():
+    if line.startswith('CHATWAIFU_PUBLIC_WEB__CRAWL4AI_API_TOKEN='):
+        _,value=line.split('=',1);settings['token']=value.strip().strip(chr(34)).strip(chr(39))
+token=settings.get('token');assert token,'Reader token unavailable; no operation attempted'
+config=PublicWebConfig(search_provider='searxng',reader_provider='crawl4ai',
+    searxng_endpoint='http://127.0.0.1:18080',crawl4ai_endpoint='http://127.0.0.1:11235',
+    crawl4ai_api_token=SecretStr(token),timeout_seconds=30,crawl4ai_builtin_fallback=False)
+reader=PublicWebReader(provider_config=config,timeout_seconds=35)
+search=PublicWebSearch(reader,provider_config=config)
+original_search=SearxngSearchClient.search
+raw=[]
+async def capture(self,query,maximum):
+    response=await original_search(self,query,maximum)
+    raw.append({'query':query,'maximum':maximum,'body_sha256':hashlib.sha256(response.body).hexdigest(),
+                'retrieved_at':response.retrieved_at,'body':json.loads(response.body)})
+    return response
+SearxngSearchClient.search=capture
+def save(name,value):
+    text=json.dumps(value,ensure_ascii=False,indent=2,default=str);assert token not in text
+    assert not (OUT/name).exists();(OUT/name).write_text(text+'\n')
+def integrity():
+    paths={'searxng_settings':Path('/home/mubai/chatwaifu-server/public-web/searxng/settings.yml'),
+           'production_reader':Path('/home/mubai/chatwaifu-server/source/services/runtime/src/chatwaifu_runtime/runtime_skills/public_web_providers.py')}
+    return {k:hashlib.sha256(p.read_bytes()).hexdigest() for k,p in paths.items()}
+before=integrity();prior=set(json.loads((OUT/'previous-read-urls.json').read_text()))
+plan=json.loads((OUT/'plan.json').read_text())
+save('admission.json',{'at':datetime.now(UTC).isoformat(),'root':str(ROOT),'plan':plan,'model_http':0,
+    'scope':'direct adapters over production services; no model or permissioned native-flow claim','before':before})
+async def main():
+    queries=[];candidates=[];reads=[]
+    for spec in plan['queries']:
+        args={**spec,'max_results':5,'dns_resolver':'cloudflare'}
+        row={'arguments':args,'started_at':datetime.now(UTC).isoformat()};started=time.monotonic()
+        try:
+            result=await search.search(args);row.update(ok=True,result=result)
+            for index,item in enumerate(result['results'],1):
+                host=urlsplit(item['url']).hostname or ''
+                if (host=='caac.gov.cn' or host.endswith('.caac.gov.cn')) and item['url'] not in prior:
+                    if item['url'] not in {x['url'] for x in candidates}:
+                        candidates.append({'url':item['url'],'query_index':len(queries),'rank':index,'title':item['title'],'snippet':item['snippet']})
+        except SkillExecutionError as error:row.update(ok=False,error_code=error.structured.code,retryable=error.structured.retryable)
+        except Exception as error:row.update(ok=False,error_type=type(error).__name__)
+        row['elapsed_ms']=round((time.monotonic()-started)*1000);queries.append(row)
+        save('search-'+str(len(queries))+'.json',row)
+    save('raw-searxng.json',raw)
+    for selected in candidates[:plan['read_call_limit']]:
+        args={'url':selected['url'],'max_characters':6000,'dns_resolver':'cloudflare','fresh':True}
+        row={'arguments':args,'discovery':selected};started=time.monotonic()
+        try:
+            result=await reader.read(args);row.update(ok=True,result=result)
+            assert result['dns_resolver']=='cloudflare' and result['provider']=='crawl4ai'
+        except SkillExecutionError as error:row.update(ok=False,error_code=error.structured.code,retryable=error.structured.retryable)
+        except Exception as error:row.update(ok=False,error_type=type(error).__name__)
+        row['elapsed_ms']=round((time.monotonic()-started)*1000);reads.append(row)
+        save('read-'+str(len(reads))+'.json',row)
+    after=integrity();assert before==after
+    save('exit.json',{'search_calls':len(queries),'reader_calls':len(reads),'raw_backend_queries':len(raw),
+         'model_http':0,'production_changed':False,'before':before,'after':after,'quality_approval':False,
+         'available_unread_official_candidates':candidates,'credential_values_checked':1,
+         'exported_json_files_scanned':len(list(OUT.glob('*.json')))} )
+    assert all(token not in p.read_text() for p in OUT.glob('*.json'))
+    print(json.dumps({'search_ok':[x['ok'] for x in queries],'read_ok':[x['ok'] for x in reads],
+        'new_official_candidates':len(candidates),'engine_errors':[x['body'].get('unresponsive_engines') for x in raw],
+        'model_http':0},ensure_ascii=False))
+asyncio.run(main())

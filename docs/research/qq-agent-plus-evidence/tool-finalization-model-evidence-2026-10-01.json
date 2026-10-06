@@ -1,0 +1,85 @@
+{
+  "schema_version": "1.0",
+  "q02_accepted": false,
+  "scope": "Opus candidate_v5 four-turn detailed_answer repeat=1, instant_message; no A/B",
+  "evaluation_version": "1.4.2",
+  "prompt_as_of": "2026-09-30T16:23:48+00:00",
+  "implementation_sha256": "54be9db0b5cb84f11fd4a56aac263e0cc58deab63c9ff47be0d85ae0a4c4dac6",
+  "model": "claude-opus-4-6-thinking",
+  "replies": 4,
+  "provider_rounds": 6,
+  "tool_attempts": 4,
+  "persistent_permission_grants": 0,
+  "source_answer_complete": false,
+  "final_reply_promised_another_query": true,
+  "usage": {
+    "prompt_tokens": 25240,
+    "completion_tokens": 2855,
+    "total_tokens": 28095,
+    "reasoning_tokens": null
+  },
+  "price_usd": null,
+  "artifact_sha256": {
+    "metadata.json": "dba940d346351677356373ebe591e3b68bd394549058707ef59b786d905da323",
+    "results.jsonl": "b439396d8995c01e936cc75af8794202ac4e819b80f7645296931e41a297d7eb",
+    "provider-rounds.jsonl": "6f347b73eb603294e46cf76c80443d91a9ecd833366e9e26def40d1dc478dd08"
+  },
+  "system_message_controls": {
+    "scope": "Short isolated requests without tools; these do not verify full persona or tool transcript forwarding",
+    "provider_rounds": 6,
+    "cases": [
+      {
+        "model": "claude-opus-4-6-thinking",
+        "completed_cases": ["single", "split", "merged"],
+        "control_marker_observed_in_all_cases": true,
+        "sha256": "585b00535b6e4d803cfe6f55cae8a142b41381af17400ba18bc8ce657568b23e",
+        "usage": [
+          {
+            "prompt_tokens": 33,
+            "completion_tokens": 8,
+            "total_tokens": 41,
+            "reasoning_tokens": null
+          },
+          {
+            "prompt_tokens": 47,
+            "completion_tokens": 8,
+            "total_tokens": 55,
+            "reasoning_tokens": null
+          },
+          {
+            "prompt_tokens": 48,
+            "completion_tokens": 8,
+            "total_tokens": 56,
+            "reasoning_tokens": null
+          }
+        ]
+      },
+      {
+        "model": "gemini-3.8-flash-high",
+        "completed_cases": ["single", "split", "merged"],
+        "control_marker_observed_in_all_cases": true,
+        "sha256": "fa6ffd0948133f9969e9ca06068c54fab50f293f17c67a5eb91334cd3c250524",
+        "usage": [
+          {
+            "prompt_tokens": 25,
+            "completion_tokens": 5,
+            "total_tokens": 101,
+            "reasoning_tokens": 71
+          },
+          {
+            "prompt_tokens": 39,
+            "completion_tokens": 5,
+            "total_tokens": 179,
+            "reasoning_tokens": 135
+          },
+          {
+            "prompt_tokens": 40,
+            "completion_tokens": 5,
+            "total_tokens": 134,
+            "reasoning_tokens": 89
+          }
+        ]
+      }
+    ]
+  }
+}

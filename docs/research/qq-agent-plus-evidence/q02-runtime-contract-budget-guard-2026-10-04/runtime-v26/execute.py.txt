@@ -1,0 +1,36 @@
+import hashlib, json, os, subprocess, sys, tarfile
+from pathlib import Path
+stage=Path('/tmp/cw2-q02-v26-contract-runtime-20261004')
+root=Path('/tmp/cw2-q02-contract-position-v26-eval')
+assert not (stage/'batch-exit.json').exists(), 'Inspect completed batch before repeating'
+with tarfile.open(stage/'snapshot.tar.gz') as archive:archive.extractall(root,filter='data')
+manifest=json.loads((stage/'snapshot.json').read_text())
+verified={name:hashlib.sha256((root/name).read_bytes()).hexdigest()==digest for name,digest in manifest['sha256'].items()}
+assert all(verified.values())
+(stage/'snapshot-verification.json').write_text(json.dumps({'verified_files':len(verified),'all_match':True},indent=2)+'\n')
+env=os.environ.copy()
+env['PYTHONPATH']=os.pathsep.join([str(root/'services/runtime/src'),str(root/'packages/protocol-python/src'),str(root/'packages/model-worker-sdk-python/src'),'/tmp/cw2-q02-backport-test-deps','/tmp/cw2-q02-eval-deps',str(root)])
+tests=['services/runtime/tests/test_character_kernel.py','services/runtime/tests/test_llm_input_budget.py','services/runtime/tests/test_tool_calling_agent.py','services/runtime/tests/test_runtime_source_evaluation.py','services/runtime/tests/test_conversation_local_content.py','services/runtime/tests/conversation/test_vision.py','tools/tests/test_evaluate_character_scenarios.py','tools/tests/test_source_decision_evaluation.py']
+with (stage/'server-tests.log').open('w') as log:
+    rc=subprocess.run([sys.executable,'-m','pytest','-q',*tests],cwd=root,env=env,stdout=log,stderr=subprocess.STDOUT).returncode
+(stage/'server-tests-exit.json').write_text(json.dumps({'exit_code':rc})+'\n')
+assert rc==0, 'server regression failed; no model calls dispatched'
+profiles=['instant_message','single_text','default_voice'];jobs=[]
+for index,profile in enumerate(profiles):
+    order=['system','pre_user'] if index%2==0 else ['pre_user','system']
+    for position in order:
+        output=stage/'results'/profile/position
+        args=['--execute','--provider','openai_compatible','--model','gemini-3.8-flash-high','--base-url','https://mubai.website:8318/v1','--context-window','32768','--model-budget-json',str(stage/'budget.json'),'--output-contract-position',position,'--fixtures',str(stage/f'fixtures-{profile}.json'),'--persona',str(stage/'persona-v7.md.txt'),'--variant-name','candidate','--repeats','1','--max-requests','12','--runtime-source-tools','--allow-source-tools-once','--max-provider-requests','156','--source-dns-resolver','cloudflare','--source-search-provider','searxng','--source-reader-provider','crawl4ai','--prompt-as-of','2026-10-04T00:00:00Z','--no-cost-ceiling','--timeout','180','--output-dir',str(output),'--source-decision-contract']
+        jobs.append({'profile':profile,'position':position,'output':str(output),'arguments':args})
+(stage/'commands.json').write_text(json.dumps(jobs,indent=2)+'\n')
+for i,job in enumerate(jobs):
+    output=Path(job['output']);assert not output.exists(), 'Inspect partial results before restarting'
+    with (stage/f"job-{i}.log").open('w') as log:
+        rc=subprocess.run([sys.executable,str(stage/'launch.py'),*job['arguments']],cwd=root,env=env,stdout=log,stderr=subprocess.STDOUT).returncode
+    (stage/f"job-{i}-exit.json").write_text(json.dumps({'exit_code':rc})+'\n')
+    print(json.dumps({'completed_job':i,'profile':job['profile'],'position':job['position'],'exit_code':rc}),flush=True)
+    if rc:
+        (stage/'batch-exit.json').write_text(json.dumps({'exit_code':rc,'last_job':i})+'\n')
+        sys.exit(rc)
+assert all(hashlib.sha256((root/name).read_bytes()).hexdigest()==digest for name,digest in manifest['sha256'].items())
+(stage/'batch-exit.json').write_text(json.dumps({'exit_code':0,'completed_jobs':len(jobs)})+'\n')

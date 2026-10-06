@@ -1,0 +1,19 @@
+{
+  "code_version": "v35 / evaluator 1.32.0",
+  "candidate": "closure-c1",
+  "candidate_persona_sha256": "204644ee525210c1cb253688d7db218a2a2bc3fe6e91bfb3f5d135e9c5e47959",
+  "status": "rejected_at_frozen_source_fidelity_gate",
+  "quality_complete": 14,
+  "quality_partial": 2,
+  "model_http": 16,
+  "production_promoted": false,
+  "later_role_targeted_group_executed": false,
+  "full_864_executed": false,
+  "why": "Both Air China final checklists lose earlier unresolved freshness status despite complete source/history and explicit consolidated candidate contract. Do not stack another variant or waive the gate.",
+  "remaining": [
+    "Native search/read autonomous discovery coverage",
+    "Frozen-source unresolved-state fidelity",
+    "Original hard-boundary/degeneration targeted validation then full three-presentation AB"
+  ],
+  "original_plan_standards_unchanged": true
+}

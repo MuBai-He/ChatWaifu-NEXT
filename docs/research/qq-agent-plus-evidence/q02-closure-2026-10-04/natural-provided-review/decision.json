@@ -1,0 +1,21 @@
+{
+  "complete_four_turn_flows": 4,
+  "critical_condition_failure": "frozen_airchina:r1:t3",
+  "cross_turn_undercoverage": "frozen_airchina:r0:t4",
+  "frames_enabled": false,
+  "full_ab_started": false,
+  "next_dependency": "先封存完整证据并收口已修复流程；既有单次自核对没有语义保证。停止同义规则/格式变体和替换采样，以具体草稿→核对退化证据确定下一项可审查机制。S1自主发现仍须单列，A1/A2通过前不启动B1。",
+  "persona": "original closure-c1 unchanged",
+  "primary_grades": {
+    "complete": 14,
+    "partial": 2
+  },
+  "production_deployed": false,
+  "prompt_or_persona_rules_added": false,
+  "q02_approval": false,
+  "real_search_read_in_this_batch": false,
+  "route_fix_retained_as_software_evidence": true,
+  "source_answer_quality": "failed",
+  "version": "v40-natural-provided-review",
+  "whole_version_adopted": false
+}

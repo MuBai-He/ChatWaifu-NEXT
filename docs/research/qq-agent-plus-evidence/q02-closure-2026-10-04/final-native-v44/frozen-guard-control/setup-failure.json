@@ -1,0 +1,12 @@
+{
+  "failure_type": "evaluation_script_expected_limit_assertion",
+  "actual_model_http": 0,
+  "actual_source_http": 0,
+  "remote_session_exit_code": 1,
+  "failed_before_admission": true,
+  "expected_limit_in_original_script": 22118,
+  "actual_resolved_limit": 22341,
+  "formula": "floor((32768 - 8192) / 1.10)",
+  "production_code_changed": false,
+  "is_product_runtime_failure": false
+}

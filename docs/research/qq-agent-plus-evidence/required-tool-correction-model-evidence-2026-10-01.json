@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0",
+  "scope": "candidate_v5, two four-turn scenes, one repeat, instant_message; primary-agent review, not A/B or independent blind review",
+  "prompt_as_of": "2026-09-30T16:23:48+00:00",
+  "q02_accepted": false,
+  "models": [
+    {
+      "model": "claude-opus-4-6-thinking",
+      "replies": 8,
+      "provider_rounds": 10,
+      "tool_attempts": 4,
+      "tool_states": {
+        "succeeded": 3,
+        "failed": 1
+      },
+      "runtime_fallbacks": 0,
+      "usage": {
+        "prompt_tokens": 43674,
+        "completion_tokens": 3912,
+        "total_tokens": 47586,
+        "reasoning_tokens": null
+      },
+      "price_usd": null,
+      "persistent_permission_grants": 0,
+      "audit": "unique reply keys and one started/finished journal event per traced provider call",
+      "artifact_sha256": {
+        "metadata.json": "73da24785aec21e0b972ffc14e3538c2d5c85e06201f329ce576a12736a9075a",
+        "results.jsonl": "1e8b31eb8c7ce4895530309a106f55a73c91444dbc5637ac731c41df83e366ca",
+        "provider-rounds.jsonl": "50662bf73b93a7d89c811c9a32cd68bf72d794769bce164056ee948e64748ac9"
+      }
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "replies": 8,
+      "provider_rounds": 10,
+      "tool_attempts": 2,
+      "tool_states": {
+        "succeeded": 2
+      },
+      "runtime_fallbacks": 0,
+      "usage": {
+        "prompt_tokens": 43038,
+        "completion_tokens": 4313,
+        "total_tokens": 47351,
+        "reasoning_tokens": null
+      },
+      "price_usd": null,
+      "persistent_permission_grants": 0,
+      "audit": "unique reply keys and one started/finished journal event per traced provider call",
+      "artifact_sha256": {
+        "metadata.json": "6776152f5af7f11193175b16a40eb61c2aad1a3ff6d7e5b78dd1163cefb375c4",
+        "results.jsonl": "280aa43133ea220b2c46b93ed8aad52dd287de92ab7e63fee1d87a3ca4e61f42",
+        "provider-rounds.jsonl": "1bec0fadd3454a3a72e1bfd2bb385aaa5399f47f862773145e35805cf3ca7d17"
+      }
+    },
+    {
+      "model": "gemini-3.8-flash-high",
+      "replies": 8,
+      "provider_rounds": 9,
+      "tool_attempts": 0,
+      "tool_states": {},
+      "runtime_fallbacks": 1,
+      "usage": {
+        "prompt_tokens": 30038,
+        "completion_tokens": 3097,
+        "total_tokens": 38649,
+        "reasoning_tokens": 5514
+      },
+      "price_usd": null,
+      "persistent_permission_grants": 0,
+      "audit": "unique reply keys and one started/finished journal event per traced provider call",
+      "artifact_sha256": {
+        "metadata.json": "54adda9a9a121b64055fb07665c8d2b06be6b06d02e14516d374afeb582ff40f",
+        "results.jsonl": "669eb7fdbeb17ab7ba715cd68404543231bb653b33644a29a08e5f22612ff530",
+        "provider-rounds.jsonl": "f2f67a9c50d339d1808ebcc4fb9ffac510963336ebde7ab278eac7fa6803d57b"
+      }
+    }
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "reviewer": "primary Codex agent; independent source and experiment review, not human-user approval",
+  "date": "2026-09-30",
+  "scope": "All non-tie pairs and downgraded pairs, all 18 power-bank replies, all 9 candidate studio and deployment replies; no online-channel or playback acceptance",
+  "reviewed_judge_pairs": {
+    "gemini-3.8-flash-high": [
+      "identity:r0:t3",
+      "identity:r1:t3",
+      "identity:r2:t3",
+      "detailed_answer:r0:t2",
+      "detailed_answer:r1:t2",
+      "detailed_answer:r2:t2"
+    ],
+    "claude-sonnet-4-6": [
+      "greeting:r0:t3",
+      "teasing:r0:t2",
+      "teasing:r1:t2",
+      "teasing:r2:t2",
+      "correction:r2:t4",
+      "technical_help:r2:t1",
+      "verbose_history_pressure:r2:t1",
+      "topic_switch:r0:t4",
+      "topic_switch:r2:t4",
+      "insufficient_shared_history:r0:t3",
+      "insufficient_shared_history:r1:t3",
+      "insufficient_shared_history:r2:t3",
+      "insufficient_shared_history:r2:t4",
+      "detailed_answer:r0:t2",
+      "detailed_answer:r1:t2",
+      "detailed_answer:r2:t2"
+    ],
+    "claude-opus-4-6-thinking": [
+      "greeting:r2:t3",
+      "teasing:r2:t4",
+      "stop_joking:r1:t1",
+      "stop_joking:r1:t3",
+      "low_mood:r0:t2",
+      "low_mood:r1:t2",
+      "low_mood:r2:t2",
+      "topic_switch:r2:t1",
+      "topic_switch:r1:t4",
+      "topic_switch:r2:t4",
+      "detailed_answer:r0:t2",
+      "detailed_answer:r1:t2",
+      "detailed_answer:r2:t2"
+    ]
+  },
+  "factual_coverage_report": "real-model-v3-fact-coverage-audit-2026-09-30.json",
+  "selected_findings": [
+    {
+      "model": "claude-sonnet-4-6",
+      "pair": "technical_help:r2:t1",
+      "baseline_grade": "partial",
+      "candidate_grade": "fail",
+      "preferred_variant": "baseline",
+      "reason": "Candidate incorrectly says default gather waits for all tasks before propagating an exception. Baseline prose is correct, but its asyncio.run example returns from main after catching the exception, cancelling its unfinished sibling at shutdown, contrary to its comment. These are model-answer defects, not observed Runtime implementation defects.",
+      "source": "https://docs.python.org/3/library/asyncio-task.html#asyncio.gather",
+      "experiment": {
+        "gather_propagated_while_sibling_pending": true,
+        "sibling_not_cancelled_by_gather": true,
+        "sibling_cancelled_at_asyncio_run_shutdown": true
+      }
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "pair": "topic_switch:r2:t4",
+      "baseline_grade": "partial",
+      "candidate_grade": "partial",
+      "preferred_variant": "tie",
+      "reason": "Both disclaim real eating experience during casual preference chat. Explicit fixture expectation asks for a character preference; original judge passed both. No claim of real eating is needed to express a fictional preference."
+    },
+    {
+      "model": "claude-opus-4-6-thinking",
+      "pair": "topic_switch:r2:t1",
+      "candidate_grade": "fail",
+      "preferred_variant": "baseline",
+      "reason": "Candidate notices missing previous Raft discussion but then asks whether explanation is needed instead of answering an explicit current technical question. Missing history does not prevent answering general knowledge."
+    },
+    {
+      "model": "claude-opus-4-6-thinking",
+      "pair": "greeting:r2:t3",
+      "baseline_grade": "partial",
+      "reason": "Baseline promises a future physical act of looking up at the sky without a supported capability. Preserve hard=false since this is a future promise, not a claim that a past action was completed."
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "pair": "correction:r2:t4",
+      "baseline_grade": "pass",
+      "preferred_variant": "tie",
+      "reason": "A brief affirmative acknowledgement is adequate when the user confirms the corrected syntax; no detailed request is being truncated."
+    },
+    {
+      "model": "gemini-3.8-flash-high",
+      "pair": "detailed_answer:r0:t2",
+      "variant": "candidate",
+      "reason": "The approximation tying 100Wh to 20000mAh at 3.7V is misleading: 20Ah*3.7V=74Wh, and 100Wh at 3.7V is about 27.0Ah. The 5V-only cue cannot detect this."
+    },
+    {
+      "model": "gemini-3.8-flash-high",
+      "pair": "detailed_answer:r2:t2",
+      "variant": "baseline",
+      "reason": "Same misleading 3.7V/20000mAh approximation; coverage audit and review cues are not a complete factual audit."
+    },
+    {
+      "model": "claude-opus-4-6-thinking",
+      "pair": "detailed_answer:r0:t2",
+      "variant": "candidate",
+      "reason": "Numerical example gives 20000mAh/5V about74Wh, inconsistent with stated V*Ah formula: 5*20=100. Clear inconsistency, while product nominal/output voltage identification still requires actual label."
+    },
+    {
+      "model": "claude-opus-4-6-thinking",
+      "pair": "detailed_answer:r2:t2",
+      "variant": "baseline",
+      "reason": "Conditional 5V label calculation is ambiguous about nominal versus output voltage; retain manual review, do not automatically convict based on 5V mention."
+    }
+  ],
+  "acceptance": {
+    "coverage_missing": 18,
+    "candidate_studio_correct": 9,
+    "candidate_deployment_not_guessed": 9,
+    "persona_release_gate_passed": false,
+    "raw_judge_reports_preserved": true,
+    "human_user_approval": false
+  }
+}

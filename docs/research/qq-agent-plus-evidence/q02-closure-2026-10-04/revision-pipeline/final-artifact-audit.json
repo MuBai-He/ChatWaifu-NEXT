@@ -1,0 +1,21 @@
+{
+  "actual_model_http_attempts": 32,
+  "candidate_rejected": true,
+  "complete_flows": 4,
+  "current_checkout_check_optional": true,
+  "final_provider_replies": 16,
+  "frozen_code_files": 25,
+  "known_generic_gap_controls": 5,
+  "known_usage_calls": 32,
+  "new_model_calls": 0,
+  "no_pending_q02_server_processes": true,
+  "prior_artifact_files": 322,
+  "prior_artifacts_unchanged_in_place": 321,
+  "prior_root_readme_preserved": true,
+  "quality_approval": false,
+  "raw_replies_replaced": 0,
+  "review_complete": 13,
+  "review_partial": 3,
+  "t3_frames_without_new_scope_gap": 4,
+  "whole_input_omissions": 0
+}

@@ -1,0 +1,21 @@
+--- v38/services/runtime/tests/test_source_answer_state.py
++++ v39/services/runtime/tests/test_source_answer_state.py
+@@ -48,16 +48,16 @@
+ def payload() -> str:
+     return json.dumps(
+         {
+-            "version": "1.1",
++            "version": "1.2",
+             "blocks": [
+                 {
+                     "kind": "paragraph",
+                     "text": "A natural reply.",
+                     "source_indices": [0],
+                     "prior_gap_ids": [],
++                    "unresolved_scope": False,
+                 }
+             ],
+-            "new_gaps": [],
+         }
+     )
+ 

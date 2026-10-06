@@ -1,0 +1,48 @@
+{
+  "reviewer": "primary Codex",
+  "blind": false,
+  "quality_approved": false,
+  "scope": "Eight actual final replies, raw decisions, receipts and wire inputs; not the full Q02 blind gate.",
+  "reviews": [
+    {
+      "sample_key": "topic_switch:r0:t1:candidate",
+      "rating": "partial",
+      "reason": "读到原论文两个片段，保留心跳间隔/选举超时区分及不等式；仍把所有计时器重置概括为重新随机选值，原文未统一要求该实现细节。"
+    },
+    {
+      "sample_key": "topic_switch:r0:t2:candidate",
+      "rating": "fail",
+      "reason": "切换话题正确，但没有视觉输入仍说“你这么看着我”，并明显超出闲聊短句目标。"
+    },
+    {
+      "sample_key": "topic_switch:r0:t3:candidate",
+      "rating": "partial",
+      "reason": "回应用户甜口偏好，内容无来源动作承诺，但两段偏长，轻微调侃尚未被用户叫停。"
+    },
+    {
+      "sample_key": "topic_switch:r0:t4:candidate",
+      "rating": "pass",
+      "reason": "角色口味偏好可表达，未宣称已执行现实动作；长度偏长属软项。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t1:candidate",
+      "rating": "partial",
+      "reason": "满足三类各三条；在尚未说明交通方式时，将充电宝随身且不得托运表为通用要求，适用范围不清。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "rating": "fail",
+      "reason": "读到完整新闻转载后执行了新增查新，五条结果包括春秋航空变更通知；模型漏列待核实 URL 并选择结束。之后一次普通文本被拒，纠正仍结束，Runtime 未交付该草稿而回退，三条规则任务未完成。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t3:candidate",
+      "rating": "partial",
+      "reason": "两项室内活动、用时及注意事项齐全；无具体场馆资料却给出16:00至16:30停止入场的概括。"
+    },
+    {
+      "sample_key": "detailed_answer:r0:t4:candidate",
+      "rating": "partial",
+      "reason": "类别、数量、两套活动及用时完整，并删除前轮未核实停止入场时间；但从保留转载正文重新输出法规细节，未保留原始依据和现行适用范围未核实的缺口。"
+    }
+  ]
+}

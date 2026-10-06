@@ -1,0 +1,20 @@
+{
+  "code_version": "v44 unchanged",
+  "model_http": 0,
+  "direct_search_calls": 2,
+  "direct_read_calls": 2,
+  "adapter_gap_discovery_and_read": "passed_with_scope",
+  "autonomous_model_discovery_approval": false,
+  "current_policy_exhaustiveness_approval": false,
+  "q02_approval": false,
+  "production_mutations": 0,
+  "previous_reads_repeated": 0,
+  "new_prompt_rules": 0,
+  "reader": "production Crawl4AI11235",
+  "search": "production SearXNG18080, observed Yandex backend",
+  "public_read_dns": "cloudflare",
+  "builtin_fallback": false,
+  "primary_review": "primary-review.json",
+  "limited_backend_success_does_not_override_historical_timeouts": true,
+  "audit_failure_scope": "Initial audit assumed effective_query contained explicit domain suffix; corrected to raw provider_queries. No product failure or quality downgrade inferred."
+}

@@ -1,0 +1,9 @@
+{
+  "root": "/tmp/cw2-q02-history-candidate-v44-eval",
+  "network_attempts": 0,
+  "model_http": 0,
+  "source_http": 0,
+  "quality_approval": false,
+  "context_window": 32768,
+  "source": "actual v43 own T3 history and v41 packet; exact old review sizing control"
+}

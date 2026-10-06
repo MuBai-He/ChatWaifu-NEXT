@@ -1,0 +1,7 @@
+{
+  "services/runtime/src/chatwaifu_runtime/agent/input_budget.py": "7309da8cd63b2cf72684d51eac11a0462a7e5190c6f0f10ecbbe40459e5ea347",
+  "services/runtime/src/chatwaifu_runtime/agent/source_context.py": "fe9c3816e586fdbe4016ff4da4e892ba495de1babb355a93eb56a63e890e1186",
+  "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py": "d68343f17e22ee7b3ac01211eb48d79762a0587660bb7cd3153c5d0276512b14",
+  "services/runtime/tests/test_llm_input_budget.py": "a05f5421c5d18ee8be496bc470d12096b12ac94b287122715b47b49c0ee3c63c",
+  "services/runtime/tests/test_source_context_projection.py": "e79906a984e5e8c35c442647199c06a550086ab83780e0fb255eb03916147f61"
+}

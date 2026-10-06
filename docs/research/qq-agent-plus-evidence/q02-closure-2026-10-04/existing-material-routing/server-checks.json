@@ -1,0 +1,21 @@
+{
+  "isolated_python_files": 413,
+  "changed_from_v41": [
+    "services/runtime/src/chatwaifu_runtime/agent/source_context.py",
+    "services/runtime/src/chatwaifu_runtime/agent/tool_intent.py",
+    "services/runtime/tests/test_source_context_projection.py",
+    "services/runtime/tests/test_tool_calling_agent.py",
+    "services/runtime/tests/test_tool_intent.py"
+  ],
+  "selected_code_sha256": {
+    "services/runtime/src/chatwaifu_runtime/agent/source_context.py": "5d02e026984b6a434dc5553e528d8322dd36abbcdafb5462feb776abfa5bcd62",
+    "services/runtime/src/chatwaifu_runtime/agent/tool_intent.py": "f95a207842e113d72a188e1967d1abd30d948ebf215bc108e1c1d9c4c72c7d6a",
+    "services/runtime/tests/test_source_context_projection.py": "e4f8d5c559c2e3d4e94bce16b52c65ec9f8c35d812a308db7ecfad1e4f762f15",
+    "services/runtime/tests/test_tool_calling_agent.py": "402e24651e10c60a95f332e27fae448b393ea3b9e5f34acedfba492669e94e2a",
+    "services/runtime/tests/test_tool_intent.py": "0e6c78a513b455216fc2c7e445f1f30356158b6dd616c2edf355e53e17dd5a1d"
+  },
+  "tests": 422,
+  "model_http_calls": 0,
+  "production_deployment": false,
+  "user_runtime_state": "active"
+}

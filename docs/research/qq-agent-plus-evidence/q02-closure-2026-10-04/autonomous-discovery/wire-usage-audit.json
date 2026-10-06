@@ -1,0 +1,182 @@
+[
+  {
+    "http_attempt": 1,
+    "call_id": "2bb1d345-078d-4692-91ed-2d86262f699c",
+    "usage": {
+      "prompt_tokens": 2334,
+      "completion_tokens": 68,
+      "total_tokens": 2556,
+      "reasoning_tokens": 154
+    },
+    "reference_input_tokens": 2337,
+    "reference_error_percent": 0.128535
+  },
+  {
+    "http_attempt": 2,
+    "call_id": "cb87719c-15d3-4163-b135-b94140acda9d",
+    "usage": {
+      "prompt_tokens": 4798,
+      "completion_tokens": 60,
+      "total_tokens": 4858,
+      "reasoning_tokens": null
+    },
+    "reference_input_tokens": 5504,
+    "reference_error_percent": 14.714464
+  },
+  {
+    "http_attempt": 3,
+    "call_id": "bc67ee3e-5585-4af8-a606-6342d62241e1",
+    "usage": {
+      "prompt_tokens": 6400,
+      "completion_tokens": 63,
+      "total_tokens": 6746,
+      "reasoning_tokens": 283
+    },
+    "reference_input_tokens": 7135,
+    "reference_error_percent": 11.484375
+  },
+  {
+    "http_attempt": 4,
+    "call_id": "2f732c8b-21de-433a-adf2-690b13958107",
+    "usage": {
+      "prompt_tokens": 8119,
+      "completion_tokens": 62,
+      "total_tokens": 8453,
+      "reasoning_tokens": 272
+    },
+    "reference_input_tokens": 8908,
+    "reference_error_percent": 9.717946
+  },
+  {
+    "http_attempt": 5,
+    "call_id": "72a19540-4356-40af-afc6-3d20182a7883",
+    "usage": {
+      "prompt_tokens": 9760,
+      "completion_tokens": 54,
+      "total_tokens": 9814,
+      "reasoning_tokens": null
+    },
+    "reference_input_tokens": 10606,
+    "reference_error_percent": 8.668033
+  },
+  {
+    "http_attempt": 6,
+    "call_id": "9b64c1ce-87e3-4209-8432-3c6f4dcd9e90",
+    "usage": {
+      "prompt_tokens": 11441,
+      "completion_tokens": 545,
+      "total_tokens": 11986,
+      "reasoning_tokens": null
+    },
+    "reference_input_tokens": 12343,
+    "reference_error_percent": 7.883926
+  },
+  {
+    "http_attempt": 7,
+    "call_id": "377bf6f8-7865-4af1-9c5e-4cc467182003",
+    "usage": {
+      "prompt_tokens": 11195,
+      "completion_tokens": 604,
+      "total_tokens": 11799,
+      "reasoning_tokens": null
+    },
+    "reference_input_tokens": 12617,
+    "reference_error_percent": 12.702099
+  },
+  {
+    "http_attempt": 8,
+    "call_id": "6d220905-eac4-40c8-bab4-2d1bf4854736",
+    "usage": {
+      "prompt_tokens": 10988,
+      "completion_tokens": 738,
+      "total_tokens": 12391,
+      "reasoning_tokens": 665
+    },
+    "reference_input_tokens": 10941,
+    "reference_error_percent": -0.427739
+  },
+  {
+    "http_attempt": 9,
+    "call_id": "c173591d-9fe4-4bbe-8c75-dba1bc4e6f90",
+    "usage": {
+      "prompt_tokens": 11111,
+      "completion_tokens": 835,
+      "total_tokens": 11946,
+      "reasoning_tokens": null
+    },
+    "reference_input_tokens": 11053,
+    "reference_error_percent": -0.522005
+  },
+  {
+    "http_attempt": 10,
+    "call_id": "a099ed6b-5279-4574-b35f-cb7b4e329c29",
+    "usage": {
+      "prompt_tokens": 11049,
+      "completion_tokens": 53,
+      "total_tokens": 11558,
+      "reasoning_tokens": 456
+    },
+    "reference_input_tokens": 11064,
+    "reference_error_percent": 0.135759
+  },
+  {
+    "http_attempt": 11,
+    "call_id": "63cb3f2b-e14d-4a8e-9e73-39dea523b220",
+    "usage": {
+      "prompt_tokens": 13641,
+      "completion_tokens": 65,
+      "total_tokens": 13765,
+      "reasoning_tokens": 59
+    },
+    "reference_input_tokens": 14639,
+    "reference_error_percent": 7.316179
+  },
+  {
+    "http_attempt": 12,
+    "call_id": "4fdee292-79c1-47d5-81e5-c2967a8498b3",
+    "usage": {
+      "prompt_tokens": 14679,
+      "completion_tokens": 81,
+      "total_tokens": 14760,
+      "reasoning_tokens": null
+    },
+    "reference_input_tokens": 15944,
+    "reference_error_percent": 8.617753
+  },
+  {
+    "http_attempt": 13,
+    "call_id": "20367abe-e4ca-4008-abcf-07fc182a00da",
+    "usage": {
+      "prompt_tokens": 15537,
+      "completion_tokens": 94,
+      "total_tokens": 15631,
+      "reasoning_tokens": null
+    },
+    "reference_input_tokens": 17052,
+    "reference_error_percent": 9.750917
+  },
+  {
+    "http_attempt": 14,
+    "call_id": "0f8c79fd-20ed-49d7-a7e1-d3312164f19e",
+    "usage": {
+      "prompt_tokens": 16551,
+      "completion_tokens": 60,
+      "total_tokens": 16611,
+      "reasoning_tokens": null
+    },
+    "reference_input_tokens": 18418,
+    "reference_error_percent": 11.280285
+  },
+  {
+    "http_attempt": 15,
+    "call_id": "bcebfb8a-c9e0-4d7f-83b5-a9536560468f",
+    "usage": {
+      "prompt_tokens": 17597,
+      "completion_tokens": 65,
+      "total_tokens": 17662,
+      "reasoning_tokens": null
+    },
+    "reference_input_tokens": 19679,
+    "reference_error_percent": 11.831562
+  }
+]

@@ -1,0 +1,20 @@
+$ pnpm run build:web
+$ tsc -b && vite build --mode web
+vite v8.2.2 building client environment for web...
+transforming...
+✓ 2071 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/web/index.html                   0.65 kB │ gzip:   0.39 kB
+dist/web/chatwaifu-product.json       3.77 kB │ gzip:   0.84 kB
+dist/web/assets/index-3kJpNRdj.css   66.06 kB │ gzip:  14.14 kB
+dist/web/assets/event-CWEPUEFL.js     1.37 kB │ gzip:   0.65 kB
+dist/web/assets/core-SwWLTXZB.js      2.70 kB │ gzip:   1.05 kB
+dist/web/assets/index-51hNJcgo.js   569.15 kB │ gzip: 167.10 kB
+
+✓ built in 149ms
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.

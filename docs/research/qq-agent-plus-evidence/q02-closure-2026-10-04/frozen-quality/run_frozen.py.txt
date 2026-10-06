@@ -1,0 +1,96 @@
+"""Bounded frozen-document capability test, without retrieval or new prompt rules."""
+import contextlib
+import hashlib
+import json
+import os
+import sys
+from dataclasses import replace
+from datetime import UTC, datetime
+from pathlib import Path
+
+ROOT = Path('/tmp/cw2-q02-source-companion-v35-eval')
+STAGE = Path('/tmp/cw2-q02-frozen-quality-20261004')
+sys.path[:0] = [str(ROOT/'services/runtime/src'), str(ROOT/'packages/protocol-python/src'),
+               str(ROOT/'packages/model-worker-sdk-python/src'), '/tmp/cw2-q02-eval-deps', str(ROOT)]
+import httpx2
+from chatwaifu_runtime.agent.input_budget import fit_input_budget
+from tools import evaluate_character_scenarios as evaluation
+from tools.runtime_source_evaluation import _RecordedProvider
+
+KEY = json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+os.environ['OPENAI_API_KEY'] = KEY
+SOURCES = json.loads((STAGE/'frozen-sources.json').read_text())
+LOOKUP = json.loads((STAGE/'question-source-map.json').read_text())
+assert not (STAGE/'admission.json').exists(), 'Inspect existing results before any repeat'
+for data in SOURCES.values():
+    assert hashlib.sha256(data['text'].encode()).hexdigest() == data['text_sha256']
+
+def append(name, row):
+    text = json.dumps(row, ensure_ascii=False, default=str)
+    assert KEY not in text
+    with (STAGE/name).open('a') as target:
+        target.write(text+'\n')
+
+append('admission.json', {'model':'gemini-3.8-flash-high', 'logical_limit':16,
+       'http_limit':20, 'source_calls':0, 'new_prompt_rules':False,
+       'production_changed':False, 'q02_approval':False,
+       'started_at_utc':datetime.now(UTC).isoformat()})
+original_provider = evaluation.OpenAiCompatibleLlmProvider
+current = None
+
+class FrozenProvider:
+    kind = 'openai_compatible'
+    supports_tool_calling = True
+
+    def __init__(self, **kwargs):
+        self.recorded = _RecordedProvider(original_provider(**kwargs), STAGE/'provider-rounds.jsonl', 20)
+
+    async def stream(self, request):
+        global current
+        current = {'generation_id':str(request.generation_id), 'source_key':LOOKUP[request.user_text]}
+        data = SOURCES[current['source_key']]
+        frozen_data = json.dumps({'frozen_public_document':data}, ensure_ascii=False, separators=(',', ':'))
+        fitted = fit_input_budget(replace(request, context=(*request.context, ('user', frozen_data))))
+        assert not fitted.tools and not fitted.tool_exchanges
+        assert ('user', frozen_data) in fitted.context
+        self.recorded.sample_key = str(request.generation_id)
+        stream = self.recorded.stream(fitted)
+        async with contextlib.aclosing(stream):
+            async for event in stream:
+                yield event
+
+evaluation.OpenAiCompatibleLlmProvider = FrozenProvider
+original_stream = httpx2.AsyncClient.stream
+http_count = 0
+
+def capture(self, method, url, **kwargs):
+    global http_count
+    if method.upper() == 'POST' and str(url).endswith('/chat/completions'):
+        assert http_count < 20 and current is not None
+        body = kwargs['json']
+        assert body['model'] == 'gemini-3.8-flash-high'
+        found = []
+        for message in body['messages']:
+            try:
+                item = json.loads(message.get('content', ''))
+            except (TypeError, ValueError):
+                continue
+            if isinstance(item, dict) and 'frozen_public_document' in item:
+                found.append(item['frozen_public_document'])
+        assert found == [SOURCES[current['source_key']]], 'Complete frozen source must be on wire'
+        http_count += 1
+        append('actual-provider-payloads.jsonl', {'http_attempt':http_count, **current,
+               'payload':body, 'complete_frozen_source_verified':True,
+               'source_text_sha256':found[0]['text_sha256'],
+               'payload_sha256':hashlib.sha256(json.dumps(body,ensure_ascii=False,sort_keys=True).encode()).hexdigest()})
+    return original_stream(self, method, url, **kwargs)
+
+httpx2.AsyncClient.stream = capture
+sys.argv = ['evaluate_character_scenarios', '--fixtures',str(STAGE/'fixtures.json'),
+            '--output-dir',str(STAGE/'results'), '--provider','openai_compatible',
+            '--model','gemini-3.8-flash-high', '--base-url','https://mubai.website:8318/v1',
+            '--execute', '--repeats','2', '--max-requests','16', '--no-cost-ceiling',
+            '--timeout','180', '--context-window','32768', '--model-budget-json',str(STAGE/'budget.json'),
+            '--prompt-as-of','2026-10-04T03:30:00+08:00']
+code = evaluation.main()
+append('exit.json', {'exit_code':code, 'actual_http_attempts':http_count})

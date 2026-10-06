@@ -1,0 +1,15 @@
+{
+  "quality_approved": false,
+  "requests": 3,
+  "upstream_results": [
+    21,
+    19,
+    21
+  ],
+  "observations": [
+    "Raft original paper is already rank 2; five-result cap is not the cause of its missing chapter excerpt.",
+    "Initial aviation query exposes a newer change report at raw rank 7 / normalized rank 6, outside the five-result cap. That is a secondary lead, not a verified rule.",
+    "Neither aviation query returned an originating aviation regulator, standards-body or operator article in the first 20 raw candidates. More candidates alone did not supply the missing original."
+  ],
+  "not_runtime_skill_execution": true
+}

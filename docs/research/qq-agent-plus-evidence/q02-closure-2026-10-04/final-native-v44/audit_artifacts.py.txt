@@ -1,0 +1,61 @@
+"""Strict read-only freeze audit. Current checkout binding is an explicit extra check."""
+import argparse
+import hashlib
+import json
+from pathlib import Path
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--check-current", action="store_true")
+args = parser.parse_args()
+phase = Path(__file__).resolve().parent
+root = next(p for p in phase.parents if (p / "services/runtime/src").is_dir())
+def j(p): return json.loads(p.read_text())
+def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
+def files(directory):
+    return {str(p.relative_to(directory)) for p in directory.rglob("*") if p.is_file()
+            and p != directory / "manifest.json"
+            and not any(v.startswith(".") or v == "__pycache__" for v in p.relative_to(directory).parts)}
+def audit_manifest(directory):
+    manifest = j(directory / "manifest.json")
+    assert files(directory) == set(manifest), str(directory)
+    for rel, digest in manifest.items(): assert sha(directory / rel) == digest, rel
+    return len(manifest)
+
+count = audit_manifest(phase)
+predecessors = {
+    "budget-reconstruction": "025136b4e919b3ff1876f93926b98f004333caf9ade736a4fe745eea9a2b2796",
+    "latest-history-priority": "02a21a515208b9a2dc7b185bf0717b574de228bb3830ddff12d13cf21979cba3",
+    "authority-gap": "0e9431fc132817d069fcc8f0d1fcdfce35041fe9f4b01577dc76b88d0d257424",
+    "autonomous-discovery": "ece42e11d6caa6031260f77ab5b9daa634794fa11f8e5915b949cbcf1a1d9274",
+    "existing-material-routing": "67d55d7ba74cea79781042d1be8512a2e1c4bb7cb6cc4134a8b8b965f11ee675",
+}
+for name, digest in predecessors.items():
+    directory = phase.parent / name
+    assert sha(directory / "manifest.json") == digest, name
+    audit_manifest(directory)
+provided = phase.parent / "natural-provided-review"
+assert sha(provided / "manifest.json") == "2e735ee47f8ff5e4b33cf21aa8a552e383b9e748ebf3a862e0e99244cc87312d"
+for rel, digest in j(provided / "manifest.json")["files"].items(): assert sha(provided / rel) == digest, rel
+binding = j(phase / "source-code-binding.json")
+assert not binding["local_missing_files"] and not binding["local_different_files"]
+assert binding["admitted_server_python_tree"] == j(phase / "server/source-tree-before.json") == j(phase / "server/source-tree-after.json")
+assert binding["selected_code"] == j(phase.parent / "latest-history-priority/code-sha256.json")
+for rel, digest in binding["selected_code"].items():
+    assert sha(phase.parent / "latest-history-priority/candidate-code" / (rel.replace("/", "__") + ".txt")) == digest
+if args.check_current:
+    for rel, digest in binding["admitted_server_python_tree"].items(): assert sha(root / rel) == digest, rel
+    for snapshot in (phase / "documentation-snapshot").glob("*.txt"):
+        rel = snapshot.name.removesuffix(".txt").replace("__", "/")
+        assert sha(root / rel) == sha(snapshot), rel
+for directory in (phase / "server", phase / "frozen-guard-control/server"):
+    for rel, digest in j(directory / "export-manifest.json").items(): assert sha(directory / rel) == digest, rel
+decision = j(phase / "decision.json")
+assert not decision["approved_q02"] and not decision["original_full_864_reply_432_pair_three_presentation_gate_executed"]
+assert decision["actual_new_model_http"] == 18 and decision["new_prompt_rules"] == decision["new_persona_rules"] == 0
+assert not decision["production_changes_this_stage"] and not decision["agy"]
+cumulative = j(phase / "cumulative-accounting.json")
+assert cumulative["cumulative_actual_http_attempts"] == 273
+assert cumulative["cumulative_known_usage_calls"] == 254 and cumulative["cumulative_unknown_usage_calls"] == 19
+assert not cumulative["old_unknown_rows_backfilled"]
+print(json.dumps({"audit": "passed", "entries": count, "unchanged_predecessors": list(predecessors) + ["natural-provided-review"],
+                  "check_current": args.check_current, "actual_new_model_http": 18, "q02_approval": False}))

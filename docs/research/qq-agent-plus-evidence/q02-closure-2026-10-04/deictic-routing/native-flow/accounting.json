@@ -1,0 +1,385 @@
+{
+  "actual_http_attempts": 14,
+  "wire_audit_passed": true,
+  "wire_checks": [
+    {
+      "http_attempt": 1,
+      "sample_key": "airchina_native_deictic:r0:t1:closure_c1",
+      "payload_sha256": "78eacd8b4319cf789e10c2ca6a6252c2696e326262377147931594638772423c",
+      "reference_tokens": 2353,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 2353,
+        "estimated_input_tokens": 2353,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 2518
+    },
+    {
+      "http_attempt": 2,
+      "sample_key": "airchina_native_deictic:r0:t1:closure_c1",
+      "payload_sha256": "5739c93a32ba9309ca6809f320118f65d5aecd75f5b9bcab37116f50937cff78",
+      "reference_tokens": 5837,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 5837,
+        "estimated_input_tokens": 5837,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 3563
+    },
+    {
+      "http_attempt": 3,
+      "sample_key": "airchina_native_deictic:r0:t1:closure_c1",
+      "payload_sha256": "8bf7224eea737231510232add4dd460b8595f0cf5e293a9042d855b908ba67af",
+      "reference_tokens": 6109,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 6109,
+        "estimated_input_tokens": 6109,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 3163
+    },
+    {
+      "http_attempt": 4,
+      "sample_key": "airchina_native_deictic:r0:t2:closure_c1",
+      "payload_sha256": "34960fadff642fbdb9ad5f64a471b7f0b506a21941964ae493dec456feb19a30",
+      "reference_tokens": 5048,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 5048,
+        "estimated_input_tokens": 5048,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 3232
+    },
+    {
+      "http_attempt": 5,
+      "sample_key": "airchina_native_deictic:r0:t3:closure_c1",
+      "payload_sha256": "c87eeb3131aeb410e45911210e5e6bf8c40f244b74758287cc3443c2a9e68c6f",
+      "reference_tokens": 7441,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 7441,
+        "estimated_input_tokens": 7441,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 3868
+    },
+    {
+      "http_attempt": 6,
+      "sample_key": "airchina_native_deictic:r0:t4:closure_c1",
+      "payload_sha256": "be2670b077b878c3d5b2d1b3b0da9700e4bdce4609185abbe6982cca2086180a",
+      "reference_tokens": 6440,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 6440,
+        "estimated_input_tokens": 6440,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 2473
+    },
+    {
+      "http_attempt": 7,
+      "sample_key": "airchina_native_deictic:r0:t4:closure_c1",
+      "payload_sha256": "52bb19bf4d2ad8ff8d5aaa6c9e21192773f191b4d27c74f60194467a0555dc6c",
+      "reference_tokens": 7746,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 7746,
+        "estimated_input_tokens": 7746,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 4255
+    },
+    {
+      "http_attempt": 8,
+      "sample_key": "airchina_native_deictic:r1:t1:closure_c1",
+      "payload_sha256": "78eacd8b4319cf789e10c2ca6a6252c2696e326262377147931594638772423c",
+      "reference_tokens": 2353,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 2353,
+        "estimated_input_tokens": 2353,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 2393
+    },
+    {
+      "http_attempt": 9,
+      "sample_key": "airchina_native_deictic:r1:t1:closure_c1",
+      "payload_sha256": "78b0ad17b8de10d037c92bc5bc630dc9358b4a61ea5acda2891f9aaa5c7ae3b5",
+      "reference_tokens": 5837,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 5837,
+        "estimated_input_tokens": 5837,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 5200
+    },
+    {
+      "http_attempt": 10,
+      "sample_key": "airchina_native_deictic:r1:t1:closure_c1",
+      "payload_sha256": "b0ee6f4e123c6b4a80701cc2a61fbfc91407d957f772d466cbd4852d1c690ed3",
+      "reference_tokens": 6056,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 6056,
+        "estimated_input_tokens": 6056,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 2795
+    },
+    {
+      "http_attempt": 11,
+      "sample_key": "airchina_native_deictic:r1:t2:closure_c1",
+      "payload_sha256": "0896d0f0a284e539267757f4efed7191fd73c12b0005fca508880cea19746ee5",
+      "reference_tokens": 4988,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 4988,
+        "estimated_input_tokens": 4988,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 3007
+    },
+    {
+      "http_attempt": 12,
+      "sample_key": "airchina_native_deictic:r1:t3:closure_c1",
+      "payload_sha256": "da6958b34f616b51833a58955eef7baccd916526bc5fae57bf529a03beb8bb92",
+      "reference_tokens": 7369,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 7369,
+        "estimated_input_tokens": 7369,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 4043
+    },
+    {
+      "http_attempt": 13,
+      "sample_key": "airchina_native_deictic:r1:t4:closure_c1",
+      "payload_sha256": "ef0632ebf89f996e5d392cc9a00c32d4a0c6a166c122a59dc49fbd3c4a82e026",
+      "reference_tokens": 6407,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 6407,
+        "estimated_input_tokens": 6407,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 2508
+    },
+    {
+      "http_attempt": 14,
+      "sample_key": "airchina_native_deictic:r1:t4:closure_c1",
+      "payload_sha256": "292703137c9214b04960ea2132d0bb3bc1400b384c802550315c1b8ae8a8dac5",
+      "reference_tokens": 7813,
+      "budget_report": {
+        "estimated_token_limit": 21370,
+        "estimated_original_tokens": 7813,
+        "estimated_input_tokens": 7813,
+        "omitted_history_indices": [],
+        "omitted_tool_preamble_indices": [],
+        "estimated_image_tokens": 0,
+        "estimator": "cl100k_chat_json_v1",
+        "version": "1.1"
+      },
+      "error_type": null,
+      "http_status": null,
+      "protocol_error_code": null,
+      "latency_ms": 3271
+    }
+  ],
+  "completed_model_answers": 8,
+  "runtime_fallback_answers": 0,
+  "historical_incomplete": [],
+  "still_incomplete": [],
+  "unexecuted": [],
+  "usage": {
+    "prompt_tokens": {
+      "reported": 14,
+      "attempts": 14,
+      "known_subtotal": 64157,
+      "complete_total": 64157
+    },
+    "completion_tokens": {
+      "reported": 14,
+      "attempts": 14,
+      "known_subtotal": 5240,
+      "complete_total": 5240
+    },
+    "total_tokens": {
+      "reported": 14,
+      "attempts": 14,
+      "known_subtotal": 70198,
+      "complete_total": 70198
+    },
+    "reasoning_tokens": {
+      "reported": 3,
+      "attempts": 14,
+      "known_subtotal": 801,
+      "complete_total": null
+    }
+  },
+  "reference_error_percent_min_max": [
+    -0.381,
+    39.5926
+  ],
+  "response_identity_counts": {
+    "gemini-3.8-flash-control": 7,
+    "gemini-3.8-flash": 7
+  },
+  "identity_unknown_attempts": 0,
+  "logical_latency_p50_ms": 4948.0,
+  "logical_latency_p95_ms": 12042.95,
+  "actual_read_excerpts": [
+    {
+      "skill_run_id": "0c16ea86-413b-4c61-8328-5c2f7cabc669",
+      "url": "https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml",
+      "provider": "crawl4ai",
+      "fallback": null,
+      "body_sha256": "25eeb3bd9e5cf0bb50d42330a586d307257a3bd36b39e63bd4c50aaf781048c4",
+      "text_sha256": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+      "text_offset": 0,
+      "text_characters": 1339,
+      "total_characters": 1339,
+      "truncated": false,
+      "dns_resolver": "cloudflare",
+      "whole_excerpt_present_in_http_attempts": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "skill_run_id": "c50f1d04-4fe3-4e34-9df6-34de4172569d",
+      "url": "https://www.airchina.com.cn/zh-CN/content/c/2026-08-04/30035.shtml",
+      "provider": "crawl4ai",
+      "fallback": null,
+      "body_sha256": "25eeb3bd9e5cf0bb50d42330a586d307257a3bd36b39e63bd4c50aaf781048c4",
+      "text_sha256": "fd12c7168ed7c6276e3fe6cda05c800ecc8818cc4a28404488242e457a3cbf38",
+      "text_offset": 0,
+      "text_characters": 1339,
+      "total_characters": 1339,
+      "truncated": false,
+      "dns_resolver": "cloudflare",
+      "whole_excerpt_present_in_http_attempts": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ]
+    }
+  ],
+  "q02_approval": false
+}

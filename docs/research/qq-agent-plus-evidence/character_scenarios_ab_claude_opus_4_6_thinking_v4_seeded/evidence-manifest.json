@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "model": "claude-opus-4-6-thinking",
+  "raw_samples": 288,
+  "raw_byte_identity_verified": true,
+  "primary_review_pairs": 144,
+  "review_blind": false,
+  "files": [
+    {
+      "path": "attempt_failures/batch-1.jsonl",
+      "sha256": "4c262bf862f5527b5987cd37c34131ee0ff93158b945eee473f01bceb9759a08"
+    },
+    {
+      "path": "attempt_failures/batch-2.jsonl",
+      "sha256": "38b9262f95c54984a965171c44a64a281119c720b845cad183b06bad453e071c"
+    },
+    {
+      "path": "attempt_failures/batch-3.jsonl",
+      "sha256": "064ca9b9cb7bb391e3ec8bc892d11d17a398894d04337a78c2616521c718f69a"
+    },
+    {
+      "path": "blinded_key.json",
+      "sha256": "4bc6e353602510ba8b2eedbb52d952ade569a999a07a34b673cfa68faf393fe7"
+    },
+    {
+      "path": "blinded_review_template.md.txt",
+      "sha256": "e5bb34eeaafdfb0b0c14b5ff04901d02ec4e36491ae5c2a32e4bbd43fff571df"
+    },
+    {
+      "path": "fact-coverage-audit.json",
+      "sha256": "501317e41a9ac938ea8166d1b461038b855d781e983862cf3b8b406572780aea"
+    },
+    {
+      "path": "metadata.json",
+      "sha256": "19af9d612de4fc48fa4a8c22d77b8c716f9f8d6713e76ad6cfc869ebfba8baa1"
+    },
+    {
+      "path": "primary-code-execution.json",
+      "sha256": "85d16ca459f83d8c3d9cd8df6bf069916090ad6e9a2186d8e9f043d80e50b50e"
+    },
+    {
+      "path": "primary-review.json",
+      "sha256": "07f622984de2ee8b0329dd692e004a9b57f79776988ce5b5cd6fe3c0eefa54ff"
+    },
+    {
+      "path": "results.jsonl",
+      "sha256": "7810a5fd24352dae02320babc4c765dbb8149d2ae78df66819a4a09b49b659b2"
+    },
+    {
+      "path": "validation-summary.json",
+      "sha256": "ea12246464d9e10fbaaa903bc482af0f454aafaf2bf5e6224953318583281c8e"
+    }
+  ],
+  "release_approved": false
+}

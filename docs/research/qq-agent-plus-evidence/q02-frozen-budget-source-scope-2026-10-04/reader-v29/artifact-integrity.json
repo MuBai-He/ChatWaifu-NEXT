@@ -1,0 +1,25 @@
+{
+  "configured_credentials_absent": true,
+  "frozen_overlay_verified": true,
+  "source_snapshot_post_run_hashes": true,
+  "files": {
+    "actual-provider-payloads.jsonl": "7a6ea881b8f4d0797ff4eee9c281e11711849fa2392b594b7b641614984c5a7c",
+    "admission.json": "9da59d9901a8a265c81c90e7acf145661223266acaf9b743d36a9f283e1e536b",
+    "budget.json": "07f49ce5059f086a84fe576fae76ba06371c5508e0e1074072c535e3b39d805d",
+    "code-changes-from-v27.patch": "df90cdc4061a91f59d7f5755ff52c01d166f6707f3d4659f11c10b8b2f049057",
+    "cw2-q02-v29-run-probe.py": "ab31fb962f18096b50267276e0f0593640cf2f03832d012a7d4488c0e52481bd",
+    "exit.json": "0c5df37ba84f72c550272b5a6d462c42d7fe247213fedb3e084c5172efaa5320",
+    "fixtures.json": "76926c47b5ab351d041c351f9a6043b3c0e1aebbd9e2a5befb7d0f258c940567",
+    "frozen-source-sha256.json": "b10ff1c2434c115b037a35b4f1b43f9344eaa22ec231af42113177706d0919bf",
+    "overlay-integrity.json": "6c748ea835dbe91f4fcca2b1efd8c9fbd7a02a85aeb4c21209b0d2a9444945f6",
+    "probe.log": "39fb73939178f3323d672b9e4526537f7cca4d9d4ee694bcd0237242f49326b2",
+    "reader-diagnostics.jsonl": "4ff04ee2f983f0dff42b9ef565a32e692ae33bb43e929474ecc713512f2e612f",
+    "runtime-pilot/incomplete.jsonl": "2f8655a9b46192647c11924a6770f8376a2d47b980db540f7a4f13fb1ad03eba",
+    "runtime-pilot/metadata.json": "9778ca0d560000ecec4e05a6b2f883687469e4817e55a228801e139e42f8bc41",
+    "runtime-pilot/provider-rounds.jsonl": "f333a46d96c126fd83a7f668073284deace1938af3a364341dd24f8cbdb14b7d",
+    "runtime-pilot/results.jsonl": "1612b554f833199e212a2bbeb28959219f5679597cf5c0ce764bbb7a659786fe",
+    "server-tests.log": "173aff0436f16c3f6e913759c71fa388c80c2f5a663ec029b1c2c6b0dd93d276"
+  },
+  "database_excluded": true,
+  "hidden_reasoning_not_captured": true
+}

@@ -1,0 +1,79 @@
+"""Four bounded HTTP requests, unchanged frozen prefixes; no production lifecycle."""
+import asyncio,copy,hashlib,json,sys,time
+from pathlib import Path
+from uuid import uuid5,NAMESPACE_URL
+ROOT=Path('/tmp/cw2-q02-deictic-v36-eval')
+STAGE=Path('/tmp/cw2-q02-source-frame-frozen-control-20261004-r2')
+INPUT=Path('/tmp/cw2-q02-closure-candidate-one-20261004')
+sys.path[:0]=[str(ROOT/'services/runtime/src'),str(ROOT/'packages/protocol-python/src'),'/tmp/cw2-q02-eval-deps']
+import httpx2
+from chatwaifu_runtime.agent.source_answer_frame import FrameSource,decode_source_answer_frame,source_answer_frame_schema,source_answer_frame_prompt,SourceAnswerFrameError
+from chatwaifu_runtime.providers.input_estimation import count_reference_tokens
+assert not (STAGE/'admission.json').exists(), 'Inspect existing invocation before retry'
+STAGE.mkdir(mode=0o700,exist_ok=True)
+key=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+rows=[json.loads(line) for line in (INPUT/'results/results.jsonl').read_text().splitlines()]
+wires={row['generation_id']:row['payload'] for row in (json.loads(line) for line in (INPUT/'actual-provider-payloads.jsonl').read_text().splitlines())}
+src=json.loads((INPUT/'frozen-sources.json').read_text())['airchina']
+assert hashlib.sha256(src['text'].encode()).hexdigest()==src['text_sha256']
+sources=(FrameSource(src['url'],src['body_sha256']),)
+def save(name,row):
+ text=json.dumps(row,ensure_ascii=False,default=str);assert key not in text
+ with (STAGE/name).open('a') as f:f.write(text+'\n')
+save('admission.json',{'model':'gemini-3.8-flash-high','endpoint':'https://mubai.website:8318/v1','http_limit':4,'scope':'two pairs of frozen T3/T4 after unchanged completed T1/T2 prefixes; not a complete four-turn or Runtime test','input_budget':21370,'output_cap':8192,'frozen_text_sha256':src['text_sha256'],'production_changed':False,'new_persona':False,'lifecycle_implemented':False})
+async def main():
+ total=0
+ for repeat in range(2):
+  selected={r['turn_id']:r for r in rows if r['sample_key'].startswith(f'frozen_airchina:r{repeat}:')}
+  assert len(selected)==4
+  prior=();published_third=None
+  for turn in (3,4):
+   row=selected[turn];sample=f'frame_control:r{repeat}:t{turn}'
+   original=wires[str(uuid5(NAMESPACE_URL,row['sample_key']))]
+   payload=copy.deepcopy(original)
+   assert payload['model']=='gemini-3.8-flash-high' and payload['max_tokens']==8192
+   messages=payload['messages'];assert messages[-1]['role']=='user'
+   if turn==4:
+    assert messages[-2]['role']=='assistant' and messages[-2]['content']==selected[3]['raw_reply']
+    messages[-2]['content']=published_third
+   original_question=messages.pop()
+   prompt=source_answer_frame_prompt(sources,prior)
+   policy,data=prompt.split('[SOURCE ANSWER FRAME DATA]\n',1)
+   messages.extend([{'role':'system','content':policy},{'role':'user','content':'[SOURCE ANSWER FRAME DATA]\n'+data},original_question])
+   payload['response_format']={'type':'json_schema','json_schema':{'name':'source_answer_frame_v1','strict':True,'schema':source_answer_frame_schema(len(sources))}}
+   projection={k:v for k,v in payload.items() if k in ['messages','tools','tool_choice','response_format']}
+   reference=count_reference_tokens(json.dumps(projection,ensure_ascii=False,separators=(',',':')))+16*len(messages)
+   assert reference<=21370, 'No compression permitted'
+   documents=[json.loads(m['content'])['frozen_public_document'] for m in messages if isinstance(m['content'],str) and m['content'].startswith('{"frozen_public_document":')]
+   assert len(documents)==1 and documents[0]['text']==src['text'] and documents[0]['text_sha256']==src['text_sha256']
+   prefix_changed=[i for i,(a,b) in enumerate(zip(original['messages'],messages)) if a!=b]
+   save('actual-provider-payloads.jsonl',{'sample':sample,'payload':payload,'payload_sha256':hashlib.sha256(json.dumps(payload,ensure_ascii=False,sort_keys=True).encode()).hexdigest(),'original_payload_sha256':hashlib.sha256(json.dumps(original,ensure_ascii=False,sort_keys=True).encode()).hexdigest(),'reference_input_tokens':reference,'reference_estimator':'cl100k_chat_json_v1_plus_response_format','omitted_contents':[],'prefix_change_indices':prefix_changed,'entire_source_present':True,'t3_actual_reply_in_t4':published_third if turn==4 else None})
+   total+=1;before=time.monotonic();result={'sample':sample,'raw_frame':'','published_reply':None,'terminal_received':False,'finish_reason':None,'usage':None,'http_status':None,'reported_model_ids':[],'schema_valid':False,'prior_gaps':[{ 'gap_id':g.gap_id,'source_keys':g.source_keys,'statement':g.statement} for g in prior]}
+   try:
+    async with httpx2.AsyncClient(timeout=180) as client:
+     async with client.stream('POST','https://mubai.website:8318/v1/chat/completions',headers={'Authorization':f'Bearer {key}'},json=payload) as response:
+      result['http_status']=response.status_code;response.raise_for_status()
+      async for line in response.aiter_lines():
+       if not line.startswith('data:'):continue
+       data=line[5:].strip()
+       if data=='[DONE]':continue
+       packet=json.loads(data)
+       if packet.get('usage') is not None:result['usage']=packet['usage']
+       if packet.get('model') and packet['model'] not in result['reported_model_ids']:result['reported_model_ids'].append(packet['model'])
+       for choice in packet.get('choices',[]):
+        result['raw_frame']+=choice.get('delta',{}).get('content') or ''
+        if choice.get('finish_reason') is not None:result['finish_reason']=choice['finish_reason'];result['terminal_received']=True
+        assert not choice.get('delta',{}).get('tool_calls'), 'No tool execution in control'
+    if not result['terminal_received'] or result['finish_reason']!='stop':raise RuntimeError('Nonterminal frame')
+    frame=decode_source_answer_frame(result['raw_frame'],sources=sources,prior_gaps=prior,frame_id=sample)
+    result['schema_valid']=True;result['published_reply']=frame.text;result['gaps']=[{'gap_id':g.gap_id,'source_keys':g.source_keys,'statement':g.statement} for g in frame.gaps]
+    prior=frame.gaps
+    if turn==3:published_third=frame.text
+   except Exception as exc:
+    result['error_type']=type(exc).__name__
+    if isinstance(exc,SourceAnswerFrameError):result['error_code']=exc.code
+   result['latency_ms']=round((time.monotonic()-before)*1000);save('results.jsonl',result)
+   print(json.dumps({k:result.get(k) for k in ['sample','http_status','finish_reason','schema_valid','error_type','error_code','latency_ms']}),flush=True)
+   if not result['schema_valid']:break
+ save('exit.json',{'terminal':True,'actual_http_attempts':total})
+asyncio.run(main())

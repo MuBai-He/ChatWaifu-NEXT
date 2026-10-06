@@ -1,0 +1,105 @@
+{
+  "schema_version": "1.0",
+  "source_commit": "d43dd4dcdd37e2a00aee087672b22c7bc78306ba",
+  "success": 18,
+  "skipped": 1,
+  "failed": 0,
+  "checks": [
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36838875210/job/110293092496",
+      "name": "deploy",
+      "state": "SKIPPED"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36838875140/job/110292847642",
+      "name": "python (macos-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36838875134/job/110292847788",
+      "name": "rust (macos-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36838875140/job/110292847645",
+      "name": "neural-worker (macos-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36838875140/job/110292847531",
+      "name": "python (windows-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36838875210/job/110292848132",
+      "name": "build",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36838875140/job/110292847580",
+      "name": "neural-worker (windows-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36838875134/job/110292847610",
+      "name": "rust (windows-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36838875108/job/110292847143",
+      "name": "web (windows-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36838875134/job/110292847854",
+      "name": "rust (ubuntu-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36838875108/job/110292847490",
+      "name": "web (ubuntu-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36838875140/job/110292847614",
+      "name": "python (ubuntu-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36838875146/job/110292847775",
+      "name": "dependencies",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36838875094/job/110292847520",
+      "name": "architecture-boundaries",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36838875094/job/110292847621",
+      "name": "web-smoke",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36838875146/job/110292847582",
+      "name": "secrets",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36838875140/job/110292847583",
+      "name": "neural-worker (ubuntu-latest)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36838875140/job/110292847315",
+      "name": "python-static",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36838875144/job/110292847430",
+      "name": "contract",
+      "state": "SUCCESS"
+    }
+  ],
+  "scope": "Exact parent-head CI, not the subsequent public link extraction change"
+}

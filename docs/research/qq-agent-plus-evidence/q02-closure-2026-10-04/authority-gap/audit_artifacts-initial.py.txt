@@ -1,0 +1,54 @@
+"""Read-only integrity and acquisition audit; prose acceptance remains primary review."""
+import hashlib
+import json
+from pathlib import Path
+
+phase = Path(__file__).resolve().parent
+def j(path): return json.loads(path.read_text())
+def sha(path): return hashlib.sha256(path.read_bytes()).hexdigest()
+
+if (phase / "manifest.json").exists():
+    manifest = j(phase / "manifest.json")
+    actual = {str(p.relative_to(phase)) for p in phase.rglob("*") if p.is_file()
+              and p != phase / "manifest.json"
+              and not any(x.startswith(".") or x == "__pycache__" for x in p.relative_to(phase).parts)}
+    assert actual == set(manifest)
+    for rel, digest in manifest.items(): assert sha(phase / rel) == digest, rel
+server = phase / "server"
+for rel, digest in j(server / "export-manifest.json").items():
+    assert sha(server / rel) == digest, rel
+plan = j(phase / "plan.json")
+assert plan == j(server / "plan.json")
+assert plan["model_http_limit"] == 0 and plan["builtin_fallback"] is False
+before, after = j(server / "admission.json")["before"], j(server / "exit.json")["after"]
+assert before == after
+assert j(server / "exit.json")["model_http"] == 0
+raw = j(server / "raw-searxng.json")
+assert len(raw) == 2
+queries = []
+for i in range(2):
+    row = j(server / f"search-{i+1}.json")
+    data = row["result"]
+    assert row["ok"] and data["provider"] == "searxng"
+    assert row["arguments"]["query"] == plan["queries"][i]["query"]
+    assert row["arguments"]["domains"] == plan["queries"][i]["domains"]
+    assert len(data["provider_queries"]) == 1
+    assert data["effective_query"] == raw[i]["query"]
+    assert data["body_sha256"] == raw[i]["body_sha256"]
+    queries.append({"query": raw[i]["query"], "engines": sorted({r["engine"] for r in raw[i]["body"]["results"]}),
+                    "unresponsive_engines": raw[i]["body"].get("unresponsive_engines"), "elapsed_ms": row["elapsed_ms"]})
+review = j(phase / "primary-review.json")
+previous = j(phase / "previous-read-urls.json")
+if isinstance(previous, dict): previous = previous["urls"]
+for i, item in enumerate(review["entries"], 1):
+    row = j(server / f"read-{i}.json")
+    data = row["result"]
+    assert row["ok"] and data["provider"] == "crawl4ai" and data["dns_resolver"] == "cloudflare"
+    assert row["arguments"]["fresh"] and data["url"] not in previous
+    assert data["url"] == item["url"] and data["body_sha256"] == item["body_sha256"]
+    assert hashlib.sha256(data["text"].encode()).hexdigest() == item["text_sha256"]
+    assert not data["truncated"] and len(data["text"]) == data["total_characters"]
+    assert item["visible_time"] in data["text"]
+assert review["model_calls"] == 0
+print(json.dumps({"audit": "passed", "model_http": 0, "search_calls": 2, "read_calls": 2,
+                  "queries": queries, "production_changed": False, "q02_approval": False}, ensure_ascii=False))

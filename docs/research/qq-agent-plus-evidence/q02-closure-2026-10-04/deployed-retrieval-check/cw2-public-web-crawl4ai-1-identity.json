@@ -1,0 +1,7 @@
+{
+  "name": "cw2-public-web-crawl4ai-1",
+  "image_id": "sha256:a61d687f6f32e18452749504c38ea4a4389d8de05830521a0da0da526d0a0bf4",
+  "image": "dockerproxy.net/unclecode/crawl4ai:0.9.2",
+  "started_at": "2026-10-02T20:46:27.142269835Z",
+  "running": true
+}

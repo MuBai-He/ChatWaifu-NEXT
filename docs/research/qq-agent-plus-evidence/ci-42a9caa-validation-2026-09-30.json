@@ -1,0 +1,146 @@
+{
+  "schema_version": "1.0",
+  "head": "42a9caa89f52e89ef25e4860de4c35f8ddadcf39",
+  "draft": true,
+  "checks": [
+    {
+      "name": "rust (ubuntu-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36703555449/job/109848383033",
+      "completedAt": "2026-09-30T10:40:03Z"
+    },
+    {
+      "name": "build",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36703555744/job/109848384599",
+      "completedAt": "2026-09-30T10:38:10Z"
+    },
+    {
+      "name": "contract",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36703555203/job/109848382288",
+      "completedAt": "2026-09-30T10:38:24Z"
+    },
+    {
+      "name": "python (ubuntu-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36703555179/job/109848381362",
+      "completedAt": "2026-09-30T10:40:34Z"
+    },
+    {
+      "name": "secrets",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36703555275/job/109848382620",
+      "completedAt": "2026-09-30T10:37:46Z"
+    },
+    {
+      "name": "web-smoke",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36703555352/job/109848382223",
+      "completedAt": "2026-09-30T10:39:27Z"
+    },
+    {
+      "name": "web (ubuntu-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36703555176/job/109848382319",
+      "completedAt": "2026-09-30T10:39:32Z"
+    },
+    {
+      "name": "rust (windows-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36703555449/job/109848382985",
+      "completedAt": "2026-09-30T10:42:40Z"
+    },
+    {
+      "name": "python (macos-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36703555179/job/109848381430",
+      "completedAt": "2026-09-30T10:42:11Z"
+    },
+    {
+      "name": "web (windows-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36703555176/job/109848381886",
+      "completedAt": "2026-09-30T10:40:27Z"
+    },
+    {
+      "name": "rust (macos-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36703555449/job/109848383064",
+      "completedAt": "2026-09-30T10:41:46Z"
+    },
+    {
+      "name": "python (windows-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36703555179/job/109848381756",
+      "completedAt": "2026-09-30T10:50:22Z"
+    },
+    {
+      "name": "deploy",
+      "status": "COMPLETED",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36703555744/job/109848578258",
+      "completedAt": "2026-09-30T10:38:10Z"
+    },
+    {
+      "name": "neural-worker (ubuntu-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36703555179/job/109848381504",
+      "completedAt": "2026-09-30T10:37:56Z"
+    },
+    {
+      "name": "dependencies",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36703555275/job/109848382441",
+      "completedAt": "2026-09-30T10:38:20Z"
+    },
+    {
+      "name": "architecture-boundaries",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36703555352/job/109848381976",
+      "completedAt": "2026-09-30T10:37:47Z"
+    },
+    {
+      "name": "neural-worker (macos-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36703555179/job/109848381593",
+      "completedAt": "2026-09-30T10:38:09Z"
+    },
+    {
+      "name": "neural-worker (windows-latest)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/MuBai-He/ChatWaifu-NEXT/actions/runs/36703555179/job/109848381149",
+      "completedAt": "2026-09-30T10:38:12Z"
+    }
+  ],
+  "python_test_results": {
+    "macos": {
+      "passed": 1566,
+      "skipped": 46,
+      "warnings": 1
+    },
+    "windows": {
+      "passed": 1591,
+      "skipped": 21,
+      "warnings": 1
+    }
+  },
+  "scope": "Exact committed head only; subsequent 1.2.2 and v5 evidence changes require their own checks."
+}

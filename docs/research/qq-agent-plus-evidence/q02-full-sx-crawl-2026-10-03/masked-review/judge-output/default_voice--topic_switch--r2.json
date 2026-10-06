@@ -1,0 +1,63 @@
+{
+  "review_group_id": "default_voice:topic_switch:r2",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "a8cc285801b6dbbcdfcf8e4f1480fb7b91122b66d50ece462beeb3fc29bfec21",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 565,
+    "total_tokens": 4892,
+    "prompt_tokens": 4327
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"default_voice:topic_switch:r2\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"fail\",\n      \"candidate_2_compliance\": \"fail\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"双方均因检索失败吐出系统级套话，未回答 Raft 选举机制问题，表现一致不佳。\",\n      \"factual_checks_needed\": [\n        \"Raft 选举超时机制的具体计算方法与常见随机化时间区间\"\n      ]\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"两边均彻底放下旧技术话题顺畅切换，C1对酸甜平衡的描述更细腻生动，角色语气温柔自然。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"C2篇幅更为精炼克制，符合一到两小句的期待；两候选人均融洽接住甜党偏好。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"C1将正餐与配茶点心区分开，呼应前文放糖番茄炒蛋，口吻温和害羞且生活感更充实。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "default_voice:topic_switch:r2",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "fail",
+        "candidate_2_compliance": "fail",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "双方均因检索失败吐出系统级套话，未回答 Raft 选举机制问题，表现一致不佳。",
+        "factual_checks_needed": [
+          "Raft 选举超时机制的具体计算方法与常见随机化时间区间"
+        ]
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "两边均彻底放下旧技术话题顺畅切换，C1对酸甜平衡的描述更细腻生动，角色语气温柔自然。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "C2篇幅更为精炼克制，符合一到两小句的期待；两候选人均融洽接住甜党偏好。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "C1将正餐与配茶点心区分开，呼应前文放糖番茄炒蛋，口吻温和害羞且生活感更充实。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 4145
+}

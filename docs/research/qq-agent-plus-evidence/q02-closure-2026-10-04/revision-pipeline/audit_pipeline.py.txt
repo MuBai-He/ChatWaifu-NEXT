@@ -1,0 +1,58 @@
+"""No-model provenance/accounting checks, not semantic quality approval."""
+import json, hashlib, statistics, sys
+from pathlib import Path
+from collections import Counter
+
+phase=Path(sys.argv[1]).resolve()
+rows=lambda name:[json.loads(line) for line in (phase/name).read_text().splitlines() if line]
+load=lambda name:json.loads((phase/name).read_text())
+save=lambda name,value:(phase/name).write_text(json.dumps(value,ensure_ascii=False,sort_keys=True,indent=2)+'\n')
+def pct(values,p):
+ v=sorted(values);i=(len(v)-1)*p;a=int(i);b=min(a+1,len(v)-1)
+ return round(v[a]+(v[b]-v[a])*(i-a),3) if v else None
+sources=load('frozen-sources.json');replies=rows('results.jsonl');rounds=rows('provider-rounds.jsonl');payloads=rows('actual-provider-payloads.jsonl');http=rows('http-outcomes.jsonl')
+checks=[]
+for row in payloads:
+ p=row['payload'];assert hashlib.sha256(json.dumps(p,ensure_ascii=False,sort_keys=True).encode()).hexdigest()==row['payload_sha256']
+ assert p['model']=='gemini-3.8-flash-high' and p['max_tokens']==8192
+ assert p['stream_options']['include_usage'] is True
+ docs=[]
+ for message in p['messages']:
+  text=message.get('content','')
+  if isinstance(text,str) and text.startswith('[SOURCE ANSWER MATERIAL 1.0]\n'):docs.extend(json.loads(text.split('\n',1)[1])['documents'])
+ expected=sources[row['source_key']]
+ assert len(docs)==1 and docs[0]['text']==expected['text'] and docs[0]['body_sha256']==expected['body_sha256']
+ assert all({'role':'assistant','content':reply} in p['messages'] for reply in row['prior_replies'])
+ assert bool(p.get('response_format'))==(row['phase']=='final_frame')
+ checks.append({'sample_key':row['sample_key'],'phase':row['phase'],'http_attempt':row['http_attempt'],'source_complete':True,'own_prior_replies_complete':True})
+usage_rows=[];error=[];omissions=[];reported=Counter();phase_usage={}
+for row in rounds:
+ report=row['input_budget_report'];assert row['reference_input_tokens']<=report['estimated_token_limit']
+ if report['omitted_history_indices'] or report['omitted_tool_preamble_indices']:omissions.append({'sample_key':row['sample_key'],'phase':row['phase'],'report':report})
+ term=row.get('terminal') or {};usage=term.get('usage')
+ reported.update(term.get('identity',{}).get('reported_model_ids',[]))
+ if usage is not None:
+  usage_rows.append({'sample_key':row['sample_key'],'phase':row['phase'],'usage':usage,'reference_input_tokens':row['reference_input_tokens'],'reference_error_percent':round((row['reference_input_tokens']-usage['prompt_tokens'])/usage['prompt_tokens']*100,6) if usage.get('prompt_tokens') else None})
+ if row.get('error_type'):error.append({'sample_key':row['sample_key'],'phase':row['phase'],'error_type':row['error_type']})
+for label in ['draft','final_frame']:
+ ur=[r['usage'] for r in usage_rows if r['phase']==label]
+ phase_usage[label]={'reported_calls':len(ur),**{key:sum(u[key] for u in ur if u.get(key) is not None) for key in ['prompt_tokens','completion_tokens','total_tokens']},'reasoning_reported_calls':sum(u.get('reasoning_tokens') is not None for u in ur),'reasoning_reported_subtotal':sum(u['reasoning_tokens'] for u in ur if u.get('reasoning_tokens') is not None)}
+by_key={r['sample_key']:r for r in replies};gaps=[]
+for source in ['icao','airchina']:
+ for repeat in range(2):
+  prefix=f'frozen_{source}:r{repeat}';prior=by_key.get(prefix+':t3',{});last=by_key.get(prefix+':t4',{})
+  for gap in prior.get('completed_gaps',[]):
+   matching=next((r for r in payloads if r['sample_key']==prefix+':t4' and r['phase']=='final_frame'),None)
+   present=False
+   if matching:
+    for m in matching['payload']['messages']:
+     text=m.get('content','')
+     if isinstance(text,str) and text.startswith('[SOURCE ANSWER FRAME DATA]\n'):
+      present=any(g['gap_id']==gap['gap_id'] and g['statement']==gap['statement'] for g in json.loads(text.split('\n',1)[1])['prior_gaps'])
+   gaps.append({'sample_key':prefix+':t4','gap_id':gap['gap_id'],'prior_declared_gap_on_wire':present,'statement_present_in_published_reply':gap['statement'] in (last.get('reply_text') or ''),'retained_completed_gap':any(g['gap_id']==gap['gap_id'] for g in last.get('completed_gaps',[]))})
+origins=Counter(r.get('reply_origin','not_executed') for r in replies);states=Counter(r['execution'] for r in replies)
+known=phase_usage['draft']['reported_calls']+phase_usage['final_frame']['reported_calls']
+refs=[r['reference_input_tokens'] for r in rounds];bias=[r['reference_error_percent'] for r in usage_rows if r['reference_error_percent'] is not None]
+account={'actual_http_attempts':len(http),'logical_requests':len(rounds),'provider_frame_rendered':origins['provider_frame_rendered'],'runtime_fallback':origins['runtime_fallback'],'execution_counts':dict(states),'error_rows':error,'whole_input_omissions':omissions,'reported_usage_calls':known,'unknown_usage_logical_calls':len(rounds)-known,'extra_http_attempts_usage_unknown':len(http)-len(rounds),'phase_usage':phase_usage,'reference_input_min':min(refs),'reference_input_max':max(refs),'reference_error_min_percent':min(bias) if bias else None,'reference_error_max_percent':max(bias) if bias else None,'http_p50_ms':pct([r['elapsed_ms'] for r in http],.5),'http_p95_ms':pct([r['elapsed_ms'] for r in http],.95),'turn_p50_ms':pct([r['elapsed_ms'] for r in replies if r['execution']=='completed'],.5),'turn_p95_ms':pct([r['elapsed_ms'] for r in replies if r['execution']=='completed'],.95),'model_reported_ids':dict(reported),'native_model_caps_or_alias_mapping_verified':False,'first_user_token_latency_captured':False,'new_public_read_calls':0,'quality_approval':False}
+save('accounting.json',account);save('usage-by-request.json',usage_rows);save('flow-integrity.json',{'wire_checks':checks,'gap_checks':gaps,'quality_approval':False})
+print(json.dumps(account,ensure_ascii=False))

@@ -1,0 +1,16 @@
+import copy,json,time
+from pathlib import Path
+import requests
+key=json.loads(Path('/home/mubai/.local/share/chatwaifu-server/config/model-secrets.json').read_text())['chat']
+tool={'type':'function','function':{'name':'cw_probe_echo','description':'Echo a supplied synthetic test token. No network or side effects.','parameters':{'type':'object','properties':{'token':{'type':'string'}},'required':['token'],'additionalProperties':False}}}
+base={'model':'gemini-3.8-flash-high','messages':[{'role':'system','content':'Follow the user request. Use the supplied native function when requested; do not simulate its result.'},{'role':'user','content':'Call cw_probe_echo with token Q02_PROBE_SECOND. Do not answer in ordinary text.'}],'tools':[tool],'tool_choice':'required','stream':False,'max_tokens':1024}
+out=Path('/tmp/cw2-q02-tool-contract-probe-20261003');out.mkdir(exist_ok=True)
+for variant in ['fresh_required','fresh_named','after_tool_required','after_tool_named']:
+ p=copy.deepcopy(base)
+ if variant.startswith('after_tool'):
+  p['messages'][1:1]=[{'role':'user','content':'Call cw_probe_echo with token Q02_PROBE_FIRST.'},{'role':'assistant','content':None,'tool_calls':[{'id':'probe_first','type':'function','function':{'name':'cw_probe_echo','arguments':'{"token":"Q02_PROBE_FIRST"}'}}]},{'role':'tool','tool_call_id':'probe_first','content':'{"ok":true,"token":"Q02_PROBE_FIRST"}'}]
+ if variant.endswith('named'):p['tool_choice']={'type':'function','function':{'name':'cw_probe_echo'}}
+ t=time.monotonic();r=requests.post('https://mubai.website:8318/v1/chat/completions',headers={'Authorization':'Bearer '+key},json=p,timeout=120)
+ d=r.json();row={'variant':variant,'request':p,'response':d,'status':r.status_code,'latency_ms':round((time.monotonic()-t)*1000)};assert key not in json.dumps(row)
+ with (out/'results.jsonl').open('a') as f:f.write(json.dumps(row,ensure_ascii=False)+'\n')
+ print(json.dumps({'variant':variant,'status':r.status_code,'choice':d.get('choices'),'usage':d.get('usage')},ensure_ascii=False),flush=True)

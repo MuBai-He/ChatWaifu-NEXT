@@ -1,0 +1,14 @@
+{
+  "container": "cw2-q02-searx-yahoo-candidate",
+  "image_id": "sha256:85b1794aa5c7ba4d5f382d101426d2af32da2728dd1d17228b9172f444ab7a7b",
+  "active_engines": [
+    "360search",
+    "yandex",
+    "yahoo"
+  ],
+  "port": 18082,
+  "same_proxy_and_dns_as_existing_candidate": true,
+  "production_unchanged": true,
+  "prior_probe_container_removed": true,
+  "purpose": "Real model screening, not production promotion"
+}

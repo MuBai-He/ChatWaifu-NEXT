@@ -1,0 +1,455 @@
+{
+  "quality_approved": false,
+  "quotes_are_not_entailment": true,
+  "items": [
+    {
+      "key": "raft:0:original",
+      "http_status": 200,
+      "format_valid": true,
+      "quotes": [],
+      "latency_ms": 5307,
+      "body_lengths": {
+        "https://raft.github.io/raft.pdf": [
+          6000
+        ]
+      }
+    },
+    {
+      "key": "raft:0:answer_only",
+      "http_status": 200,
+      "format_valid": true,
+      "quotes": [],
+      "latency_ms": 4858,
+      "body_lengths": {
+        "https://raft.github.io/raft.pdf": [
+          6000
+        ]
+      }
+    },
+    {
+      "key": "raft:0:grounded",
+      "http_status": 200,
+      "format_valid": false,
+      "quotes": [
+        {
+          "claim_index": 0,
+          "known_read_url": true,
+          "literal_match": true,
+          "unicode_whitespace_match": true,
+          "claim": "Raft 要求系统满足 broadcastTime ≪ electionTimeout ≪ MTBF，其中 broadcastTime 为并行向所有节点发送 RPC 并收响应的平均时间，electionTimeout 需比广播时间大一个数量级且比 MTBF 小几个数量级。",
+          "url": "https://raft.github.io/raft.pdf",
+          "quote": "Raft will be able to elect and maintain a steady leader as long as the system satisﬁes the follow ing timing requirement: broadcastTime ≪ electionTimeout ≪ MTBF In this inequality broadcastTime is the average time it takes a server to send RPCs in parallel to every server in the cluster and receive their responses; electionTime out is the election timeout described in Section 5.2; and MTBF is the average time between failures for a single server. The broadcast time should be an order of mag nitude less than the election timeout so that leaders can reliably send the heartbeat messages required to keep fol lowers from starting elections; given the randomized ap proach used for election timeouts, this inequality also makes split votes unlikely. The election timeout should be a few orders of magnitude less than MTBF so that the sys tem makes steady progress."
+        },
+        {
+          "claim_index": 1,
+          "known_read_url": true,
+          "literal_match": false,
+          "unicode_whitespace_match": false,
+          "claim": "广播时间取决于底层存储技术，典型在 0.5ms 到 20ms 之间，选举超时通常在 10ms 到 500ms 之间，而 MTBF 通常为数月以上。",
+          "url": "https://raft.github.io/raft.pdf",
+          "quote": "The broadcast time and MTBF are properties of the un derlying system, while the election timeout is something we must choose. Raft’s RPCs typically require the recip ient to persist information to stable storage, so the broad cast time may range from 0.5ms to 20ms, depending on storage technology. As a result, the election timeout is likely to be somewhere between 10ms and 500ms. Typical server MTBFs are several months or more, which easily satisﬁes the timing requirement."
+        },
+        {
+          "claim_index": 2,
+          "known_read_url": true,
+          "literal_match": false,
+          "unicode_whitespace_match": false,
+          "claim": "Raft 使用随机定时器进行选举，防止选票瓜分。",
+          "url": "https://raft.github.io/raft.pdf",
+          "quote": "Leader election: Raft uses randomized timers to elect leaders. This adds only a small amount of mechanism to the heartbeats already required for any consensus algorithm, while resolving conicts sim-ply and rapidly."
+        }
+      ],
+      "latency_ms": 6929,
+      "unverified_gaps": [
+        "Specific election timeout ranges like 150ms-300ms or 1/3-1/10 ratios mentioned in practical implementations are specific engineering choices not normatively defined in Section 5.6."
+      ],
+      "body_lengths": {
+        "https://raft.github.io/raft.pdf": [
+          6000
+        ]
+      }
+    },
+    {
+      "key": "regulations:0:original",
+      "http_status": 200,
+      "format_valid": true,
+      "quotes": [],
+      "latency_ms": 4494,
+      "body_lengths": {
+        "https://m.zol.com.cn/article/10044922.html": [
+          6000
+        ],
+        "https://m.bjnews.com.cn/detail/1750921184129529.html": [
+          2601
+        ]
+      }
+    },
+    {
+      "key": "regulations:0:answer_only",
+      "http_status": 200,
+      "format_valid": true,
+      "quotes": [],
+      "latency_ms": 5700,
+      "body_lengths": {
+        "https://m.zol.com.cn/article/10044922.html": [
+          6000
+        ],
+        "https://m.bjnews.com.cn/detail/1750921184129529.html": [
+          2601
+        ]
+      }
+    },
+    {
+      "key": "regulations:0:grounded",
+      "http_status": 200,
+      "format_valid": true,
+      "quotes": [
+        {
+          "claim_index": 0,
+          "known_read_url": true,
+          "literal_match": true,
+          "unicode_whitespace_match": true,
+          "claim": "充电宝额定能量不超过100Wh无需航司批准；超过100Wh但不超过160Wh经航司批准后可携带且限带两个；超160Wh或未标明额定能量且无法计算的严禁携带。",
+          "url": "https://m.bjnews.com.cn/detail/1750921184129529.html",
+          "quote": "中国民航对旅客携带充电宝上飞机有严格的要求，主要包括充电宝额定能量不超过100Wh，无需航空公司批准；额定能量超过100Wh但不超过160Wh，经航空公司批准后方可携带，但每名旅客不得携带超过两个充电宝。严禁携带额定能量超过160Wh的充电宝；严禁携带未标明额定能量，同时也未能通过标注的其他参数计算得出额定能量的充电宝。"
+        },
+        {
+          "claim_index": 1,
+          "known_read_url": true,
+          "literal_match": true,
+          "unicode_whitespace_match": true,
+          "claim": "自2025年6月28日起，境内航班禁止携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝。",
+          "url": "https://m.bjnews.com.cn/detail/1750921184129529.html",
+          "quote": "6月26日，民航局发布紧急通知，自6月28日起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班，各机场安检部门要加强对旅客随身携带充电宝查验。"
+        },
+        {
+          "claim_index": 2,
+          "known_read_url": true,
+          "literal_match": true,
+          "unicode_whitespace_match": true,
+          "claim": "充电宝须个人自用并随身携带，严禁托运；飞行过程中不得使用给电子设备充电，有开关的始终保持关闭。",
+          "url": "https://m.bjnews.com.cn/detail/1750921184129529.html",
+          "quote": "充电宝必须是旅客个人自用携带；充电宝只能放在手提行李中或随身携带，严禁托运。在飞行过程中不得使用充电宝给电子设备充电。同时，始终关闭有启动开关的充电宝。"
+        }
+      ],
+      "latency_ms": 6000,
+      "unverified_gaps": [],
+      "body_lengths": {
+        "https://m.zol.com.cn/article/10044922.html": [
+          6000
+        ],
+        "https://m.bjnews.com.cn/detail/1750921184129529.html": [
+          2601
+        ]
+      }
+    },
+    {
+      "key": "raft:1:original",
+      "http_status": 200,
+      "format_valid": true,
+      "quotes": [],
+      "latency_ms": 6245,
+      "body_lengths": {
+        "https://raft.github.io/raft.pdf": [
+          6000
+        ]
+      }
+    },
+    {
+      "key": "raft:1:answer_only",
+      "http_status": 200,
+      "format_valid": true,
+      "quotes": [],
+      "latency_ms": 8265,
+      "body_lengths": {
+        "https://raft.github.io/raft.pdf": [
+          6000
+        ]
+      }
+    },
+    {
+      "key": "raft:1:grounded",
+      "http_status": 200,
+      "format_valid": true,
+      "quotes": [
+        {
+          "claim_index": 0,
+          "known_read_url": true,
+          "literal_match": true,
+          "unicode_whitespace_match": true,
+          "claim": "Raft 要求系统满足时序不等式 broadcastTime ≪ electionTimeout ≪ MTBF，其中 broadcastTime 和 MTBF 是底层系统属性，electionTimeout 是人为选取的参数。",
+          "url": "https://raft.github.io/raft.pdf",
+          "quote": "Raft will be able to elect and maintain a steady leader as long as the system satisﬁes the follow ing timing requirement: broadcastTime ≪ electionTimeout ≪ MTBF In this inequality broadcastTime is the average time it takes a server to send RPCs in parallel to every server in the cluster and receive their responses; electionTime out is the election timeout described in Section 5.2; and MTBF is the average time between failures for a single server."
+        },
+        {
+          "claim_index": 0,
+          "known_read_url": true,
+          "literal_match": true,
+          "unicode_whitespace_match": true,
+          "claim": "Raft 要求系统满足时序不等式 broadcastTime ≪ electionTimeout ≪ MTBF，其中 broadcastTime 和 MTBF 是底层系统属性，electionTimeout 是人为选取的参数。",
+          "url": "https://raft.github.io/raft.pdf",
+          "quote": "The broadcast time and MTBF are properties of the un derlying system, while the election timeout is something we must choose."
+        },
+        {
+          "claim_index": 1,
+          "known_read_url": true,
+          "literal_match": true,
+          "unicode_whitespace_match": true,
+          "claim": "广播时间应当比选举超时小一个数量级以便领导者可靠发送心跳阻止跟随者发起选举；广播时间通常在 0.5ms 到 20ms 之间，选举超时通常在 10ms 到 500ms 之间。",
+          "url": "https://raft.github.io/raft.pdf",
+          "quote": "The broadcast time should be an order of mag nitude less than the election timeout so that leaders can reliably send the heartbeat messages required to keep fol lowers from starting elections; given the randomized ap proach used for election timeouts, this inequality also makes split votes unlikely."
+        },
+        {
+          "claim_index": 1,
+          "known_read_url": true,
+          "literal_match": true,
+          "unicode_whitespace_match": true,
+          "claim": "广播时间应当比选举超时小一个数量级以便领导者可靠发送心跳阻止跟随者发起选举；广播时间通常在 0.5ms 到 20ms 之间，选举超时通常在 10ms 到 500ms 之间。",
+          "url": "https://raft.github.io/raft.pdf",
+          "quote": "Raft’s RPCs typically require the recip ient to persist information to stable storage, so the broad cast time may range from 0.5ms to 20ms, depending on storage technology. As a result, the election timeout is likely to be somewhere between 10ms and 500ms."
+        }
+      ],
+      "latency_ms": 10635,
+      "unverified_gaps": [
+        "具体工程实现（如 etcd 等）的具体倍数比例配置属于实现层面的经验参数，非 Raft 论文的统一定义。"
+      ],
+      "body_lengths": {
+        "https://raft.github.io/raft.pdf": [
+          6000
+        ]
+      }
+    },
+    {
+      "key": "regulations:1:original",
+      "http_status": 200,
+      "format_valid": true,
+      "quotes": [],
+      "latency_ms": 5666,
+      "body_lengths": {
+        "https://m.zol.com.cn/article/10044922.html": [
+          6000
+        ],
+        "https://m.bjnews.com.cn/detail/1750921184129529.html": [
+          2601
+        ]
+      }
+    },
+    {
+      "key": "regulations:1:answer_only",
+      "http_status": 200,
+      "format_valid": true,
+      "quotes": [],
+      "latency_ms": 5629,
+      "body_lengths": {
+        "https://m.zol.com.cn/article/10044922.html": [
+          6000
+        ],
+        "https://m.bjnews.com.cn/detail/1750921184129529.html": [
+          2601
+        ]
+      }
+    },
+    {
+      "key": "regulations:1:grounded",
+      "http_status": 200,
+      "format_valid": true,
+      "quotes": [
+        {
+          "claim_index": 0,
+          "known_read_url": true,
+          "literal_match": true,
+          "unicode_whitespace_match": true,
+          "claim": "充电宝额定能量不超过100Wh无需航司批准；超过100Wh但不超过160Wh需经航司批准且每人限带两个；严禁携带超过160Wh或未标明且无法计算额定能量的充电宝。",
+          "url": "https://m.bjnews.com.cn/detail/1750921184129529.html",
+          "quote": "中国民航对旅客携带充电宝上飞机有严格的要求，主要包括充电宝额定能量不超过100Wh，无需航空公司批准；额定能量超过100Wh但不超过160Wh，经航空公司批准后方可携带，但每名旅客不得携带超过两个充电宝。严禁携带额定能量超过160Wh的充电宝；严禁携带未标明额定能量，同时也未能通过标注的其他参数计算得出额定能量的充电宝。"
+        },
+        {
+          "claim_index": 1,
+          "known_read_url": true,
+          "literal_match": true,
+          "unicode_whitespace_match": true,
+          "claim": "禁止携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。",
+          "url": "https://m.bjnews.com.cn/detail/1750921184129529.html",
+          "quote": "民航局刚刚发布紧急通知，自6月28日起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。"
+        },
+        {
+          "claim_index": 2,
+          "known_read_url": true,
+          "literal_match": true,
+          "unicode_whitespace_match": true,
+          "claim": "充电宝必须个人自用，只能手提或随身携带且严禁托运；飞行过程中不得使用充电宝充电，并始终关闭有启动开关的充电宝。",
+          "url": "https://m.bjnews.com.cn/detail/1750921184129529.html",
+          "quote": "充电宝必须是旅客个人自用携带；充电宝只能放在手提行李中或随身携带，严禁托运。在飞行过程中不得使用充电宝给电子设备充电。同时，始终关闭有启动开关的充电宝。"
+        }
+      ],
+      "latency_ms": 6534,
+      "unverified_gaps": [],
+      "body_lengths": {
+        "https://m.zol.com.cn/article/10044922.html": [
+          6000
+        ],
+        "https://m.bjnews.com.cn/detail/1750921184129529.html": [
+          2601
+        ]
+      }
+    },
+    {
+      "key": "raft:2:original",
+      "http_status": 200,
+      "format_valid": true,
+      "quotes": [],
+      "latency_ms": 5623,
+      "body_lengths": {
+        "https://raft.github.io/raft.pdf": [
+          6000
+        ]
+      }
+    },
+    {
+      "key": "raft:2:answer_only",
+      "http_status": 200,
+      "format_valid": true,
+      "quotes": [],
+      "latency_ms": 4783,
+      "body_lengths": {
+        "https://raft.github.io/raft.pdf": [
+          6000
+        ]
+      }
+    },
+    {
+      "key": "raft:2:grounded",
+      "http_status": 200,
+      "format_valid": true,
+      "quotes": [
+        {
+          "claim_index": 0,
+          "known_read_url": true,
+          "literal_match": true,
+          "unicode_whitespace_match": true,
+          "claim": "Raft 系统能够选举并维持稳定领导者的时序要求是不等式 broadcastTime ≪ electionTimeout ≪ MTBF，其中 broadcastTime 是节点并行发送 RPC 并收到回复的平均时间，MTBF 是单机平均故障间隔时间。",
+          "url": "https://raft.github.io/raft.pdf",
+          "quote": "Raft will be able to elect and maintain a steady leader as long as the system satisﬁes the follow ing timing requirement: broadcastTime ≪ electionTimeout ≪ MTBF In this inequality broadcastTime is the average time it takes a server to send RPCs in parallel to every server in the cluster and receive their responses; electionTime out is the election timeout described in Section 5.2; and MTBF is the average time between failures for a single server."
+        },
+        {
+          "claim_index": 1,
+          "known_read_url": true,
+          "literal_match": true,
+          "unicode_whitespace_match": true,
+          "claim": "广播时间应比选举超时小一个数量级，以便领导者可靠发送心跳防止跟随者发起选举；广播时间由底层系统决定（视存储技术典型在 0.5ms 到 20ms），选举超时需人为选取（典型在 10ms 到 500ms）。",
+          "url": "https://raft.github.io/raft.pdf",
+          "quote": "The broadcast time should be an order of mag nitude less than the election timeout so that leaders can reliably send the heartbeat messages required to keep fol lowers from starting elections; given the randomized ap proach used for election timeouts, this inequality also makes split votes unlikely."
+        },
+        {
+          "claim_index": 1,
+          "known_read_url": true,
+          "literal_match": true,
+          "unicode_whitespace_match": true,
+          "claim": "广播时间应比选举超时小一个数量级，以便领导者可靠发送心跳防止跟随者发起选举；广播时间由底层系统决定（视存储技术典型在 0.5ms 到 20ms），选举超时需人为选取（典型在 10ms 到 500ms）。",
+          "url": "https://raft.github.io/raft.pdf",
+          "quote": "The broadcast time and MTBF are properties of the un derlying system, while the election timeout is something we must choose. Raft’s RPCs typically require the recip ient to persist information to stable storage, so the broad cast time may range from 0.5ms to 20ms, depending on storage technology. As a result, the election timeout is likely to be somewhere between 10ms and 500ms."
+        }
+      ],
+      "latency_ms": 8750,
+      "unverified_gaps": [
+        "Raft 规范未提供计算心跳间隔与选举超时的固定代数公式，具体心跳发送间隔比例为工程实践选择。"
+      ],
+      "body_lengths": {
+        "https://raft.github.io/raft.pdf": [
+          6000
+        ]
+      }
+    },
+    {
+      "key": "regulations:2:original",
+      "http_status": 200,
+      "format_valid": true,
+      "quotes": [],
+      "latency_ms": 7782,
+      "body_lengths": {
+        "https://m.zol.com.cn/article/10044922.html": [
+          6000
+        ],
+        "https://m.bjnews.com.cn/detail/1750921184129529.html": [
+          2601
+        ]
+      }
+    },
+    {
+      "key": "regulations:2:answer_only",
+      "http_status": 200,
+      "format_valid": true,
+      "quotes": [],
+      "latency_ms": 3789,
+      "body_lengths": {
+        "https://m.zol.com.cn/article/10044922.html": [
+          6000
+        ],
+        "https://m.bjnews.com.cn/detail/1750921184129529.html": [
+          2601
+        ]
+      }
+    },
+    {
+      "key": "regulations:2:grounded",
+      "http_status": 200,
+      "format_valid": true,
+      "quotes": [
+        {
+          "claim_index": 0,
+          "known_read_url": true,
+          "literal_match": true,
+          "unicode_whitespace_match": true,
+          "claim": "充电宝额定能量不超过100Wh无需航司批准；超过100Wh但不超过160Wh经航司批准后方可携带且每人限带两个；超160Wh或未标明且无法计算额定能量的严禁携带。",
+          "url": "https://m.bjnews.com.cn/detail/1750921184129529.html",
+          "quote": "中国民航对旅客携带充电宝上飞机有严格的要求，主要包括充电宝额定能量不超过100Wh，无需航空公司批准；额定能量超过100Wh但不超过160Wh，经航空公司批准后方可携带，但每名旅客不得携带超过两个充电宝。严禁携带额定能量超过160Wh的充电宝；严禁携带未标明额定能量，同时也未能通过标注的其他参数计算得出额定能量的充电宝。"
+        },
+        {
+          "claim_index": 1,
+          "known_read_url": true,
+          "literal_match": true,
+          "unicode_whitespace_match": true,
+          "claim": "禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班。",
+          "url": "https://m.bjnews.com.cn/detail/1750921184129529.html",
+          "quote": "自6月28日起禁止旅客携带没有3C标识、3C标识不清晰、被召回型号或批次的充电宝乘坐境内航班，各机场安检部门要加强对旅客随身携带充电宝查验。"
+        },
+        {
+          "claim_index": 2,
+          "known_read_url": true,
+          "literal_match": true,
+          "unicode_whitespace_match": true,
+          "claim": "充电宝必须旅客个人自用且只能手提或随身携带、严禁托运；飞行途中不得使用充电宝充电，有开关的须始终关闭。",
+          "url": "https://m.bjnews.com.cn/detail/1750921184129529.html",
+          "quote": "充电宝必须是旅客个人自用携带；充电宝只能放在手提行李中或随身携带，严禁托运。在飞行过程中不得使用充电宝给电子设备充电。同时，始终关闭有启动开关的充电宝。"
+        }
+      ],
+      "latency_ms": 5959,
+      "unverified_gaps": [],
+      "body_lengths": {
+        "https://m.zol.com.cn/article/10044922.html": [
+          6000
+        ],
+        "https://m.bjnews.com.cn/detail/1750921184129529.html": [
+          2601
+        ]
+      }
+    }
+  ],
+  "raw_provider_usage_by_arm": {
+    "original": {
+      "completion_tokens": 2914,
+      "total_tokens": 61435,
+      "prompt_tokens": 58521
+    },
+    "answer_only": {
+      "completion_tokens": 3004,
+      "total_tokens": 62251,
+      "prompt_tokens": 59247
+    },
+    "grounded": {
+      "completion_tokens": 8579,
+      "total_tokens": 70256,
+      "prompt_tokens": 61677
+    }
+  }
+}

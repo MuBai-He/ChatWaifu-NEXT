@@ -1,0 +1,50 @@
+[
+  {
+    "file": "services/runtime/src/chatwaifu_runtime/agent/source_context.py",
+    "old_sha256": "9cc7474bd3d156d37db28cbab3f797c52d0a35abd7ad294df897fc21df8a7b5f",
+    "new_sha256": "30ca398df617bb2a84483eb8c58efb642af3dbd7dad5524f44f486917339924c",
+    "diff_lines": 56
+  },
+  {
+    "file": "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py",
+    "old_sha256": "9dd64ea4495fec714e5ae7ba9114eb5aebfd54f3b705f7d6bd3f428ea72d4e51",
+    "new_sha256": "b8706d9f119f741d3cfea06adadf6c5e7d97e37c251374d04248b8c8d1bc1411",
+    "diff_lines": 454
+  },
+  {
+    "file": "services/runtime/src/chatwaifu_runtime/providers/contracts.py",
+    "old_sha256": "3e2c33beb6ba7eb827feb8b4cd5c3fe0dfb85c72710e296c6743eee45bb6120d",
+    "new_sha256": "1013a2ccff350453031c699564600611ec18dd1254f014eedf5f77cfcf90cb0a",
+    "diff_lines": 92
+  },
+  {
+    "file": "services/runtime/src/chatwaifu_runtime/providers/demo_llm.py",
+    "old_sha256": "617802a5105f5d07e5bce72d2e57f041abbc6caf566848ba00f407af606a99f2",
+    "new_sha256": "39c7a1770ab104e53e42403ea2db5e409395949210dcf94903f5e7bfaba8a9f3",
+    "diff_lines": 25
+  },
+  {
+    "file": "services/runtime/src/chatwaifu_runtime/providers/input_estimation.py",
+    "old_sha256": "d22ce6ec7fdbb1259e8c54b38a41dc69a47b6453135d54ad52e0e6226633acf8",
+    "new_sha256": "acf173b831cd5df3d1221b24d2eafd5873461f05816fd25ad5be22b191276d52",
+    "diff_lines": 13
+  },
+  {
+    "file": "services/runtime/src/chatwaifu_runtime/providers/openai_compatible.py",
+    "old_sha256": "9aca9179cd04845372ed5c52f00811d4b84950155eac8e4e2e6732bcee5b1cc2",
+    "new_sha256": "e7b90ff4d39d29f7964e9c5b349553d31186d6c8b7ec9f4f51ec6bd52300fd19",
+    "diff_lines": 56
+  },
+  {
+    "file": "services/runtime/src/chatwaifu_runtime/conversation/service.py",
+    "old_sha256": "c2ecec4b7832e5679507fa19f3e867819ddda4496920ce0dc255674fc8f50dbb",
+    "new_sha256": "0764dcde596e722a5aaee04cbd05e54f4c04be72e51f6c960d058b0872ec7849",
+    "diff_lines": 246
+  },
+  {
+    "file": "services/runtime/src/chatwaifu_runtime/bootstrap/container.py",
+    "old_sha256": "d162def493b79d007fe0929444b3b5bf9bb136fcc58c0c6c36a742ef72924c4d",
+    "new_sha256": "245f824fcb609e2df0f7d75037ab857fa849bfea8c45c9379564234ba7f61a6e",
+    "diff_lines": 19
+  }
+]

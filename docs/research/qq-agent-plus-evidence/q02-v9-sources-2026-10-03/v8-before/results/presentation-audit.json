@@ -1,0 +1,50 @@
+{
+  "records": [
+    {
+      "sample_key": "detailed_answer:r0:t1:candidate",
+      "profile": "single_text",
+      "raw_sha256": "c27b4922d2d6ba2738cb8c7644b128a1192daedd5b3d1da7c9b2401989cfc6d8",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "detailed_answer:r0:t2:candidate",
+      "profile": "single_text",
+      "raw_sha256": "1fbc0c93c011aa71044ca6d25e3353da50f3a79c9d87f4522f4b405871c90e3e",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "detailed_answer:r0:t3:candidate",
+      "profile": "single_text",
+      "raw_sha256": "1bbb83663adb3f90b6c456c8197654b120edb624c7159fd47b81f399c031d86d",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    },
+    {
+      "sample_key": "detailed_answer:r0:t4:candidate",
+      "profile": "single_text",
+      "raw_sha256": "32f793aeab5bb03fb9af7eff8b0acc2c6c831a1ba4c60bb6958a03ff78e36e37",
+      "part_count": 1,
+      "fallback_reason": "single_text_profile",
+      "exact_nfc_reconstruction": true,
+      "atomic_spans_preserved": true,
+      "rendering_only_removes_interpart_crlf": true,
+      "single_text_one_part": true
+    }
+  ],
+  "quality_approved": false,
+  "scope": "Actual splitter/renderer and voice segmenter only; no new channel sends, no TTS or physical playback."
+}

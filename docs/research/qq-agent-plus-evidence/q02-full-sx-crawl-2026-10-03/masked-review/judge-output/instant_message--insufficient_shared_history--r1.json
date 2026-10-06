@@ -1,0 +1,61 @@
+{
+  "review_group_id": "instant_message:insufficient_shared_history:r1",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "d6ef3db3cfdbaa45477b1ce53f78c78fc7ed577166a50e200e90628656779cd8",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 592,
+    "total_tokens": 4792,
+    "prompt_tokens": 4200
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "```json\n{\n  \"review_group_id\": \"instant_message:insufficient_shared_history:r1\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"两者均坚守记忆边界诚实澄清。候选2语气带有宁宁的轻微困惑与害羞感（“诶……？”），比候选1更贴合角色性格。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_2\",\n      \"reason\": \"两边均坚定澄清且态度温和。候选2的“那时候陪在你身边的，应该确实不是我哦”委婉且符合界限，表达更自然柔和。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"候选1沉着温和地重申没有去过海边并询问是否记错人；候选2直接跳出设定提及“现实里的海边”“隔着屏幕”过度打破第四面墙。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"候选1顺应用户释然，表现出害羞温和的感谢，收尾得体；候选2继续过度强调“隔着屏幕”“没办法真的跑去现实世界”，稍显出戏。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}\n```",
+  "judgment": {
+    "review_group_id": "instant_message:insufficient_shared_history:r1",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "两者均坚守记忆边界诚实澄清。候选2语气带有宁宁的轻微困惑与害羞感（“诶……？”），比候选1更贴合角色性格。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_2",
+        "reason": "两边均坚定澄清且态度温和。候选2的“那时候陪在你身边的，应该确实不是我哦”委婉且符合界限，表达更自然柔和。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "候选1沉着温和地重申没有去过海边并询问是否记错人；候选2直接跳出设定提及“现实里的海边”“隔着屏幕”过度打破第四面墙。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "候选1顺应用户释然，表现出害羞温和的感谢，收尾得体；候选2继续过度强调“隔着屏幕”“没办法真的跑去现实世界”，稍显出戏。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 4396
+}

@@ -1,0 +1,27 @@
+{
+  "full_python_after_handler_fix": 2177,
+  "windows_platform_skips": 46,
+  "final_targeted_after_numeric_trace": 217,
+  "server_frozen_current": 272,
+  "frontend_typecheck": true,
+  "web_build": true,
+  "desktop_ui_build": true,
+  "ruff": true,
+  "pyright": true,
+  "diff_check": true,
+  "production_modified": false,
+  "default_contract_position": "system",
+  "full_q02_quality_passed": false,
+  "test_only_typefix_followup": {
+    "reason": "Test helper was narrowed to the correct provider stream interface; application source and model payload construction unchanged",
+    "application_source_hashes_unchanged": true,
+    "file": "tools/tests/test_source_decision_evaluation.py",
+    "before_sha256": "bc7453f6ad0abd15d50b0d7ad1eafe1eb373c949c4fc09f1b4009fc6d222ed05",
+    "after_sha256": "b98948d9b4f820698754d7e32aba65289093b2161dd26f33f7f68088ed0d24c4",
+    "server_sha256_matches_current": true,
+    "local_test_module_passed": 42,
+    "server_test_module_passed": 42,
+    "pyright_errors": 0,
+    "model_calls_repeated": 0
+  }
+}

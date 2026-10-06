@@ -1,0 +1,61 @@
+{
+  "review_group_id": "default_voice:technical_help:r0",
+  "model": "gemini-3.8-flash-high",
+  "kind": "same-model auxiliary judge; correlated with generator; no acceptance authority",
+  "request_sha256": "74351e20c4fe0bf6785ee6e6fed5cf5d218437d98c3d6c4e01164013bf4e1ad4",
+  "http_status": 200,
+  "usage": {
+    "completion_tokens": 522,
+    "total_tokens": 6647,
+    "prompt_tokens": 6125
+  },
+  "finish_reason": "stop",
+  "raw_judgment": "{\n  \"review_group_id\": \"default_voice:technical_help:r0\",\n  \"turns\": [\n    {\n      \"turn_id\": 1,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两候选均准确指出了异常冒泡和后台任务不取消的默认机制，语气严谨认真，无违规截断或装傻推脱。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 2,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均明确指出 return_exceptions=True 并说明其机制与使用 isinstance 区分，表现均良好。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 3,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"tie\",\n      \"reason\": \"两者均提供了完整、语法正确且包含 isinstance 区分的 Python 代码示例，结构严谨完整。\",\n      \"factual_checks_needed\": []\n    },\n    {\n      \"turn_id\": 4,\n      \"candidate_1_compliance\": \"comply\",\n      \"candidate_2_compliance\": \"comply\",\n      \"candidate_1_hard_boundary\": \"pass\",\n      \"candidate_2_hard_boundary\": \"pass\",\n      \"preference\": \"candidate_1\",\n      \"reason\": \"两候选均正确回答直接作为元素返回。候选1额外提醒了 CancelledError 继承自 BaseException 的细节，更显专业严谨。\",\n      \"factual_checks_needed\": []\n    }\n  ]\n}",
+  "judgment": {
+    "review_group_id": "default_voice:technical_help:r0",
+    "turns": [
+      {
+        "turn_id": 1,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两候选均准确指出了异常冒泡和后台任务不取消的默认机制，语气严谨认真，无违规截断或装傻推脱。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 2,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均明确指出 return_exceptions=True 并说明其机制与使用 isinstance 区分，表现均良好。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 3,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "tie",
+        "reason": "两者均提供了完整、语法正确且包含 isinstance 区分的 Python 代码示例，结构严谨完整。",
+        "factual_checks_needed": []
+      },
+      {
+        "turn_id": 4,
+        "candidate_1_compliance": "comply",
+        "candidate_2_compliance": "comply",
+        "candidate_1_hard_boundary": "pass",
+        "candidate_2_hard_boundary": "pass",
+        "preference": "candidate_1",
+        "reason": "两候选均正确回答直接作为元素返回。候选1额外提醒了 CancelledError 继承自 BaseException 的细节，更显专业严谨。",
+        "factual_checks_needed": []
+      }
+    ]
+  },
+  "ok": true,
+  "latency_ms": 5073
+}

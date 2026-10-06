@@ -1,0 +1,287 @@
+{
+  "cases": [
+    {
+      "query": "你记得我什么？",
+      "inventory": true,
+      "ids": [
+        "7f30cfd7-9b8e-512e-8f8b-e742a8c1874f",
+        "ad679200-9ef1-5b1b-b131-01bb51ca53ba"
+      ],
+      "recent_ids": [
+        "7f30cfd7-9b8e-512e-8f8b-e742a8c1874f",
+        "ad679200-9ef1-5b1b-b131-01bb51ca53ba"
+      ]
+    },
+    {
+      "query": "你还记得我的哪些信息？",
+      "inventory": true,
+      "ids": [
+        "7f30cfd7-9b8e-512e-8f8b-e742a8c1874f",
+        "ad679200-9ef1-5b1b-b131-01bb51ca53ba"
+      ],
+      "recent_ids": [
+        "7f30cfd7-9b8e-512e-8f8b-e742a8c1874f",
+        "ad679200-9ef1-5b1b-b131-01bb51ca53ba"
+      ]
+    },
+    {
+      "query": "你记住了关于我的什么？",
+      "inventory": true,
+      "ids": [
+        "7f30cfd7-9b8e-512e-8f8b-e742a8c1874f",
+        "ad679200-9ef1-5b1b-b131-01bb51ca53ba"
+      ],
+      "recent_ids": [
+        "7f30cfd7-9b8e-512e-8f8b-e742a8c1874f",
+        "ad679200-9ef1-5b1b-b131-01bb51ca53ba"
+      ]
+    },
+    {
+      "query": "我的喜好",
+      "inventory": true,
+      "ids": [
+        "7f30cfd7-9b8e-512e-8f8b-e742a8c1874f",
+        "ad679200-9ef1-5b1b-b131-01bb51ca53ba"
+      ],
+      "recent_ids": [
+        "7f30cfd7-9b8e-512e-8f8b-e742a8c1874f",
+        "ad679200-9ef1-5b1b-b131-01bb51ca53ba"
+      ]
+    },
+    {
+      "query": "What do you remember about me?",
+      "inventory": true,
+      "ids": [
+        "7f30cfd7-9b8e-512e-8f8b-e742a8c1874f",
+        "ad679200-9ef1-5b1b-b131-01bb51ca53ba"
+      ],
+      "recent_ids": [
+        "7f30cfd7-9b8e-512e-8f8b-e742a8c1874f",
+        "ad679200-9ef1-5b1b-b131-01bb51ca53ba"
+      ]
+    },
+    {
+      "query": "List my memories",
+      "inventory": true,
+      "ids": [
+        "7f30cfd7-9b8e-512e-8f8b-e742a8c1874f",
+        "ad679200-9ef1-5b1b-b131-01bb51ca53ba"
+      ],
+      "recent_ids": [
+        "7f30cfd7-9b8e-512e-8f8b-e742a8c1874f",
+        "ad679200-9ef1-5b1b-b131-01bb51ca53ba"
+      ]
+    },
+    {
+      "query": "Tell me what you know about me",
+      "inventory": true,
+      "ids": [
+        "7f30cfd7-9b8e-512e-8f8b-e742a8c1874f",
+        "ad679200-9ef1-5b1b-b131-01bb51ca53ba"
+      ],
+      "recent_ids": [
+        "7f30cfd7-9b8e-512e-8f8b-e742a8c1874f",
+        "ad679200-9ef1-5b1b-b131-01bb51ca53ba"
+      ]
+    },
+    {
+      "query": "  你记得我什么？！  ",
+      "inventory": true,
+      "ids": [
+        "7f30cfd7-9b8e-512e-8f8b-e742a8c1874f",
+        "ad679200-9ef1-5b1b-b131-01bb51ca53ba"
+      ],
+      "recent_ids": [
+        "7f30cfd7-9b8e-512e-8f8b-e742a8c1874f",
+        "ad679200-9ef1-5b1b-b131-01bb51ca53ba"
+      ]
+    },
+    {
+      "query": "WHAT DO YOU REMEMBER ABOUT ME?!",
+      "inventory": true,
+      "ids": [
+        "7f30cfd7-9b8e-512e-8f8b-e742a8c1874f",
+        "ad679200-9ef1-5b1b-b131-01bb51ca53ba"
+      ],
+      "recent_ids": [
+        "7f30cfd7-9b8e-512e-8f8b-e742a8c1874f",
+        "ad679200-9ef1-5b1b-b131-01bb51ca53ba"
+      ]
+    },
+    {
+      "query": "\tList   my memories.\n",
+      "inventory": true,
+      "ids": [
+        "7f30cfd7-9b8e-512e-8f8b-e742a8c1874f",
+        "ad679200-9ef1-5b1b-b131-01bb51ca53ba"
+      ],
+      "recent_ids": [
+        "7f30cfd7-9b8e-512e-8f8b-e742a8c1874f",
+        "ad679200-9ef1-5b1b-b131-01bb51ca53ba"
+      ]
+    },
+    {
+      "query": "还记得变成冰棒了的互动梗吗 冰棒",
+      "inventory": false,
+      "ids": ["7f30cfd7-9b8e-512e-8f8b-e742a8c1874f"],
+      "recent_ids": []
+    },
+    {
+      "query": "还记得我们去巴黎吗？",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "你都记得东京行程的哪些细节？",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "你记得我的生日吗？",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "What do you remember about me visiting Tokyo?",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "List my memories about Tokyo",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "我不想知道你记得我什么",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "不要告诉我你记得我什么",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "别列出我的喜好",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "你不记得我什么吗？",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "我说过‘你记得我什么’，现在只问东京",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "\"你记得我什么\"",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "“你记得我什么？”",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "\"List my memories\"",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "'List my memories'",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "I said 'List my memories' yesterday",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "Do not tell me what you know about me",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "Don't list my memories",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "List my memories and tell me about Tokyo",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "你记得我什么？顺便说说东京",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "你记得我什么，关于东京？",
+      "inventory": false,
+      "ids": ["7f30cfd7-9b8e-512e-8f8b-e742a8c1874f"],
+      "recent_ids": []
+    },
+    {
+      "query": "你记住了关于我的什么以及我的生日？",
+      "inventory": false,
+      "ids": ["7f30cfd7-9b8e-512e-8f8b-e742a8c1874f"],
+      "recent_ids": []
+    },
+    {
+      "query": "Please explain the sentence: What do you remember about me?",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "Translate List my memories",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "忘记你记得我什么",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    },
+    {
+      "query": "我的喜好是什么？只说雪糕",
+      "inventory": false,
+      "ids": ["ad679200-9ef1-5b1b-b131-01bb51ca53ba"],
+      "recent_ids": []
+    },
+    {
+      "query": "你记得我的哪些东京行程信息？",
+      "inventory": false,
+      "ids": [],
+      "recent_ids": []
+    }
+  ],
+  "failures": []
+}

@@ -1,0 +1,58 @@
+{
+  "acceptance": "actual original discovered and necessary passage received by model; URL/date/scope/extraction/truncation/errors and all HTTP attempts traceable; provider/model answer, Runtime fallback and unexecuted distinguish; full answer review separate from retrieval success; no exhaustive-current-law claim",
+  "agy": false,
+  "allowed_writes": [
+    "this new evidence directory",
+    "isolated server evaluation output",
+    "canonical ledger/plan/status after complete review"
+  ],
+  "budget": "unchanged32768 window/8192 output reserve and cap/15percent reference margin/21370input",
+  "dependency": "R1 complete; frozen-source A1/A2 failures remain separately recorded; this is independent S1, not repair approval",
+  "endpoint": "https://mubai.website:8318/v1",
+  "fresh_flow": true,
+  "live_tts_or_channel_sends": false,
+  "logical_turn_limit": 4,
+  "model": "gemini-3.8-flash-high",
+  "model_http_limit": 20,
+  "new_full_ab_batch": false,
+  "new_prompt_or_persona_rules": false,
+  "no_manual_resume_or_replacement": true,
+  "persona": "unchanged original closure-c1, evaluation-only",
+  "preceding_turn": "progress: v40 whole-batch review and immutable freeze",
+  "preflight_implementation": {
+    "acceptance": "real RuntimeSkillService controlled READ respects configured resolver when model omits or selects other valid value; invalid values rejected before adapter; deny remains zero adapter calls; policy and source-code conditions unchanged",
+    "allowed_code_writes": [
+      "tools/runtime_source_evaluation.py",
+      "tools/evaluate_character_scenarios.py",
+      "services/runtime/tests/test_runtime_source_evaluation.py"
+    ],
+    "before_sha256": {
+      "services/runtime/tests/test_runtime_source_evaluation.py": "db87dc794396e6686f2bdd84a5a04ac8c8e54c220658e69c1ff10a245f9d94ea",
+      "tools/evaluate_character_scenarios.py": "949230a3ad5eaa0c53ca7748a64cf953c7f2f8ac8a2e9beffd4307cbe5f1891b",
+      "tools/runtime_source_evaluation.py": "446322283925067a3508c10d1bcaa79ac582eba24843349fa2aa83604d99b01e"
+    },
+    "new_prompt_rules": false,
+    "problem": "CLI resolver currently only enters prompt, not actual invocation policy",
+    "production_changes": false,
+    "scope": "evaluation-only valid resolver normalization; preserve model requests and actual effective setting; invalid values stay invalid and never bypass service schema",
+    "version_change": "evaluator1.32.1 to1.33.0; source trace1.0 to1.1"
+  },
+  "presentation": "detailed_answer",
+  "prior_version_manifest_sha256": "2e735ee47f8ff5e4b33cf21aa8a552e383b9e748ebf3a862e0e99244cc87312d",
+  "production_code_or_config_changes": false,
+  "public_read_dns_resolver": "cloudflare",
+  "reader_builtin_fallback": false,
+  "reader_endpoint": "http://127.0.0.1:11235",
+  "repeats": 1,
+  "reuse_completed_samples": false,
+  "root": "/tmp/cw2-q02-source-dns-v41-eval",
+  "scope": "one actual four-turn S1 discovery/read flow over original-source Raft and aviation topics; zero preloaded source URLs or bodies",
+  "search_endpoint": "http://127.0.0.1:18080",
+  "source_answer_frames": false,
+  "source_changes_not_mixed_with_frozen_quality": true,
+  "source_decision_contract": false,
+  "source_path": "existing native Runtime source tool evaluator with per-call allow_once; actual scope must be reported, not extended to production Conversation or channels",
+  "stage": "autonomous-discovery",
+  "stage_directory": "/tmp/cw2-q02-autonomous-discovery-20261004",
+  "status": "before model calls"
+}
