@@ -37,14 +37,15 @@ def channel_tool_policy(
     text: str,
     *,
     public_web_enabled: bool = False,
+    voice_reply_enabled: bool = True,
 ) -> frozenset[str]:
     # Reply medium is chosen by the model. This grants only the current owner
     # reply surface and opted-in public reads; execution checks live scope and generation.
     del text
     if configuration.provider_id == PROVIDER_ID:
-        return (
-            frozenset({VOICE_SKILL_ID, "web.search", "web.read"})
-            if public_web_enabled
-            else frozenset({VOICE_SKILL_ID})
+        voice = frozenset({VOICE_SKILL_ID}) if voice_reply_enabled else frozenset[str]()
+        public_web = (
+            frozenset({"web.search", "web.read"}) if public_web_enabled else frozenset[str]()
         )
+        return voice | public_web
     return frozenset()

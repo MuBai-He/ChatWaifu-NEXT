@@ -14,7 +14,10 @@ import {
   readConversationScope,
   scopedSessionStorageKey,
 } from "../conversationScope";
-import { resolveRuntimeConnection } from "../runtimeEndpoint";
+import {
+  assertRuntimeRequestContext,
+  readRuntimeRequestContext,
+} from "../runtimeEndpoint";
 
 export type {
   SavedPhoto,
@@ -45,11 +48,12 @@ export async function getPhotoMemory(
   characterId = "default",
   signal?: AbortSignal,
 ): Promise<PhotoMemorySnapshot> {
+  const expectedContext = await readRuntimeRequestContext();
   const query = await photoQuery(characterId);
   return requestRuntime(
     `/v1/photo-memory?${query.toString()}`,
     photoMemorySnapshotParser,
-    { signal },
+    { signal, expectedContext },
   );
 }
 
@@ -58,6 +62,7 @@ export async function updatePhotoMemorySettings(
   characterId = "default",
   signal?: AbortSignal,
 ): Promise<PhotoMemorySettings> {
+  const expectedContext = await readRuntimeRequestContext();
   const query = await photoQuery(characterId);
   return requestRuntime(
     `/v1/photo-memory/settings?${query.toString()}`,
@@ -66,6 +71,7 @@ export async function updatePhotoMemorySettings(
       method: "PUT",
       body: JSON.stringify(update),
       signal,
+      expectedContext,
     },
   );
 }
@@ -75,6 +81,7 @@ export async function deleteSavedPhoto(
   characterId = "default",
   signal?: AbortSignal,
 ): Promise<PhotoMemoryDeleteResult> {
+  const expectedContext = await readRuntimeRequestContext();
   const query = await photoQuery(characterId);
   return requestRuntime(
     `/v1/photo-memory/${encodeURIComponent(photoId)}?${query.toString()}`,
@@ -82,6 +89,7 @@ export async function deleteSavedPhoto(
     {
       method: "DELETE",
       signal,
+      expectedContext,
     },
   );
 }
@@ -112,7 +120,8 @@ export async function fetchPhotoImageUrl(
     throw callerSignal.reason ?? new DOMException("Aborted", "AbortError");
   }
 
-  const connection = await resolveRuntimeConnection();
+  const expectedContext = await readRuntimeRequestContext();
+  const connection = expectedContext.connection;
 
   if (callerSignal?.aborted) {
     throw callerSignal.reason ?? new DOMException("Aborted", "AbortError");
@@ -143,6 +152,7 @@ export async function fetchPhotoImageUrl(
   }
 
   try {
+    assertRuntimeRequestContext(expectedContext);
     const response = await fetch(url, {
       method: "GET",
       headers,
@@ -150,6 +160,7 @@ export async function fetchPhotoImageUrl(
       signal: controller.signal,
     });
 
+    assertRuntimeRequestContext(expectedContext);
     if (!response.ok) {
       throw new Error(`获取照片失败 (${response.status})`);
     }
@@ -219,6 +230,7 @@ export async function fetchPhotoImageUrl(
 
     const blob = new Blob(chunks, { type: contentType });
 
+    assertRuntimeRequestContext(expectedContext);
     return URL.createObjectURL(blob);
   } catch (error: unknown) {
     if (timedOut) {

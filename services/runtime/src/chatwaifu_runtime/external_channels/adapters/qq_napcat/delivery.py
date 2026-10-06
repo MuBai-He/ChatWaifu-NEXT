@@ -145,6 +145,7 @@ class NapCatDelivery:
         | None = None,
         group_authorization: Callable[[ChannelDeliveryPlanRecord], Awaitable[bool]] | None = None,
         journal_lock: asyncio.Lock | None = None,
+        private_voice_enabled: Callable[[], bool] = lambda: True,
     ) -> None:
         self._repository = repository
         self._client = client
@@ -156,6 +157,7 @@ class NapCatDelivery:
         self._proactive_authorization = proactive_authorization
         self._group_authorization = group_authorization
         self._journal_lock = journal_lock or asyncio.Lock()
+        self._private_voice_enabled = private_voice_enabled
 
     async def execute_part(
         self, plan: ChannelDeliveryPlanRecord, part: ChannelDeliveryPartRecord
@@ -202,6 +204,8 @@ class NapCatDelivery:
             if isinstance(part.payload, ChannelTextDeliveryPartPayload):
                 segments = native_text_segments(self._render_text(plan, part))
             elif isinstance(part.payload, ChannelAudioDeliveryPartPayload):
+                if not self._private_voice_enabled():
+                    return _failed("qq_voice_disabled", "QQ 私聊语音回复已关闭。")
                 path = self._audio_root / f"{part.payload.asset_id}.wav"
                 if path.is_symlink() or not path.is_file() or path.stat().st_size > 8 * 1024 * 1024:
                     return _failed("qq_audio_unavailable", "语音文件不可用，请重新请求。")
@@ -289,6 +293,10 @@ class NapCatDelivery:
                         and connection.configuration.allowed_sender_keys == [self._owner]
                         and current is not None
                         and current.cancel_requested_at is None
+                        and (
+                            not isinstance(part.payload, ChannelAudioDeliveryPartPayload)
+                            or self._private_voice_enabled()
+                        )
                         and await self._authorized(plan)
                     )
 

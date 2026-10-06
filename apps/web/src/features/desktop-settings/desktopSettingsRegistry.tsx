@@ -1,6 +1,6 @@
 import { ConnectionSettingsSection } from "./ConnectionSettingsSection";
 import { AppearanceSettingsSection } from "./AppearanceSettingsSection";
-import { ChannelsSettingsSection } from "./ChannelsSettingsSection";
+import { ChannelsSettingsSection } from "../channels-settings/ChannelsSettingsSection";
 import { CompanionSettingsPanel } from "./CompanionSettingsPanel";
 import { DataSettingsSection } from "./DataSettingsSection";
 import type { DesktopSettingsContext } from "./DesktopSettingsContext";
@@ -49,7 +49,7 @@ export const desktopSettingsRegistry =
     {
       id: "channels",
       label: "渠道",
-      description: "微信与外部消息",
+      description: "微信、QQ 与权限",
       icon: "channels",
       component: ChannelsSettingsSection,
     },

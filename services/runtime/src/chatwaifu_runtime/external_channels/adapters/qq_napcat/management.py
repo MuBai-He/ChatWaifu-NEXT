@@ -87,6 +87,8 @@ class NapCatManagement:
         | None = None,
         proactive_on_terminal: Callable[[ChannelDeliveryPlanRecord], Awaitable[None]] | None = None,
         groups: ChannelGroupService | None = None,
+        private_voice_enabled: Callable[[], bool] = lambda: True,
+        native_favorites_enabled: Callable[[], bool] = lambda: True,
     ) -> None:
         self._gateway = gateway
         self._repository = repository
@@ -101,6 +103,8 @@ class NapCatManagement:
         )
         self._proactive_on_terminal = proactive_on_terminal or gateway.proactive_delivery_terminal
         self._groups = groups
+        self._private_voice_enabled = private_voice_enabled
+        self._native_favorites_enabled = native_favorites_enabled
         self._factory = client_factory
         self._sticker_catalog = sticker_catalog
         self._sticker_library = sticker_library
@@ -572,6 +576,7 @@ class NapCatManagement:
                         client,
                         connection_id,
                         journal_lock=self._journal_locks.setdefault(connection_id, asyncio.Lock()),
+                        enabled=self._native_favorites_enabled,
                         group_authorization=self._groups.authorize_sticker_source
                         if self._groups is not None
                         else None,
@@ -588,6 +593,7 @@ class NapCatManagement:
                         sticker_catalog=self._sticker_catalog,
                         sticker_library=self._sticker_library,
                         proactive_authorization=self._proactive_authorization,
+                        private_voice_enabled=self._private_voice_enabled,
                         group_authorization=self._groups.authorize_delivery
                         if self._groups is not None
                         else None,

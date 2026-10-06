@@ -260,6 +260,7 @@ class ExternalChannelService:
         burst_scheduler: BurstScheduler | None = None,
         tool_policy: Callable[[ChannelConnectionConfiguration, str], frozenset[str]] | None = None,
         recent_image_clock: Callable[[], float] = monotonic,
+        qq_voice_input_enabled: Callable[[], bool] = lambda: True,
     ) -> None:
         self._repository = repository
         self._conversation_repository = conversation_repository
@@ -270,6 +271,7 @@ class ExternalChannelService:
         self._publisher = publisher
         self._providers = {item.provider_id: item for item in providers}
         self._tool_policy = tool_policy
+        self._qq_voice_input_enabled = qq_voice_input_enabled
         self._sticker_catalog = sticker_catalog
         self._sticker_library = sticker_library
         self._photo_observer = photo_observer
@@ -1113,6 +1115,11 @@ class ExternalChannelService:
                 await self._fence_audio_locked(connection_id, records, tasks)
         finally:
             await self._finish_audio_cancellation(records, tasks)
+
+    async def revoke_qq_voice_input(self) -> None:
+        for connection in await self._repository.list_connections():
+            if connection.configuration.provider_id == "qq_napcat":
+                await self._cancel_connection_audio(connection.configuration.connection_id)
 
     def _quoted_message_loader(
         self, message: ChannelInboundTextMessage, binding: ChannelBindingRecord
@@ -2685,6 +2692,12 @@ class ExternalChannelService:
     ) -> None:
         configuration = connection.configuration
         provider = self._providers[configuration.provider_id]
+        if (
+            has_audio
+            and configuration.provider_id == "qq_napcat"
+            and not self._qq_voice_input_enabled()
+        ):
+            raise ChannelPolicyError("QQ private voice input is disabled")
         if not configuration.enabled:
             raise ChannelPolicyError("channel connection is disabled")
         if message.chat_type is not ChannelChatType.DIRECT:

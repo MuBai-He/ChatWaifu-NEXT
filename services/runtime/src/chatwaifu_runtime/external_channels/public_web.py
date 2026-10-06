@@ -15,7 +15,7 @@ class ChannelPublicWebPolicy:
         repository: ExternalChannelRepository,
         active_generation: Callable[[UUID], UUID | None],
         *,
-        enabled: bool,
+        enabled: bool | Callable[[], bool],
     ) -> None:
         self._repository = repository
         self._active_generation = active_generation
@@ -23,7 +23,7 @@ class ChannelPublicWebPolicy:
 
     async def __call__(self, context: GenerationSkillContext, skill_id: str) -> bool:
         if (
-            not self._enabled
+            not (self._enabled() if callable(self._enabled) else self._enabled)
             or skill_id not in {"web.search", "web.read"}
             or context.origin != "agent"
             or context.turn_id is None
@@ -47,7 +47,8 @@ class ChannelPublicWebPolicy:
                 return False
             config = connection.configuration
             return (
-                connection.deleted_at is None
+                (self._enabled() if callable(self._enabled) else self._enabled)
+                and connection.deleted_at is None
                 and config.enabled
                 and config.provider_id == "qq_napcat"
                 and config.account_key == turn.account_key

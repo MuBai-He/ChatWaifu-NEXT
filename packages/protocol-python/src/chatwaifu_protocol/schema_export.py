@@ -34,6 +34,13 @@ from chatwaifu_protocol.channel_proactive import (
     ChannelProactivePolicyUpdate,
     ChannelProactivePreview,
 )
+from chatwaifu_protocol.channel_settings import (
+    ChannelRuntimePolicy,
+    ChannelRuntimeSettingsResponse,
+    ChannelRuntimeSettingsSnapshot,
+    ChannelRuntimeSettingsUpdate,
+    GroupDiscussionPolicy,
+)
 from chatwaifu_protocol.channels import (
     ChannelAuthorizationSnapshot,
     ChannelAuthorizationStartRequest,
@@ -148,6 +155,11 @@ class ProtocolCatalog(ProtocolModel):
     channel_pairing_start_request: ChannelPairingStartRequest
     channel_pairing: ChannelPairingSnapshot
     channel_provider: ChannelProviderRegistration
+    channel_runtime_policy: ChannelRuntimePolicy
+    channel_runtime_settings: ChannelRuntimeSettingsResponse
+    channel_runtime_settings_snapshot: ChannelRuntimeSettingsSnapshot
+    channel_runtime_settings_update: ChannelRuntimeSettingsUpdate
+    group_discussion_policy: GroupDiscussionPolicy
     channel_presentation_policy: ChannelPresentationPolicy
     channel_connection_configuration: ChannelConnectionConfiguration
     channel_connection: ChannelConnectionSnapshot
@@ -222,6 +234,11 @@ class ProtocolCatalog(ProtocolModel):
 
 
 SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
+    "channel-runtime-policy": ChannelRuntimePolicy,
+    "channel-runtime-settings-response": ChannelRuntimeSettingsResponse,
+    "channel-runtime-settings-snapshot": ChannelRuntimeSettingsSnapshot,
+    "channel-runtime-settings-update": ChannelRuntimeSettingsUpdate,
+    "group-discussion-policy": GroupDiscussionPolicy,
     "channel-group-turn-snapshot": ChannelGroupTurnSnapshot,
     "channel-group-turn-page": ChannelGroupTurnPage,
     "channel-group-audience-request": ChannelGroupAudienceRequest,

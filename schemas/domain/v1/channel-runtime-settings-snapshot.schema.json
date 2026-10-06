@@ -1,0 +1,181 @@
+{
+  "$defs": {
+    "ChannelRuntimePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "group_discussion": {
+          "$ref": "#/$defs/GroupDiscussionPolicy"
+        },
+        "qq_native_favorites_enabled": {
+          "default": true,
+          "title": "Qq Native Favorites Enabled",
+          "type": "boolean"
+        },
+        "qq_owner_public_web_enabled": {
+          "default": false,
+          "title": "Qq Owner Public Web Enabled",
+          "type": "boolean"
+        },
+        "qq_owner_voice_input_enabled": {
+          "default": true,
+          "title": "Qq Owner Voice Input Enabled",
+          "type": "boolean"
+        },
+        "qq_owner_voice_reply_enabled": {
+          "default": true,
+          "title": "Qq Owner Voice Reply Enabled",
+          "type": "boolean"
+        }
+      },
+      "title": "ChannelRuntimePolicy",
+      "type": "object"
+    },
+    "GroupDiscussionPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_characters": {
+          "default": 24000,
+          "maximum": 128000,
+          "minimum": 3200,
+          "title": "Cache Characters",
+          "type": "integer"
+        },
+        "cache_messages": {
+          "default": 96,
+          "maximum": 512,
+          "minimum": 32,
+          "title": "Cache Messages",
+          "type": "integer"
+        },
+        "duplicate_window_seconds": {
+          "default": 60,
+          "maximum": 900,
+          "minimum": 1,
+          "title": "Duplicate Window Seconds",
+          "type": "integer"
+        },
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "frequency_window_seconds": {
+          "default": 30,
+          "maximum": 300,
+          "minimum": 1,
+          "title": "Frequency Window Seconds",
+          "type": "integer"
+        },
+        "input_tokens": {
+          "default": 1536,
+          "maximum": 8192,
+          "minimum": 128,
+          "title": "Input Tokens",
+          "type": "integer"
+        },
+        "max_groups": {
+          "default": 32,
+          "maximum": 128,
+          "minimum": 1,
+          "title": "Max Groups",
+          "type": "integer"
+        },
+        "member_characters": {
+          "default": 6000,
+          "maximum": 32000,
+          "minimum": 80,
+          "title": "Member Characters",
+          "type": "integer"
+        },
+        "member_messages": {
+          "default": 24,
+          "maximum": 128,
+          "minimum": 1,
+          "title": "Member Messages",
+          "type": "integer"
+        },
+        "member_messages_per_window": {
+          "default": 6,
+          "maximum": 30,
+          "minimum": 1,
+          "title": "Member Messages Per Window",
+          "type": "integer"
+        },
+        "message_characters": {
+          "default": 800,
+          "maximum": 2000,
+          "minimum": 80,
+          "title": "Message Characters",
+          "type": "integer"
+        },
+        "retention_seconds": {
+          "default": 900,
+          "maximum": 3600,
+          "minimum": 30,
+          "title": "Retention Seconds",
+          "type": "integer"
+        },
+        "summary_input_tokens": {
+          "default": 3072,
+          "maximum": 16384,
+          "minimum": 256,
+          "title": "Summary Input Tokens",
+          "type": "integer"
+        },
+        "summary_output_tokens": {
+          "default": 256,
+          "maximum": 1024,
+          "minimum": 64,
+          "title": "Summary Output Tokens",
+          "type": "integer"
+        },
+        "summary_timeout_seconds": {
+          "default": 8,
+          "maximum": 30,
+          "minimum": 0.1,
+          "title": "Summary Timeout Seconds",
+          "type": "number"
+        }
+      },
+      "title": "GroupDiscussionPolicy",
+      "type": "object"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-runtime-settings-snapshot.schema.json",
+  "properties": {
+    "policy": {
+      "$ref": "#/$defs/ChannelRuntimePolicy"
+    },
+    "revision": {
+      "minimum": 0,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "updated_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Updated At"
+    }
+  },
+  "required": [
+    "revision",
+    "policy"
+  ],
+  "title": "ChannelRuntimeSettingsSnapshot",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

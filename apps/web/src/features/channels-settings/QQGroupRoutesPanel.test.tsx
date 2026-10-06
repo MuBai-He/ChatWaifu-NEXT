@@ -21,6 +21,8 @@ import { QQGroupRoutesPanel } from "./QQGroupRoutesPanel";
 import { QQChannelPanel } from "./QQChannelPanel";
 import * as runtimeClient from "../chat/runtimeClient";
 
+vi.mock("./StickerLibraryPanel", () => ({ StickerLibraryPanel: () => null }));
+
 vi.mock("../chat/runtime-client/channelGroupsClient", () => ({
   getChannelGroupConnection: vi.fn(),
   getChannelGroupParticipants: vi.fn(),
@@ -227,6 +229,49 @@ async function selectExisting() {
 }
 
 describe("QQ group operator management", () => {
+  it("requires fresh audience confirmation for the selected requested-voice setting", async () => {
+    vi.mocked(client.getChannelParticipantLinks).mockResolvedValue({
+      schema_version: "1.0",
+      items: [link("100"), link("200")],
+    });
+    await selectExisting();
+    await screen.findByRole("button", { name: "重新读取成员以启用" });
+    const voice = screen.getByRole<HTMLInputElement>("switch", {
+      name: "允许本群按当前请求发语音",
+    });
+    expect(voice.checked).toBe(false);
+    fireEvent.click(voice);
+    expect(client.updateChannelGroupRoute).not.toHaveBeenCalled();
+    vi.mocked(client.observeChannelGroupAudience).mockResolvedValue(
+      audience(freshObservationId),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "重新读取成员以启用" }));
+    const confirmation = await screen.findByLabelText<HTMLInputElement>(
+      "我已重新核对成员，确认该群共享范围与所选回复权限",
+    );
+    fireEvent.click(confirmation);
+    fireEvent.click(voice);
+    expect(confirmation.checked).toBe(false);
+    expect(
+      screen
+        .getByRole<HTMLButtonElement>("button", { name: "确认启用群路由" })
+        .matches(":disabled"),
+    ).toBe(true);
+    fireEvent.click(voice);
+    fireEvent.click(confirmation);
+    fireEvent.click(screen.getByRole("button", { name: "确认启用群路由" }));
+    await waitFor(() =>
+      expect(client.updateChannelGroupRoute).toHaveBeenCalledOnce(),
+    );
+    expect(
+      vi.mocked(client.updateChannelGroupRoute).mock.calls[0]?.[2],
+    ).toMatchObject({
+      allow_requested_voice: true,
+      enabled: true,
+      observation_id: freshObservationId,
+      expected_revision: 1,
+    });
+  });
   it("opens group management explicitly without changing owner private settings", async () => {
     render(<QQChannelPanel characterId="default" runtimeOnline />);
     const button = await screen.findByRole("button", {
@@ -237,7 +282,7 @@ describe("QQ group operator management", () => {
     await ready();
     expect(screen.getByRole("region", { name: "QQ 群路由" })).toBeTruthy();
     expect(
-      screen.getByRole<HTMLInputElement>("switch", { name: "启用 QQ 私聊" })
+      screen.getByRole<HTMLInputElement>("switch", { name: "启用 QQ 连接" })
         .checked,
     ).toBe(true);
     expect(runtimeClient.updateChannelConnection).not.toHaveBeenCalled();
@@ -287,6 +332,7 @@ describe("QQ group operator management", () => {
         schema_version: "1.0",
         observation_id: id,
         display_name: "朋友群",
+        allow_requested_voice: false,
         speaker_sender_keys: ["100"],
       },
       expect.any(Object),
@@ -302,10 +348,10 @@ describe("QQ group operator management", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "重新读取成员以启用" }));
     await screen.findByLabelText(
-      "我已重新核对成员，确认该群共享限制并启用文字回复",
+      "我已重新核对成员，确认该群共享范围与所选回复权限",
     );
     fireEvent.click(
-      screen.getByLabelText("我已重新核对成员，确认该群共享限制并启用文字回复"),
+      screen.getByLabelText("我已重新核对成员，确认该群共享范围与所选回复权限"),
     );
     fireEvent.click(screen.getByRole("button", { name: "确认启用群路由" }));
     await screen.findByText(/群路由已启用/u);
@@ -315,6 +361,7 @@ describe("QQ group operator management", () => {
       {
         schema_version: "1.0",
         enabled: true,
+        allow_requested_voice: false,
         expected_revision: 1,
         observation_id: freshObservationId,
         speaker_sender_keys: ["100"],
@@ -418,6 +465,7 @@ describe("QQ group operator management", () => {
       {
         schema_version: "1.0",
         enabled: false,
+        allow_requested_voice: false,
         expected_revision: 1,
         observation_id: null,
         speaker_sender_keys: ["100", "200"],

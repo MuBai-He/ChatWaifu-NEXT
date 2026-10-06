@@ -4548,6 +4548,151 @@
       "title": "ChannelProviderRegistration",
       "type": "object"
     },
+    "ChannelRuntimePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "group_discussion": {
+          "$ref": "#/$defs/GroupDiscussionPolicy"
+        },
+        "qq_native_favorites_enabled": {
+          "default": true,
+          "title": "Qq Native Favorites Enabled",
+          "type": "boolean"
+        },
+        "qq_owner_public_web_enabled": {
+          "default": false,
+          "title": "Qq Owner Public Web Enabled",
+          "type": "boolean"
+        },
+        "qq_owner_voice_input_enabled": {
+          "default": true,
+          "title": "Qq Owner Voice Input Enabled",
+          "type": "boolean"
+        },
+        "qq_owner_voice_reply_enabled": {
+          "default": true,
+          "title": "Qq Owner Voice Reply Enabled",
+          "type": "boolean"
+        }
+      },
+      "title": "ChannelRuntimePolicy",
+      "type": "object"
+    },
+    "ChannelRuntimeSettingsResponse": {
+      "description": "Selected service names only; no endpoints, credentials or private messages.",
+      "properties": {
+        "policy": {
+          "$ref": "#/$defs/ChannelRuntimePolicy"
+        },
+        "reader_provider": {
+          "title": "Reader Provider",
+          "type": "string"
+        },
+        "revision": {
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "search_provider": {
+          "title": "Search Provider",
+          "type": "string"
+        },
+        "stt_provider": {
+          "title": "Stt Provider",
+          "type": "string"
+        },
+        "updated_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Updated At"
+        }
+      },
+      "required": [
+        "revision",
+        "policy",
+        "search_provider",
+        "reader_provider",
+        "stt_provider"
+      ],
+      "title": "ChannelRuntimeSettingsResponse",
+      "type": "object"
+    },
+    "ChannelRuntimeSettingsSnapshot": {
+      "properties": {
+        "policy": {
+          "$ref": "#/$defs/ChannelRuntimePolicy"
+        },
+        "revision": {
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "updated_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Updated At"
+        }
+      },
+      "required": [
+        "revision",
+        "policy"
+      ],
+      "title": "ChannelRuntimeSettingsSnapshot",
+      "type": "object"
+    },
+    "ChannelRuntimeSettingsUpdate": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_revision": {
+          "minimum": 0,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "policy": {
+          "$ref": "#/$defs/ChannelRuntimePolicy"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "policy"
+      ],
+      "title": "ChannelRuntimeSettingsUpdate",
+      "type": "object"
+    },
     "ChannelTextDeliveryPartPayload": {
       "properties": {
         "kind": {
@@ -6491,6 +6636,116 @@
         "resource.models_woke"
       ],
       "type": "string"
+    },
+    "GroupDiscussionPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_characters": {
+          "default": 24000,
+          "maximum": 128000,
+          "minimum": 3200,
+          "title": "Cache Characters",
+          "type": "integer"
+        },
+        "cache_messages": {
+          "default": 96,
+          "maximum": 512,
+          "minimum": 32,
+          "title": "Cache Messages",
+          "type": "integer"
+        },
+        "duplicate_window_seconds": {
+          "default": 60,
+          "maximum": 900,
+          "minimum": 1,
+          "title": "Duplicate Window Seconds",
+          "type": "integer"
+        },
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "frequency_window_seconds": {
+          "default": 30,
+          "maximum": 300,
+          "minimum": 1,
+          "title": "Frequency Window Seconds",
+          "type": "integer"
+        },
+        "input_tokens": {
+          "default": 1536,
+          "maximum": 8192,
+          "minimum": 128,
+          "title": "Input Tokens",
+          "type": "integer"
+        },
+        "max_groups": {
+          "default": 32,
+          "maximum": 128,
+          "minimum": 1,
+          "title": "Max Groups",
+          "type": "integer"
+        },
+        "member_characters": {
+          "default": 6000,
+          "maximum": 32000,
+          "minimum": 80,
+          "title": "Member Characters",
+          "type": "integer"
+        },
+        "member_messages": {
+          "default": 24,
+          "maximum": 128,
+          "minimum": 1,
+          "title": "Member Messages",
+          "type": "integer"
+        },
+        "member_messages_per_window": {
+          "default": 6,
+          "maximum": 30,
+          "minimum": 1,
+          "title": "Member Messages Per Window",
+          "type": "integer"
+        },
+        "message_characters": {
+          "default": 800,
+          "maximum": 2000,
+          "minimum": 80,
+          "title": "Message Characters",
+          "type": "integer"
+        },
+        "retention_seconds": {
+          "default": 900,
+          "maximum": 3600,
+          "minimum": 30,
+          "title": "Retention Seconds",
+          "type": "integer"
+        },
+        "summary_input_tokens": {
+          "default": 3072,
+          "maximum": 16384,
+          "minimum": 256,
+          "title": "Summary Input Tokens",
+          "type": "integer"
+        },
+        "summary_output_tokens": {
+          "default": 256,
+          "maximum": 1024,
+          "minimum": 64,
+          "title": "Summary Output Tokens",
+          "type": "integer"
+        },
+        "summary_timeout_seconds": {
+          "default": 8,
+          "maximum": 30,
+          "minimum": 0.1,
+          "title": "Summary Timeout Seconds",
+          "type": "number"
+        }
+      },
+      "title": "GroupDiscussionPolicy",
+      "type": "object"
     },
     "InteractionTraceDetail": {
       "properties": {
@@ -12224,6 +12479,18 @@
     "channel_provider": {
       "$ref": "#/$defs/ChannelProviderRegistration"
     },
+    "channel_runtime_policy": {
+      "$ref": "#/$defs/ChannelRuntimePolicy"
+    },
+    "channel_runtime_settings": {
+      "$ref": "#/$defs/ChannelRuntimeSettingsResponse"
+    },
+    "channel_runtime_settings_snapshot": {
+      "$ref": "#/$defs/ChannelRuntimeSettingsSnapshot"
+    },
+    "channel_runtime_settings_update": {
+      "$ref": "#/$defs/ChannelRuntimeSettingsUpdate"
+    },
     "channel_turn": {
       "$ref": "#/$defs/ChannelTurnSnapshot"
     },
@@ -12276,6 +12543,9 @@
     },
     "generation": {
       "$ref": "#/$defs/GenerationSnapshot"
+    },
+    "group_discussion_policy": {
+      "$ref": "#/$defs/GroupDiscussionPolicy"
     },
     "interaction_trace_detail": {
       "$ref": "#/$defs/InteractionTraceDetail"
@@ -12430,6 +12700,11 @@
     "channel_pairing_start_request",
     "channel_pairing",
     "channel_provider",
+    "channel_runtime_policy",
+    "channel_runtime_settings",
+    "channel_runtime_settings_snapshot",
+    "channel_runtime_settings_update",
+    "group_discussion_policy",
     "channel_presentation_policy",
     "channel_connection_configuration",
     "channel_connection",

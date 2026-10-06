@@ -33,6 +33,7 @@ class NapCatStickerFavorites:
         connection_id: UUID,
         *,
         journal_lock: asyncio.Lock,
+        enabled: Callable[[], bool] = lambda: True,
         group_authorization: Callable[[StickerLearningSource], Awaitable[bool]] | None = None,
     ) -> None:
         self._repository = repository
@@ -41,12 +42,14 @@ class NapCatStickerFavorites:
         self._connection_id = connection_id
         self._journal_lock = journal_lock
         self._group_authorization = group_authorization
+        self._enabled = enabled
         self._lock = asyncio.Lock()
 
     async def _allowed(self, source: StickerLearningSource, sticker: LearnedSticker) -> bool:
         connection = await self._repository.get_connection(self._connection_id)
         if (
-            connection is None
+            not self._enabled()
+            or connection is None
             or connection.deleted_at is not None
             or not connection.configuration.enabled
             or source.connection_id != self._connection_id
@@ -66,7 +69,11 @@ class NapCatStickerFavorites:
         settings = await self._library.repository.get_settings(
             source.principal_scope, source.character_id
         )
-        return settings.learning_enabled and settings.revision == source.settings_revision
+        return (
+            self._enabled()
+            and settings.learning_enabled
+            and settings.revision == source.settings_revision
+        )
 
     async def _journal(self) -> dict[str, str]:
         raw = await self._repository.get_adapter_cursor(self._connection_id)
@@ -121,6 +128,8 @@ class NapCatStickerFavorites:
                 md5 = hashlib.md5(image, usedforsecurity=False).hexdigest()
                 if md5 in await self._client.favorite_hashes():
                     await self._checkpoint(key, "confirmed")
+                    return
+                if not await self._allowed(source, sticker):
                     return
                 confirmed = await self._client.add_sticker_favorite(
                     image,
