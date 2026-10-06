@@ -53,6 +53,7 @@ class ChannelGroupInboundDescriptor:
     external_message_id: str
     text: str
     received_at: datetime
+    image_fingerprint: str | None = None
 
     def __post_init__(self) -> None:
         raw = cast(object, self.connection_id)
@@ -72,6 +73,11 @@ class ChannelGroupInboundDescriptor:
         if self.sender_key == self.account_key:
             raise ValueError("self messages cannot be admitted")
         aware(self.received_at)
+        if self.image_fingerprint is not None and (
+            type(self.image_fingerprint) is not str
+            or not re.fullmatch(r"[0-9a-f]{64}", self.image_fingerprint)
+        ):
+            raise ValueError("group image fingerprint must be SHA256")
 
     @property
     def content_sha256(self) -> str:
@@ -82,6 +88,8 @@ class ChannelGroupInboundDescriptor:
             self.external_message_id,
             self.text,
         )
+        if self.image_fingerprint is not None:
+            payload += (self.image_fingerprint,)
         return hashlib.sha256(json.dumps(payload, ensure_ascii=False).encode()).hexdigest()
 
 

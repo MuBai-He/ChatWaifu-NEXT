@@ -45,13 +45,28 @@ def messaging_presentation_policy(
 
 
 def group_text_parts_match_reply(
-    parts: Sequence[ChannelDeliveryPartDraft | ChannelDeliveryPartRecord], reply_text: str
+    parts: Sequence[ChannelDeliveryPartDraft | ChannelDeliveryPartRecord],
+    reply_text: str,
+    *,
+    allow_sticker: bool = False,
 ) -> bool:
-    """A bounded, ordered text-only plan must retain the complete canonical group reply."""
-    if not 1 <= len(parts) <= 10 or not reply_text.strip():
+    """Required text stays canonical; a permitted final learned image stays optional."""
+    text_parts = parts
+    if allow_sticker and parts and parts[-1].kind is ChannelDeliveryPartKind.IMAGE:
+        image = parts[-1]
+        if (
+            image.required
+            or image.ordinal != len(parts) - 1
+            or image.delay_after_ms != 0
+            or not isinstance(image.payload, ChannelImageDeliveryPartPayload)
+            or not image.payload.sticker_id.startswith("learned_")
+        ):
+            return False
+        text_parts = parts[:-1]
+    if not 1 <= len(text_parts) <= 10 or not reply_text.strip():
         return False
     texts: list[str] = []
-    for ordinal, part in enumerate(parts):
+    for ordinal, part in enumerate(text_parts):
         if (
             part.ordinal != ordinal
             or part.kind is not ChannelDeliveryPartKind.TEXT

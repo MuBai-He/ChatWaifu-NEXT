@@ -50,6 +50,7 @@ from chatwaifu_runtime.external_channels.stickers import MAX_STICKER_BYTES, Pres
 from chatwaifu_runtime.sticker_library.service import StickerLibraryService
 
 from .client import NapCatClient, NapCatRejected
+from .expressions import FAVORITE_JOURNAL_PREFIX, native_text_segments, send_journal_size
 
 _IMAGE_FORMATS = {"image/png": "PNG", "image/jpeg": "JPEG"}
 _MAX_IMAGE_DIMENSION = 8192
@@ -78,14 +79,19 @@ async def reconcile_known_sends(
         if not isinstance(parsed, dict):
             return
         raw = cast(dict[object, object], parsed)
-        if len(raw) > 256 or any(
+        if len(raw) > 356 or any(
             not isinstance(k, str) or not isinstance(v, str) for k, v in raw.items()
         ):
             logger.warning("QQ send journal shape rejected; checkpoint retained")
             return
         journal = cast(dict[str, str], raw)
+        if send_journal_size(journal) > 256 or len(journal) - send_journal_size(journal) > 100:
+            logger.warning("QQ send journal capacity rejected; checkpoint retained")
+            return
         conflicts: set[str] = set()
         for key, receipt in journal.items():
+            if key.startswith(FAVORITE_JOURNAL_PREFIX):
+                continue
             if receipt == "unknown":
                 continue
             if not re.fullmatch(r"-?[0-9]{1,20}", receipt):
@@ -108,11 +114,15 @@ async def reconcile_known_sends(
                     ChannelDeliveryStatus.CANCELLED,
                 }:
                     await on_terminal(transition.plan)
-        retained = await repository.retained_send_journal_keys(connection_id, tuple(journal))
+        send_keys = tuple(key for key in journal if not key.startswith(FAVORITE_JOURNAL_PREFIX))
+        retained = await repository.retained_send_journal_keys(connection_id, send_keys)
         kept = {
             key: receipt
             for key, receipt in journal.items()
-            if key in retained or key in conflicts or receipt == "unknown"
+            if key.startswith(FAVORITE_JOURNAL_PREFIX)
+            or key in retained
+            or key in conflicts
+            or receipt == "unknown"
         }
         if kept != journal:
             await repository.set_adapter_cursor(
@@ -187,11 +197,10 @@ class NapCatDelivery:
             or current.cancel_requested_at is not None
         ):
             return _failed("qq_delivery_cancelled", "QQ 投递已停止。")
+        segments: list[JsonObject]
         try:
             if isinstance(part.payload, ChannelTextDeliveryPartPayload):
-                segments: list[JsonObject] = [
-                    {"type": "text", "data": {"text": self._render_text(plan, part)}}
-                ]
+                segments = native_text_segments(self._render_text(plan, part))
             elif isinstance(part.payload, ChannelAudioDeliveryPartPayload):
                 path = self._audio_root / f"{part.payload.asset_id}.wav"
                 if path.is_symlink() or not path.is_file() or path.stat().st_size > 8 * 1024 * 1024:
@@ -235,7 +244,10 @@ class NapCatDelivery:
                 segments = [
                     {
                         "type": "image",
-                        "data": {"file": "base64://" + base64.b64encode(image).decode("ascii")},
+                        "data": {
+                            "file": "base64://" + base64.b64encode(image).decode("ascii"),
+                            "sub_type": 1,
+                        },
                     }
                 ]
             if part.ordinal == 0 and plan.delivery.channel_turn_id is not None:
@@ -249,7 +261,7 @@ class NapCatDelivery:
             # echo only correlates RPCs. A persisted fence prevents restart replay.
             # Receipt reconciliation owns garbage collection: a delivered
             # part alone cannot prove a cursor's different receipt is resolved.
-            if len(journal) >= 256:
+            if send_journal_size(journal) >= 256:
                 return _failed("qq_send_journal_full", "请处理未完成的 QQ 投递后重试。")
             # File reads can overlap cancellation or disabling the connection.
             connection = await self._repository.get_connection(self._connection_id)
@@ -299,19 +311,41 @@ class NapCatDelivery:
         part: ChannelDeliveryPartRecord,
         journal: dict[str, str],
     ) -> DeliveryPartExecutionResult:
-        """A separate text-only path; the host supplies current route authority."""
+        """A fixed group path with canonical text and one optional scoped image."""
         target = plan.group_target
         assert target is not None
         key = part.provider_client_id
+        segments: list[JsonObject]
         try:
             if not await self._group_allowed(plan, part):
                 return _failed("qq_group_delivery_cancelled", "群文字投递已停止。")
-            if len(journal) >= 256:
+            if send_journal_size(journal) >= 256:
                 return _failed("qq_send_journal_full", "请处理未完成的 QQ 投递后重试。")
-            assert isinstance(part.payload, ChannelTextDeliveryPartPayload)
-            segments: list[JsonObject] = [
-                {"type": "text", "data": {"text": self._render_text(plan, part)}}
-            ]
+            if isinstance(part.payload, ChannelTextDeliveryPartPayload):
+                segments = native_text_segments(self._render_text(plan, part))
+            elif isinstance(part.payload, ChannelImageDeliveryPartPayload):
+                if self._sticker_library is None:
+                    return _failed("qq_image_unavailable", "群表情图片不可用。")
+                image = await self._sticker_library.image_for_delivery(
+                    f"scene:{target.scene_id}", "default", part.payload
+                )
+                if image is None or not await asyncio.to_thread(
+                    _valid_image, image, part.payload.mime_type
+                ):
+                    return _failed("qq_image_unavailable", "群表情图片不可用或已变更。")
+                segments = [
+                    {
+                        "type": "image",
+                        "data": {
+                            "file": "base64://" + base64.b64encode(image).decode("ascii"),
+                            "sub_type": 1,
+                        },
+                    }
+                ]
+                if not await self._group_allowed(plan, part):
+                    return _failed("qq_group_delivery_cancelled", "群表情投递已停止。")
+            else:
+                return _failed("qq_group_delivery_cancelled", "群表情投递不受支持。")
             journal[key] = "unknown"
             await self._save(journal)
             try:
@@ -402,7 +436,7 @@ class NapCatDelivery:
             or source.connection_id != self._connection_id
             or source.chat_type is not ChannelChatType.GROUP
             or source.status is not ChannelTurnStatus.COMPLETED
-            or source.input_kind is not ChannelMessageKind.TEXT
+            or source.input_kind not in {ChannelMessageKind.TEXT, ChannelMessageKind.IMAGE}
             or source.account_key != target.account_key
             or source.conversation_key != f"group:{target.group_id}"
             or source.principal_scope != f"scene:{target.scene_id}"
@@ -412,8 +446,12 @@ class NapCatDelivery:
             or plan.delivery.part_count != len(plan.parts)
             or current.delivery.part_count != len(current.parts)
             or len(plan.parts) != len(current.parts)
-            or not group_text_parts_match_reply(plan.parts, source.reply_text or "")
-            or not group_text_parts_match_reply(current.parts, source.reply_text or "")
+            or not group_text_parts_match_reply(
+                plan.parts, source.reply_text or "", allow_sticker=True
+            )
+            or not group_text_parts_match_reply(
+                current.parts, source.reply_text or "", allow_sticker=True
+            )
             or not 0 <= part.ordinal < len(current.parts)
         ):
             return False
@@ -438,13 +476,24 @@ class NapCatDelivery:
             and part.part_id == original.part_id == claimed.part_id
             and part.provider_client_id == original.provider_client_id == claimed.provider_client_id
             and part.payload == original.payload == claimed.payload
-            and part.kind is original.kind is claimed.kind is ChannelDeliveryPartKind.TEXT
-            and isinstance(part.payload, ChannelTextDeliveryPartPayload)
-            and bool(part.payload.text.strip())
+            and part.kind is original.kind is claimed.kind
+            and (
+                (
+                    isinstance(part.payload, ChannelTextDeliveryPartPayload)
+                    and bool(part.payload.text.strip())
+                    and part.required
+                    and original.required
+                    and claimed.required
+                )
+                or (
+                    isinstance(part.payload, ChannelImageDeliveryPartPayload)
+                    and part.payload.sticker_id.startswith("learned_")
+                    and not part.required
+                    and not original.required
+                    and not claimed.required
+                )
+            )
             and part.ordinal == original.ordinal == claimed.ordinal
-            and part.required
-            and original.required
-            and claimed.required
             and part.status is claimed.status is ChannelDeliveryPartStatus.SENDING
             and part.lease_id is not None
             and part.lease_id == claimed.lease_id

@@ -192,6 +192,8 @@ M/L 表示相对复杂度，不承诺日历工期。首批范围为 **Q01 → Q0
 
 ### CW-Q07：复用表情闭环并验证体验
 
+2026-10-05 QQ 切片：按用户选择启用主人私聊及 `931709239` 群的学习，群库与私聊库隔离；补原生 face/收藏、有界 GIF 首帧和同人近期图片关联。18:20 的“发图后立刻追问”仍失败，已定位为前图轮次取消后新文字轮次未携图；`24872e0` 以本轮图片引用修复，通过 3686 项后端回归及 169 项 Linux 检查，已部署并独立核对源码、配置、旧持久事实与原群授权，新手机验收仍待复测。私聊沿用主人共享学习设置，不能宣称是 QQ 独立的平台开关。原 Q07 体验及 Q02 完整质量标准不降低，见[切片证据](qq-agent-plus-evidence/qq-sticker-learning-2026-10-05/README.md)与 [ADR 0074](../adr/0074-scoped-qq-sticker-learning.md)。
+
 **目标**：表情合场景、不过度重复、失败时不破坏文字回答；不再建一套已经存在的能力。
 
 **现有落点**：`services/runtime/src/chatwaifu_runtime/sticker_library/service.py`、`external_channels/stickers.py`、`external_channels/presentation.py`、`persistence/sqlite_external_channels.py`；测试包括 `test_sticker_learning_integration.py`、`test_sticker_usage.py`、`test_sticker_repeat_avoidance.py` 和 `test_sticker_repeat_delivery.py`。

@@ -189,6 +189,113 @@ describe("StickerLibraryPanel", () => {
     expect(screen.getByText("网络连接超时")).toBeTruthy();
   });
 
+  it("binds group reads, previews, mutations and usage to the observed scene", async () => {
+    const groupScope = { routeId: "group-route", sceneId: "group-scene" };
+    vi.mocked(runtimeClient.getStickerUsage).mockResolvedValue({
+      schema_version: "1.0",
+      items: [],
+      scan_limit: 200,
+      has_more: false,
+    });
+    render(
+      <StickerLibraryPanel
+        characterId="default"
+        runtimeOnline
+        groupScope={groupScope}
+      />,
+    );
+    const toggle = await screen.findByRole<HTMLInputElement>("switch", {
+      name: "学习本群发来的表情",
+    });
+    await waitFor(() =>
+      expect(runtimeClient.fetchStickerImageUrl).toHaveBeenCalled(),
+    );
+    expect(runtimeClient.getStickerLibrary).toHaveBeenCalledWith(
+      "default",
+      expect.any(AbortSignal),
+      groupScope,
+    );
+    expect(runtimeClient.fetchStickerImageUrl).toHaveBeenCalledWith(
+      sampleSnapshot.items![0].sticker_id,
+      expect.objectContaining({ groupScope }),
+    );
+    expect(screen.queryByText(/想让宁宁以后记得普通照片/)).toBeNull();
+    fireEvent.click(toggle);
+    await waitFor(() =>
+      expect(runtimeClient.updateStickerLibrarySettings).toHaveBeenCalledWith(
+        {
+          schema_version: "1.0",
+          learning_enabled: true,
+          expected_revision: 2,
+        },
+        "default",
+        undefined,
+        groupScope,
+      ),
+    );
+    await waitFor(() => expect(toggle.disabled).toBe(false));
+    fireEvent.click(screen.getByText("最近表情发送记录"));
+    await waitFor(() =>
+      expect(runtimeClient.getStickerUsage).toHaveBeenCalledWith(
+        "default",
+        expect.any(AbortSignal),
+        groupScope,
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "删除表情 摸鱼小猫" }));
+    await waitFor(() =>
+      expect(runtimeClient.deleteLearnedSticker).toHaveBeenCalledWith(
+        sampleSnapshot.items![0].sticker_id,
+        "default",
+        undefined,
+        groupScope,
+      ),
+    );
+  });
+
+  it("aborts the previous group scene and ignores its late library result", async () => {
+    let finishOld!: (value: StickerLibrarySnapshot) => void;
+    const pending = new Promise<StickerLibrarySnapshot>((resolve) => {
+      finishOld = resolve;
+    });
+    const empty = { ...sampleSnapshot, items: [], total_bytes: 0 };
+    vi.mocked(runtimeClient.getStickerLibrary)
+      .mockReturnValueOnce(pending)
+      .mockResolvedValue(empty);
+    const view = render(
+      <StickerLibraryPanel
+        characterId="default"
+        runtimeOnline
+        groupScope={{ routeId: "route", sceneId: "old" }}
+      />,
+    );
+    await waitFor(() =>
+      expect(runtimeClient.getStickerLibrary).toHaveBeenCalledTimes(1),
+    );
+    const oldSignal = vi.mocked(runtimeClient.getStickerLibrary).mock
+      .calls[0][1];
+    view.rerender(
+      <StickerLibraryPanel
+        characterId="default"
+        runtimeOnline
+        groupScope={{ routeId: "route", sceneId: "new" }}
+      />,
+    );
+    await screen.findByText("暂无已学习的表情");
+    expect(oldSignal?.aborted).toBe(true);
+    await act(async () => {
+      finishOld(sampleSnapshot);
+      await pending;
+    });
+    expect(screen.queryByText("摸鱼小猫")).toBeNull();
+    expect(runtimeClient.fetchStickerImageUrl).not.toHaveBeenCalled();
+    expect(runtimeClient.getStickerLibrary).toHaveBeenLastCalledWith(
+      "default",
+      expect.any(AbortSignal),
+      { routeId: "route", sceneId: "new" },
+    );
+  });
+
   it("toggles learning setting sending expected revision and optimistic disable", async () => {
     render(<StickerLibraryPanel characterId="default" runtimeOnline={true} />);
 

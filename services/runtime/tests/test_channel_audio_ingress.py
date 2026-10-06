@@ -399,7 +399,7 @@ async def test_audio_restored_without_live_task_fails_once_without_download_or_m
 ) -> None:
     async with _audio_runtime(runtime_settings, monkeypatch) as (harness, connection_id, token):
         gateway = harness.container.external_channels
-        _, _, turn, duplicate = await gateway._admit_ingress(
+        _, _, turn, duplicate, _ = await gateway._admit_ingress(
             _message(connection_id), access_token=token, audio_fingerprint="a" * 64
         )
         assert not duplicate and turn.input_kind is ChannelMessageKind.AUDIO

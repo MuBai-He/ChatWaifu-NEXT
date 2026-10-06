@@ -760,7 +760,8 @@ async def test_bounded_cancel_prevents_late_adapter_success_from_resurrecting_ru
             session.session_id,
             SkillInvocation(skill_id="runtime.status", capability="read", arguments={}),
         )
-        await asyncio.wait_for(adapter_started.wait(), timeout=1)
+        # Durable preparation is outside the measured cancellation interval.
+        await asyncio.wait_for(adapter_started.wait(), timeout=15)
 
         started_at = time.monotonic()
         cancelled = await asyncio.wait_for(service.cancel(running.skill_run_id), timeout=1)
@@ -811,7 +812,7 @@ async def test_wait_for_terminal_observes_both_future_and_already_committed_tran
             session.session_id,
             SkillInvocation(skill_id="runtime.status", capability="read", arguments={}),
         )
-        await asyncio.wait_for(adapter_started.wait(), timeout=1)
+        await asyncio.wait_for(adapter_started.wait(), timeout=15)
         waiter = asyncio.create_task(service.wait_for_terminal(running.skill_run_id))
         await asyncio.sleep(0)
         release_adapter.set()

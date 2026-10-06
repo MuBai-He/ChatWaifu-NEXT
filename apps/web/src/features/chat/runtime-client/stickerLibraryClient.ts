@@ -25,6 +25,17 @@ export type {
   StickerLibrarySnapshot,
 };
 
+export type StickerGroupScope = { routeId: string; sceneId: string };
+
+function libraryQuery(characterId: string, groupScope?: StickerGroupScope) {
+  const query = new URLSearchParams({ character_id: characterId });
+  if (groupScope) {
+    query.set("group_route_id", groupScope.routeId);
+    query.set("group_scene_id", groupScope.sceneId);
+  }
+  return query;
+}
+
 const stickerLibrarySnapshotParser = runtimeParser(parseStickerLibrarySnapshot);
 const stickerLibrarySettingsParser = runtimeParser(parseStickerLibrarySettings);
 const stickerLibraryDeleteResultParser = runtimeParser(
@@ -34,8 +45,9 @@ const stickerLibraryDeleteResultParser = runtimeParser(
 export async function getStickerLibrary(
   characterId = "default",
   signal?: AbortSignal,
+  groupScope?: StickerGroupScope,
 ): Promise<StickerLibrarySnapshot> {
-  const query = new URLSearchParams({ character_id: characterId });
+  const query = libraryQuery(characterId, groupScope);
   return requestRuntime(
     `/v1/sticker-library?${query.toString()}`,
     stickerLibrarySnapshotParser,
@@ -47,8 +59,9 @@ export async function updateStickerLibrarySettings(
   update: StickerLibrarySettingsUpdate,
   characterId = "default",
   signal?: AbortSignal,
+  groupScope?: StickerGroupScope,
 ): Promise<StickerLibrarySettings> {
-  const query = new URLSearchParams({ character_id: characterId });
+  const query = libraryQuery(characterId, groupScope);
   return requestRuntime(
     `/v1/sticker-library/settings?${query.toString()}`,
     stickerLibrarySettingsParser,
@@ -64,8 +77,9 @@ export async function deleteLearnedSticker(
   stickerId: string,
   characterId = "default",
   signal?: AbortSignal,
+  groupScope?: StickerGroupScope,
 ): Promise<StickerLibraryDeleteResult> {
-  const query = new URLSearchParams({ character_id: characterId });
+  const query = libraryQuery(characterId, groupScope);
   return requestRuntime(
     `/v1/sticker-library/${encodeURIComponent(stickerId)}?${query.toString()}`,
     stickerLibraryDeleteResultParser,
@@ -78,6 +92,7 @@ export async function deleteLearnedSticker(
 
 export interface FetchStickerImageOptions {
   characterId?: string;
+  groupScope?: StickerGroupScope;
   signal?: AbortSignal;
   timeoutMs?: number;
 }
@@ -94,6 +109,7 @@ export async function fetchStickerImageUrl(
 ): Promise<string> {
   const {
     characterId = "default",
+    groupScope,
     signal: callerSignal,
     timeoutMs = 8_000,
   } = options;
@@ -124,7 +140,7 @@ export async function fetchStickerImageUrl(
     );
   }, timeoutMs);
 
-  const query = new URLSearchParams({ character_id: characterId });
+  const query = libraryQuery(characterId, groupScope);
   const url = `${connection.baseUrl}/v1/sticker-library/${encodeURIComponent(stickerId)}/image?${query.toString()}`;
 
   const headers: Record<string, string> = {};
@@ -199,8 +215,9 @@ export async function fetchStickerImageUrl(
 export async function getStickerUsage(
   characterId = "default",
   signal?: AbortSignal,
+  groupScope?: StickerGroupScope,
 ): Promise<StickerUsageHistory> {
-  const query = new URLSearchParams({ character_id: characterId });
+  const query = libraryQuery(characterId, groupScope);
   return requestRuntime(
     `/v1/sticker-library/usage?${query.toString()}`,
     runtimeParser(parseStickerUsageHistory),

@@ -6,6 +6,8 @@ import {
   type StickerUsageRecord,
 } from "../chat/runtimeClient";
 
+import type { StickerGroupScope } from "../chat/runtime-client/stickerLibraryClient";
+
 const STATUS_LABELS: Record<StickerUsageRecord["status"], string> = {
   pending: "等待发送",
   sending: "发送中",
@@ -19,16 +21,25 @@ export function StickerUsagePanel({
   characterId,
   runtimeOnline,
   refreshToken,
+  groupScope,
 }: {
   characterId: string;
   runtimeOnline: boolean;
   refreshToken: object | null;
+  groupScope?: StickerGroupScope;
 }) {
   const [open, setOpen] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const request = useMemo(
-    () => ({ characterId, runtimeOnline, refreshToken, open, refresh }),
-    [characterId, runtimeOnline, refreshToken, open, refresh],
+    () => ({
+      characterId,
+      runtimeOnline,
+      refreshToken,
+      groupScope,
+      open,
+      refresh,
+    }),
+    [characterId, runtimeOnline, refreshToken, groupScope, open, refresh],
   );
   const [result, setResult] = useState<{
     request: object;
@@ -43,7 +54,11 @@ export function StickerUsagePanel({
   useEffect(() => {
     if (!request.open || !request.runtimeOnline) return;
     const controller = new AbortController();
-    void getStickerUsage(request.characterId, controller.signal).then(
+    void getStickerUsage(
+      request.characterId,
+      controller.signal,
+      request.groupScope,
+    ).then(
       (history) => {
         if (!controller.signal.aborted)
           setResult({ request, history, error: false });

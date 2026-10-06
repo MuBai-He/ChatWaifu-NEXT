@@ -900,7 +900,7 @@ async def test_owner_image_reaches_vision_once_without_retention_or_voice_escala
 
         monkeypatch.setattr(NapCatClient, "download_image", download)
         monkeypatch.setattr(harness.container.photo_observer, "observe_batch", observe)
-        monkeypatch.setattr(harness.container.sticker_library, "observe_batch", observe)
+        monkeypatch.setattr(harness.container.sticker_library._classifier, "classify", observe)
         event = _image_event(caption, 40, reply_id=999)
         await harness.peer.peers[-1].send(json.dumps(event))
         request = await asyncio.wait_for(harness.model.received.get(), timeout=5)
@@ -918,6 +918,7 @@ async def test_owner_image_reaches_vision_once_without_retention_or_voice_escala
         result = await _terminal(harness, connection_id, turn.channel_turn_id)
         assert result.status is ChannelTurnStatus.COMPLETED
         assert not observations
+        assert not (await harness.container.sticker_repository.snapshot("local", "default")).items
         assert downloads == ["photo.png"]
         assert len(harness.synthesis) == int(bool(caption))
 
@@ -944,7 +945,9 @@ async def test_admitted_image_failure_sends_one_durable_notice_without_model_req
             downloads.append(file_ref)
             if failure == "expired":
                 raise RuntimeError("private-filename-and-token")
-            return _picture("GIF")
+            output = io.BytesIO()
+            Image.new("RGB", (12, 8), "red").save(output, format="BMP")
+            return output.getvalue()
 
         monkeypatch.setattr(NapCatClient, "download_image", download)
         files = (
@@ -975,7 +978,7 @@ async def test_admitted_image_failure_sends_one_durable_notice_without_model_req
 
 
 @pytest.mark.asyncio
-async def test_new_owner_text_cancels_image_loading_without_stale_vision_or_reply(
+async def test_cleared_image_context_and_new_text_cancel_loading_without_stale_vision_or_reply(
     runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     async with _runtime(runtime_settings, monkeypatch) as harness:
@@ -994,6 +997,9 @@ async def test_new_owner_text_cancels_image_loading_without_stale_vision_or_repl
         monkeypatch.setattr(NapCatClient, "download_image", download)
         await harness.peer.peers[-1].send(json.dumps(_image_event("看图", 43)))
         await asyncio.wait_for(entered.wait(), timeout=5)
+        # Explicit context revocation removes the recent descriptor; a following
+        # turn must still cancel the original loader and reject stale vision.
+        harness.container.external_channels.fence_recent_images(connection_id)
         await harness.peer.peers[-1].send(json.dumps(_event("取消图片，直接文字聊", 44)))
         await asyncio.wait_for(cancelled.wait(), timeout=5)
         request = await asyncio.wait_for(harness.model.received.get(), timeout=5)

@@ -267,6 +267,7 @@ class ConversationTurnOptions:
     image_loader: Callable[[], Awaitable[LlmInputImage | tuple[LlmInputImage, ...]]] | None = field(
         default=None, repr=False, compare=False
     )
+    allow_shared_images: bool = False
     quoted_message_loader: Callable[[], Awaitable[ConversationQuotedMessage | None]] | None = field(
         default=None, repr=False, compare=False
     )

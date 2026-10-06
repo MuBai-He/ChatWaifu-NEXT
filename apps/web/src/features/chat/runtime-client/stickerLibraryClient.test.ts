@@ -4,6 +4,7 @@ import {
   deleteLearnedSticker,
   fetchStickerImageUrl,
   getStickerLibrary,
+  getStickerUsage,
   updateStickerLibrarySettings,
   type StickerLibrarySnapshot,
 } from "./stickerLibraryClient";
@@ -54,6 +55,57 @@ describe("stickerLibraryClient", () => {
 
     const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toMatch(/\/v1\/sticker-library\?character_id=default$/u);
+  });
+
+  it("keeps every group management request bound to its route and observed scene", async () => {
+    const scope = {
+      routeId: "00000000-0000-4000-8000-000000000111",
+      sceneId: "scene & group",
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(sampleSnapshot)))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(sampleSnapshot.settings)),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ schema_version: "1.0", deleted: true, revision: 4 }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            schema_version: "1.0",
+            items: [],
+            scan_limit: 200,
+            has_more: false,
+          }),
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    await getStickerLibrary("default", undefined, scope);
+    await updateStickerLibrarySettings(
+      { schema_version: "1.0", learning_enabled: true, expected_revision: 3 },
+      "default",
+      undefined,
+      scope,
+    );
+    await deleteLearnedSticker(
+      sampleSnapshot.items![0].sticker_id,
+      "default",
+      undefined,
+      scope,
+    );
+    await getStickerUsage("default", undefined, scope);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    for (const call of fetchMock.mock.calls) {
+      const query = new URLSearchParams((call[0] as string).split("?")[1]);
+      expect(query.get("character_id")).toBe("default");
+      expect(query.get("group_route_id")).toBe(scope.routeId);
+      expect(query.get("group_scene_id")).toBe(scope.sceneId);
+      expect(query.has("principal_scope")).toBe(false);
+    }
   });
 
   it("updates sticker library settings via PUT", async () => {

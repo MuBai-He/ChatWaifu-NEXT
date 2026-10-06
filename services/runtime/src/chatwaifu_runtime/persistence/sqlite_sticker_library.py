@@ -221,9 +221,57 @@ class SqliteStickerLibraryRepository:
             if not bool(settings_row["learning_enabled"]):
                 return None
 
-            # Atomically verify source connection and source generation
-            cursor = await conn.execute(
-                """
+            # Group media requires the exact current scene/audience/speaker, not owner scope.
+            target = candidate.group_target
+            if target is not None:
+                if (
+                    target.connection_id != candidate.source_connection_id
+                    or scope != f"scene:{target.scene_id}"
+                ):
+                    return None
+                cursor = await conn.execute(
+                    """
+                    SELECT 1 FROM channel_connections c
+                    JOIN channel_turns t ON t.connection_id=c.connection_id
+                    JOIN channel_group_routes r ON r.route_id=t.group_route_id
+                    JOIN channel_group_route_members m
+                      ON m.route_id=r.route_id AND m.route_revision=r.revision
+                      AND m.sender_key=t.sender_key AND m.can_speak=1
+                    JOIN channel_participant_links l ON l.link_id=m.link_id AND l.enabled=1
+                    JOIN generations g ON g.generation_id=t.generation_id
+                      AND g.session_id=t.session_id AND g.turn_id=t.turn_id
+                    WHERE c.connection_id=? AND c.enabled=1 AND c.deleted_at IS NULL
+                      AND c.status='ready' AND c.provider_id='qq_napcat'
+                      AND c.account_key=? AND c.character_id=?
+                      AND t.channel_turn_id=? AND t.generation_id=? AND t.status='completed'
+                      AND t.chat_type='group' AND t.group_lineage_version=1
+                      AND t.principal_scope=? AND t.group_route_revision=r.revision
+                      AND t.account_key=r.account_key AND t.conversation_key='group:'||r.group_id
+                      AND r.route_id=? AND r.revision=? AND r.scene_id=?
+                      AND r.group_id=? AND r.audience_fingerprint=?
+                      AND r.enabled=1 AND r.deleted_at IS NULL AND r.character_id=?
+                      AND g.state='completed' AND g.invalidated_at IS NULL
+                    LIMIT 1
+                    """,
+                    (
+                        str(candidate.source_connection_id),
+                        target.account_key,
+                        character_id,
+                        str(target.channel_turn_id),
+                        str(candidate.generation_id),
+                        scope,
+                        str(target.route_id),
+                        target.route_revision,
+                        target.scene_id,
+                        target.group_id,
+                        target.audience_fingerprint,
+                        character_id,
+                    ),
+                )
+            else:
+                # Atomically verify a completed private source. Group turns cannot enter here.
+                cursor = await conn.execute(
+                    """
                 SELECT 1
                 FROM channel_connections c
                 JOIN channel_turns t ON t.connection_id = c.connection_id
@@ -234,15 +282,16 @@ class SqliteStickerLibraryRepository:
                   AND c.character_id = ?
                   AND t.generation_id = ?
                   AND t.status = 'completed'
+                  AND t.chat_type = 'direct'
                 LIMIT 1
                 """,
-                (
-                    str(candidate.source_connection_id),
-                    scope,
-                    character_id,
-                    str(candidate.generation_id),
-                ),
-            )
+                    (
+                        str(candidate.source_connection_id),
+                        scope,
+                        character_id,
+                        str(candidate.generation_id),
+                    ),
+                )
             source_valid = await cursor.fetchone()
             await cursor.close()
             if source_valid is None:

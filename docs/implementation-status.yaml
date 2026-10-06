@@ -22,6 +22,7 @@ qq_napcat:
   voice_selection_adr: "0067"
   proactive_text_adr: "0068"
   group_member_identity_adr: "0069"
+  sticker_learning_adr: "0074"
   original_plan_stages:
     A: owner_private_text_core_and_one_real_nonowner_denial_verified_additional_fault_acceptance_pending
     B: bounded_static_images_stickers_and_scoped_quotes_implemented_single_owner_private_image_preset_and_quote_phone_cases_verified
@@ -30,6 +31,10 @@ qq_napcat:
     D2: fixed_owner_proactive_text_real_single_idle_quiet_hours_and_disabled_restart_verified_new_input_cancellation_and_revocation_pending
     D3: group_source_linux_and_deployment_verified_two_member_real_at_text_disable_and_fresh_restart_resume_phone_verified_additional_privacy_fault_acceptance_pending
   evidence:
+    - Scoped QQ sticker learning and native face/favorites at a4ad15b extend the existing owner library and independently opted-in group scene library; public native favorite was added once and confirmed by MD5 readback after a real stream-action response-shape defect was fixed; user-material handset learning/reuse/native display remains pending
+    - User phone feedback exposed GIF bytes labeled PNG and separate image/mention envelopes; bd2855a provides bounded first-frame preview without animated retention and same-sender 60-second group image descriptors under current scene/authority/settings with ordered admission; no unmentioned group text is collected
+    - At 18:20 on 2026-10-05 a private image turn was superseded two seconds later by a pure text question whose model reply reported no image; frozen 24872e0 carries one scoped recent descriptor into the question's own generation and digest, with current auth and cancellation/configuration/transport fences, no photo retention, and unchanged default ingress for other channels
+    - Frozen follow-up source passed full Python with 3686 checks and 46 platform skips, strict Pyright and Ruff; old quote isolation and no-stale-output gates remain, new targeted Runtime/SQLite/OneBot regressions cover expiry, revocation, failed reads, duplicates and learning after the successor's completion; the source then passed 169 Linux checks and deployed with all 1269 source hashes, seven Web hashes, configuration and prior durable facts preserved, while a new phone result remains pending in qq-sticker-learning-2026-10-05/README.md
     - QQ group quote-plus-mention inputs were dropped before Runtime admission; bounded envelope compatibility passed 722 local and 103 Linux checks and was deployed with both previous group audiences/scenes/grants revalidated unchanged; exact old shapes now pass read-only parser replay, while fresh handset quote acceptance remains pending
     - Native OneBot WebSocket adapter, secure pairing, connection supervision and durable send fences implemented in an isolated branch based on e609345
     - Default text and current-generation channel.voice authorization use the existing character, conversation, memory and Runtime Skill path
