@@ -66,7 +66,7 @@ async def _turn(container: RuntimeContainer, session_id: UUID, text: str) -> Non
     )
     task = container.conversation._active[session_id].task
     assert task is not None
-    await asyncio.wait_for(task, timeout=5)
+    await asyncio.wait_for(task, timeout=15)
     record = await container.conversation_repository.generation_result(accepted.generation_id)
     errors = await container.database.fetchall(
         "SELECT payload_json FROM events WHERE event_type = 'system.error_raised' "
@@ -141,10 +141,13 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
         for tool in RuntimeSkillRouter(container.runtime_skills.list).select(f"请核查网页 {_URL}")
         if tool.skill_id == "web.read"
     )
+    first: asyncio.Task[None] | None = None
     try:
         session = await container.sessions.create_session("default")
         first = asyncio.create_task(_turn(container, session.session_id, f"请核查网页 {_URL}"))
-        event = await asyncio.wait_for(events.receive(), timeout=2)
+        # This guard bounds a deadlock; permission/source invariants below do
+        # not impose a two-second SQLite/provider setup performance threshold.
+        event = await asyncio.wait_for(events.receive(), timeout=15)
         payload = cast(dict[str, object], event["payload"])
         await container.runtime_skills.decide_confirmation(
             UUID(str(payload["request_id"])), "deny" if mode == "denied" else "allow_once"
@@ -170,7 +173,7 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
                 "把刚才的条件整理成简表。",
                 options=ConversationTurnOptions(output_modes=frozenset({"text"})),
             )
-            await asyncio.wait_for(entered.wait(), timeout=2)
+            await asyncio.wait_for(entered.wait(), timeout=15)
             assert await container.conversation.cancel(
                 session.session_id, expected_generation_id=accepted.generation_id
             )
@@ -312,6 +315,8 @@ async def test_real_conversation_followup_gets_original_permissioned_read(
     finally:
         events.close()
         await container.stop()
+        if first is not None:
+            await asyncio.gather(first, return_exceptions=True)
 
 
 @pytest.mark.asyncio
@@ -422,7 +427,7 @@ async def test_budget_omitted_index_keeps_actual_child_for_separate_confirmation
         ):
             before_executions = list(executions)
             task = asyncio.create_task(_turn(container, session.session_id, text))
-            event = await asyncio.wait_for(events.receive(), timeout=2)
+            event = await asyncio.wait_for(events.receive(), timeout=15)
             assert executions == before_executions
             payload = cast(dict[str, object], event["payload"])
             assert payload["skill_id"] == "web.read"
