@@ -1342,13 +1342,16 @@ class ConversationService:
         tasks: list[asyncio.Task[None]] = []
         for session_id, generation in active:
             generation.coverage_valid = False
+            # Completion is irrevocable, but still owns publication and memory
+            # work. Join it before shutdown releases those dependencies.
+            if generation.task is not None:
+                tasks.append(generation.task)
             if not generation.completing:
                 already_revoked = generation.revoked
                 generation.revoked = True
                 if generation.task is not None:
                     if not already_revoked and not generation.task.cancelling():
                         generation.task.cancel("runtime_stopping")
-                    tasks.append(generation.task)
                 else:
                     await self.terminate_active_generation(
                         session_id,
