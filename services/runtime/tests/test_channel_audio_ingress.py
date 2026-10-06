@@ -88,6 +88,19 @@ class _Audio:
         return ChannelInboundAudioInput(fingerprint, self.load)
 
 
+@dataclass
+class _AudioTimeouts:
+    deadlines: list[asyncio.Timeout] = field(default_factory=list[asyncio.Timeout])
+
+    def __getattr__(self, name: str) -> object:
+        return getattr(asyncio, name)
+
+    def timeout(self, delay: float | None) -> asyncio.Timeout:
+        deadline = asyncio.timeout(delay)
+        self.deadlines.append(deadline)
+        return deadline
+
+
 @asynccontextmanager
 async def _audio_runtime(
     settings: Settings, monkeypatch: pytest.MonkeyPatch
@@ -294,12 +307,11 @@ async def test_invalid_failed_or_timed_out_stt_has_one_sanitized_durable_text_no
 ) -> None:
     async with _audio_runtime(runtime_settings, monkeypatch) as (harness, connection_id, token):
         audio = _Audio(invalid)
+        timeouts = _AudioTimeouts()
         if invalid == "failure":
             audio.failure = RuntimeError("SECRET URL AND PAYLOAD MUST NEVER BE PERSISTED")
         if invalid in {"timeout", "timeout_late"}:
-            monkeypatch.setattr(
-                "chatwaifu_runtime.external_channels.service.AUDIO_PREPROCESS_TIMEOUT_SECONDS", 0.02
-            )
+            monkeypatch.setattr("chatwaifu_runtime.external_channels.service.asyncio", timeouts)
             if invalid == "timeout_late":
                 audio.swallow_cancel = True
                 audio.transcript = "请用语音回复我"
@@ -308,10 +320,18 @@ async def test_invalid_failed_or_timed_out_stt_has_one_sanitized_durable_text_no
         receipt = await harness.container.external_channels.ingest(
             _message(connection_id), access_token=token, audio_input=audio.input()
         )
-        await asyncio.wait_for(audio.entered.wait(), 3)
+        await asyncio.wait_for(audio.entered.wait(), 15)
         task = harness.container.external_channels._audio_tasks.get(receipt.channel_turn_id)
+        if invalid in {"timeout", "timeout_late"}:
+            # Expire the real production timeout only after the held loader has
+            # entered. SQLite/runner scheduling must not consume a 20ms budget
+            # before the cancellation and late-result behavior can be exercised.
+            assert task is not None and len(timeouts.deadlines) == 1
+            timeouts.deadlines[0].reschedule(asyncio.get_running_loop().time())
         if task is not None:
-            await asyncio.wait_for(task, 3)
+            await asyncio.wait_for(task, 15)
+        if invalid in {"timeout", "timeout_late"}:
+            assert audio.cancelled == 1
         await _assert_failure(harness, connection_id, receipt.channel_turn_id)
         repeated = await harness.container.external_channels.ingest(
             _message(connection_id), access_token=token, audio_input=audio.input()
