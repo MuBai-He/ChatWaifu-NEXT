@@ -2445,7 +2445,9 @@ async def test_already_queued_idle_callback_cannot_seal_refreshed_window(
         await asyncio.gather(*tuple(coordinator._background_tasks))
         assert not recorder.requests
         scheduler.advance(BURST_IDLE_WINDOW_SECONDS)
-        await asyncio.wait_for(transport.sent.wait(), 5)
+        # Virtual-time assertions above check the sliding window. This wait
+        # joins real durable delivery, with a separate bounded deadlock guard.
+        await asyncio.wait_for(transport.sent.wait(), 15)
         assert [len(r.images) for r in recorder.requests] == [2]
     finally:
         await container.stop()

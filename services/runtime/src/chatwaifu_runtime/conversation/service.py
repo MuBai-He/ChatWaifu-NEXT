@@ -928,10 +928,13 @@ class ConversationService:
         active = tuple(self._active.items())
         tasks: list[asyncio.Task[None]] = []
         for session_id, generation in active:
+            # Completion is irrevocable, but still owns publication and memory
+            # work. Join it before shutdown releases those dependencies.
+            if generation.task is not None:
+                tasks.append(generation.task)
             if not generation.completing:
                 if generation.task is not None:
                     generation.task.cancel("runtime_stopping")
-                    tasks.append(generation.task)
                 else:
                     await self.terminate_active_generation(
                         session_id,
