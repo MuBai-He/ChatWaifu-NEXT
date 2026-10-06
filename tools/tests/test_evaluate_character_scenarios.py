@@ -74,7 +74,9 @@ async def test_evaluation_contract_position_reaches_provider_and_fences_resume(
     assert len(requests) == 1 and requests[0].pre_user_system_prompt is not None
     assert "[OUTPUT CONTRACT]" not in requests[0].system_prompt
     assert (
-        json.loads((tmp_path / "metadata.json").read_text())["identity"]["output_contract_position"]
+        json.loads((tmp_path / "metadata.json").read_text(encoding="utf-8"))["identity"][
+            "output_contract_position"
+        ]
         == "pre_user"
     )
     changed = EvaluationRunner(
@@ -215,7 +217,9 @@ async def test_empty_model_answer_is_incomplete_with_reported_usage_retained(
     )
     samples = await runner.execute([("baseline", runner.variant_a_persona_path)], ["greeting"])
     assert samples == []
-    assert not (tmp_path / "results.jsonl").exists() or not (tmp_path / "results.jsonl").read_text()
+    assert not (tmp_path / "results.jsonl").exists() or not (tmp_path / "results.jsonl").read_text(
+        encoding="utf-8"
+    )
     failures = [
         json.loads(line)
         for line in (tmp_path / "incomplete.jsonl").read_text(encoding="utf-8").splitlines()
@@ -421,10 +425,10 @@ async def test_runtime_mode_accepts_deployed_crawl4ai_reader(
     assert captured[0].crawl4ai_builtin_fallback is fallback
     assert captured[0].crawl4ai_endpoint == "http://127.0.0.1:11236"
     assert captured[0].crawl4ai_api_token.get_secret_value() == "synthetic-reader-token"
-    identity = json.loads((tmp_path / "metadata.json").read_text())["identity"]
+    identity = json.loads((tmp_path / "metadata.json").read_text(encoding="utf-8"))["identity"]
     assert identity["runtime_source_config"]["reader_provider"] == "crawl4ai"
     assert identity["runtime_source_config"]["crawl4ai_builtin_fallback"] is fallback
-    assert "synthetic-reader-token" not in (tmp_path / "metadata.json").read_text()
+    assert "synthetic-reader-token" not in (tmp_path / "metadata.json").read_text(encoding="utf-8")
     opposite = EvaluationRunner(
         output_dir=tmp_path,
         provider="demo",
@@ -2003,13 +2007,14 @@ async def test_returned_model_identity_is_recorded_separately_from_requested_mod
     )
     samples = await runner.execute([("baseline", runner.variant_a_persona_path)], ["greeting"])
     file = tmp_path / ("incomplete.jsonl" if empty else "results.jsonl")
-    record = json.loads(file.read_text().splitlines()[0])
+    record = json.loads(file.read_text(encoding="utf-8").splitlines()[0])
     expected = {"version": "1.0", "reported_model_ids": ["returned-alias"], "incomplete": False}
     assert record["provider_response_identities"] == [expected]
     if runtime_tools:
         assert record["runtime_source_trace"]["provider_calls"][0]["response_identity"] == expected
         events = [
-            json.loads(s) for s in (tmp_path / "provider-rounds.jsonl").read_text().splitlines()
+            json.loads(s)
+            for s in (tmp_path / "provider-rounds.jsonl").read_text(encoding="utf-8").splitlines()
         ]
         assert events[0]["response_identity"] is None
         assert events[-1]["response_identity"] == expected

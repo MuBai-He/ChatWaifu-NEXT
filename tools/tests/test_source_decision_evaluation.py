@@ -52,7 +52,9 @@ URL = "https://source.example/new"
 def projections() -> tuple[ProjectedSkillTool, ...]:
     result: list[ProjectedSkillTool] = []
     for kind in ("search", "read"):
-        manifest = yaml.safe_load((ROOT / f"skills/builtin/web-{kind}/chatwaifu.yaml").read_text())
+        manifest = yaml.safe_load(
+            (ROOT / f"skills/builtin/web-{kind}/chatwaifu.yaml").read_text(encoding="utf-8")
+        )
         cap = manifest["definition"]["capabilities"][0]
         result.append(
             ProjectedSkillTool(
@@ -552,7 +554,7 @@ async def test_recorded_http_failure_retains_status_without_private_error_detail
     with pytest.raises(httpx2.HTTPStatusError):
         async for _event in recorded.stream(request()):
             pass
-    raw = path.read_text()
+    raw = path.read_text(encoding="utf-8")
     rows = [json.loads(line) for line in raw.splitlines()]
     assert rows[-1]["http_status"] == 503 and rows[-1]["error_type"] == "HTTPStatusError"
     assert secret not in raw and recorded.used == 1

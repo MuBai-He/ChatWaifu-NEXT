@@ -77,7 +77,9 @@ async def test_opt_in_fallback_preserves_actual_source_focus_resolver_and_schema
         "http_status": 503,
     }
     assert "secret" not in json.dumps(result) and "private provider" not in json.dumps(result)
-    manifest = yaml.safe_load((ROOT / "skills/builtin/web-read/chatwaifu.yaml").read_text())
+    manifest = yaml.safe_load(
+        (ROOT / "skills/builtin/web-read/chatwaifu.yaml").read_text(encoding="utf-8")
+    )
     schema = manifest["definition"]["capabilities"][0]["output_schema"]
     validate(result, schema)
 
