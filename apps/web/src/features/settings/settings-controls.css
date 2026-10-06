@@ -1,5 +1,9 @@
-/* Shared form controls for the settings surfaces, including macOS WebKit. */
-:is(.desktop-settings-page, .channels-settings-section).settings-controls {
+/* Shared form controls for settings pages and opt-in portalled dialogs. */
+:is(
+  .desktop-settings-page,
+  .channels-settings-section,
+  .conversation-scope-dialog
+).settings-controls {
   --settings-control-height: 40px;
   --settings-control-radius: 10px;
   --settings-control-font: 0.8125rem;
@@ -8,7 +12,11 @@
   --settings-control-focus: #8d527d;
 }
 
-:is(.desktop-settings-page, .channels-settings-section).settings-controls
+:is(
+    .desktop-settings-page,
+    .channels-settings-section,
+    .conversation-scope-dialog
+  ).settings-controls
   :is(
     input:where(
       :not(
@@ -39,7 +47,11 @@
   outline: none;
 }
 
-:is(.desktop-settings-page, .channels-settings-section).settings-controls
+:is(
+    .desktop-settings-page,
+    .channels-settings-section,
+    .conversation-scope-dialog
+  ).settings-controls
   select {
   /* Native WebKit menulists otherwise ignore the intended padding and height. */
   -webkit-appearance: none;
@@ -52,29 +64,49 @@
   cursor: pointer;
 }
 
-:is(.desktop-settings-page, .channels-settings-section).settings-controls
+:is(
+    .desktop-settings-page,
+    .channels-settings-section,
+    .conversation-scope-dialog
+  ).settings-controls
   textarea {
   min-height: 96px;
   resize: vertical;
 }
 
-:is(.desktop-settings-page, .channels-settings-section).settings-controls
+:is(
+    .desktop-settings-page,
+    .channels-settings-section,
+    .conversation-scope-dialog
+  ).settings-controls
   :is(input, select, textarea):focus {
   border-color: var(--settings-control-focus);
 }
 
-:is(.desktop-settings-page, .channels-settings-section).settings-controls
+:is(
+    .desktop-settings-page,
+    .channels-settings-section,
+    .conversation-scope-dialog
+  ).settings-controls
   :is(input, select, textarea, button, summary):focus-visible {
   outline: 2px solid var(--settings-control-focus);
   outline-offset: 2px;
 }
 
-:is(.desktop-settings-page, .channels-settings-section).settings-controls
+:is(
+    .desktop-settings-page,
+    .channels-settings-section,
+    .conversation-scope-dialog
+  ).settings-controls
   :is(input, textarea)::placeholder {
   color: #938b97;
 }
 
-:is(.desktop-settings-page, .channels-settings-section).settings-controls
+:is(
+    .desktop-settings-page,
+    .channels-settings-section,
+    .conversation-scope-dialog
+  ).settings-controls
   :is(input, select, textarea):disabled {
   cursor: default;
   color: #827a87;
@@ -82,13 +114,18 @@
   opacity: 0.7;
 }
 
-:is(.desktop-settings-page, .channels-settings-section).settings-controls
+:is(
+    .desktop-settings-page,
+    .channels-settings-section,
+    .conversation-scope-dialog
+  ).settings-controls
   :is(input[type="checkbox"], input[type="radio"]) {
   accent-color: var(--settings-control-focus);
 }
 
 .desktop-settings-page .desktop-settings-scroll button:not([aria-label]),
-.channels-settings-section button:not([aria-label]) {
+.channels-settings-section button:not([aria-label]),
+.conversation-scope-dialog.settings-controls button:not([aria-label]) {
   min-height: var(--settings-control-height);
   border-radius: var(--settings-control-radius);
   font-size: var(--settings-control-font);
@@ -97,7 +134,11 @@
 }
 
 @media (prefers-contrast: more) {
-  :is(.desktop-settings-page, .channels-settings-section).settings-controls {
+  :is(
+    .desktop-settings-page,
+    .channels-settings-section,
+    .conversation-scope-dialog
+  ).settings-controls {
     --settings-control-border: #77707d;
   }
 }

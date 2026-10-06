@@ -45,6 +45,10 @@ class InvalidSessionTransition(ValueError):
     pass
 
 
+class ParticipantNameConflict(ValueError):
+    pass
+
+
 class SessionService:
     def __init__(self, database: Database, event_store: EventStore, event_hub: EventHub) -> None:
         self._database = database
@@ -104,6 +108,31 @@ class SessionService:
                     participant.display_name,
                     participant.created_at.isoformat(),
                 ),
+            )
+        return participant
+
+    async def rename_participant(
+        self, participant_id: str, display_name: str, *, expected_display_name: str
+    ) -> ParticipantSnapshot:
+        # Names are operator-managed labels. Never replace an identity, audience,
+        # channel link or memory scope when changing this metadata.
+        async with self._database.transaction() as connection:
+            cursor = await connection.execute(
+                "SELECT * FROM participants WHERE participant_id = ?", (participant_id,)
+            )
+            row = await cursor.fetchone()
+            if row is None:
+                raise KeyError("participant not found")
+            if row["display_name"] != expected_display_name:
+                raise ParticipantNameConflict("participant name changed; reload and try again")
+            participant = ParticipantSnapshot(
+                participant_id=participant_id,
+                display_name=display_name.strip(),
+                created_at=row["created_at"],
+            )
+            await connection.execute(
+                "UPDATE participants SET display_name = ? WHERE participant_id = ?",
+                (participant.display_name, participant_id),
             )
         return participant
 

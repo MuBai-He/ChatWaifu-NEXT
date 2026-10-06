@@ -7,7 +7,7 @@ export const ConnectionControlsContext = createContext<{
 } | null>(null);
 export const ScopeControlsContext = createContext<{
   label: string;
-  open: () => void;
+  open: (trigger?: HTMLElement) => void;
 } | null>(null);
 export const useConnectionControls = () =>
   useContext(ConnectionControlsContext);

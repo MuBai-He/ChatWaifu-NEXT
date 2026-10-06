@@ -34,7 +34,7 @@ export function ChannelsSettingsPage() {
             type="button"
             className="qq-channel-secondary-action"
             disabled={!scope}
-            onClick={() => scope?.open()}
+            onClick={(event) => scope?.open(event.currentTarget)}
           >
             管理参与者
           </button>

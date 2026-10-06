@@ -1,14 +1,15 @@
-import { useEffect, useRef, type KeyboardEvent } from "react";
+import { useEffect, useRef, type KeyboardEvent, type RefObject } from "react";
 import { acquireNativeInteractionGuard } from "../../nativeInteractionGuard";
 
 export function useDialogNavigation<T extends HTMLElement>(
   open: boolean,
   close: () => void,
+  returnFocus?: RefObject<HTMLElement | null>,
 ) {
   const ref = useRef<T>(null);
   useEffect(() => {
     if (!open) return;
-    const previous = document.activeElement;
+    const previous = returnFocus?.current ?? document.activeElement;
     const release = acquireNativeInteractionGuard("dialog");
     const target = ref.current?.querySelector<HTMLElement>(
       "[data-dialog-close], input, button",
@@ -19,7 +20,7 @@ export function useDialogNavigation<T extends HTMLElement>(
       if (previous instanceof HTMLElement && previous.isConnected)
         previous.focus();
     };
-  }, [open]);
+  }, [open, returnFocus]);
   const onKeyDown = (event: KeyboardEvent<T>) => {
     if (event.key === "Escape") {
       event.preventDefault();

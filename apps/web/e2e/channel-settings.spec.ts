@@ -284,3 +284,200 @@ test("settings controls share sizes, keyboard focus and narrow-screen layout", a
     );
   }
 });
+
+test("conversation scope settings controls preserve names, identity and modal navigation", async ({
+  page,
+  request,
+}, info) => {
+  const runtime = process.env.VITE_RUNTIME_URL!;
+  const headers = { Authorization: `Bearer ${process.env.VITE_RUNTIME_TOKEN}` };
+  const health: unknown = await (
+    await request.get(`${runtime}/v1/runtime/health`)
+  ).json();
+  expect(health).toMatchObject({
+    providers: { llm: "demo", tts: "fake", stt: "disabled" },
+  });
+  const fixture = async (display_name: string) => {
+    const response = await request.post(`${runtime}/v1/participants`, {
+      headers,
+      data: { display_name },
+    });
+    expect(response.status()).toBe(201);
+    return (await response.json()) as {
+      participant_id: string;
+      display_name: string;
+    };
+  };
+  const suffix = info.project.name;
+  const first = await fixture(`测试占位名 · ${suffix}`);
+  const second = await fixture(`小周 · ${suffix}`);
+  const sceneResponse = await request.post(`${runtime}/v1/scenes`, {
+    headers,
+    data: {
+      display_name: `原有讨论 · ${suffix}`,
+      participant_ids: [first.participant_id, second.participant_id],
+    },
+  });
+  expect(sceneResponse.status()).toBe(201);
+  const scene = (await sceneResponse.json()) as { scene_id: string };
+  const scenesBefore: unknown = await (
+    await request.get(`${runtime}/v1/scenes`, { headers })
+  ).json();
+  const writes: { method: string; path: string }[] = [];
+  page.on("request", (r) => {
+    if (["POST", "PATCH", "PUT", "DELETE"].includes(r.method()))
+      writes.push({ method: r.method(), path: new URL(r.url()).pathname });
+  });
+  const desktop = info.project.name.startsWith("channels-desktop");
+  await page.setViewportSize({ width: 960, height: 700 });
+  await page.goto(desktop ? "/desktop-settings" : "/");
+  const openConnectionSection = async () => {
+    if (desktop)
+      await page
+        .getByRole("navigation", { name: "设置分类" })
+        .getByRole("button", { name: /^连接/ })
+        .click();
+  };
+  await openConnectionSection();
+  const opener = page.getByRole("button", {
+    name: desktop ? "管理对话" : "切换参与者与场景",
+    exact: true,
+  });
+  await opener.click();
+  const dialog = page.getByRole("dialog", { name: "参与者与场景" });
+  const speaker = dialog.getByRole("combobox", { name: "当前说话者" });
+  await expect(speaker).toBeEnabled();
+  await speaker.selectOption(first.participant_id);
+  await dialog.getByText("修改当前参与者名称", { exact: true }).click();
+  const alias = `小林 · ${suffix}`;
+  await dialog
+    .getByRole("textbox", { name: "显示名称", exact: true })
+    .fill(alias);
+  await dialog.getByRole("button", { name: "保存名称", exact: true }).click();
+  await expect(
+    dialog.getByText("参与者名称已保存", { exact: true }),
+  ).toBeVisible();
+  await expect(speaker).toHaveValue(first.participant_id);
+  await expect(
+    speaker.locator(`option[value="${first.participant_id}"]`),
+  ).toHaveText(alias);
+  await dialog
+    .getByRole("combobox", { name: "对话场景" })
+    .selectOption(scene.scene_id);
+  await expect(
+    dialog
+      .getByText(`听众：${alias}、${second.display_name}`, { exact: true })
+      .or(
+        dialog.getByText(`听众：${second.display_name}、${alias}`, {
+          exact: true,
+        }),
+      ),
+  ).toBeVisible();
+  expect(
+    await (await request.get(`${runtime}/v1/scenes`, { headers })).json(),
+  ).toEqual(scenesBefore);
+  await dialog.getByRole("button", { name: "取消", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(opener).toBeFocused();
+  await page.reload();
+  await openConnectionSection();
+  await opener.click();
+  await expect(speaker).toBeEnabled();
+  await expect(
+    speaker.locator(`option[value="${first.participant_id}"]`),
+  ).toHaveText(alias);
+  await dialog.getByText("创建共享场景", { exact: true }).click();
+  const sceneName = dialog.getByRole("textbox", {
+    name: "场景名称",
+    exact: true,
+  });
+  await sceneName.fill("示例共享讨论（未提交）");
+  const firstCheckbox = dialog.locator(
+    `input[type="checkbox"][value="${first.participant_id}"]`,
+  );
+  const secondCheckbox = dialog.locator(
+    `input[type="checkbox"][value="${second.participant_id}"]`,
+  );
+  await expect(firstCheckbox).toHaveAccessibleName(alias);
+  await expect(secondCheckbox).toHaveAccessibleName(second.display_name);
+  await firstCheckbox.check();
+  await secondCheckbox.check();
+  await expect(
+    dialog.getByRole("button", { name: "创建场景", exact: true }),
+  ).toBeEnabled();
+  for (const control of [
+    speaker,
+    sceneName,
+    dialog.getByRole("button", { name: "应用", exact: true }),
+  ]) {
+    expect(
+      await control.evaluate((node) => {
+        const style = getComputedStyle(node);
+        return {
+          height: node.getBoundingClientRect().height,
+          radius: style.borderRadius,
+          font: style.fontSize,
+        };
+      }),
+    ).toMatchObject({ height: 40, radius: "10px", font: "13px" });
+  }
+  expect(
+    await speaker.evaluate((node) => getComputedStyle(node).appearance),
+  ).toBe("none");
+  expect(
+    await firstCheckbox.evaluate((node) => node.getBoundingClientRect().width),
+  ).toBe(16);
+  await dialog.getByRole("button", { name: "应用", exact: true }).focus();
+  await page.keyboard.press("Tab");
+  await expect(
+    dialog.getByRole("button", { name: "关闭参与者与场景", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(
+    dialog.getByRole("button", { name: "应用", exact: true }),
+  ).toBeFocused();
+  expect(
+    await dialog.evaluate((node) => ({
+      top: node.getBoundingClientRect().top,
+      bottom: node.getBoundingClientRect().bottom,
+      viewport: window.innerHeight,
+      overflowing: node.scrollWidth > node.clientWidth,
+    })),
+  ).toMatchObject({ top: 24, bottom: 676, viewport: 700, overflowing: false });
+  await page.screenshot({
+    path: info.outputPath("conversation-scope-desktop.png"),
+  });
+  await page.setViewportSize({ width: 390, height: 640 });
+  await expect(
+    dialog.getByRole("button", { name: "应用", exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  expect(
+    await dialog.evaluate((node) => {
+      const heading = node.querySelector("header")!.getBoundingClientRect();
+      const footer = node.querySelector("footer")!.getBoundingClientRect();
+      const body = node.querySelector(".conversation-scope-body")!;
+      return (
+        heading.top >= 0 &&
+        footer.bottom <= window.innerHeight &&
+        body.scrollHeight > body.clientHeight
+      );
+    }),
+  ).toBe(true);
+  await page.screenshot({
+    path: info.outputPath("conversation-scope-mobile.png"),
+  });
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(opener).toBeFocused();
+  expect(
+    writes.filter((r) => /\/turns$|\/channel|\/scenes$/.test(r.path)),
+  ).toEqual([]);
+  expect(writes.filter((r) => r.method === "PATCH")).toEqual([
+    { method: "PATCH", path: `/v1/participants/${first.participant_id}` },
+  ]);
+});

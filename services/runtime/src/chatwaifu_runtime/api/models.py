@@ -26,6 +26,10 @@ class CreateParticipantRequest(BaseModel):
     display_name: str = Field(min_length=1, max_length=80)
 
 
+class UpdateParticipantNameRequest(CreateParticipantRequest):
+    expected_display_name: str = Field(min_length=1, max_length=80)
+
+
 class CreateSceneRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
