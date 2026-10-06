@@ -73,12 +73,16 @@ class SQLiteExperienceResetRepository(ExperienceResetRepository):
                 (memory_namespace,),
             )
             await connection.execute(
-                "DELETE FROM character_states WHERE character_id = ? AND user_scope = ?",
-                (character_id, user_scope),
+                "DELETE FROM character_states WHERE character_id = ? AND (user_scope = ? OR "
+                "user_scope IN (SELECT state_scope FROM sessions WHERE character_id = ? "
+                "AND user_scope = ?))",
+                (character_id, user_scope, character_id, user_scope),
             )
             await connection.execute(
-                "DELETE FROM relationship_states WHERE character_id = ? AND user_scope = ?",
-                (character_id, user_scope),
+                "DELETE FROM relationship_states WHERE character_id = ? AND (user_scope = ? OR "
+                "user_scope IN (SELECT state_scope FROM sessions WHERE character_id = ? "
+                "AND user_scope = ?))",
+                (character_id, user_scope, character_id, user_scope),
             )
 
             events_cursor = await connection.execute(

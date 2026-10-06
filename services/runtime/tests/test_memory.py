@@ -452,7 +452,7 @@ def test_participant_scene_memory_and_management_isolation(client: TestClient) -
     for session, text in [
         (owner, "请记住:我喜欢咖啡"),
         (private_a, "请记住:我喜欢蓝色"),
-        (shared_a, "请记住:我们喜欢爬山"),
+        (shared_a, "请记住:我喜欢爬山"),
     ]:
         _submit_and_wait(http, session, text)
 

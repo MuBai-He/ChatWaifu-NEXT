@@ -542,8 +542,26 @@ async def test_audio_input_kind_migration_is_atomic_and_old_rows_default_to_text
     await database.open()
     await database.close()
     with sqlite3.connect(path) as connection:
-        connection.execute("PRAGMA foreign_keys = OFF")
+        connection.execute("PRAGMA foreign_keys = ON")
         ids = [str(uuid4()) for _ in range(6)]
+        stamp = "2026-10-03T00:00:00+00:00"
+        connection.execute(
+            """INSERT INTO sessions(session_id,character_id,state,conversation_state,
+            created_at,updated_at) VALUES (?,'default','ready','idle',?,?)""",
+            (ids[3], stamp, stamp),
+        )
+        connection.execute(
+            """INSERT INTO channel_connections(connection_id,provider_id,name,character_id,
+            principal_scope,account_key,access_token_hash,created_at,updated_at)
+            VALUES (?,'weixin_ilink','legacy','default','local','fixture',?,?,?)""",
+            (ids[1], "a" * 64, stamp, stamp),
+        )
+        connection.execute(
+            """INSERT INTO channel_bindings(binding_id,connection_id,conversation_key,
+            sender_key,session_id,created_at,updated_at)
+            VALUES (?,?,'conversation','owner',?,?,?)""",
+            (ids[2], ids[1], ids[3], stamp, stamp),
+        )
         connection.execute(
             """INSERT INTO channel_turns (
             channel_turn_id, connection_id, binding_id, external_message_id,
@@ -552,9 +570,10 @@ async def test_audio_input_kind_migration_is_atomic_and_old_rows_default_to_text
             accepted_at, created_at, updated_at)
             VALUES (?, ?, ?, 'old', ?, 'conversation', 'direct', 'owner', 'local',
                     ?, ?, ?, 'accepted', 0, ?, ?, ?)""",
-            (*ids[:3], "a" * 64, *ids[3:], *("2026-10-03T00:00:00+00:00",) * 3),
+            (*ids[:3], "a" * 64, *ids[3:], *(stamp,) * 3),
         )
         connection.commit()
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
 
     audio_script = next(script for version, script in MIGRATIONS if version == 37)
     broken = Database(
@@ -572,6 +591,7 @@ async def test_audio_input_kind_migration_is_atomic_and_old_rows_default_to_text
     current = Database(path, storage)
     await current.open()
     try:
+        assert await current.fetchall("PRAGMA foreign_key_check") == []
         column = next(
             row
             for row in await current.fetchall("PRAGMA table_info(channel_turns)")

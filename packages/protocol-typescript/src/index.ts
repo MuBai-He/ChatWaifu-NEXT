@@ -67,3 +67,21 @@ export {
   parseChannelOutboundIntentPage,
   parseChannelOutboundIntentCancelRequest,
 } from "./parsers/channelProactive";
+
+export {
+  parseChannelGroupAudienceRequest,
+  parseChannelGroupAudienceSnapshot,
+  parseChannelGroupDeliveryTarget,
+  parseChannelParticipantLinkCreate,
+  parseChannelParticipantLinkUpdate,
+  parseChannelParticipantLinkSnapshot,
+  parseChannelParticipantLinkPage,
+  parseChannelGroupRouteCreate,
+  parseChannelGroupRouteUpdate,
+  parseChannelGroupRouteMemberSnapshot,
+  parseChannelGroupRouteSnapshot,
+  parseChannelGroupRoutePage,
+  parseChannelGroupTurnCancelRequest,
+  parseChannelGroupTurnSnapshot,
+  parseChannelGroupTurnPage,
+} from "./parsers/channelGroups";

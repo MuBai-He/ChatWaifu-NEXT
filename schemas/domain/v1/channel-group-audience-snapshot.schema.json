@@ -1,0 +1,72 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-group-audience-snapshot.schema.json",
+  "properties": {
+    "account_key": {
+      "title": "Account Key",
+      "type": "string"
+    },
+    "connection_id": {
+      "format": "uuid",
+      "title": "Connection Id",
+      "type": "string"
+    },
+    "connection_revision": {
+      "minimum": 1,
+      "title": "Connection Revision",
+      "type": "integer"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    },
+    "group_id": {
+      "title": "Group Id",
+      "type": "string"
+    },
+    "member_fingerprint": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Member Fingerprint",
+      "type": "string"
+    },
+    "member_ids": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 32,
+      "minItems": 2,
+      "title": "Member Ids",
+      "type": "array"
+    },
+    "observation_id": {
+      "format": "uuid",
+      "title": "Observation Id",
+      "type": "string"
+    },
+    "observed_at": {
+      "format": "date-time",
+      "title": "Observed At",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "observation_id",
+    "connection_id",
+    "connection_revision",
+    "account_key",
+    "group_id",
+    "member_ids",
+    "member_fingerprint",
+    "observed_at",
+    "expires_at"
+  ],
+  "title": "ChannelGroupAudienceSnapshot",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

@@ -25,6 +25,7 @@ from chatwaifu_runtime.memory.repository import (
     PresentedAssistantEventType,
 )
 from chatwaifu_runtime.persistence.database import Database
+from chatwaifu_runtime.sessions.identity import TrustedConversationIdentity
 
 _RECORD_SELECT = """
 SELECT record.*,
@@ -67,8 +68,11 @@ class SQLiteMemoryRepository(MemoryRepository):
             """
             SELECT event.event_id, event.event_type, event.session_id,
                    event.occurred_at, event.envelope_json,
-                   turn.source_context_json
+                   turn.source_context_json,
+                   session.participant_id, session.scene_id, session.audience_json,
+                   session.user_scope, session.state_scope
             FROM events AS event
+            JOIN sessions AS session ON session.session_id=event.session_id
             LEFT JOIN turns AS turn
               ON turn.session_id = event.session_id
              AND turn.turn_id = json_extract(event.envelope_json, '$.turn_id')
@@ -89,6 +93,18 @@ class SQLiteMemoryRepository(MemoryRepository):
             event_type=str(row["event_type"]),
             channel_attribution=_channel_attribution_from_source_context(
                 row["source_context_json"], fallback_received_at=occurred_at
+            ),
+            identity=TrustedConversationIdentity(
+                participant_id=str(row["participant_id"]),
+                scene_id=str(row["scene_id"]) if row["scene_id"] is not None else None,
+                audience_ids=tuple(json.loads(str(row["audience_json"]))),
+                memory_scope=str(row["user_scope"]),
+                state_scope=str(row["state_scope"]),
+            ),
+            source_text=(
+                str(cast(dict[str, object], envelope["payload"]).get("text", ""))
+                if isinstance(envelope.get("payload"), dict)
+                else None
             ),
         )
 
@@ -217,19 +233,25 @@ class SQLiteMemoryRepository(MemoryRepository):
             channel_attribution=channel_attribution,
         )
 
-    async def find_exact(self, namespace: str, normalized_text: str) -> MemoryRecord | None:
+    async def find_exact(
+        self, namespace: str, normalized_text: str, *, subject_id: str | None = "user"
+    ) -> MemoryRecord | None:
         row = await self._database.fetchone(
             _RECORD_SELECT + " WHERE record.namespace = ? AND record.normalized_text = ? "
-            "AND record.state = 'active' ORDER BY record.created_at DESC LIMIT 1",
-            (namespace, normalized_text),
+            "AND record.subject_id IS ? AND record.state = 'active' "
+            "ORDER BY record.created_at DESC LIMIT 1",
+            (namespace, normalized_text, subject_id),
         )
         return _record_from_row(dict(row)) if row is not None else None
 
-    async def find_tombstone(self, namespace: str, normalized_text: str) -> MemoryRecord | None:
+    async def find_tombstone(
+        self, namespace: str, normalized_text: str, *, subject_id: str | None = "user"
+    ) -> MemoryRecord | None:
         row = await self._database.fetchone(
             _RECORD_SELECT + " WHERE record.namespace = ? AND record.normalized_text = ? "
-            "AND record.state = 'tombstoned' ORDER BY record.tombstoned_at DESC LIMIT 1",
-            (namespace, normalized_text),
+            "AND record.subject_id IS ? AND record.state = 'tombstoned' "
+            "ORDER BY record.tombstoned_at DESC LIMIT 1",
+            (namespace, normalized_text, subject_id),
         )
         return _record_from_row(dict(row)) if row is not None else None
 
@@ -725,7 +747,7 @@ class SQLiteMemoryRepository(MemoryRepository):
         return grouped
 
     async def search_fts(
-        self, query: str, namespaces: Sequence[str], limit: int
+        self, query: str, namespaces: Sequence[str], limit: int, *, subject_id: str | None = None
     ) -> list[MemorySearchHit]:
         if not namespaces:
             return []
@@ -735,13 +757,16 @@ class SQLiteMemoryRepository(MemoryRepository):
         if terms:
             match = " OR ".join(f'"{term.replace(chr(34), chr(34) * 2)}"' for term in terms)
             rows = await self._database.fetchall(
-                """
-                SELECT memory_id, bm25(memory_records_fts) AS rank
-                FROM memory_records_fts
+                f"""
+                SELECT memory_records_fts.memory_id, bm25(memory_records_fts) AS rank
+                FROM memory_records_fts JOIN memory_records AS record
+                    ON record.memory_id=memory_records_fts.memory_id
                 WHERE memory_records_fts MATCH ?
+                    AND record.namespace IN ({placeholders}) AND record.state='active'
+                    AND (? IS NULL OR record.subject_id=?)
                 ORDER BY rank LIMIT ?
                 """,
-                (match, min(max(limit * 3, 1), 100)),
+                (match, *namespaces, subject_id, subject_id, min(max(limit * 3, 1), 100)),
             )
             ids = [UUID(str(row["memory_id"])) for row in rows]
             records = await self.get_many(ids)
@@ -753,10 +778,13 @@ class SQLiteMemoryRepository(MemoryRepository):
         like_rows = await self._database.fetchall(
             _RECORD_SELECT
             + f" WHERE record.state = 'active' AND record.namespace IN ({placeholders}) "
+            "AND (? IS NULL OR record.subject_id=?) "
             "AND (record.normalized_text LIKE ? OR ? LIKE '%' || record.normalized_text || '%') "
             "ORDER BY record.pinned DESC, record.importance DESC LIMIT ?",
             (
                 *namespaces,
+                subject_id,
+                subject_id,
                 f"%{normalized}%",
                 normalized,
                 min(max(limit * 2, 1), 100),

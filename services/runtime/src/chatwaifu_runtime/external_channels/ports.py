@@ -39,7 +39,9 @@ from chatwaifu_runtime.external_channels.models import (
 class ExternalChannelRepository(Protocol):
     async def list_connections(self) -> tuple[ChannelConnectionRecord, ...]: ...
 
-    async def get_connection(self, connection_id: UUID) -> ChannelConnectionRecord | None: ...
+    async def get_connection(
+        self, connection_id: UUID, *, include_deleted: bool = False
+    ) -> ChannelConnectionRecord | None: ...
 
     async def create_connection(
         self,
@@ -87,7 +89,7 @@ class ExternalChannelRepository(Protocol):
     ) -> ChannelBindingRecord: ...
 
     async def find_turn_by_external_message(
-        self, connection_id: UUID, external_message_id: str
+        self, connection_id: UUID, external_message_id: str, *, conversation_key: str | None = None
     ) -> ChannelTurnRecord | None: ...
 
     async def get_turn(self, channel_turn_id: UUID) -> ChannelTurnRecord | None: ...

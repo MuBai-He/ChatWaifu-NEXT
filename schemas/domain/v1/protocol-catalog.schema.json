@@ -2297,6 +2297,17 @@
           "title": "Delivery Id",
           "type": "string"
         },
+        "group_target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChannelGroupDeliveryTarget"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "next_pending_ordinal": {
           "anyOf": [
             {
@@ -2657,6 +2668,568 @@
         "checked_at"
       ],
       "title": "ChannelGatewayStatusSnapshot",
+      "type": "object"
+    },
+    "ChannelGroupAudienceRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "group_id": {
+          "maxLength": 20,
+          "minLength": 1,
+          "pattern": "^[1-9][0-9]{0,19}$",
+          "title": "Group Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id"
+      ],
+      "title": "ChannelGroupAudienceRequest",
+      "type": "object"
+    },
+    "ChannelGroupAudienceSnapshot": {
+      "properties": {
+        "account_key": {
+          "title": "Account Key",
+          "type": "string"
+        },
+        "connection_id": {
+          "format": "uuid",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "connection_revision": {
+          "minimum": 1,
+          "title": "Connection Revision",
+          "type": "integer"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "group_id": {
+          "title": "Group Id",
+          "type": "string"
+        },
+        "member_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Member Fingerprint",
+          "type": "string"
+        },
+        "member_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 2,
+          "title": "Member Ids",
+          "type": "array"
+        },
+        "observation_id": {
+          "format": "uuid",
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "observation_id",
+        "connection_id",
+        "connection_revision",
+        "account_key",
+        "group_id",
+        "member_ids",
+        "member_fingerprint",
+        "observed_at",
+        "expires_at"
+      ],
+      "title": "ChannelGroupAudienceSnapshot",
+      "type": "object"
+    },
+    "ChannelGroupDeliveryTarget": {
+      "additionalProperties": false,
+      "description": "Fixed admitted group target; field values cannot grant sending authority.",
+      "properties": {
+        "account_key": {
+          "maxLength": 20,
+          "minLength": 1,
+          "pattern": "^[1-9][0-9]{0,19}$",
+          "title": "Account Key",
+          "type": "string"
+        },
+        "audience_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Audience Fingerprint",
+          "type": "string"
+        },
+        "channel_turn_id": {
+          "format": "uuid",
+          "title": "Channel Turn Id",
+          "type": "string"
+        },
+        "connection_id": {
+          "format": "uuid",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "group_id": {
+          "maxLength": 20,
+          "minLength": 1,
+          "pattern": "^[1-9][0-9]{0,19}$",
+          "title": "Group Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "group",
+          "default": "group",
+          "title": "Kind",
+          "type": "string"
+        },
+        "route_id": {
+          "format": "uuid",
+          "title": "Route Id",
+          "type": "string"
+        },
+        "route_revision": {
+          "minimum": 1,
+          "title": "Route Revision",
+          "type": "integer"
+        },
+        "scene_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Scene Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "connection_id",
+        "account_key",
+        "group_id",
+        "route_id",
+        "route_revision",
+        "channel_turn_id",
+        "scene_id",
+        "audience_fingerprint"
+      ],
+      "title": "ChannelGroupDeliveryTarget",
+      "type": "object"
+    },
+    "ChannelGroupPauseReason": {
+      "enum": [
+        "operator_disabled",
+        "reconnect",
+        "membership_changed",
+        "account_changed",
+        "connection_disabled",
+        "connection_deleted",
+        "configuration_changed",
+        "link_revoked",
+        "scene_reset",
+        "route_deleted"
+      ],
+      "title": "ChannelGroupPauseReason",
+      "type": "string"
+    },
+    "ChannelGroupRouteCreate": {
+      "additionalProperties": false,
+      "properties": {
+        "display_name": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "observation_id": {
+          "format": "uuid",
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "speaker_sender_keys": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Speaker Sender Keys",
+          "type": "array"
+        }
+      },
+      "required": [
+        "observation_id",
+        "display_name"
+      ],
+      "title": "ChannelGroupRouteCreate",
+      "type": "object"
+    },
+    "ChannelGroupRouteMemberSnapshot": {
+      "properties": {
+        "can_speak": {
+          "title": "Can Speak",
+          "type": "boolean"
+        },
+        "link_id": {
+          "format": "uuid",
+          "title": "Link Id",
+          "type": "string"
+        },
+        "participant_id": {
+          "title": "Participant Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sender_key": {
+          "title": "Sender Key",
+          "type": "string"
+        }
+      },
+      "required": [
+        "link_id",
+        "sender_key",
+        "participant_id",
+        "can_speak"
+      ],
+      "title": "ChannelGroupRouteMemberSnapshot",
+      "type": "object"
+    },
+    "ChannelGroupRoutePage": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ChannelGroupRouteSnapshot"
+          },
+          "maxItems": 50,
+          "title": "Items",
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Next Cursor"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "title": "ChannelGroupRoutePage",
+      "type": "object"
+    },
+    "ChannelGroupRouteSnapshot": {
+      "properties": {
+        "account_key": {
+          "title": "Account Key",
+          "type": "string"
+        },
+        "audience_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Audience Fingerprint",
+          "type": "string"
+        },
+        "character_id": {
+          "title": "Character Id",
+          "type": "string"
+        },
+        "connection_id": {
+          "format": "uuid",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "deleted_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deleted At"
+        },
+        "display_name": {
+          "title": "Display Name",
+          "type": "string"
+        },
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "group_id": {
+          "title": "Group Id",
+          "type": "string"
+        },
+        "members": {
+          "items": {
+            "$ref": "#/$defs/ChannelGroupRouteMemberSnapshot"
+          },
+          "maxItems": 32,
+          "minItems": 2,
+          "title": "Members",
+          "type": "array"
+        },
+        "observation_id": {
+          "format": "uuid",
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "pause_reason": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChannelGroupPauseReason"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "revision": {
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "route_id": {
+          "format": "uuid",
+          "title": "Route Id",
+          "type": "string"
+        },
+        "scene_id": {
+          "title": "Scene Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "route_id",
+        "connection_id",
+        "account_key",
+        "group_id",
+        "character_id",
+        "scene_id",
+        "display_name",
+        "revision",
+        "observation_id",
+        "audience_fingerprint",
+        "members",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "ChannelGroupRouteSnapshot",
+      "type": "object"
+    },
+    "ChannelGroupRouteUpdate": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "expected_revision": {
+          "minimum": 1,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "observation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observation Id"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "speaker_sender_keys": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Speaker Sender Keys",
+          "type": "array"
+        }
+      },
+      "required": [
+        "enabled",
+        "expected_revision",
+        "speaker_sender_keys"
+      ],
+      "title": "ChannelGroupRouteUpdate",
+      "type": "object"
+    },
+    "ChannelGroupTurnCancelRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_revision": {
+          "minimum": 0,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_revision"
+      ],
+      "title": "ChannelGroupTurnCancelRequest",
+      "type": "object"
+    },
+    "ChannelGroupTurnPage": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ChannelGroupTurnSnapshot"
+          },
+          "maxItems": 50,
+          "title": "Items",
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Next Cursor"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "title": "ChannelGroupTurnPage",
+      "type": "object"
+    },
+    "ChannelGroupTurnSnapshot": {
+      "properties": {
+        "cancelable": {
+          "default": false,
+          "title": "Cancelable",
+          "type": "boolean"
+        },
+        "participant_id": {
+          "title": "Participant Id",
+          "type": "string"
+        },
+        "provider_receipt_present": {
+          "default": false,
+          "title": "Provider Receipt Present",
+          "type": "boolean"
+        },
+        "route_id": {
+          "format": "uuid",
+          "title": "Route Id",
+          "type": "string"
+        },
+        "route_revision": {
+          "minimum": 1,
+          "title": "Route Revision",
+          "type": "integer"
+        },
+        "scene_id": {
+          "title": "Scene Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "turn": {
+          "$ref": "#/$defs/ChannelTurnSnapshot"
+        }
+      },
+      "required": [
+        "route_id",
+        "route_revision",
+        "scene_id",
+        "participant_id",
+        "turn"
+      ],
+      "title": "ChannelGroupTurnSnapshot",
       "type": "object"
     },
     "ChannelImageDeliveryPartPayload": {
@@ -3263,6 +3836,166 @@
         "access_token"
       ],
       "title": "ChannelPairingStartRequest",
+      "type": "object"
+    },
+    "ChannelParticipantLinkCreate": {
+      "additionalProperties": false,
+      "properties": {
+        "observation_id": {
+          "format": "uuid",
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "participant_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Participant Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sender_key": {
+          "maxLength": 20,
+          "minLength": 1,
+          "pattern": "^[1-9][0-9]{0,19}$",
+          "title": "Sender Key",
+          "type": "string"
+        }
+      },
+      "required": [
+        "observation_id",
+        "sender_key",
+        "participant_id"
+      ],
+      "title": "ChannelParticipantLinkCreate",
+      "type": "object"
+    },
+    "ChannelParticipantLinkPage": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ChannelParticipantLinkSnapshot"
+          },
+          "maxItems": 50,
+          "title": "Items",
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Next Cursor"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "title": "ChannelParticipantLinkPage",
+      "type": "object"
+    },
+    "ChannelParticipantLinkSnapshot": {
+      "properties": {
+        "account_key": {
+          "title": "Account Key",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "link_id": {
+          "format": "uuid",
+          "title": "Link Id",
+          "type": "string"
+        },
+        "participant_id": {
+          "title": "Participant Id",
+          "type": "string"
+        },
+        "provider_id": {
+          "const": "qq_napcat",
+          "default": "qq_napcat",
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "revision": {
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sender_key": {
+          "title": "Sender Key",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "link_id",
+        "account_key",
+        "sender_key",
+        "participant_id",
+        "enabled",
+        "revision",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "ChannelParticipantLinkSnapshot",
+      "type": "object"
+    },
+    "ChannelParticipantLinkUpdate": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "expected_revision": {
+          "minimum": 1,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "enabled",
+        "expected_revision"
+      ],
+      "title": "ChannelParticipantLinkUpdate",
       "type": "object"
     },
     "ChannelPresentationPolicy": {
@@ -6934,6 +7667,18 @@
           "title": "Source Event Ids",
           "type": "array"
         },
+        "subject_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject Id"
+        },
         "temporal_relevance": {
           "default": 0,
           "maximum": 1,
@@ -9327,6 +10072,11 @@
         "state": {
           "$ref": "#/$defs/SessionState"
         },
+        "state_scope": {
+          "default": "local",
+          "title": "State Scope",
+          "type": "string"
+        },
         "updated_at": {
           "format": "date-time",
           "title": "Updated At",
@@ -11371,6 +12121,39 @@
     "channel_gateway_status": {
       "$ref": "#/$defs/ChannelGatewayStatusSnapshot"
     },
+    "channel_group_audience_request": {
+      "$ref": "#/$defs/ChannelGroupAudienceRequest"
+    },
+    "channel_group_audience_snapshot": {
+      "$ref": "#/$defs/ChannelGroupAudienceSnapshot"
+    },
+    "channel_group_delivery_target": {
+      "$ref": "#/$defs/ChannelGroupDeliveryTarget"
+    },
+    "channel_group_route_create": {
+      "$ref": "#/$defs/ChannelGroupRouteCreate"
+    },
+    "channel_group_route_member_snapshot": {
+      "$ref": "#/$defs/ChannelGroupRouteMemberSnapshot"
+    },
+    "channel_group_route_page": {
+      "$ref": "#/$defs/ChannelGroupRoutePage"
+    },
+    "channel_group_route_snapshot": {
+      "$ref": "#/$defs/ChannelGroupRouteSnapshot"
+    },
+    "channel_group_route_update": {
+      "$ref": "#/$defs/ChannelGroupRouteUpdate"
+    },
+    "channel_group_turn_cancel_request": {
+      "$ref": "#/$defs/ChannelGroupTurnCancelRequest"
+    },
+    "channel_group_turn_page": {
+      "$ref": "#/$defs/ChannelGroupTurnPage"
+    },
+    "channel_group_turn_snapshot": {
+      "$ref": "#/$defs/ChannelGroupTurnSnapshot"
+    },
     "channel_inbound_text": {
       "$ref": "#/$defs/ChannelInboundTextMessage"
     },
@@ -11388,6 +12171,18 @@
     },
     "channel_pairing_start_request": {
       "$ref": "#/$defs/ChannelPairingStartRequest"
+    },
+    "channel_participant_link_create": {
+      "$ref": "#/$defs/ChannelParticipantLinkCreate"
+    },
+    "channel_participant_link_page": {
+      "$ref": "#/$defs/ChannelParticipantLinkPage"
+    },
+    "channel_participant_link_snapshot": {
+      "$ref": "#/$defs/ChannelParticipantLinkSnapshot"
+    },
+    "channel_participant_link_update": {
+      "$ref": "#/$defs/ChannelParticipantLinkUpdate"
     },
     "channel_presentation_policy": {
       "$ref": "#/$defs/ChannelPresentationPolicy"
@@ -11617,6 +12412,21 @@
     "channel_connection_configuration",
     "channel_connection",
     "channel_gateway_status",
+    "channel_group_audience_request",
+    "channel_group_audience_snapshot",
+    "channel_group_turn_snapshot",
+    "channel_group_turn_page",
+    "channel_group_delivery_target",
+    "channel_group_route_create",
+    "channel_group_route_member_snapshot",
+    "channel_group_route_page",
+    "channel_group_route_snapshot",
+    "channel_group_route_update",
+    "channel_group_turn_cancel_request",
+    "channel_participant_link_create",
+    "channel_participant_link_page",
+    "channel_participant_link_snapshot",
+    "channel_participant_link_update",
     "channel_proactive_policy",
     "channel_proactive_policy_update",
     "channel_proactive_policy_snapshot",

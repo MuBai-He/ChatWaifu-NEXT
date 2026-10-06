@@ -16,6 +16,7 @@ from chatwaifu_protocol.memory import (
 from chatwaifu_runtime.memory.policy import MemoryPolicy
 from chatwaifu_runtime.memory.ports import SemanticMemoryIndex, TemporalMemoryGraph
 from chatwaifu_runtime.memory.repository import MemoryRepository
+from chatwaifu_runtime.memory.subjects import subject_text
 
 
 @dataclass(slots=True)
@@ -110,7 +111,7 @@ class MemoryRetriever:
             record = item.record
             if record.state != "active" or not self._policy.allow_retrieval(record.sensitivity):
                 continue
-            estimated_tokens = max(1, len(record.text))
+            estimated_tokens = max(1, len(subject_text(record.subject_id, record.text)))
             if budget_used + estimated_tokens > token_budget:
                 continue
             budget_used += estimated_tokens
@@ -140,6 +141,7 @@ class MemoryRetriever:
                     record,
                     MemoryExcerpt(
                         memory_id=record.memory_id,
+                        subject_id=record.subject_id,
                         text=record.text,
                         source_event_ids=record.source_event_ids,
                         relevance=item.score,

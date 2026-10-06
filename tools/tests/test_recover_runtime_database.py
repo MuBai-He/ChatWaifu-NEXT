@@ -117,7 +117,9 @@ def test_recovery_preserves_durable_truth_and_reconstructs_missing_session(
         assert session is not None
         assert session["character_id"] == "ayachi_nene"
         assert session["next_sequence"] == 8
-        assert session["participant_id"] == session["user_scope"] == "local"
+        assert (
+            session["participant_id"] == session["user_scope"] == session["state_scope"] == "local"
+        )
         assert session["scene_id"] is None
         assert session["scene_kind"] == "private"
         assert json.loads(session["audience_json"]) == ["local"]
@@ -944,6 +946,7 @@ def _seed_source(path: Path, *, delete_session: bool = False, shared: bool | Non
         participant_id = "local" if shared is None else "guest-1"
         scene_id = "scene-1" if shared else None
         scope = "local" if shared is None else "scene:scene-1" if shared else "participant:guest-1"
+        state_scope = "scene_member:scene-1:guest-1" if shared else scope
         audience = ["local", participant_id] if shared else [participant_id]
         if shared is not None:
             connection.execute(
@@ -979,8 +982,8 @@ def _seed_source(path: Path, *, delete_session: bool = False, shared: bool | Non
             INSERT INTO sessions(
                 session_id, character_id, state, conversation_state, revision,
                 next_sequence, created_at, updated_at,
-                participant_id, scene_id, scene_kind, audience_json, user_scope
-            ) VALUES (?, 'ayachi_nene', 'ready', 'idle', 3, 8, ?, ?, ?, ?, ?, ?, ?)
+                participant_id, scene_id, scene_kind, audience_json, user_scope, state_scope
+            ) VALUES (?, 'ayachi_nene', 'ready', 'idle', 3, 8, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 SESSION_ID,
@@ -991,6 +994,7 @@ def _seed_source(path: Path, *, delete_session: bool = False, shared: bool | Non
                 "shared" if shared else "private",
                 json.dumps(audience),
                 scope,
+                state_scope,
             ),
         )
         connection.execute(
@@ -1109,7 +1113,7 @@ def _seed_source(path: Path, *, delete_session: bool = False, shared: bool | Non
                 embarrassment, tension, revision, updated_at
             ) VALUES ('ayachi_nene', ?, 0, 0.5, 0.5, 0.5, 0, 0, 1, ?)
             """,
-            (scope, NOW),
+            (state_scope, NOW),
         )
         connection.execute(
             """

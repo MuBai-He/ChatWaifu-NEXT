@@ -1,0 +1,38 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/channel-group-route-create.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "display_name": {
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Display Name",
+      "type": "string"
+    },
+    "observation_id": {
+      "format": "uuid",
+      "title": "Observation Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "speaker_sender_keys": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 32,
+      "title": "Speaker Sender Keys",
+      "type": "array"
+    }
+  },
+  "required": [
+    "observation_id",
+    "display_name"
+  ],
+  "title": "ChannelGroupRouteCreate",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

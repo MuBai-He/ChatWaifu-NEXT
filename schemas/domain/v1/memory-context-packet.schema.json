@@ -162,6 +162,18 @@
           "title": "Source Event Ids",
           "type": "array"
         },
+        "subject_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject Id"
+        },
         "temporal_relevance": {
           "default": 0,
           "maximum": 1,

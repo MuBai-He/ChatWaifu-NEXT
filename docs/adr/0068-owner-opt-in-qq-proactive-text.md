@@ -4,6 +4,7 @@
 - Date: 2026-10-03
 - Scope: Fixed paired-owner private QQ idle check-ins, disabled by default.
 - Extends: ADR 0064 delivery fences and ADR 0067 current-reply voice boundaries.
+- Validation state: Automated checks, dedicated Linux deployment, one real owner-idle text, actual quiet-hours blocking and exact restoration of the prior disabled policy are verified. Dedicated Runtime restart preserved the settled intent and delivery facts, with handset no-replay confirmation. Further inflight revocation/input-cancellation acceptance remains separate.
 
 ## Context
 

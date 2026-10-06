@@ -45,7 +45,7 @@ async def _open(path: Path, *, legacy: bool = False) -> Database:
     database = Database(
         path,
         StorageConfig(database_path=path),
-        migrations=MIGRATIONS[:-1] if legacy else MIGRATIONS,
+        migrations=tuple(item for item in MIGRATIONS if item[0] < 38) if legacy else MIGRATIONS,
     )
     await database.open()
     return database

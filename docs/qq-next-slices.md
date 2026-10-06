@@ -1,12 +1,45 @@
 # QQ 下一片：主动文本与群成员隔离
 
-本文记录 D2 的实现边界与 D3 的待实施包。D2 已按
+本文记录 D2、D3 的实现边界与尚未完成的验收。D2 已按
 [ADR 0068](adr/0068-owner-opt-in-qq-proactive-text.md) 实现默认关闭的源码、
 迁移 38、管理接口和界面；服务器部署及真实主动文字验收单独记录。
 D1 的入站语音和模型选择回复方式已经集成，并取得单次手机播放确认。
-D3 的群路由、成员身份与受众隔离尚未实现。
+D3 按 [ADR 0069](adr/0069-qq-group-member-identity-and-shared-context.md) 集成了
+群路由、成员身份、受众隔离、管理接口和共享设置源码。新群路由默认关闭；完整 Runtime
+与本地 OneBot 已通过本地和 Linux 集成检查，资源上限由应用与仓储回归覆盖。源码与
+配套网页已部署至 QQ 测试环境，迁移 38→39→40 保留旧事实。用户选择的单个小群已完成
+两成员真实 @ 文字回复及普通消息不触发的手机确认，服务端回执与成员状态隔离也已核对。
+停用时群内无回复、私聊正常也已取得手机确认。该群在专用 Runtime 重启后通过新受众观察
+恢复，新的 @ 文字回复及私聊无重复主动消息均已取得手机确认。主动消息默认关闭；
+主人单独同意的一次临时纯文字验收已完成，测试策略为
+闲置两分钟、每日最多一次、五分钟 TTL，本次暂取消静默时段。第一次测试收到主人新消息时
+只剩约 37 秒，因此未等满闲置时间，未发送主动消息；已独立核对版本二恢复原关闭策略。
+沿用同一次尚未发送的授权重新开启至版本三，限时控制任务在第一条新消息到达后至少保留
+五分钟，总上限十五分钟。重试已在新消息后约两分钟生成并投递一条纯文字，主人确认手机收到，
+服务端核对一条 intent、一个文字 part 及真实回执。控制任务正常退出，版本四已恢复原关闭策略；
+撤销和新输入打断的进一步真实验收仍独立待完成。
+关闭状态下的专用 Runtime 重启已保留该 intent、投递回执及六张业务表的精确内容，测试群
+重连暂停后通过新受众观察恢复到版本十一。手机无重复消息、群恢复回复和同绑定引用显示均已确认。
+主人另行同意的静默时段检查已通过：实际 23:00–08:00 静默段内达到一分钟闲置后，仍有可用
+预算且冷却已结束，quiet_hours 连续阻止发送约三十秒，手机仅收到正常回复，未新增主动 intent。
+限时控制正常退出，版本六已恢复原关闭策略。
 当前完成状态以 [实施状态](implementation-status.yaml)、相关 ADR 和实际验收记录为准。
 本文不改变现有 owner 配对、语音授权或搜索工作流的权限。
+后续工作位于独立 Git 仓库 `/Users/mubai/Desktop/CW2-QQ-integration`；原共享仓库不再接收
+本会话的新提交。需要主人配合的剩余步骤见 [手机验收待办](qq-phone-acceptance.md)。
+
+B 的私聊预设表情发送已取得主人明确的持续开启选择，并保存至该连接的 presentation
+policy。三个静态资源校验通过，表情学习仍关闭。主人已确认修复后正常收到
+文字和小猫表情，服务端也核对了这一轮文字及图片的真实回执。单张静态图片理解也已
+通过手机与服务器核对：左红色正方形、右蓝色圆形，只收到文字。主人随后引用这条识图回复，
+正确复述结论及 QQ 引用标记也已通过手机与服务器核对；这些结果仅覆盖具体有界用例。
+搜索工作线的版本和差异见
+[整合检查](qq-search-integration-readiness.md)。
+首次庆祝消息的手机结果为只有文字，服务端确认这一轮未规划图片。已修复角色规划中的
+程度词否定误判和积极信号遗漏，实际角色规划至 OneBot 发送的回归及整套 Python 检查通过；
+修复已作为冻结 QQ 源码上的单文件补丁部署，私聊就绪、表情持续开启，测试群通过新成员
+观察恢复至版本九；后续关闭状态重启测试再次核验受众并恢复至版本十一。
+单次私聊预设表情显示已通过，原失败结果保留。
 
 ## A / B / C / D 的范围
 
@@ -31,31 +64,31 @@ QQ 仍是适配器，不增加另一套角色、模型、记忆或定时发送�
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | [SessionService](../services/runtime/src/chatwaifu_runtime/sessions/service.py)，`create_session`                                                                                                                                                                                       | registered participant、不可变 scene、服务端派生 scope/audience | provider/account/sender 到 participant，以及群 route 到 scene 的可信映射      |
 | [MemoryService](../services/runtime/src/chatwaifu_runtime/memory/service.py)，`namespaces_for_session`；[历史仓储](../services/runtime/src/chatwaifu_runtime/persistence/sqlite_conversation.py)，`recent_history`                                                                      | 持久 session scope 下的记忆、历史、投影和重置过滤               | 群内第一人称事实的可信主体；不能加载成员的私人 namespaces                     |
-| [CharacterKernel](../services/runtime/src/chatwaifu_runtime/character_kernel/service.py)，`_session_scope`、`snapshot`                                                                                                                                                                  | 持久情绪、关系及 CAS                                            | 当前一整个 scene 共用一份关系，尚无群内成员独立关系                           |
+| [CharacterKernel](../services/runtime/src/chatwaifu_runtime/character_kernel/service.py)，`_session_scope`、`snapshot`                                                                                                                                                                  | 持久情绪、关系及 CAS                                            | 原有 scene 共用关系；D3 增加群内成员独立 state scope                          |
 | [Ambient](../services/runtime/src/chatwaifu_runtime/companion/ambient.py)，`decide_proactive`                                                                                                                                                                                           | quiet hours、busy deferral、cooldown、日预算、审计              | 外部目标 opt-in、固定 route、TTL、发送前重查与有界 pending                    |
 | [Conversation](../services/runtime/src/chatwaifu_runtime/conversation/service.py)，`submit_proactive`                                                                                                                                                                                   | 角色、记忆、正常生成，不伪造可见用户发言                        | text-only 外部选项、可恢复主动 intent 与预分配 lineage                        |
 | [Channel ports](../services/runtime/src/chatwaifu_runtime/external_channels/ports.py)、[scheduler](../services/runtime/src/chatwaifu_runtime/external_channels/scheduler.py)、[QQ delivery](../services/runtime/src/chatwaifu_runtime/external_channels/adapters/qq_napcat/delivery.py) | plan/part、lease、取消、receipt、unknown journal、重启不重发    | 非入站回复的明确来源、持久目标、权限/route revision 和 expiry                 |
 | [Assistant tasks](../services/runtime/src/chatwaifu_runtime/personal_assistant/tasks.py) 与 [其持久化](../services/runtime/src/chatwaifu_runtime/persistence/sqlite_assistant_tasks.py)                                                                                                 | owner 验证、occurrence 去重、过期、撤销与迟到结果的既有模式     | 当前目标是本机 device，不是 QQ；不能直接把 device delivery 表改成外部发送队列 |
 
-以下群路由与身份缺口仍需 D3 解决；D2 不扩大现有主人私聊权限：
+以下是 D3 设计所针对的原有缺口。对应源码现已集成，但不能以源码或私聊回归
+代替完整群聊和真实受众验收；D2 不扩大现有主人私聊权限：
 
-1. `ExternalChannelService._admit_ingress` 创建默认 owner session，并拒绝同一
-   `conversation_key` 的第二个 sender。`channel_bindings` 也只有
-   `UNIQUE(connection_id, conversation_key)`。群路由和成员 session 必须分开建模。
-2. `ConversationService._submit` 对非 owner session 会整体替换外部 source 为
-   `SessionService.source_context`，因此直接接入群会丢掉 QQ provenance。
-   应在服务端核验 scope/audience 后保留可信外部 route 和 sender 元数据，继续禁止工具。
-3. [记忆提取器](../services/runtime/src/chatwaifu_runtime/memory/extractor.py) 默认
-   `subject_id="user"`，`MemoryService` 用 namespace + subject + predicate 查找身份和更正。
-   同 scene 的 Alice/Bob 分别说姓名或最喜欢的颜色，会被当成同一人的变化。
-   已有 `MemoryRecordDraft.subject_id` 可复用，但第一人称主体须从持久 speaker 派生。
-4. `CharacterKernel` 的关系和情绪按 `character_id + user_scope` 存储；共享 scene 的
-   不同成员目前共用关系，不能把群的关系快照说成成员独立关系。
+1. 主人私聊仍由 `ExternalChannelService._admit_ingress` 创建 owner session。
+   群聊独立进入 `ChannelGroupService`，迁移 40 为 route、scene、member binding 和
+   typed turn lineage 建模；历史 GROUP 来源的旧绑定保留并隔离，允许建立新的安全私聊绑定。
+2. Conversation 从持久 session 核验 trusted identity 后保留 QQ route 和 speaker provenance，
+   并继续禁止群工具、媒体和照片；提交前后及生成前均保留撤权检查。
+3. 群第一人称事实在 scene namespace 内使用持久 speaker 派生的 participant subject。
+   同名成员不会因为昵称而合并；缺失可信主来源、第三人称或不匹配的提取内容不能自动
+   归到当前成员。语言启发式和本地用例不代表所有自然语言场景都已验收。
+4. 群关系和情绪使用 `(scene_id, participant_id)` 的 state scope，记忆仍使用共享 scene
+   scope。迁移不把历史歧义事实或私聊关系自动复制给群成员。
 5. D2 已从桌面 Ambient 排除历史或当前 channel session，并为 `submit_proactive`
    提供固定来源、预分配 lineage 和纯文字选项。桌面主动开关不授权 QQ，群也不能
    继承这项主人私聊 policy。
-6. `NapCatDelivery` 固定向 owner 私聊，`NapCatClient.send` 调用 `send_private_msg`。
-   群发送目标必须来自持久 route，不能从 sender、模型文字或工具参数临时推断。
+6. 群投递使用持久 route 固定的 typed group target，调用 `send_group_msg` 前重查
+   lineage、账号、受众和 revision；没有群目标或授权时不能回退到私聊。完整 Runtime
+   到本地 OneBot 协议替身的群投递已通过验证，真实 QQ 投递仍须单独验收。
 
 ## D2：owner 私聊的主动文字
 

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { channelGroupDeliveryTargetSchema } from "./channelGroupTarget";
 import type {
   AudioFrameHeader,
   AvatarCapabilityManifest,
@@ -515,6 +516,7 @@ const sessionSnapshotSchema = z
     scene_kind: z.enum(["private", "shared"]).default("private"),
     audience_ids: z.array(z.string()).min(1).default(["local"]),
     user_scope: z.string().min(1).default("local"),
+    state_scope: z.string().min(1).optional(),
     state: z.enum([
       "created",
       "connecting",
@@ -1260,6 +1262,7 @@ const channelDeliveryPlanSnapshotSchema = z
     channel_turn_id: uuid.nullable(),
     outbound_intent_id: uuid.nullish(),
     connection_id: uuid,
+    group_target: channelGroupDeliveryTargetSchema.nullish(),
     status: channelDeliveryStatusSchema,
     plan_version: z.number().int().min(1).default(1),
     part_count: z.number().int().min(1),
@@ -1272,7 +1275,30 @@ const channelDeliveryPlanSnapshotSchema = z
     delivered_at: awareDateTime.nullish(),
   })
   .passthrough()
-  .superRefine(validateDeliverySource);
+  .superRefine(validateDeliverySource)
+  .superRefine((plan, context) => {
+    if (plan.group_target == null) return;
+    const part = plan.parts[0];
+    if (
+      plan.schema_version !== "1.0" ||
+      plan.outbound_intent_id != null ||
+      plan.group_target.connection_id !== plan.connection_id ||
+      plan.group_target.channel_turn_id !== plan.channel_turn_id ||
+      plan.part_count !== 1 ||
+      plan.parts.length !== 1 ||
+      part?.kind !== "text" ||
+      part.delivery_id !== plan.delivery_id ||
+      part.ordinal !== 0 ||
+      !part.required
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["group_target"],
+        message:
+          "group delivery requires one text part and its fixed inbound target",
+      });
+    }
+  });
 
 function validateDeliverySource(
   source: {
@@ -1759,7 +1785,11 @@ export function parseAvatarInteractionEvent(
 }
 
 export function parseSessionSnapshot(input: unknown): SessionSnapshot {
-  return sessionSnapshotSchema.parse(input) as SessionSnapshot;
+  const session = sessionSnapshotSchema.parse(input);
+  return {
+    ...session,
+    state_scope: session.state_scope ?? session.user_scope,
+  } as SessionSnapshot;
 }
 
 export function parseCharacterKernelSnapshot(

@@ -1,4 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import {
+  getRuntimeContextRevision,
+  subscribeRuntimeContext,
+  readRuntimeRequestContext,
+  assertRuntimeRequestContext,
+  type RuntimeRequestContext,
+} from "../chat/runtimeEndpoint";
 
 import {
   deleteChannelConnection,
@@ -15,6 +28,7 @@ import {
 } from "../chat/runtime-client/qqClient";
 import { RuntimeRequestError } from "../chat/runtime-client/http";
 import { QQProactivePanel } from "./QQProactivePanel";
+import { QQGroupRoutesPanel } from "./QQGroupRoutesPanel";
 import { SettingsIcon } from "./SettingsIcon";
 import { SettingsToggle } from "./SettingsPrimitives";
 import "./qq-channel-panel.css";
@@ -22,17 +36,31 @@ import "./qq-channel-panel.css";
 type Operation =
   "start" | "cancel" | "test" | "toggle" | "stickers" | "disconnect";
 
-export function QQChannelPanel({
-  characterId,
-  runtimeOnline,
-}: {
+type Props = {
   characterId: string;
   runtimeOnline: boolean;
-}) {
+};
+
+export function QQChannelPanel(props: Props) {
+  const runtimeContext = useSyncExternalStore(
+    subscribeRuntimeContext,
+    getRuntimeContextRevision,
+    getRuntimeContextRevision,
+  );
+  return (
+    <QQChannelContent
+      key={`${runtimeContext}:${props.characterId}`}
+      {...props}
+    />
+  );
+}
+
+function QQChannelContent({ characterId, runtimeOnline }: Props) {
   const [connection, setConnection] =
     useState<ChannelConnectionSnapshot | null>(null);
   const [pairing, setPairing] = useState<QQPairingSnapshot | null>(null);
   const [setupOpen, setSetupOpen] = useState(false);
+  const [groupsOpen, setGroupsOpen] = useState(false);
   const [endpoint, setEndpoint] = useState("ws://127.0.0.1:3001");
   const [accessToken, setAccessToken] = useState("");
   const [loading, setLoading] = useState(true);
@@ -47,12 +75,40 @@ export function QQChannelPanel({
   const pollAbortRef = useRef<AbortController | null>(null);
   const connectionRevisionRef = useRef(0);
   const cancellingRef = useRef<string | null>(null);
+  const originRef = useRef<RuntimeRequestContext | null>(null);
+  const pairingOriginRef = useRef<RuntimeRequestContext | null>(null);
+  const operationAbortRef = useRef<AbortController | null>(null);
 
   if (lastRuntimeOnline !== runtimeOnline) {
     setLastRuntimeOnline(runtimeOnline);
     setLoading(true);
     setConnectionVerified(false);
+    if (!runtimeOnline) setOperation(null);
   }
+
+  const currentOrigin = useCallback(
+    (origin: RuntimeRequestContext, signal?: AbortSignal) => {
+      if (!mountedRef.current || signal?.aborted) return false;
+      try {
+        assertRuntimeRequestContext(origin);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [],
+  );
+  const beginOperation = (origin = originRef.current) => {
+    if (!origin || operationAbortRef.current || !currentOrigin(origin))
+      return null;
+    const controller = new AbortController();
+    operationAbortRef.current = controller;
+    return {
+      origin,
+      controller,
+      options: { expectedContext: origin, signal: controller.signal },
+    };
+  };
 
   const refreshConnection = useCallback(() => {
     setConnectionVerified(false);
@@ -65,12 +121,25 @@ export function QQChannelPanel({
     return () => {
       mountedRef.current = false;
       pollAbortRef.current?.abort();
+      operationAbortRef.current?.abort();
       const current = pairingRef.current;
+      const origin = pairingOriginRef.current;
+      pairingRef.current = null;
+      pairingOriginRef.current = null;
+      originRef.current = null;
       if (
         current?.status === "pending" &&
+        origin &&
         cancellingRef.current !== current.pairing_id
       ) {
-        void cancelQQPairing(current.pairing_id).catch(() => {
+        try {
+          assertRuntimeRequestContext(origin);
+        } catch {
+          return;
+        }
+        void cancelQQPairing(current.pairing_id, {
+          expectedContext: origin,
+        }).catch(() => {
           // The server's bounded expiry remains the fallback when cleanup is offline.
         });
       }
@@ -78,16 +147,31 @@ export function QQChannelPanel({
   }, []);
 
   useEffect(() => {
+    if (!runtimeOnline) operationAbortRef.current?.abort();
+  }, [runtimeOnline]);
+
+  useEffect(() => {
     if (!runtimeOnline) return;
     const controller = new AbortController();
     const initialRevision = connectionRevisionRef.current;
-    void getChannelConnections(controller.signal)
-      .then((items) => {
+    originRef.current = null;
+    void readRuntimeRequestContext()
+      .then(async (origin) => {
+        controller.signal.throwIfAborted();
+        assertRuntimeRequestContext(origin);
+        const items = await getChannelConnections(controller.signal, {
+          expectedContext: origin,
+        });
+        assertRuntimeRequestContext(origin);
+        return { items, origin };
+      })
+      .then(({ items, origin }) => {
         if (
           controller.signal.aborted ||
           initialRevision !== connectionRevisionRef.current
         )
           return;
+        originRef.current = origin;
         setConnection(
           items.find(
             (item) =>
@@ -115,12 +199,17 @@ export function QQChannelPanel({
   useEffect(() => {
     if (!runtimeOnline || !pairingId || pairingStatus !== "pending") return;
     const controller = new AbortController();
+    const origin = pairingOriginRef.current;
+    if (!origin) return;
     pollAbortRef.current = controller;
     const poll = async () => {
       try {
         while (!controller.signal.aborted) {
-          const current = await getQQPairing(pairingId, 20, controller.signal);
-          if (controller.signal.aborted) return;
+          assertRuntimeRequestContext(origin);
+          const current = await getQQPairing(pairingId, 20, controller.signal, {
+            expectedContext: origin,
+          });
+          if (!currentOrigin(origin, controller.signal)) return;
           pairingRef.current = current;
           setPairing(current);
           if (current.connection) {
@@ -131,7 +220,7 @@ export function QQChannelPanel({
           if (current.status !== "pending") break;
         }
       } catch (error: unknown) {
-        if (controller.signal.aborted) return;
+        if (!currentOrigin(origin, controller.signal)) return;
         if (isMissingPairing(error)) {
           // Pairing resources are ephemeral; enrollment may already be durable.
           pairingRef.current = null;
@@ -153,6 +242,7 @@ export function QQChannelPanel({
     pairingStatus,
     pollRevision,
     refreshConnection,
+    currentOrigin,
   ]);
 
   const startPairing = async () => {
@@ -165,6 +255,9 @@ export function QQChannelPanel({
     )
       return;
     const token = accessToken;
+    const request = beginOperation();
+    if (!request) return;
+    const { origin, controller, options } = request;
     setAccessToken("");
     setOperation("start");
     setNotice(null);
@@ -173,12 +266,18 @@ export function QQChannelPanel({
         endpoint.trim(),
         token,
         characterId,
+        options,
       );
-      if (!mountedRef.current) {
-        if (snapshot.status === "pending")
-          await cancelQQPairing(snapshot.pairing_id);
+      if (!currentOrigin(origin, controller.signal)) {
+        if (snapshot.status === "pending") {
+          assertRuntimeRequestContext(origin);
+          await cancelQQPairing(snapshot.pairing_id, {
+            expectedContext: origin,
+          });
+        }
         return;
       }
+      pairingOriginRef.current = origin;
       pairingRef.current = snapshot;
       setPairing(snapshot);
       if (snapshot.connection) {
@@ -188,28 +287,40 @@ export function QQChannelPanel({
       }
     } catch {
       // Do not render a server-provided message that could echo the submitted token.
-      if (mountedRef.current)
+      if (currentOrigin(origin, controller.signal))
         setNotice(
           "无法开始 QQ 配对，请检查 NapCat 登录、连接地址和访问令牌后重试。",
         );
     } finally {
-      if (mountedRef.current) setOperation(null);
+      if (operationAbortRef.current === controller)
+        operationAbortRef.current = null;
+      if (currentOrigin(origin, controller.signal)) setOperation(null);
     }
   };
 
   const cancelPairing = async () => {
     const current = pairingRef.current;
     if (current?.status !== "pending" || operation) return;
+    const pairingOrigin = pairingOriginRef.current;
+    if (!pairingOrigin) return;
+    const request = beginOperation(pairingOrigin);
+    if (!request) return;
+    const { origin, controller, options } = request;
     pollAbortRef.current?.abort();
     cancellingRef.current = current.pairing_id;
     setOperation("cancel");
     setNotice(null);
     try {
-      await cancelQQPairing(current.pairing_id);
-      if (!mountedRef.current) return;
+      await cancelQQPairing(current.pairing_id, options);
+      if (!currentOrigin(origin, controller.signal)) return;
       // DELETE is a no-op if confirmation won the race; read the actual result.
-      const snapshot = await getQQPairing(current.pairing_id, 0);
-      if (!mountedRef.current) return;
+      const snapshot = await getQQPairing(
+        current.pairing_id,
+        0,
+        controller.signal,
+        options,
+      );
+      if (!currentOrigin(origin, controller.signal)) return;
       if (snapshot.status === "pending" || snapshot.status === "confirmed") {
         pairingRef.current = snapshot;
         setPairing(snapshot);
@@ -226,7 +337,7 @@ export function QQChannelPanel({
       }
       refreshConnection();
     } catch (error: unknown) {
-      if (mountedRef.current) {
+      if (currentOrigin(origin, controller.signal)) {
         if (isMissingPairing(error)) {
           pairingRef.current = null;
           setPairing(null);
@@ -238,7 +349,9 @@ export function QQChannelPanel({
       }
     } finally {
       cancellingRef.current = null;
-      if (mountedRef.current) setOperation(null);
+      if (operationAbortRef.current === controller)
+        operationAbortRef.current = null;
+      if (currentOrigin(origin, controller.signal)) setOperation(null);
     }
   };
 
@@ -247,13 +360,16 @@ export function QQChannelPanel({
   ) => {
     if (!connection || operation || !runtimeOnline || !connectionVerified)
       return;
+    const request = beginOperation();
+    if (!request) return;
+    const { origin, controller, options } = request;
     setOperation(action);
     setNotice(null);
     const id = connection.configuration.connection_id;
     try {
       if (action === "disconnect") {
-        await deleteChannelConnection(id);
-        if (!mountedRef.current) return;
+        await deleteChannelConnection(id, options);
+        if (!currentOrigin(origin, controller.signal)) return;
         connectionRevisionRef.current += 1;
         setConnection(null);
         setPairing(null);
@@ -261,7 +377,7 @@ export function QQChannelPanel({
       } else {
         const updated =
           action === "test"
-            ? await testQQChannelConnection(id)
+            ? await testQQChannelConnection(id, controller.signal, options)
             : await updateChannelConnection(
                 id,
                 {
@@ -277,17 +393,22 @@ export function QQChannelPanel({
                     : { enabled: !connection.configuration.enabled }),
                 },
                 connection.revision,
+                controller.signal,
+                options,
               );
-        if (mountedRef.current) {
+        if (currentOrigin(origin, controller.signal)) {
           connectionRevisionRef.current += 1;
           setConnection(updated);
           setConnectionVerified(true);
         }
       }
     } catch (error: unknown) {
-      if (mountedRef.current) setNotice(errorMessage(error, "QQ 连接操作失败"));
+      if (currentOrigin(origin, controller.signal))
+        setNotice(errorMessage(error, "QQ 连接操作失败"));
     } finally {
-      if (mountedRef.current) setOperation(null);
+      if (operationAbortRef.current === controller)
+        operationAbortRef.current = null;
+      if (currentOrigin(origin, controller.signal)) setOperation(null);
     }
   };
 
@@ -381,6 +502,21 @@ export function QQChannelPanel({
             <QQProactivePanel
               key={`${connection.configuration.connection_id}:${connection.revision}`}
               connectionId={connection.configuration.connection_id}
+              runtimeOnline={runtimeOnline}
+              connectionVerified={connectionVerified && !busy}
+            />
+          ) : null}
+          <button
+            type="button"
+            className="qq-channel-secondary-action"
+            aria-expanded={groupsOpen}
+            onClick={() => setGroupsOpen((value) => !value)}
+          >
+            {groupsOpen ? "收起 QQ 群管理" : "管理 QQ 群路由"}
+          </button>
+          {groupsOpen ? (
+            <QQGroupRoutesPanel
+              connection={connection}
               runtimeOnline={runtimeOnline}
               connectionVerified={connectionVerified && !busy}
             />

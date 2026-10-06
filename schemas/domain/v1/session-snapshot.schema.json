@@ -88,6 +88,11 @@
     "state": {
       "$ref": "#/$defs/SessionState"
     },
+    "state_scope": {
+      "default": "local",
+      "title": "State Scope",
+      "type": "string"
+    },
     "updated_at": {
       "format": "date-time",
       "title": "Updated At",

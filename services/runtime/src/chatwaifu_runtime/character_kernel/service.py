@@ -52,11 +52,12 @@ class CharacterKernelService:
 
     async def _session_scope(self, session_id: UUID, character_id: str) -> str:
         row = await self._database.fetchone(
-            "SELECT character_id, user_scope FROM sessions WHERE session_id = ?", (str(session_id),)
+            "SELECT character_id, state_scope FROM sessions WHERE session_id = ?",
+            (str(session_id),),
         )
         if row is None or row["character_id"] != character_id:
             raise KeyError("unknown character session")
-        return str(row["user_scope"])
+        return str(row["state_scope"])
 
     async def snapshot(
         self, character_id: str, *, user_scope: str = USER_SCOPE
@@ -589,6 +590,10 @@ _NEGATION_PREFIXES = (
 
 def _is_negated_at(text: str, index: int) -> bool:
     prefix = text[max(0, index - 10) : index].strip()
+    # The intensifier “特别” ends in “别”, but does not negate the next word.
+    # Strip it before checking so “别特别开心” still retains its negation.
+    if prefix.endswith("特别"):
+        prefix = prefix[:-2].rstrip()
     return any(prefix.endswith(neg) for neg in _NEGATION_PREFIXES)
 
 
@@ -791,6 +796,15 @@ def _plan_response(
             expression="curious",
             motion="stare" if snapshot.relationship.stage != "acquaintance" else None,
             rationale="answering a question attentively",
+        )
+    if signal.positive:
+        # React to this turn's positive signal, independently of decayed mood.
+        # Distress, boundaries, interactions and questions keep their precedence.
+        return ResponsePlan(
+            intent="celebrate",
+            tone="bright",
+            expression="happy",
+            rationale="user expressed a current positive signal",
         )
     expression = "happy" if snapshot.affect.valence >= 0.25 else "neutral"
     tone = "playful" if snapshot.relationship.stage in {"trusted", "close"} else "gentle"

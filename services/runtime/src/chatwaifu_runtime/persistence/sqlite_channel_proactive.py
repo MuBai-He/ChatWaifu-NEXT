@@ -45,6 +45,7 @@ from chatwaifu_runtime.persistence.sqlite_external_channels import (
     _datetime,
     _error_from_json,
     _error_json,
+    _private_binding_predicate,
     _required_datetime,
     _turn_record,
 )
@@ -184,12 +185,17 @@ class SQLiteChannelProactiveRepository(ChannelProactiveRepository):
         if route is not None and len(route.configuration.allowed_sender_keys) == 1:
             config = route.configuration
             owner = config.allowed_sender_keys[0]
+            columns = {
+                str(column["name"])
+                for column in await _rows(connection, "PRAGMA table_info(channel_bindings)")
+            }
             bindings = await _rows(
                 connection,
-                """
+                f"""
                 SELECT b.* FROM channel_bindings b JOIN sessions s ON s.session_id=b.session_id
                 WHERE b.connection_id=? AND b.sender_key=? AND b.conversation_key=?
                   AND s.character_id=? AND s.user_scope=? AND s.scene_kind='private'
+                  AND {_private_binding_predicate(columns)}
                 LIMIT 2
                 """,
                 (

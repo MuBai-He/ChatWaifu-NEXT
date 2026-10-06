@@ -18,17 +18,24 @@ from uuid import UUID
 from chatwaifu_protocol.base import JsonObject
 from chatwaifu_protocol.channels import (
     ChannelAudioDeliveryPartPayload,
+    ChannelChatType,
+    ChannelDeliveryPartKind,
+    ChannelDeliveryPartStatus,
     ChannelDeliveryStatus,
     ChannelImageDeliveryPartPayload,
+    ChannelMessageKind,
     ChannelTextDeliveryPartPayload,
+    ChannelTurnStatus,
 )
 from chatwaifu_protocol.errors import StructuredError
 from PIL import Image
 
 from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.external_channels.models import (
+    ChannelConnectionRecord,
     ChannelDeliveryPartRecord,
     ChannelDeliveryPlanRecord,
+    ChannelTurnRecord,
 )
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
 from chatwaifu_runtime.external_channels.scheduler import (
@@ -122,6 +129,7 @@ class NapCatDelivery:
         sticker_library: StickerLibraryService | None = None,
         proactive_authorization: Callable[[ChannelDeliveryPlanRecord], Awaitable[bool]]
         | None = None,
+        group_authorization: Callable[[ChannelDeliveryPlanRecord], Awaitable[bool]] | None = None,
         journal_lock: asyncio.Lock | None = None,
     ) -> None:
         self._repository = repository
@@ -132,6 +140,7 @@ class NapCatDelivery:
         self._sticker_catalog = sticker_catalog
         self._sticker_library = sticker_library
         self._proactive_authorization = proactive_authorization
+        self._group_authorization = group_authorization
         self._journal_lock = journal_lock or asyncio.Lock()
 
     async def execute_part(
@@ -154,6 +163,14 @@ class NapCatDelivery:
             )
         if known == "unknown":
             return _failed("qq_delivery_unknown", "发送结果待确认，为避免重复消息，未自动重发。")
+        if plan.group_target is not None:
+            return await self._execute_group(plan, part, journal)
+        if plan.channel_turn_id is not None:
+            source = await self._repository.get_turn(plan.channel_turn_id)
+            if source is not None and source.chat_type is ChannelChatType.GROUP:
+                # Historical group rows have no admitted fixed target. Never
+                # reinterpret them as owner-private delivery.
+                return _failed("qq_group_delivery_cancelled", "群文字投递已停止。")
         if not await self._authorized(plan):
             return _failed("qq_proactive_cancelled", "主动文字投递已停止。")
         connection = await self._repository.get_connection(self._connection_id)
@@ -269,6 +286,147 @@ class NapCatDelivery:
             )
         except Exception:
             return _failed("qq_delivery_unknown", "发送结果待确认，未自动重发。")
+
+    async def _execute_group(
+        self,
+        plan: ChannelDeliveryPlanRecord,
+        part: ChannelDeliveryPartRecord,
+        journal: dict[str, str],
+    ) -> DeliveryPartExecutionResult:
+        """A separate text-only path; the host supplies current route authority."""
+        target = plan.group_target
+        assert target is not None
+        key = part.provider_client_id
+        try:
+            if not await self._group_allowed(plan, part):
+                return _failed("qq_group_delivery_cancelled", "群文字投递已停止。")
+            if len(journal) >= 256:
+                return _failed("qq_send_journal_full", "请处理未完成的 QQ 投递后重试。")
+            assert isinstance(part.payload, ChannelTextDeliveryPartPayload)
+            segments: list[JsonObject] = [{"type": "text", "data": {"text": part.payload.text}}]
+            journal[key] = "unknown"
+            await self._save(journal)
+            try:
+                message_id = await self._client.send_group(
+                    target.group_id,
+                    segments,
+                    before_send=lambda: self._group_allowed(plan, part),
+                )
+            except NapCatRejected:
+                journal.pop(key, None)
+                await self._save(journal)
+                return _failed("qq_send_rejected", "QQ 拒绝了这条消息。")
+            journal[key] = message_id
+            await self._save(journal)
+            return DeliveryPartExecutionResult(
+                DeliveryPartOutcome.DELIVERED, provider_message_id=message_id
+            )
+        except Exception:
+            return _failed("qq_delivery_unknown", "发送结果待确认，未自动重发。")
+
+    async def _group_allowed(
+        self, plan: ChannelDeliveryPlanRecord, part: ChannelDeliveryPartRecord
+    ) -> bool:
+        if (
+            self._group_authorization is None
+            or plan.channel_turn_id is None
+            or not self._client.group_dispatch_ready
+        ):
+            return False
+        if not await self._group_context_matches(plan, part):
+            return False
+        if not await self._group_authorization(plan):
+            return False
+        # The host guard can await storage. Check immutable target, lease and
+        # cancellation again after it returns, including after login preflight.
+        if not await self._group_context_matches(plan, part):
+            return False
+        # Conversely, those storage awaits can overlap route revocation. The
+        # final await must consult host authority, not just historical fields.
+        return await self._group_authorization(plan)
+
+    async def _group_context_matches(
+        self, plan: ChannelDeliveryPlanRecord, part: ChannelDeliveryPartRecord
+    ) -> bool:
+        connection = await self._repository.get_connection(self._connection_id)
+        current = await self._repository.get_delivery_plan(plan.delivery_id)
+        source = (
+            await self._repository.get_turn(plan.channel_turn_id)
+            if plan.channel_turn_id is not None
+            else None
+        )
+        return self._group_records_match(plan, part, connection, current, source)
+
+    def _group_records_match(
+        self,
+        plan: ChannelDeliveryPlanRecord,
+        part: ChannelDeliveryPartRecord,
+        connection: ChannelConnectionRecord | None,
+        current: ChannelDeliveryPlanRecord | None,
+        source: ChannelTurnRecord | None,
+    ) -> bool:
+        target = plan.group_target
+        if (
+            target is None
+            or connection is None
+            or current is None
+            or source is None
+            or connection.deleted_at is not None
+            or not connection.configuration.enabled
+            or connection.configuration.provider_id != "qq_napcat"
+            or connection.configuration.connection_id != self._connection_id
+            or connection.configuration.account_key != target.account_key
+            or self._client.bound_account != target.account_key
+            or not self._client.group_dispatch_ready
+            or plan.connection_id != self._connection_id
+            or target.connection_id != self._connection_id
+            or target.channel_turn_id != plan.channel_turn_id
+            or plan.outbound_intent_id is not None
+            or current.delivery_id != plan.delivery_id
+            or current.connection_id != self._connection_id
+            or current.channel_turn_id != plan.channel_turn_id
+            or current.outbound_intent_id is not None
+            or current.group_target != target
+            or current.plan_version != plan.plan_version
+            or current.cancel_requested_at is not None
+            or current.status is not ChannelDeliveryStatus.SENDING
+            or source.channel_turn_id != target.channel_turn_id
+            or source.connection_id != self._connection_id
+            or source.chat_type is not ChannelChatType.GROUP
+            or source.status is not ChannelTurnStatus.COMPLETED
+            or source.input_kind is not ChannelMessageKind.TEXT
+            or source.account_key != target.account_key
+            or source.conversation_key != f"group:{target.group_id}"
+            or source.principal_scope != f"scene:{target.scene_id}"
+            or source.group_route_id != target.route_id
+            or source.group_route_revision != target.route_revision
+            or source.group_lineage_version != 1
+            or len(plan.parts) != 1
+            or plan.delivery.part_count != 1
+            or len(current.parts) != 1
+            or current.delivery.part_count != 1
+        ):
+            return False
+        original, claimed = plan.parts[0], current.parts[0]
+        return (
+            part.delivery_id == original.delivery_id == claimed.delivery_id == plan.delivery_id
+            and part.part_id == original.part_id == claimed.part_id
+            and part.provider_client_id == original.provider_client_id == claimed.provider_client_id
+            and part.payload == original.payload == claimed.payload
+            and part.kind is original.kind is claimed.kind is ChannelDeliveryPartKind.TEXT
+            and isinstance(part.payload, ChannelTextDeliveryPartPayload)
+            and bool(part.payload.text.strip())
+            and part.ordinal == original.ordinal == claimed.ordinal == 0
+            and part.required
+            and original.required
+            and claimed.required
+            and part.status is claimed.status is ChannelDeliveryPartStatus.SENDING
+            and part.lease_id is not None
+            and part.lease_id == claimed.lease_id
+            and part.attempt == claimed.attempt
+            and claimed.lease_expires_at is not None
+            and claimed.lease_expires_at > datetime.now(UTC)
+        )
 
     async def _save(self, journal: dict[str, str]) -> None:
         await self._repository.set_adapter_cursor(

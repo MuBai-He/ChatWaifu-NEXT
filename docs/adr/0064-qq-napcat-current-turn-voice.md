@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-10-03
+- Reply-medium policy: Superseded by [ADR 0067](0067-model-selected-qq-reply-voice.md), which permits model-selected voice for the current admitted owner-private reply.
 - Validation state: Automated checks, isolated Linux deployment, QQ login, owner pairing, real text/voice/text playback and Runtime restart are verified. Additional fault and access-boundary acceptance remains scoped in [the validation record](../qq-napcat-validation-2026-10-03.md).
 
 ## Context
@@ -9,8 +10,9 @@
 The owner wants the same character, relationship and memory through an ordinary
 QQ account, while another workstream improves search and answer quality. QQ
 transport must not introduce a separate agent or bypass the existing channel
-delivery lifecycle. Ordinary replies should be text. Voice is an explicit action
-requested by the owner, rather than an automatic attachment to every reply.
+delivery lifecycle. Ordinary replies should prefer text. Voice is an optional
+model-selected action under ADR 0067, using the current owner's medium preference
+and conversation context; it is not attached to every reply.
 
 NapCat provides a Linux/Docker NTQQ bridge and a bidirectional OneBot 11
 WebSocket server. Transport `echo` correlates a request and its response; it does
@@ -55,13 +57,15 @@ provides only the actual spoken text. Runtime resolves the current character's
 voice, current conversation and fixed configured owner. The tool cannot select
 an arbitrary recipient, file path, service endpoint or voice identity.
 
-QQ's external-tool policy whitelists only `channel.voice` in this slice, and only
-when the fresh user input explicitly requests voice or reading aloud. The
-authorization is bound to the active session, turn and generation, admitted
+QQ's external-tool policy makes only `channel.voice` contextually available for
+an admitted owner-private reply. ADR 0067 supersedes this ADR's original keyword
+gate: the model chooses text or the optional voice tool with `tool_choice=auto`.
+The authorization is bound to the active session, turn and generation, admitted
 channel turn, enabled connection and configured owner. Re-check it at execution
 and before publication. There is no permanent permission grant or persistent
 "always use voice" mode. An instruction found in quoted history, remembered
-context or a previous turn cannot authorize the current send.
+context or a previous turn cannot establish a new reply permission or replace the
+current user's medium preference.
 
 TTS writes a bounded Runtime-owned WAV asset, at most 120 seconds and 8 MiB, using
 the existing TTS adapter and character voice configuration. The tool creates an

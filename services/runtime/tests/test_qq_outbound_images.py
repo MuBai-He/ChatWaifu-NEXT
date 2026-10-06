@@ -8,7 +8,6 @@ import asyncio
 import base64
 import hashlib
 from typing import cast
-from uuid import UUID
 
 import pytest
 from chatwaifu_protocol.base import JsonObject
@@ -19,7 +18,6 @@ from chatwaifu_protocol.channels import (
     ChannelPresentationPolicy,
     ChannelPresentationProfile,
 )
-from chatwaifu_protocol.character import ResponsePlan
 from chatwaifu_runtime.config.settings import Settings
 from test_qq_channels import TEXT_REPLY, _ingest, _pair, _runtime, _segments
 
@@ -58,14 +56,6 @@ async def test_character_planned_optional_image_preserves_qq_text_reply(
             rotate_access_token=False,
         )
 
-        async def response_plan(_generation_id: UUID) -> ResponsePlan:
-            return ResponsePlan(
-                intent="celebrate", tone="bright", expression="happy", rationale="fixture"
-            )
-
-        monkeypatch.setattr(
-            container.conversation_repository, "generation_response_plan", response_plan
-        )
         if scenario == "missing_image":
 
             def missing(_id: str, _sha: str) -> None:
@@ -76,7 +66,9 @@ async def test_character_planned_optional_image_preserves_qq_text_reply(
             lambda event: event.get("event_type") == "channel.delivery_plan_completed", queue_size=8
         )
         try:
-            receipt = await _ingest(harness, connection_id, "今天很开心！", 71)
+            receipt = await _ingest(
+                harness, connection_id, "今天我遇到了好事，特别开心，用文字陪我庆祝一下吧！", 71
+            )
             text = await asyncio.wait_for(harness.peer.sends.get(), timeout=5)
             assert _segments(text) == [{"type": "text", "data": {"text": TEXT_REPLY}}]
             if scenario == "enabled":
@@ -94,6 +86,11 @@ async def test_character_planned_optional_image_preserves_qq_text_reply(
             assert (
                 turn is not None and turn.reply_text == TEXT_REPLY and turn.delivery_id is not None
             )
+            character_plan = await container.conversation_repository.generation_response_plan(
+                turn.generation_id
+            )
+            assert character_plan is not None
+            assert character_plan.intent == "celebrate" and character_plan.expression == "happy"
             plan = await container.external_channel_repository.get_delivery_plan(turn.delivery_id)
             assert plan is not None and plan.status is ChannelDeliveryStatus.DELIVERED
             assert plan.parts[0].kind is ChannelDeliveryPartKind.TEXT

@@ -482,8 +482,8 @@ All **38** migration checksums, foreign-key/integrity checks, default-off empty
 tables and seven original receipts passed. The strict startup comparison preserved
 **73 old tables, 597 compared columns and 345 typed rows**; its only allowed change
 was the independently proven collection of seven already-confirmed journal keys.
-The copied-database migration comparison above includes one additional old schema
-column; these are separate comparison inventories. Eight protected unit identities,
+The migration inventory counts schema columns; the startup projection also
+compares FTS row IDs and excludes four transient connection fields. Eight protected unit identities,
 22 resource hashes and configuration were unchanged. Root independently passed
 **37** verifier tests, including rejection of removed unknown/unacknowledged keys,
 changed receipts, retained-key mutations and timestamp-only checkpoint changes.
@@ -492,3 +492,731 @@ The separate successful evidence is
 the original failed report remains retained. No old database was restored.
 Real opt-in, phone receipt, quiet hours/disable, new-owner cancellation and restart
 without replay still require separate acceptance. D3 remains unimplemented.
+
+## D3 source and local Runtime acceptance (2026-10-04)
+
+The isolated QQ branch now implements ADR 0069 through trusted participant links,
+immutable group audiences, shared scene memory and per-member session/state,
+fixed text-only group plans, operator management and shared settings. New routes
+remain disabled. Group tools, media, voice, quotes and proactive sends are not
+available. This source has not been merged into the primary checkout or deployed
+to the Linux QQ stage.
+
+Root independently passed **258** application, operator API, store, migration,
+host-contract and group delivery checks after `b124504`. These include migration
+39/40, legacy-group binding quarantine, global admission capacity and bounded
+group epoch metadata. Unknown groups at the 128-entry epoch limit revoke the
+whole connection without reusing epochs. After durable pause, only the captured
+blocks are cleared; newer notices and stale admissions, observations and delivery
+authorizations retain their revocation.
+
+The nine new `10e3889` scenarios exercise the same actual RuntimeContainer,
+operator guard, SQLite 40, Conversation, Memory and Character Kernel used by the
+application, with a loopback OneBot WebSocket peer and a controlled model. Root
+independently passed all nine, then **37** combined group/private QQ checks with
+the NapCat 1.1.0 capability registration. They cover explicit enablement,
+two-member state isolation, private-history exclusion, wire rejections and
+deduplication, synchronous membership revocation while private preparation
+blocks event consumption, late output after a provider swallows cancellation,
+failed CAS, disable/reset/reconnect, pending input cancellation, known receipt
+reconciliation after revocation and unknown no-replay. They establish local
+integration behavior; they do not establish real QQ handset receipt or atomic
+freshness of NapCat's member list.
+
+Frozen production source `48ef3ae` completed the full Python suite with
+**3023 passed, 46 platform skips**, normal exit in 153.48 seconds. Full strict
+Pyright and Ruff passed; all **704** Python files passed formatting. Web and
+protocol sources remain unchanged from the separately recorded **409 Web** and
+**111 TypeScript protocol** checks, Web/desktop UI builds and Web lint. The UI
+build is separate from native desktop packaging, which remains unverified.
+
+Root then strengthened the membership-notice test to await the already-owned
+generation task without issuing another cancellation. The reader's fence must
+reject uncancelled late output on its own. All **37** group/private QQ checks,
+strict typing, lint and test formatting passed again; production source is
+unchanged from the full regression.
+
+A read-only server observation found schema **38**, the four owned QQ services
+active, a ready connection and no proactive policies or intents. Root verified
+the actual source root and absence of the D3 application; source provenance
+records `467bb7d`. This read did not recheck every source hash. Migration on an
+online-backup copy, a verified default-off D3 deployment and a user-selected
+two-member real QQ acceptance remain separate pending steps. No real group send
+or proactive opt-in was performed for these checks.
+
+## D3 Linux gate and default-off deployment (2026-10-04)
+
+Frozen source/Web `f0588d1dad2a516eea2ac2489fcee33fd5e6e639` passed
+**394 Linux group/private QQ fixtures, zero failures/skips**, with normal pytest
+and runner exits. All **1535** source files and **259** loaded project modules
+matched the candidate hashes. Python audit admitted only the fixtures' own
+**180** ephemeral peer ports; blocked attempts and protected-port intersection
+were zero. The nine unit identities and independent NapCat container identity
+remained unchanged throughout. Null keyring, private logs/cache/tmp and the one
+exact read-only `ldconfig -p` probe plus `/dev/null` open were explicit fixture
+parameters. Two unaccepted runner attempts remain retained; neither is recorded
+as a passing gate. These checks use a controlled model and OneBot peer.
+
+Root independently reviewed all frozen executor/helpers/tests and passed
+**71** real SQLite and simulated service/HTTP fault checks with normal exit,
+Ruff and formatting. Fresh preflight reverified all **1484** old tracked source
+hashes, no new-file untracked collisions and the five shared Web hashes/modes.
+The separately verified source/Web archives both identify `f0588d1`.
+
+The owned stage then completed an actual normal-exit rollout. Only
+`chatwaifu-qq-stage.service` stopped and started. SQLite online backups and a
+candidate rehearsal preceded the stopped in-place **38→39→40→40 reopen**.
+Migration retained **76 old tables, 646 old columns and 385 typed rows**, all
+38 old migration checksums/timestamps, delivery metadata and receipt/journal
+facts without exceptions. Foreign keys were on, integrity passed, state scope
+was backfilled and new group/proactive tables remained empty. No database was
+restored. Private backups and the successful rollout evidence are under
+`backups/d3-20261003T195622Z-f9e4a264/`.
+
+Root's separate deployed-state verification matched all **1535 tracked source
+files**, **60** preserved untracked files, **seven** candidate Web files on disk
+and HTTP and **12** preserved cached Web assets. It verified **111** migration
+module origins/hashes and **76-table, 642-column, 385-row** typed startup facts;
+only the four documented transient connection health columns were excluded.
+Checkpoint journal changes were **zero**, and all **eight** delivered receipts
+were retained. Configuration, own unit enablement, eight protected unit process
+identities, NapCat identity and **22** resource hashes were unchanged. Own
+Runtime has a new process identity, healthy database and the persisted private
+connection ready. Authenticated management reads show group routes, links,
+observations and new group turns empty, policy **revision zero/off**, empty
+proactive history and a disabled read-only preview.
+
+The first supplemental root readback referenced the wrong D2 table name and
+failed before writing its result. The corrected read-only verifier passed with
+the actual `channel_proactive_episodes` catalog name; the failed-probe metadata
+is retained separately. This was a verifier error, not a rollout or database
+failure. Root's successful evidence is
+`validation/d3-release-f0588d1-0vymhcy1/root-postdeployment-verification.json`.
+
+No group audience observation, route enablement, real model request or QQ send
+API call was made by these scripts. Runtime restart restored its normal private
+connection. Actual new-version phone receipt, Phase B image/sticker/quote
+behavior, D2 explicit opt-in and D3 user-selected two-member group acceptance
+remain separate. This deployment is in the owned QQ stage; the source remains
+in the isolated QQ branch rather than the primary checkout.
+
+## Selected two-member group: real at/text acceptance (2026-10-04)
+
+The operator selected one exact test group and named its second human member.
+Read-only NapCat metadata confirmed the role account, existing bound owner and
+exactly one other human. The owner's registered participant came from its
+existing trusted private binding. The second member received a separate
+registered participant; QQ nicknames did not grant identity or permission.
+
+Operator APIs created two explicit links and a new two-member shared scene.
+The route was created disabled at revision one, then enabled at revision two
+using a second fresh account-matched audience observation. Only this group
+became enabled. Private sender admission and the default-off proactive policy
+were unchanged. Operator scripts called neither model nor QQ send APIs.
+
+The owner confirmed that ordinary non-at input received no reply and both
+members' actual at messages received text. Independent operator/SQLite reads
+found **three completed group turns, three delivered text parts and provider
+receipts** covering both participants. Two separate member sessions use one
+shared `scene:` memory scope and distinct `scene_member:` state scopes. No
+private binding points to the group scene. Runtime health, the persisted
+private connection and foreign-key checks passed. The private source inputs,
+replies and root verification are retained under
+`validation/d3-selected-group-nmheduli/` rather than public documentation.
+
+The selected route was then temporarily disabled at revision three. The owner
+confirmed group silence and working private replies. Root verified the same
+three completed group turns/receipts and a new delivered owner-private turn
+after disabling. A new account-matched audience observation restored only this
+route at revision four with the same scene and member mapping; proactive
+delivery remained off. Phone receipt after resume remains pending. This proves
+one real group's core at/text flow and operator disable; membership changes,
+reconnect behavior and additional real memory-isolation scenarios remain
+separate acceptance gates.
+
+## Phase B private sticker opt-in and group revalidation (2026-10-04)
+
+An authenticated read-only preflight verified the ready paired owner, advertised
+image input and three preset assets with matching hashes and decoded static
+PNG/JPEG formats. The connection initially had no presentation override, no
+sticker opt-in, no learned stickers and no private image turns. This does not
+prove real image understanding or sticker display.
+
+The owner then explicitly requested that sticker replies remain enabled.
+Operator management saved a presentation override for the existing default
+character and private owner. A typed controlled `celebrate`/`happy` plan first
+verified a complete short text plus one optional preset image, with no model or
+QQ send call. The override uses the instant-message profile, two maximum text
+parts, a 500-character preferred size, a 1000-character soft size and no cadence
+delay or typing indicator. Technical/structured bypass remains enabled. Account,
+character, principal and admitted private sender were retained; neither learning
+nor proactive delivery was enabled. This opt-in is continuous, not a temporary
+test toggle to be closed automatically.
+
+Saving the connection configuration refreshed its existing QQ transport and
+paused the selected group. An initial restore used a route revision that had
+changed during reconnect and returned **409**; that failed attempt is retained.
+Root then read current authority, obtained another account-matched two-member
+observation and enabled the same selected route at revision **seven**. Scene,
+member identity and all three original group text receipts were unchanged.
+Private readiness, authenticated readback and foreign-key checks passed. No
+service or source deployment was performed by these operator scripts.
+
+Private evidence is under
+`validation/phase-b-sticker-opt-in-y3sw8mya/`, with the original failure and
+successful recovery recorded separately. Actual phone sticker display, incoming
+image understanding and quote display remain pending, as does phone receipt
+after group resume. The existing model-selected voice policy is unchanged.
+
+## Phase B first phone sticker failure and planning repair (2026-10-04)
+
+The owner reported **text only** for the approved celebration test. Root matched
+the exact committed input and retained its failed evidence in
+`validation/phase-b-missing-sticker-jd3sqgem/`: the completed generation planned
+`answer`/`neutral`, and its two required text parts were delivered with provider
+receipts. There was no image part or image-send attempt. Continuous sticker
+opt-in remained saved; this is a planning failure, not a verified transport failure.
+
+Two deterministic Character omissions reproduced locally: the intensifier
+`特别` was mistaken for the negation `别`, and an admitted positive signal did
+not otherwise produce a celebration plan. The narrow repair preserves negation
+before an intensifier and all higher-priority response branches, then plans the
+current positive signal as `celebrate`/`happy`. Generic answers remain undecorated
+even when background affect is happy. This follows ADR 0015 and 0034; it does
+not claim a new model-selected sticker tool or change model-selected voice.
+
+The strengthened QQ regression removes its supplied response-plan fixture and
+runs real Character planning, durable plan storage and the local OneBot socket
+for enabled, disabled and missing-image cases. The failed-first planning checks
+are retained in the turn history. After repair, 121 related checks passed and
+the complete Python suite passed **3039**, with **46** platform skips and normal
+exit in **151.69 s**. Full strict Pyright and targeted Ruff/format checks passed.
+New-version server deployment and actual phone sticker display remain separate
+gates; the first failed phone result is not promoted to a pass by these checks.
+
+The reviewed repair commit `d6ba8137e4a5dcceb66033382d970b0d60b328ee`
+was subsequently promoted as a **one-file overlay** on the frozen `f0588d1`
+Linux QQ source. This is not a complete deployment of every file at the newer
+commit. The executor first matched the exact prior source hash and passed seven
+pure Character planning checks on Linux, without starting a test Runtime or
+calling a model/send API. It backed up the source and consistent SQLite 40 state,
+then restarted only the owned QQ Runtime. A fresh account-matched observation
+restored the same authorized group at revision **nine** with the same scene and
+two participant mappings.
+
+Complete source-inventory comparison found only the reviewed planning file
+changed, to SHA-256
+`e3322b90ec125b0b32658c54b2998a2fea1edb48f6927a4b14ccda4f7a8fd9a9`.
+Eight other unit identities, NapCat identity, 22 protected resource hashes and
+configuration hashes were unchanged. All 14 prior delivered part receipts were
+preserved; database integrity and foreign keys passed. Root separately re-read
+authenticated connection/group/proactive state and the imported source path/hash:
+private connection ready, continuous sticker opt-in saved, selected group enabled,
+and proactive policy off. Private rollback copies, executor evidence and the
+separate root readback are under `validation/phase-b-positive-plan-i5mwabx_/`.
+The new celebration phone retry was requested; sticker and group-resume phone
+acceptance are still pending at this checkpoint.
+
+The owner then confirmed **text plus a normally displayed kitten sticker**.
+Root matched the second exact celebration input, admitted after this overlay,
+to its completed generation and durable `celebrate`/`happy` response plan. Two
+required text parts and one optional final `kitten_happy` image all had delivered
+status and provider receipts; the image payload matched the immutable preset
+hash. The private raw turn, parts and human acknowledgement are retained in
+`validation/phase-b-positive-plan-i5mwabx_/private-phone-sticker-acceptance.json`.
+This single owner-direct preset display is now accepted. The initial text-only
+failure remains retained; inbound image understanding, quote display, learned
+stickers and post-resume group phone acceptance are not implied by this result.
+
+## Post-repair Linux fixtures and real image understanding (2026-10-04)
+
+The complete committed source at `76290f942c8218d9701d5e0bd74df0572f983069`
+was frozen into a new isolated Linux fixture directory. Relative to `f0588d1`,
+its only production-code change is the reviewed Character planning repair.
+The previously reviewed child fences and launcher were retained; only frozen
+identities/inventory counts and five additional Character/sticker test files
+changed. No production source, service or database was changed by this run.
+
+All **478** selected cases passed, with zero failures/skips and normal pytest
+and runner exit. Before/after inventory matched all **1536** frozen files, and
+all **268** loaded project module origins and hashes matched that candidate.
+Root separately checked raw evidence, the repaired module's live-overlay hash,
+and exact before/after service/NapCat identities. Connections reached only
+**183** owned ephemeral peers, with no blocked attempt or protected-port
+intersection. Null keyring, one exact read-only `ldconfig -p` probe and one
+`/dev/null` write-open were explicit fixture boundaries; Python audit fences
+are not an OS sandbox or real-phone proof.
+
+Server evidence is `validation/positive-plan-linux-qomzecal/`; the frozen source
+archive SHA-256 is
+`c95bdb2c9e860d0619d6c0e3f138fe697d5535cb251c39b8576cdba6f1e618a1`,
+and the manifest hash is
+`f6a69c002dcca107aad948ef6e59a78fa0b3f286f2a1315e26153ef9b40403e7`.
+Root's independent evidence review is in the corresponding local private
+`cw2-qq-positive-linux-x2pgyoo1` directory. This does not imply a full new-commit
+deployment; the live source still uses the previously recorded one-file overlay.
+
+The owner then confirmed the static test image was understood correctly. Root
+matched the exact approved question to a completed **image** turn admitted at
+`2026-10-03T21:47:22.001905Z`. Its actual answer identified a red square on the
+left and a blue circle on the right, agreeing with the deterministic oracle.
+One text part was delivered with a provider receipt, with no voice or extra
+image. The private accepted turn, part and human acknowledgement are under
+`validation/phase-b-phone-image-h3zsqqt6/` alongside the oracle manifest. Its
+local PNG hash identifies the test oracle, not provider-transcoded bytes.
+This one owner-private static image understanding case is accepted; quote
+display and general vision quality are separate. The phone quote test was
+requested next.
+
+## D2 explicitly approved single proactive-text test, armed (2026-10-04)
+
+Authenticated readback and policy-only preview verified policy revision zero,
+disabled state and empty intent history. A typed reviewable proposal was saved
+under `validation/d2-live-plan-2y5vgln_/` without applying it or calling a model
+or send API. The owner subsequently explicitly approved **one temporary test**.
+The operator saved revision **one** with two-minute idle, 60-minute cooldown,
+one local-day reservation, five-minute TTL, `Asia/Shanghai`, and a temporary
+quiet-hours override. Voice, stickers and tools remain excluded from proactive
+generation/delivery regardless of private inbound reply settings.
+
+A bounded operator controller is actually running as
+`cw2-qq-d2-once-test-2y5vgln.service`, with verified nonzero PID and running state.
+It only uses policy management and intent reads, and never chooses a recipient
+or calls model/message-send APIs. The existing Runtime supplies any authorized
+generation and send. The controller restores the exact previous disabled policy
+after the first terminal intent or its ten-minute test window, including signal
+cleanup, and does not overwrite a newer operator policy revision. A newly
+admitted owner input after saving is required; enabling does not authorize old
+idle backlog. That fresh-input phone step was requested. At this checkpoint
+actual proactive phone receipt and disabled-policy cleanup are still pending.
+
+Separate root readback while the controller PID was still running confirmed
+enabled revision one and preview reason `no_owner_activity`, with null owner
+anchor and zero reservations. All previously admitted private inputs preceded
+this policy revision; no old idle backlog was exposed by enabling. This is
+actual server policy/anchor evidence, not a proactive phone-receipt claim.
+
+## D2 first-window timeout corrected; same single test rearmed (2026-10-04)
+
+The owner correctly reported having sent the requested fresh private message.
+Root's earlier no-input summary was inaccurate: read-only SQLite showed the
+text "我先离开一会儿" admitted at **06:09:12.403915 Asia/Shanghai**, with a
+completed normal reply. The controller's original window ended at
+**06:09:49.093707**, leaving only **36.689792 seconds**. Two-minute eligibility
+would start at 06:11:12, after that operator window had already closed. This
+was an incomplete test window, not an inbound-message failure or a proactive
+phone acceptance. No outbound intent or proactive send was attempted.
+
+The terminal controller recorded `test_deadline_reached`, exit **one**, and
+`restored_off=true`. Independent authenticated policy, preview and history reads
+plus read-only SQLite verified exact restoration of the previous disabled
+policy at revision **two**, `disabled` preview, zero intents and valid foreign
+keys. The private connection remained ready, continuous preset stickers stayed
+enabled, and the selected group remained enabled at revision nine. The evidence
+under `validation/d2-live-plan-2y5vgln_/root-post-timeout-verification.json`
+explicitly corrects the earlier no-input summary. Only the already-terminal
+test controller's failed unit marker was reset; evidence was preserved.
+
+Under the existing explicit, still-unspent **one-test** approval, a new typed
+proposal used expected revision two and the same temporary policy. The reviewed
+operator controller now grants at least **five minutes after observing its
+first fresh owner anchor**, with a **fifteen-minute total hard limit**. It still
+restores the exact previous disabled policy, preserves any newer operator
+revision and calls neither model nor QQ send APIs. Syntax and early/middle/late
+anchor deadline calculations were checked before launch.
+
+The actual transient unit `cw2-qq-d2-once-test-dv8t6e4b.service` was verified
+active/running with a nonzero PID. Separate authenticated readback confirmed
+enabled revision **three**, empty intent history, zero reservations and
+`no_owner_activity`; a fresh owner input is required for this new revision.
+Private proposal, controller and readback evidence are retained under
+`validation/d2-live-retry-dv8t6e4b/`. The phone step was requested again;
+proactive receipt and this new revision's disabled cleanup remain pending.
+
+## D2 one real owner-idle proactive text accepted; default off restored (2026-10-04)
+
+The fresh private owner input was admitted at **06:21:02.299952 Asia/Shanghai**.
+Root independently observed `idle_threshold_not_reached` and a next-eligible
+time of 06:23:02 while the controller was still running. The owner subsequently
+confirmed **"收到额外的主动文字"**. Authenticated history and read-only SQLite
+matched this anchor to exactly **one** outbound intent at policy revision three,
+reserved after **120.057018 seconds**, with settled reason `delivered`, one
+delivered text part and a real provider message receipt. There were no image
+or voice parts in this proactive delivery.
+
+The bounded controller completed with `one_intent_terminal`, `ok=true`,
+`restored_off=true`, `Result=success`, normal exit **zero** and no running PID.
+Separate root authenticated readback verified exact restoration of the previous
+disabled policy at revision **four**, a `disabled` preview, and only the single
+settled intent in history. Private readiness, permanent preset stickers,
+the selected group at revision nine and valid foreign keys were preserved.
+Only this completed transient test unit was stopped after evidence capture.
+Private raw intent, owner input, text part/receipt and handset confirmation are
+retained in `validation/d2-live-retry-dv8t6e4b/root-phone-proactive-acceptance.json`.
+
+This accepts the **single owner-idle proactive text plus exact default-off
+cleanup** case. The original incomplete window remains recorded above.
+Quiet hours, revocation, input cancellation, restart and uncertain-send phone
+checks remain separate; this one-test opt-in does not authorize ongoing
+proactive delivery. Group-resume and private quote display are also pending.
+
+## D2 disabled Runtime restart and selected-group revalidation (2026-10-04)
+
+Fresh authenticated readback found policy revision **four** disabled and exactly
+the single delivered proactive intent. Private input count was fourteen and group
+input count was three, with no new quoted or post-resume group phone test input.
+The concurrent search checkout remained at committed `e609345`, with forty-one
+tracked changes and seventy-nine untracked paths; no stable integrated release
+or search permission was inferred from that state.
+
+Before restarting, root verified zero nonterminal channel turns/intents, saved a
+private online SQLite backup, and captured exact typed row/column hashes for
+six channel/proactive business tables: **17** channel turns, **18** deliveries,
+**21** delivery parts, **1** outbound intent, **1** policy and **2** episodes.
+Only `chatwaifu-qq-stage.service` was restarted. It returned active with a new
+process/invocation, healthy Runtime and ready private connection. Every captured
+business table retained its exact hash and row count; policy revision four,
+the single settled delivered intent, connection configuration and the reviewed
+Character overlay hash were unchanged. The other eight unit identities/states
+and the NapCat container identity/process/start time were unchanged.
+
+Reconnect correctly paused the selected group at revision **ten** with reason
+`reconnect`. The operator then observed only that selected group's audience
+through the authenticated management API, verified the same account and exact
+two-member sender set, and used current-revision CAS to restore it at revision
+**eleven**. The shared scene, participant links and speaker grants were preserved;
+foreign keys passed. No operator model or QQ message-send API was called. Raw
+backup, before/paused/after readbacks and typed fact hashes are retained under
+`validation/d2-real-disabled-restart-0nm7e0dn/`.
+
+This proves the captured live restart/cleanup facts, without substituting for
+phone absence or display observations. Resumed real group text, no repeated
+private proactive greeting and correct same-binding quote/display checks were
+requested together. Those phone results remain pending at this checkpoint.
+
+The owner subsequently confirmed **"群里收到新文字，私聊无重复主动消息"**.
+Root matched the exact new group input "恢复测试，你好", admitted at
+**06:33:41.907700 Asia/Shanghai**, to a completed turn at route revision eleven
+in the same shared scene. Its sender matched a granted linked participant and
+it had exactly one delivered text part with provider receipt. Group history
+now contains four turns; the previous three remain intact. The private policy
+snapshot at revision four and single delivered proactive intent history were
+exactly unchanged. Raw handset confirmation and matching turn/part evidence
+are retained in `root-phone-restart-group-acceptance.json` in that same folder.
+This accepts the resumed selected-group text and absence of repeated private
+proactive greeting after the real restart; quote display remains pending.
+
+## B real same-binding quote text and QQ display accepted (2026-10-04)
+
+The owner confirmed **"结论正确，显示引用标记"**. Root read-only SQLite
+verification matched the quoted private input admitted at **06:35:20.484716
+Asia/Shanghai** to the unique previously delivered image-answer text part from
+the same connection and binding. The referenced generation was completed,
+the provider ID did not collide with an admitted user message, and no photo
+redaction applied. Its text was the previously confirmed left-red-square and
+right-blue-circle image answer.
+
+The new completed answer was "左侧：红色的正方形\n右侧：蓝色的圆形", with exactly
+one delivered text part and provider receipt and no image or voice part.
+The persisted fresh input contained its reply-reference metadata. The adapter
+derives the first part's reply segment target from that current admitted message;
+the model cannot choose it. The QQ marker was observed on the handset, while a
+raw outgoing packet capture is not claimed. Foreign keys passed. Private exact
+input, referenced part, matching reply/receipt and handset confirmation are
+retained under `validation/phase-b-phone-quote-8cuetj5h/`.
+
+This accepts one owner-private same-binding quote text/display case. Together
+with the separately recorded static image and preset-display cases, B's core
+real phone checks are now verified. Animation, photo retention, sticker learning,
+cross-binding history and general image-answer quality are not added by this
+acceptance. Additional A/C fault, D2 quiet/revocation/input-cancellation, D3
+privacy/membership and search-integration gates remain open.
+
+## D2 quiet-hours negative check prepared, not enabled (2026-10-04)
+
+After the separately confirmed one-test authorization was consumed, a new typed
+quiet-hours proposal was prepared without applying it. Current policy remains
+disabled at revision **four**. The proposal preserves `Asia/Shanghai` and the
+23:00–08:00 quiet window, with one-minute idle/cooldown, two local-day reservations
+(one is already used) and two-minute TTL. The latter bounds avoid daily budget or
+the completed check-in's cooldown masking the quiet-hours decision. The intended
+result is **zero new proactive intents/sends**, after a newly admitted owner input.
+
+The reviewed policy-only controller has a five-minute initial input window,
+at least three minutes after its first fresh anchor and an eight-minute total
+limit. It requires the entire possible window plus margin to remain inside quiet
+hours and the same local date, observes the actual `quiet_hours` preview for
+thirty seconds after idle eligibility while history remains exactly unchanged,
+then restores the exact previous disabled policy through current-revision CAS.
+It preserves newer operator revisions and calls no model or QQ send API.
+
+Private typed proposal/controller are retained under
+`validation/d2-quiet-negative-plan-77e153o5/`. Syntax and early/middle/late anchor
+deadline calculations passed. A real unapproved-run guard check rejected the
+controller before policy/credential calls; independent authenticated readback
+confirmed the prior disabled snapshot unchanged and no armed/result file.
+Its approved source hash is
+`9f4475adc1d1abdc01345fe3744659543957aa8ed92b545377647d5ff8ff0101`.
+New explicit opt-in was requested under ADR 0068; no controller unit was started
+and no quiet-hours phone acceptance is claimed at this checkpoint.
+
+The owner subsequently separately approved **"临时启用静默检查"**. The saved
+proposal records that direct approval, and the deployed controller hash still
+matches the reviewed hash above. Actual transient unit
+`cw2-qq-quiet-test-77e153o5.service` was verified active/running with a nonzero
+PID. Separate authenticated readback confirmed temporary enabled revision
+**five**, the proposed quiet window, `no_owner_activity`, one existing reservation,
+one remaining budget slot, and the exactly unchanged single-intent history.
+The initial fresh-input window ends at **06:51:56.816810 Asia/Shanghai**; a
+first owner input grants enough additional observation time within the stated
+eight-minute hard limit. The phone fresh-input/no-extra-text step was requested.
+This is an armed checkpoint, not quiet-hours phone acceptance or cleanup proof.
+
+## D2 actual quiet-hours block accepted; default off restored (2026-10-04)
+
+The owner confirmed **"只有正常回复，没有额外主动文字"**. The actual private
+text was "静默测试，我先离开一会", admitted at **06:47:44.135424 Asia/Shanghai**
+and completed with one delivered normal text part and provider receipt. At
+06:48:44 the episode became due; the controller observed `quiet_hours`, not
+budget exhaustion or cooldown, continuously for **30.46842296 seconds**. One
+budget slot remained and the old reservation's one-minute cooldown had elapsed.
+There were zero new proactive intents and the original delivered intent history
+was exactly unchanged.
+
+The controller ended with `quiet_hours_blocked_without_new_intent`, `ok=true`,
+`restored_off=true`, no running PID, `Result=success` and normal exit zero.
+Independent policy/preview/history reads and read-only SQLite verified the exact
+previous disabled policy restored at revision **six**, `disabled` preview,
+one unchanged existing intent, valid foreign keys, ready private connection,
+permanent stickers enabled and the selected group unchanged at revision eleven.
+Only the completed transient test unit was stopped. Private raw phone/input,
+due preview and cleanup evidence is retained in
+`validation/d2-quiet-negative-plan-77e153o5/root-phone-quiet-acceptance.json`.
+An initial root verifier expected the suggested prompt's trailing "儿"; the
+actual input omitted it. That probe mismatch is retained separately and the
+passing verification matches the exact admitted owner timestamp and actual text.
+It was not a Runtime failure.
+
+The owner then requested a wake-up-readable acceptance document and instructed
+this chat to keep future commits outside the other chat's repository. Six owned
+documentary changes were hash-verified into independent clone
+`/Users/mubai/Desktop/CW2-QQ-integration`, whose Git common directory is its own
+`.git`, with no object alternates or remotes. Only the verified transferred edits
+were restored in the old worktree, leaving its HEAD unchanged and worktree clean.
+Subsequent changes and commits use the independent repository. Transfer evidence
+is retained under `/private/tmp/cw2-qq-independent-3wv7obn5/`.
+
+## Independent repository checks and wake-up acceptance document (2026-10-04)
+
+The independent clone installed locked Python/Node dependencies using offline
+caches into its own virtual environment/workspace. Protocol, Runtime and worker
+SDK package imports were verified to originate in that repository. The focused
+private QQ adapter/Runtime, group application/API/store/migration/host and
+proactive Runtime/repository/API campaign passed **838** with zero failures,
+errors or skips, one audioop deprecation warning, and normal pytest exit zero.
+Full strict Pyright, relevant Ruff, Web typecheck/build, documentary Prettier
+and diff checks passed. The Web build retains its existing bundle-size warning.
+The first test invocation named a nonexistent repository test file and exited
+four without running tests; its log was preserved separately, then the actual
+file inventory was used for the passing campaign. Raw JUnit/logs, module origins
+and independent root review are under the transfer evidence directory above.
+
+No production source changed in this checkpoint, and no new version was
+deployed merely for documentary edits. All three completed transient proactive
+test units were independently observed inactive/not-found with zero PID.
+The remaining phone and controlled-fault steps are organized in
+[QQ phone acceptance](qq-phone-acceptance.md), including what can be tested
+without enabling another policy and what needs a prepared operator window.
+These automated checks do not claim the still-pending real phone fault cases.
+
+## Complete Runtime voice receipt fault coverage (2026-10-04)
+
+Three new protocol cases send a successful OneBot response with a missing,
+malformed or boolean message id. The actual Runtime, SQLite repository and
+loopback WebSocket are exercised with scripted model/TTS providers. Each case
+verifies exactly one AUDIO send attempt, one TEXT fallback saying the voice
+result is unconfirmed, and the same durable delivery plan revised to version two.
+The failed optional audio part retains `qq_delivery_unknown`, its journal entry
+remains `unknown`, the required text part has a confirmed receipt, assistant
+history contains the actual fallback, and the temporary audio asset is removed.
+
+After a complete Runtime shutdown/startup on the same state, the prior plan and
+unknown fence survive. Re-ingesting the same input is rejected as a duplicate;
+a fresh owner text reply completes without replaying the old voice or fallback.
+The focused private Runtime and delivery campaign passed **81**, zero failures
+or skips, normal exit zero, with only the existing audioop deprecation warning.
+An initial test-only missing enum import produced three failures and is retained
+in `uncertain-voice-receipt.xml`; the corrected full checks and raw log are
+`voice-receipt-final.xml` and `voice-receipt-final.log` in the independent evidence
+directory. This checkpoint changes tests and documents, not production behavior
+or deployed source. Strict types, Ruff and formatting are checked independently.
+
+ADR 0064 now points explicitly to ADR 0067 and describes its current optional,
+model-selected voice policy, removing contradictory keyword-gate prose. This is
+a documentary correction to the already implemented decision. Real phone
+send-failure and uncertain-receipt cases remain pending.
+
+A read-only server check at **2026-10-04 07:20:29 Asia/Shanghai** again found the
+private channel ready, proactive policy off at revision six, exactly unchanged
+single-intent history, the selected group enabled at revision eleven, and all
+three completed temporary controllers inactive/not-found with zero PID.
+
+## Real nonowner private-access acceptance (2026-10-04)
+
+The fresh live preflight at 15:12:48 Asia/Shanghai found the private connection
+ready, unchanged disabled proactive policy revision six, selected two-member
+group enabled at revision eleven, one original intent and the expected source
+overlay hash. The owner then confirmed **"睦月无回复，主人正常收到回复"**.
+
+NapCat's actual receive logs show the linked nonowner's
+`私聊权限验收:我是睦月` at 15:16:19 and the owner's shortened
+`私聊权限验收` at 15:16:36. The nonowner has zero newly admitted turns on this
+connection since preflight. The owner input was admitted at
+`2026-10-04T07:16:36.884022+00:00` and completed at
+`2026-10-04T07:16:51.691526+00:00`, with exactly one delivered AUDIO part and
+provider message receipt on the same one-owner allowlist. This accepts this
+specific private refusal and continued owner reply availability; the phone
+confirmation does not newly establish audio playback quality.
+
+The passive observer had filtered for exact suggested text and did not match
+the half-width colon or owner's shortened input. The passing verification uses
+the actual provider receive logs and SQLite, not a fabricated wire capture.
+An initial root probe also incorrectly required TEXT-only output; its mismatch
+is retained, and the corrected requirement permits the implemented ADR 0067
+model-selected reply medium. No Runtime behavior, permissions or policy changed.
+
+Private evidence is under
+`/home/mubai/cw2-qq-napcat-stage/validation/phone-acceptance-session-tfbezc3q/`,
+including `private-preflight.json`, `private-access-provider-log-lines.json`,
+`root-first-access-probe-mismatch.json` and
+`root-phone-access-acceptance.json`. The pending group subject-correction and
+private-secret isolation cases remain separate real-phone gates.
+
+## Group recent-context preference case and durable-memory boundary (2026-10-04)
+
+The owner reported sending the four planned group preference messages. Exact
+admitted inputs were owner red tea, the second member also red tea, owner
+correction to green tea, then the owner asking both preferences. These completed
+at 15:26:03, 15:26:23, 15:26:35 and 15:26:42 Asia/Shanghai. All used enabled route
+revision eleven and sessions belonging to the corresponding linked participant.
+The members share the scene memory scope and have distinct state scopes. Each
+turn has exactly one delivered TEXT part with provider receipt. The final reply
+correctly says the owner prefers green tea and Mutsuki red tea; the owner
+confirmed that the handset answer is identical and correct.
+
+The first reply nevertheless addressed the owner as Mutsuki. That naming concern
+is retained independently; correct final preference attribution does not erase
+it. Registered names remain owner and Mutsuki and trusted participant IDs are
+correct. No participant binding or authority was inferred from the model's words.
+
+The four ordinary statements did not persist a new durable memory. The first
+created one pending proposal with the correct owner participant subject; the
+other statements created no proposals. The current `MemoryPolicy` reviews
+ordinary statements and commits an admissible explicit remember command. This
+is a difference between recent conversation correctness and durable-memory
+acceptance, not grounds to silently approve the proposal or alter policy.
+A supplemental real case uses identical `请记住我的茶偏好是红茶。` statements
+from both members followed by the owner's green-tea update of the same
+`profile.茶偏好` predicate. The local extractor and policy were checked to ground
+these commands as first-person explicit commits. The owner then completed all
+four real messages and confirmed the correct green-tea/red-tea handset answer.
+
+The explicit commands were admitted at 15:34:02, 15:35:28, 15:35:39 and
+15:35:49 Asia/Shanghai, on the same revision-eleven route and correct linked
+participant sessions. Each completed with exactly one delivered TEXT part and
+provider receipt. Read-only database verification found three durable records
+for `profile.茶偏好`: owner red tea superseded, Mutsuki red tea active, and owner
+green tea active with a supersedes link only to the owner's old red tea. The two
+identical initial commands thus remain distinct by trusted participant subject.
+All three memory sources join to the actual user committed events and match
+their admitted session, turn and text. The final actual compiled prompt selected
+both active green-tea and red-tea records. The ordinary proposal remains pending
+and no operator memory decision was called.
+
+Read-only proof `root-group-context-verification.json` references the exact group
+turn/delivery/session readback and the pending proposal/context evidence in the
+current private acceptance directory. Additional private readback
+`private-group-explicit-memory-readback.json` and independent
+`root-phone-group-memory-acceptance.json` record the separate durable-memory
+case and both handset confirmations. Private-to-group isolation is recorded separately below.
+The earlier passive exact-text observer
+has now reached its bounded ten-minute timeout and closed its own socket; its
+exit one/empty capture is retained and is not used as received-message proof.
+
+## Owner-private memory excluded from group case (2026-10-04)
+
+The owner sent an explicit remember command with one fictional acceptance
+sentinel in private at 15:45:26 Asia/Shanghai. The actual input committed an
+active `profile.验收暗号` memory in `character/default/user/local`; its source
+joins to the real owner's private committed event with matching session, turn
+and text. This verifies that the privacy check used a durable private record.
+
+Mutsuki then asked for that private sentinel through a real group mention at
+15:45:42. The route remained revision eleven with the correctly linked second
+participant and shared-scene scope. The actual memory recall and compiled
+prompt selection contain only the two active shared-scene tea records, excluding
+the private record. The group answer did not contain the sentinel, and the owner
+confirmed the same absence on the handset. Both turns completed with one
+delivered TEXT part and provider receipt each.
+
+Read-only history eligible under the production session/character/user-scope
+selection conditions also excludes the private session and sentinel. The live
+history selector's source hash matches this independent clone. No raw provider
+prompt was captured, so this eligibility readback is not presented as a complete
+provider-payload trace. This accepts one concrete private-to-group isolation
+case; it does not establish nonleakage for every natural-language request.
+
+Private proof `root-phone-private-isolation-acceptance.json` references
+`private-isolation-actual-readback.json` and the preparation/preflight records in
+the current private acceptance directory. No operator memory decision, manual
+model/send call, deployment or policy change occurred during this case.
+
+## Unsupported file and working followup text (2026-10-04)
+
+The owner confirmed that the test media received no reply and the subsequent
+text received a normal answer. The requested test was a short video, but the
+actual NapCat receive log at 15:54:42 Asia/Shanghai and authenticated read-only
+provider history identify an MP4 delivered as one `file` segment. Provider
+metadata confirms the account and owner; the normalizer rejects that actual
+segment. SQLite has no admission for its external message ID. The sole fresh
+admission is the following text probe, completed at 15:54:52 with exactly one
+delivered TEXT part and provider receipt. This accepts that concrete unsupported
+file case, with no real `video` segment acceptance claimed.
+
+The bounded read-only observer matched only video and the exact text probe. It
+captured the real probe but no video; the file's type and identifier were instead
+read with [`get_friend_msg_history`](https://napneko.github.io/develop/api/doc)
+and matched to the NapCat receive log. The media payload was not downloaded or
+passed to a model by the verifier. Once the actual type was known, only the
+verified owned observer process received SIGINT; its finally block closed its
+own socket and its process is absent. The recorded SSH exit 255 with cancellation
+and KeyboardInterrupt is the deliberate observer stop, not a Runtime failure.
+
+Independent current management readback confirms the private connection ready,
+proactive policy unchanged off at revision six and group revision eleven.
+Private `root-phone-unsupported-file-acceptance.json` references the actual
+readback, selective receive log, provider history metadata, partial observer
+capture and stop request. No Runtime/NapCat stop, provider send, deployment or
+policy change occurred.
+
+## Real new owner input cancels a compiled generation (2026-10-04)
+
+The owner sent the voice-story request at 16:13:56 Asia/Shanghai and immediately
+followed it with a stop/request-for-text message. The original generation started
+at 16:13:56.801920 and was invalidated at 16:13:57.558376, 0.756456 seconds later,
+with `superseded_by_new_inbound_message`. Its prompt had compiled before
+cancellation. Generation and channel turn both remain cancelled, with no output,
+delivery plan/part or assistant history for that generation.
+
+The replacement was admitted at 16:13:57.573918 on the same owner binding and
+session, completed with `收到就好。`, and delivered exactly one TEXT part with
+provider receipt at 16:13:59.233227. The owner confirmed receiving text. No voice
+skill or speech event preceded cancellation, so this verifies new-input
+interruption at the generation stage; it does not accept interruption of an
+already-running TTS job or external QQ send.
+
+Independent private `root-phone-generation-interruption-acceptance.json`
+references the exact turn/generation/event/plan/part readback. No fault was
+injected and no source or policy changed. Current authenticated management
+readback confirms private ready, proactive off at revision six and the same
+group route revision eleven.

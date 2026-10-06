@@ -25,6 +25,7 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryPartsCancelRequest,
     ChannelDeliveryPartStatus,
     ChannelDeliveryStatus,
+    ChannelGroupDeliveryTarget,
     ChannelMessageKind,
     ChannelPresentationPolicy,
     ChannelTextDeliveryPartPayload,
@@ -135,12 +136,12 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
         )
         return tuple(_connection_record(row) for row in rows)
 
-    async def get_connection(self, connection_id: UUID) -> ChannelConnectionRecord | None:
+    async def get_connection(
+        self, connection_id: UUID, *, include_deleted: bool = False
+    ) -> ChannelConnectionRecord | None:
         row = await self._database.fetchone(
-            """
-            SELECT * FROM channel_connections
-            WHERE connection_id = ? AND deleted_at IS NULL
-            """,
+            "SELECT * FROM channel_connections WHERE connection_id = ?"
+            + ("" if include_deleted else " AND deleted_at IS NULL"),
             (str(connection_id),),
         )
         return _connection_record(row) if row is not None else None
@@ -388,14 +389,20 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
     async def find_binding(
         self, connection_id: UUID, conversation_key: str
     ) -> ChannelBindingRecord | None:
-        row = await self._database.fetchone(
-            """
-            SELECT * FROM channel_bindings
-            WHERE connection_id = ? AND conversation_key = ?
+        columns = {
+            str(row["name"])
+            for row in await self._database.fetchall("PRAGMA table_info(channel_bindings)")
+        }
+        rows = await self._database.fetchall(
+            f"""
+            SELECT b.* FROM channel_bindings b
+            WHERE b.connection_id = ? AND b.conversation_key = ?
+              AND {_private_binding_predicate(columns)}
+            LIMIT 2
             """,
             (str(connection_id), conversation_key),
         )
-        return _binding_record(row) if row is not None else None
+        return _binding_record(rows[0]) if len(rows) == 1 else None
 
     async def create_binding(
         self,
@@ -430,13 +437,19 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
         return created
 
     async def find_turn_by_external_message(
-        self, connection_id: UUID, external_message_id: str
+        self, connection_id: UUID, external_message_id: str, *, conversation_key: str | None = None
     ) -> ChannelTurnRecord | None:
-        row = await self._database.fetchone(
-            _TURN_SELECT + " WHERE t.connection_id = ? AND t.external_message_id = ?",
-            (str(connection_id), external_message_id),
+        sql = _TURN_SELECT + (
+            " WHERE t.connection_id = ? AND t.external_message_id = ? AND t.chat_type='direct'"
         )
-        return _turn_record(row) if row is not None else None
+        parameters: tuple[str, ...] = (str(connection_id), external_message_id)
+        if conversation_key is not None:
+            sql += " AND t.conversation_key = ?"
+            parameters += (conversation_key,)
+        rows = await self._database.fetchall(sql + " LIMIT 2", parameters)
+        # Legacy callers without a conversation key cannot resolve an ambiguous
+        # provider ID by choosing whichever conversation SQLite returned first.
+        return _turn_record(rows[0]) if len(rows) == 1 else None
 
     async def get_turn(self, channel_turn_id: UUID) -> ChannelTurnRecord | None:
         row = await self._database.fetchone(
@@ -1270,7 +1283,17 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
             part_count=len(parts),
             delivered_part_count=delivered_count,
         )
-        return ChannelDeliveryPlanRecord(delivery=delivery, parts=parts)
+        target_json = (
+            delivery_row["group_target_json"]
+            if "group_target_json" in delivery_row.keys()
+            else None
+        )
+        target = (
+            ChannelGroupDeliveryTarget.model_validate_json(str(target_json))
+            if target_json is not None
+            else None
+        )
+        return ChannelDeliveryPlanRecord(delivery=delivery, parts=parts, group_target=target)
 
     async def _derive_delivery_plan_state_tx(
         self,
@@ -2946,8 +2969,23 @@ def _connection_record(row: object) -> ChannelConnectionRecord:
     )
 
 
+def _private_binding_predicate(columns: set[str]) -> str:
+    # Apply the isolation before LIMIT, including when many historical member
+    # bindings share a provider conversation key. Schema 39 has no typed columns.
+    result = (
+        "NOT EXISTS (SELECT 1 FROM channel_turns legacy "
+        "WHERE legacy.binding_id=b.binding_id AND legacy.chat_type='group')"
+    )
+    if "chat_type" in columns:
+        result += " AND b.chat_type='direct'"
+    if "legacy_group_provenance" in columns:
+        result += " AND b.legacy_group_provenance=0"
+    return result
+
+
 def _binding_record(row: object) -> ChannelBindingRecord:
-    item = row
+    item = cast(aiosqlite.Row, row)
+    columns = frozenset(item.keys())
     return ChannelBindingRecord(
         binding_id=UUID(str(item["binding_id"])),  # type: ignore[index]
         connection_id=UUID(str(item["connection_id"])),  # type: ignore[index]
@@ -2956,13 +2994,41 @@ def _binding_record(row: object) -> ChannelBindingRecord:
         session_id=UUID(str(item["session_id"])),  # type: ignore[index]
         created_at=_required_datetime(item["created_at"]),  # type: ignore[index]
         updated_at=_required_datetime(item["updated_at"]),  # type: ignore[index]
+        chat_type=ChannelChatType(str(item["chat_type"]))
+        if "chat_type" in columns
+        else ChannelChatType.DIRECT,
+        group_route_id=UUID(str(item["group_route_id"]))
+        if "group_route_id" in columns and item["group_route_id"] is not None
+        else None,
+        scene_id=str(item["scene_id"])
+        if "scene_id" in columns and item["scene_id"] is not None
+        else None,
+        link_id=UUID(str(item["participant_link_id"]))
+        if "participant_link_id" in columns and item["participant_link_id"] is not None
+        else None,
+        participant_id=str(item["participant_id"])
+        if "participant_id" in columns and item["participant_id"] is not None
+        else None,
+        legacy_group_provenance=bool(item["legacy_group_provenance"])
+        if "legacy_group_provenance" in columns
+        else False,
     )
 
 
 def _turn_record(row: object) -> ChannelTurnRecord:
     item = cast(aiosqlite.Row, row)
+    columns = frozenset(item.keys())
     return ChannelTurnRecord(
         channel_turn_id=UUID(str(item["channel_turn_id"])),  # type: ignore[index]
+        group_route_id=UUID(str(item["group_route_id"]))
+        if "group_route_id" in columns and item["group_route_id"] is not None
+        else None,
+        group_route_revision=int(item["group_route_revision"])
+        if "group_route_revision" in columns and item["group_route_revision"] is not None
+        else None,
+        group_lineage_version=int(item["group_lineage_version"])
+        if "group_lineage_version" in columns
+        else 0,
         connection_id=UUID(str(item["connection_id"])),  # type: ignore[index]
         binding_id=UUID(str(item["binding_id"])),  # type: ignore[index]
         external_message_id=str(item["external_message_id"]),  # type: ignore[index]
