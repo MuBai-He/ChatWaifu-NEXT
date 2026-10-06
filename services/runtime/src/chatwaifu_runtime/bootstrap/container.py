@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import cast
 from uuid import UUID
 
+from chatwaifu_protocol.channel_settings import ChannelRuntimePolicy
 from pydantic import SecretStr
 
 from chatwaifu_runtime import __version__
@@ -43,6 +44,7 @@ from chatwaifu_runtime.external_channels.service import (
     WEIXIN_ILINK_PROVIDER,
     ExternalChannelService,
 )
+from chatwaifu_runtime.external_channels.settings import ChannelSettingsService
 from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
 from chatwaifu_runtime.external_channels.voice import ChannelVoiceSkill
 from chatwaifu_runtime.index_orchestration.service import IndexRebuildService
@@ -54,6 +56,7 @@ from chatwaifu_runtime.persistence.event_store import EventStore
 from chatwaifu_runtime.persistence.sqlite_assistant_tasks import SQLiteTaskRepository
 from chatwaifu_runtime.persistence.sqlite_channel_groups import SQLiteChannelGroupRepository
 from chatwaifu_runtime.persistence.sqlite_channel_proactive import SQLiteChannelProactiveRepository
+from chatwaifu_runtime.persistence.sqlite_channel_settings import SQLiteChannelSettingsRepository
 from chatwaifu_runtime.persistence.sqlite_conversation import SQLiteConversationRepository
 from chatwaifu_runtime.persistence.sqlite_experience_reset import SQLiteExperienceResetRepository
 from chatwaifu_runtime.persistence.sqlite_external_channels import (
@@ -192,6 +195,13 @@ class RuntimeContainer:
         self.channel_group_repository = SQLiteChannelGroupRepository(
             self.database, self.event_store
         )
+        self.channel_settings = ChannelSettingsService(
+            SQLiteChannelSettingsRepository(self.database),
+            ChannelRuntimePolicy(
+                qq_owner_public_web_enabled=settings.public_web.qq_owner_reads_enabled,
+                group_discussion=settings.group_discussion,
+            ),
+        )
         self.experience_reset_repository = SQLiteExperienceResetRepository(
             self.database, self.event_store
         )
@@ -217,6 +227,9 @@ class RuntimeContainer:
                 and "audio" in item.capabilities.outbound_message_kinds
                 for item in self.external_channels.providers()
             ),
+            private_voice_enabled=lambda: (
+                self.channel_settings.get().policy.qq_owner_voice_reply_enabled
+            ),
         )
         self.runtime_skills = RuntimeSkillService(
             settings.skills_dir,
@@ -234,7 +247,7 @@ class RuntimeContainer:
             generation_permission_policy=ChannelPublicWebPolicy(
                 self.external_channel_repository,
                 lambda session_id: self.conversation.active_generation_id(session_id),
-                enabled=settings.public_web.qq_owner_reads_enabled,
+                enabled=lambda: self.channel_settings.get().policy.qq_owner_public_web_enabled,
             ),
             session_builtin_handlers={
                 "calendar_read": CalendarReadSkill(self.personal_assistant),
@@ -330,7 +343,13 @@ class RuntimeContainer:
             self.event_publisher,
             providers=(WEIXIN_ILINK_PROVIDER, NAPCAT_PROVIDER),
             tool_policy=lambda configuration, text: channel_tool_policy(
-                configuration, text, public_web_enabled=settings.public_web.qq_owner_reads_enabled
+                configuration,
+                text,
+                public_web_enabled=self.channel_settings.get().policy.qq_owner_public_web_enabled,
+                voice_reply_enabled=self.channel_settings.get().policy.qq_owner_voice_reply_enabled,
+            ),
+            qq_voice_input_enabled=lambda: (
+                self.channel_settings.get().policy.qq_owner_voice_input_enabled
             ),
             sticker_catalog=self.sticker_catalog,
             sticker_library=self.sticker_library,
@@ -352,7 +371,7 @@ class RuntimeContainer:
             self.event_publisher,
             conversation_repository=self.conversation_repository,
             sticker_library=self.sticker_library,
-            discussion_policy=settings.group_discussion,
+            discussion_policy=self.channel_settings.get().policy.group_discussion,
         )
         self.channel_groups.set_authenticator(self.external_channels.authenticate_group_transport)
         self.external_channels.set_group_service(self.channel_groups)
@@ -392,7 +411,14 @@ class RuntimeContainer:
             proactive_authorization=self.external_channels.authorize_proactive_delivery,
             proactive_on_terminal=self.external_channels.proactive_delivery_terminal,
             groups=self.channel_groups,
+            private_voice_enabled=lambda: (
+                self.channel_settings.get().policy.qq_owner_voice_reply_enabled
+            ),
+            native_favorites_enabled=lambda: (
+                self.channel_settings.get().policy.qq_native_favorites_enabled
+            ),
         )
+        self.channel_settings.set_apply_callback(self._apply_channel_policy)
         self.resources = ResourceLifecycleService(
             self.companion_settings,
             self.activity,
@@ -482,6 +508,13 @@ class RuntimeContainer:
         self._cleanup_steps = self._shutdown_steps()
         self._lifecycle_lock = asyncio.Lock()
 
+    async def _apply_channel_policy(
+        self, previous: ChannelRuntimePolicy, current: ChannelRuntimePolicy
+    ) -> None:
+        self.channel_groups.configure_discussion(current.group_discussion)
+        if previous.qq_owner_voice_input_enabled and not current.qq_owner_voice_input_enabled:
+            await self.external_channels.revoke_qq_voice_input()
+
     async def start(self) -> None:
         async with self._lifecycle_lock:
             if self._state == "started":
@@ -498,6 +531,7 @@ class RuntimeContainer:
                 self.audio_assets.start()
 
                 await self.database.open()
+                await self.channel_settings.start()
                 await self.personal_assistant.start()
                 self.audio_assets.recover_staged_removals(
                     await self.experience_reset_repository.all_audio_asset_ids()

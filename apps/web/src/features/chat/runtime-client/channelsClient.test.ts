@@ -7,6 +7,7 @@ import {
   getChannelAuthorization,
   getChannelConnections,
   startChannelAuthorization,
+  submitChannelAuthorizationVerification,
   updateChannelConnection,
   updateChannelPresentationPolicy,
   type ChannelConnectionSnapshot,
@@ -18,6 +19,50 @@ describe("external channels client", () => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
+
+  it.each(["start", "poll", "cancel", "verify"] as const)(
+    "fences WeChat authorization %s before I/O when the Runtime changes",
+    async (kind) => {
+      runtimeEndpoint.setRemoteRuntimeConnection({
+        baseUrl: "https://a.example",
+        token: "a",
+      });
+      const expectedContext = await runtimeEndpoint.readRuntimeRequestContext();
+      let finish!: (value: runtimeEndpoint.RuntimeConnection) => void;
+      vi.spyOn(runtimeEndpoint, "resolveRuntimeConnection").mockReturnValueOnce(
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+      );
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+      const options = { expectedContext, signal: new AbortController().signal };
+      const id = "00000000-0000-4000-8000-000000000101";
+      const request =
+        kind === "start"
+          ? startChannelAuthorization(
+              "weixin_ilink",
+              "default",
+              options.signal,
+              options,
+            )
+          : kind === "poll"
+            ? getChannelAuthorization(id, 0, options.signal, options)
+            : kind === "cancel"
+              ? cancelChannelAuthorization(id, options)
+              : submitChannelAuthorizationVerification(
+                  id,
+                  "123456",
+                  options.signal,
+                  options,
+                );
+      const second = { baseUrl: "https://b.example", token: "b" };
+      runtimeEndpoint.setRemoteRuntimeConnection(second);
+      finish(second);
+      await expect(request).rejects.toThrow("上下文已变化");
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
 
   it.each(["read", "update", "presentation", "delete"] as const)(
     "guards optional %s context without changing legacy endpoint behavior",

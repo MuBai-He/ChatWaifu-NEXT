@@ -29,6 +29,8 @@ import {
 } from "../chat/runtime-client/channelGroupsClient";
 import { isConflictError } from "../chat/runtime-client/realtimeClient";
 import { StickerLibraryPanel } from "./StickerLibraryPanel";
+import { SettingsToggle } from "../settings/SettingsPrimitives";
+import { useScopeControls } from "../connection/clientControls";
 import "./qq-group-routes-panel.css";
 
 type Props = {
@@ -84,6 +86,7 @@ function QQGroupRoutesContent({
     useState<ChannelGroupAudienceSnapshot | null>(null);
   const [creationSpeakers, setCreationSpeakers] = useState<string[]>([]);
   const [creationConfirmed, setCreationConfirmed] = useState(false);
+  const [creationVoice, setCreationVoice] = useState(false);
   const [selected, setSelected] = useState<ChannelGroupRouteSnapshot | null>(
     null,
   );
@@ -91,6 +94,8 @@ function QQGroupRoutesContent({
     useState<ChannelGroupAudienceSnapshot | null>(null);
   const [routeSpeakers, setRouteSpeakers] = useState<string[]>([]);
   const [routeConfirmed, setRouteConfirmed] = useState(false);
+  const [routeVoice, setRouteVoice] = useState(false);
+  const scopeControls = useScopeControls();
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [history, setHistory] = useState<ChannelGroupTurnPage | null>(null);
   const [historyFresh, setHistoryFresh] = useState(false);
@@ -393,6 +398,7 @@ function QQGroupRoutesContent({
           observation_id: creationObservation.observation_id,
           display_name: displayName.trim(),
           speaker_sender_keys: creationSpeakers,
+          allow_requested_voice: creationVoice,
         },
         request,
       );
@@ -421,6 +427,7 @@ function QQGroupRoutesContent({
     setCreationObservation(null);
     setCreationConfirmed(false);
     setSelected(route);
+    setRouteVoice(route.allow_requested_voice ?? false);
     setRouteSpeakers(
       route.members
         .filter((member) => member.can_speak)
@@ -454,6 +461,7 @@ function QQGroupRoutesContent({
           expected_revision: route.revision,
           observation_id: enabled ? routeObservation?.observation_id : null,
           speaker_sender_keys: routeSpeakers,
+          allow_requested_voice: routeVoice,
         },
         request,
       );
@@ -472,11 +480,12 @@ function QQGroupRoutesContent({
         ),
       }));
       setSelected(result);
+      setRouteVoice(result.allow_requested_voice ?? false);
       setRouteObservation(null);
       setRouteConfirmed(false);
       setNotice(
         enabled
-          ? "群路由已启用；仅允许所选成员以结构化 @ 发起文字对话。"
+          ? `群路由已启用；仅允许所选成员 @ 发起对话。${result.allow_requested_voice ? "当前明确要求时可回复语音。" : "只回复文字。"}`
           : "群路由已保存为关闭状态，历史和实际回执仍保留。",
       );
     });
@@ -539,11 +548,20 @@ function QQGroupRoutesContent({
 
   return (
     <section className="qq-group-routes-panel" aria-label="QQ 群路由">
-      <h3>QQ 小群 · 独立管理</h3>
+      <h3>QQ 群 · 成员与回复权限</h3>
       <p>
         新路由默认关闭。仅注册成员的结构化 @
         触发回复；可单独开启本群静态表情学习。群聊默认文字；只有单独授权的群可按当前请求发语音，不支持主动消息或其他工具。主人私聊设置独立保留。
       </p>
+      {scopeControls ? (
+        <button
+          type="button"
+          className="qq-channel-secondary-action"
+          onClick={scopeControls.open}
+        >
+          管理对话参与者
+        </button>
+      ) : null}
       <p>
         成员须先在“对话设置 → 添加参与者”中注册。关联 QQ
         号时必须逐一选择；不会按昵称自动匹配。一个群内的不同成员须关联不同的
@@ -619,6 +637,12 @@ function QQGroupRoutesContent({
             onChange={(event) => setDisplayName(event.currentTarget.value)}
           />
         </label>
+        <SettingsToggle
+          label="新群允许按需语音"
+          description="默认关闭；开启后仍只在当前授权发言者明确要求时允许语音。创建不会启用群回复。"
+          checked={creationVoice}
+          onChange={setCreationVoice}
+        />
         <button
           type="button"
           disabled={!validQQId(groupId)}
@@ -764,6 +788,15 @@ function QQGroupRoutesContent({
             className="qq-group-fields"
           >
             <legend>发言权限与启用</legend>
+            <SettingsToggle
+              label="允许本群按当前请求发语音"
+              description="平时回复文字。保存启用前仍需读取成员并确认；历史、引用和旁听内容不能授权语音。"
+              checked={routeVoice}
+              onChange={(value) => {
+                setRouteVoice(value);
+                setRouteConfirmed(false);
+              }}
+            />
             <button type="button" onClick={() => observe(selected)}>
               重新读取成员以启用
             </button>
@@ -816,7 +849,7 @@ function QQGroupRoutesContent({
                     setRouteConfirmed(event.currentTarget.checked)
                   }
                 />
-                我已重新核对成员，确认该群共享限制并启用文字回复
+                我已重新核对成员，确认该群共享范围与所选回复权限
               </label>
             ) : null}
             <button

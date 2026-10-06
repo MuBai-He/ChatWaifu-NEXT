@@ -455,6 +455,20 @@ An adapter is release-ready only after automated and observable checks cover:
 Groups, media, voice, proactive delivery, and multiple human principals are pending until their own
 contracts, privacy policy, and acceptance gates exist.
 
+## Shared operator settings (ADR 0077)
+
+Web `/settings/channels` and Desktop's Channels category reuse the same
+`features/channels-settings` components, without owning playback or generation.
+Existing connection, group, proactive and media APIs retain their authority.
+GET/PUT `/v1/channels/settings` adds a non-secret Runtime-wide QQ private capability
+and group-discussion budget policy, persisted with CAS in schema 44. Defaults come
+from TOML/env until the first save; persisted policy then takes precedence.
+Ingress credentials do not authorize this endpoint. Live probes guard tool
+exposure/execution, preprocessing, voice publication/send and native favorites;
+group voice continues to depend on its independent route policy. See the
+[coverage and usage audit](../channel-settings-audit.md) and
+[ADR 0077](../adr/0077-shared-channel-settings-and-live-policy.md).
+
 ## References
 
 - [ADR 0029: External Channel Gateway](../adr/0029-external-channel-gateway.md)

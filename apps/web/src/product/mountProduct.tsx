@@ -3,7 +3,11 @@ import { createRoot } from "react-dom/client";
 
 export type ProductKind = "web" | "desktop";
 export type ProductSurface =
-  "application" | "avatar-lab" | "desktop-pet" | "desktop-settings";
+  | "application"
+  | "avatar-lab"
+  | "channels-settings"
+  | "desktop-pet"
+  | "desktop-settings";
 
 interface MountProductOptions {
   product: ProductKind;

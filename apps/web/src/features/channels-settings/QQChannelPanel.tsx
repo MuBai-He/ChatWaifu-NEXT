@@ -1,3 +1,4 @@
+import { effectiveChannelPresentation } from "./channelPresentationDefaults";
 import {
   useCallback,
   useEffect,
@@ -29,8 +30,14 @@ import {
 import { RuntimeRequestError } from "../chat/runtime-client/http";
 import { QQProactivePanel } from "./QQProactivePanel";
 import { QQGroupRoutesPanel } from "./QQGroupRoutesPanel";
-import { SettingsIcon } from "./SettingsIcon";
-import { SettingsToggle } from "./SettingsPrimitives";
+import { SettingsIcon } from "../settings/SettingsIcon";
+import { SettingsToggle } from "../settings/SettingsPrimitives";
+import {
+  ChannelConnectionDetails,
+  ChannelSettingsDisclosure,
+} from "./ChannelSettingsPrimitives";
+import { ChannelPresentationPanel } from "./ChannelPresentationPanel";
+import { StickerLibraryPanel } from "./StickerLibraryPanel";
 import "./qq-channel-panel.css";
 
 type Operation =
@@ -56,8 +63,35 @@ export function QQChannelPanel(props: Props) {
 }
 
 function QQChannelContent({ characterId, runtimeOnline }: Props) {
-  const [connection, setConnection] =
+  const [connection, setConnectionState] =
     useState<ChannelConnectionSnapshot | null>(null);
+  const [connections, setConnections] = useState<ChannelConnectionSnapshot[]>(
+    [],
+  );
+  const selectedConnectionRef = useRef<string | null>(null);
+  const setConnection = useCallback(
+    (value: ChannelConnectionSnapshot | null) => {
+      const previousId = selectedConnectionRef.current;
+      selectedConnectionRef.current =
+        value?.configuration.connection_id ?? null;
+      setConnectionState(value);
+      setConnections((items) =>
+        value
+          ? [
+              ...items.filter(
+                (item) =>
+                  item.configuration.connection_id !==
+                  value.configuration.connection_id,
+              ),
+              value,
+            ]
+          : items.filter(
+              (item) => item.configuration.connection_id !== previousId,
+            ),
+      );
+    },
+    [],
+  );
   const [pairing, setPairing] = useState<QQPairingSnapshot | null>(null);
   const [setupOpen, setSetupOpen] = useState(false);
   const [groupsOpen, setGroupsOpen] = useState(false);
@@ -172,12 +206,21 @@ function QQChannelContent({ characterId, runtimeOnline }: Props) {
         )
           return;
         originRef.current = origin;
+        const matches = items.filter(
+          (item) =>
+            item.configuration.provider_id === "qq_napcat" &&
+            item.configuration.character_id === characterId,
+        );
+        setConnections(matches);
         setConnection(
-          items.find(
+          matches.find(
             (item) =>
-              item.configuration.provider_id === "qq_napcat" &&
-              item.configuration.character_id === characterId,
-          ) ?? null,
+              item.configuration.connection_id ===
+              selectedConnectionRef.current,
+          ) ??
+            matches.find((item) => item.status === "ready") ??
+            matches[0] ??
+            null,
         );
         setConnectionVerified(true);
         setNotice(null);
@@ -192,7 +235,7 @@ function QQChannelContent({ characterId, runtimeOnline }: Props) {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [runtimeOnline, characterId, connectionReadRevision]);
+  }, [runtimeOnline, characterId, connectionReadRevision, setConnection]);
 
   const pairingId = pairing?.pairing_id;
   const pairingStatus = pairing?.status;
@@ -243,6 +286,7 @@ function QQChannelContent({ characterId, runtimeOnline }: Props) {
     pollRevision,
     refreshConnection,
     currentOrigin,
+    setConnection,
   ]);
 
   const startPairing = async () => {
@@ -385,8 +429,7 @@ function QQChannelContent({ characterId, runtimeOnline }: Props) {
                   ...(action === "stickers"
                     ? {
                         presentation_policy: {
-                          ...connection.configuration.presentation_policy,
-                          profile: "instant_message" as const,
+                          ...effectiveChannelPresentation(connection),
                           stickers_enabled: !stickersEnabled,
                         },
                       }
@@ -413,10 +456,11 @@ function QQChannelContent({ characterId, runtimeOnline }: Props) {
   };
 
   const busy = operation !== null || loading;
-  const stickersEnabled =
-    connection?.configuration.presentation_policy?.profile ===
-      "instant_message" &&
-    connection.configuration.presentation_policy.stickers_enabled === true;
+  const stickersEnabled = Boolean(
+    connection &&
+    effectiveChannelPresentation(connection).profile === "instant_message" &&
+    effectiveChannelPresentation(connection).stickers_enabled === true,
+  );
   const pending = pairing?.status === "pending";
   const endpointValid = validEndpoint(endpoint);
   const health = !runtimeOnline
@@ -456,16 +500,46 @@ function QQChannelContent({ characterId, runtimeOnline }: Props) {
         </p>
       ) : connection ? (
         <div className="qq-channel-content">
+          {connections.length > 1 ? (
+            <label className="channel-settings-select">
+              管理哪个 QQ 连接
+              <select
+                value={connection.configuration.connection_id}
+                disabled={!runtimeOnline || !connectionVerified || busy}
+                onChange={(event) => {
+                  setConnection(
+                    connections.find(
+                      (item) =>
+                        item.configuration.connection_id ===
+                        event.currentTarget.value,
+                    ) ?? null,
+                  );
+                  setGroupsOpen(false);
+                  setNotice(null);
+                }}
+              >
+                {connections.map((item) => (
+                  <option
+                    key={item.configuration.connection_id}
+                    value={item.configuration.connection_id}
+                  >
+                    {item.configuration.name} · QQ{" "}
+                    {item.configuration.account_key ?? "待确认"}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <h3>{connection.configuration.name || "角色的 QQ"}</h3>
           <p>
-            已绑定当前角色和你的私聊。普通对话优先文字；角色可按本轮语义选择调用语音工具回复。
+            已绑定当前角色和你的私聊。普通对话优先文字；允许语音回复时，角色可按本轮语义选择调用语音工具。能力开关在“权限与预算”中管理。
           </p>
           {connection.last_error ? (
             <p role="status">连接异常：{connection.last_error.message}</p>
           ) : null}
           <SettingsToggle
-            label="启用 QQ 私聊"
-            description="关闭后停止接收和回复，保留当前配对。"
+            label="启用 QQ 连接"
+            description="关闭后停止本连接的私聊和群聊，保留配对与历史；恢复后群需重新核对成员。"
             checked={connection.configuration.enabled !== false}
             disabled={!runtimeOnline || busy || !connectionVerified}
             onChange={() => void operateConnection("toggle")}
@@ -476,7 +550,13 @@ function QQChannelContent({ characterId, runtimeOnline }: Props) {
               label="允许角色发送表情图片"
               description="角色可以根据对话附上表情；关闭后仍可理解你发来的静态图片。"
               checked={stickersEnabled}
-              disabled={!runtimeOnline || busy || !connectionVerified}
+              disabled={
+                !runtimeOnline ||
+                busy ||
+                !connectionVerified ||
+                effectiveChannelPresentation(connection).profile !==
+                  "instant_message"
+              }
               onChange={() => void operateConnection("stickers")}
             />
           ) : null}
@@ -498,13 +578,40 @@ function QQChannelContent({ characterId, runtimeOnline }: Props) {
               {operation === "disconnect" ? "正在断开…" : "断开 QQ 连接"}
             </button>
           </div>
+          <ChannelPresentationPanel
+            connection={connection}
+            editable={runtimeOnline && !busy && connectionVerified}
+            onSaved={(updated) => {
+              connectionRevisionRef.current += 1;
+              setConnection(updated);
+              setConnectionVerified(true);
+            }}
+            onRefresh={refreshConnection}
+          />
+          <ChannelConnectionDetails connection={connection} />
+          {characterId === "default" ? (
+            <ChannelSettingsDisclosure
+              title="私聊表情学习与使用记录"
+              description="与微信主人共用私聊表情库；群表情库单独隔离"
+            >
+              <StickerLibraryPanel
+                characterId={characterId}
+                runtimeOnline={runtimeOnline && connectionVerified && !busy}
+              />
+            </ChannelSettingsDisclosure>
+          ) : null}
           {connection.capabilities?.supports_proactive_messages === true ? (
-            <QQProactivePanel
-              key={`${connection.configuration.connection_id}:${connection.revision}`}
-              connectionId={connection.configuration.connection_id}
-              runtimeOnline={runtimeOnline}
-              connectionVerified={connectionVerified && !busy}
-            />
+            <ChannelSettingsDisclosure
+              title="主动文字问候"
+              description="只向已配对主人发送；次数、安静时段和历史"
+            >
+              <QQProactivePanel
+                key={`${connection.configuration.connection_id}:${connection.revision}`}
+                connectionId={connection.configuration.connection_id}
+                runtimeOnline={runtimeOnline}
+                connectionVerified={connectionVerified && !busy}
+              />
+            </ChannelSettingsDisclosure>
           ) : null}
           <button
             type="button"
@@ -562,7 +669,7 @@ function QQChannelContent({ characterId, runtimeOnline }: Props) {
             <p role="status">{pairingStatusLabel(pairing.status)}</p>
           ) : null}
           <p>
-            与桌宠共享当前角色、关系和记忆。普通对话优先文字，角色可按本轮语义选择角色语音。
+            与桌宠共享当前角色、关系和记忆。普通对话优先文字；语音、联网与账号收藏在“权限与预算”中单独管理。
           </p>
           {setupOpen ? (
             <form

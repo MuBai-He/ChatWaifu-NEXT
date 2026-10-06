@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "revision": 7,
+  "policy": {
+    "qq_owner_public_web_enabled": true,
+    "qq_owner_voice_reply_enabled": false,
+    "qq_owner_voice_input_enabled": true,
+    "qq_native_favorites_enabled": true,
+    "group_discussion": {
+      "enabled": true,
+      "max_groups": 32,
+      "message_characters": 800,
+      "cache_messages": 96,
+      "cache_characters": 24000,
+      "retention_seconds": 900,
+      "member_messages": 24,
+      "member_characters": 6000,
+      "member_messages_per_window": 6,
+      "frequency_window_seconds": 30,
+      "duplicate_window_seconds": 60,
+      "input_tokens": 4096,
+      "summary_input_tokens": 3072,
+      "summary_output_tokens": 256,
+      "summary_timeout_seconds": 8.0
+    }
+  },
+  "updated_at": "2026-10-06T00:00:00Z",
+  "search_provider": "searxng",
+  "reader_provider": "crawl4ai",
+  "stt_provider": "disabled"
+}

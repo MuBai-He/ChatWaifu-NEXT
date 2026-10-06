@@ -62,6 +62,8 @@ class ChannelVoiceSkill:
         audio_root: Path,
         active_generation: Callable[[UUID], UUID | None],
         supports_audio: Callable[[str], bool],
+        *,
+        private_voice_enabled: Callable[[], bool] = lambda: True,
     ) -> None:
         self._repository = repository
         self._conversations = conversations
@@ -71,6 +73,7 @@ class ChannelVoiceSkill:
         self.audio_root = audio_root
         self._active_generation = active_generation
         self._supports_audio = supports_audio
+        self._private_voice_enabled = private_voice_enabled
         self._changed = asyncio.Condition()
         self._executing: set[UUID] = set()
         self._groups: GroupReplyVoicePort | None = None
@@ -98,7 +101,10 @@ class ChannelVoiceSkill:
                     and self._supports_audio(connection.configuration.provider_id)
                 ):
                     if turn.chat_type is ChannelChatType.DIRECT:
-                        if turn.sender_key in connection.configuration.allowed_sender_keys:
+                        if (
+                            self._private_voice_enabled()
+                            and turn.sender_key in connection.configuration.allowed_sender_keys
+                        ):
                             return turn
                     elif self._groups is not None and await self._groups.authorize_reply_voice(
                         turn
@@ -107,10 +113,16 @@ class ChannelVoiceSkill:
         return None
 
     async def authorize(self, context: GenerationSkillContext) -> bool:
-        if await self._turn(context) is None or context.generation_id is None:
+        turn = await self._turn(context)
+        if turn is None or context.generation_id is None:
             return False
         source = await self._conversations.generation_user_input_context(context.generation_id)
-        return source is not None and bool(source.user_text.strip())
+        return (
+            source is not None
+            and bool(source.user_text.strip())
+            and self._active_generation(context.session_id) == context.generation_id
+            and (turn.chat_type is not ChannelChatType.DIRECT or self._private_voice_enabled())
+        )
 
     async def __call__(self, context: GenerationSkillContext, arguments: JsonObject) -> JsonObject:
         turn = await self._turn(context)

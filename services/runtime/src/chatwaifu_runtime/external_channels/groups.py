@@ -193,6 +193,12 @@ class ChannelGroupService:
     def active_count(self) -> int:
         return len(self._admissions) + len(self._workflows) + len(self._pending)
 
+    def configure_discussion(self, policy: GroupDiscussionConfig) -> None:
+        if self._discussion.policy != policy:
+            # New intake gets the new bounds. Already admitted generations keep
+            # their immutable evidence/budget; raw caches are never persisted.
+            self._discussion = GroupDiscussionCache(policy)
+
     def set_audience_reader(self, reader: AudienceReader) -> None:
         self._audience_reader = reader
 

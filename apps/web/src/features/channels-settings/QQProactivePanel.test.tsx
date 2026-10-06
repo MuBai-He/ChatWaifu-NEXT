@@ -7,6 +7,8 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("./StickerLibraryPanel", () => ({ StickerLibraryPanel: () => null }));
 import {
   parseChannelOutboundIntentSnapshot,
   parseChannelProactivePolicySnapshot,

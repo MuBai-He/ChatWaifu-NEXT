@@ -10,7 +10,7 @@ import {
 } from "../chat/runtimeClient";
 import type { StickerGroupScope } from "../chat/runtime-client/stickerLibraryClient";
 import { StickerUsagePanel } from "./StickerUsagePanel";
-import { SettingsToggle } from "./SettingsPrimitives";
+import { SettingsToggle } from "../settings/SettingsPrimitives";
 
 const EXPRESSION_LABELS: Record<LearnedSticker["expression"], string> = {
   neutral: "平静",
