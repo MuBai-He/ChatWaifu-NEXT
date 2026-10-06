@@ -1,0 +1,66 @@
+{
+  "frontend_commit": "2dca6cc52a46cef30cc1dd5b1dbdbd30e8b7dbbb",
+  "runtime_source_unchanged": true,
+  "web": "/home/mubai/chatwaifu-server/releases/channel-settings-ui-20261006-2dca6cc/web",
+  "previous_web": "/home/mubai/chatwaifu-server/releases/channel-settings-20261006-4898cb1/web",
+  "services_unchanged": true,
+  "services": {
+    "chatwaifu-runtime.service": "MainPID=1488295\nActiveState=active",
+    "chatwaifu-web.service": "MainPID=4043357\nActiveState=active",
+    "chatwaifu-https.service": "MainPID=1489128\nActiveState=active"
+  },
+  "files_verified": 7,
+  "vendor_assets_published": false,
+  "served_files": [
+    {
+      "path": "assets/core-SwWLTXZB.js",
+      "sha256": "dc85f7a86c39d33c35fbe88fd339813a2c05c9ccf25a1bdd8691d7866355dd74",
+      "bytes": 2706,
+      "status": 200
+    },
+    {
+      "path": "assets/event-CWEPUEFL.js",
+      "sha256": "73796d4f2fcecd8f1a6b6132380077c05bf08ab15963d36e7343959d07dec5be",
+      "bytes": 1371,
+      "status": 200
+    },
+    {
+      "path": "assets/index-DsExNBt5.css",
+      "sha256": "1c8327bec412766acdc02ab2575f4182d0e7d57020094bf39f2578dcc4a0bbe4",
+      "bytes": 92351,
+      "status": 200
+    },
+    {
+      "path": "assets/index-E9FxrSFc.js",
+      "sha256": "0afdd725d0075cca9c59f99a76227c38682f1427c559d863334def5ce8f1baab",
+      "bytes": 701729,
+      "status": 200
+    },
+    {
+      "path": "brand/chatwaifu-mark-small.png",
+      "sha256": "6c0b5f040249c94662b0cc7da0423605f78d79995f488c829986c985afbba893",
+      "bytes": 12530,
+      "status": 200
+    },
+    {
+      "path": "chatwaifu-product.json",
+      "sha256": "94874dedbfaa313dc6d423dfc810137b49a12660efa8a51ccec18b8d23187661",
+      "bytes": 5476,
+      "status": 200
+    },
+    {
+      "path": "index.html",
+      "sha256": "a89bc9acd6bfcb0cf7e6be6c4b6ab97a7e0026412371ecf45d14e3593c553cdf",
+      "bytes": 654,
+      "status": 200
+    }
+  ],
+  "channel_settings_entry_matches": true,
+  "policy_revision": 0,
+  "policy_unchanged": true,
+  "qq_ready": true,
+  "current_weixin_ready": true,
+  "native_remote_connection_mode_verified": true,
+  "native_connection_file_mode": "0o600",
+  "handset_messages_sent": false
+}

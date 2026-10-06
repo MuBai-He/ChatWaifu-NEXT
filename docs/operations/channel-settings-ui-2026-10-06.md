@@ -46,5 +46,16 @@ menulist 外观并使用一致的箭头，仍保留原生选择、标签与键�
 
 ## 发布记录
 
-发布前端静态产物并保留服务器现有 Runtime 源码和进程；具体提交、路径、哈希
-及服务保持情况在发布完成后记录。此次未进行 QQ/微信手机收件或真实语音验收。
+前端提交 `2dca6cc` 已发布到
+`/home/mubai/chatwaifu-server/releases/channel-settings-ui-20261006-2dca6cc/web`。
+另存 12 个本次已提交的前端源码路径，明确作为既有 `4898cb1` 发布的 UI 覆盖文件，
+没有宣称该目录是完整 Runtime 源码。Web 链接原子切换，7 个实际 HTTP 返回文件与
+本地产物哈希相同，`/settings/channels` 正确返回新入口。
+
+Runtime 源码仍为原 `channel-settings-20261006-4898cb1/source`；Runtime、Web Nginx
+和 HTTPS 进程均保持原 PID，没有重启服务或容器。渠道策略 revision 0 及内容哈希
+保持；QQ 和当前微信仍为 ready。Mac 原生客户端继续使用现有远程连接，配置文件
+权限 0600。[部署记录](../research/qq-agent-plus-evidence/channel-settings-ui-polish-2026-10-06/deployment.json)
+与原 Web 链接保存在独立备份目录，样式回退只需恢复原 Web 链接。
+
+此次未进行 QQ/微信手机收件或真实语音验收。
