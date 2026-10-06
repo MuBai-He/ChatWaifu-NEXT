@@ -22,7 +22,10 @@
       "keyboard focus ring",
       "switch dimensions",
       "390px no horizontal overflow",
-      "real isolated API persistence and reload"
+      "real isolated API persistence and reload",
+      "horizontal number fields retain 84px width",
+      "voice selector retains its half-row width",
+      "QQ endpoint fills its vertical form"
     ]
   },
   "checks": [

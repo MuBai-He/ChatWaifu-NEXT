@@ -25,7 +25,7 @@
   ) {
   box-sizing: border-box;
   min-width: 0;
-  width: 100%;
+  /* Each form owns its width: horizontal preference rows use compact controls. */
   min-height: var(--settings-control-height);
   padding: 9px 12px;
   border: 1px solid var(--settings-control-border);

@@ -242,6 +242,7 @@ test("settings controls share sizes, keyboard focus and narrow-screen layout", a
   await expect(endpoint).toHaveCSS("font-size", "13px");
   await expect(endpoint).toHaveCSS("border-radius", "10px");
   expect((await endpoint.boundingBox())!.height).toBeGreaterThanOrEqual(40);
+  expect((await endpoint.boundingBox())!.width).toBeGreaterThan(300);
   await page.screenshot({
     path: info.outputPath("qq-controls.png"),
     fullPage: true,
@@ -264,4 +265,22 @@ test("settings controls share sizes, keyboard focus and narrow-screen layout", a
   });
   // Opening settings creates an empty session; it must never submit a turn or policy.
   expect(writes).toEqual(["/v1/sessions"]);
+  if (desktop) {
+    await page.setViewportSize({ width: 960, height: 760 });
+    const sections = page.getByRole("navigation", { name: "设置分类" });
+    await sections.getByRole("button", { name: /陪伴/ }).click();
+    const compactNumber = page
+      .locator(".companion-settings-number-row input")
+      .first();
+    await expect(compactNumber).toHaveCSS("width", "84px");
+    await expect(compactNumber).toHaveCSS("border-radius", "10px");
+    await sections.getByRole("button", { name: /声音/ }).click();
+    const compactSelect = page.locator(".desktop-settings-select-row select");
+    await expect(compactSelect).toBeVisible();
+    expect((await compactSelect.boundingBox())!.width).toBeLessThanOrEqual(310);
+    await expect(compactSelect).toHaveCSS("appearance", "none");
+    expect((await compactSelect.boundingBox())!.height).toBeGreaterThanOrEqual(
+      40,
+    );
+  }
 });
