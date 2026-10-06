@@ -61,7 +61,22 @@ def test_only_delivered_recency_breaks_stable_candidate_ties() -> None:
     # Newest-created order does not imply newest delivery; aggregate MAX(delivered_at).
     records = [delivered(a, -10), delivered(b, -5), delivered(a, 5)]
     assert least_recently_delivered([a, b], StickerUsageHistory(items=records)) == b
+    # Different delivery timestamps break ties by recency regardless of candidate order.
+    assert (
+        least_recently_delivered(
+            [a, b], StickerUsageHistory(items=[delivered(a, -10), delivered(b)])
+        )
+        == a
+    )
+    assert (
+        least_recently_delivered(
+            [b, a], StickerUsageHistory(items=[delivered(a, -10), delivered(b)])
+        )
+        == a
+    )
+    # Equal delivery timestamps preserve candidate list order.
     assert least_recently_delivered([a, b], StickerUsageHistory(items=[first, delivered(b)])) == a
+    assert least_recently_delivered([b, a], StickerUsageHistory(items=[first, delivered(b)])) == b
     # Duplicate callbacks and retry counts cannot multiply usage.
     repeated = first.model_copy(update={"attempt": 7})
     assert least_recently_delivered([a, b], StickerUsageHistory(items=[first, repeated])) == b

@@ -1,0 +1,23 @@
+{
+  "character_id": "default-character",
+  "character_package_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "chat_route": {
+    "context_window": 128000,
+    "endpoint_digest": "772062cee0b6010158740accacfb96b3d174ca06d157a3db0d6d93b4820cee6f",
+    "model": "gpt-4o",
+    "provider": "openai_compatible",
+    "role": "chat"
+  },
+  "identity_hash": "6864fe1a0c97658ef27f499bfe6b43f9b9e0241ada9ff23a0b92f001b070d9f4",
+  "memory_summary_route": {
+    "context_window": 8192,
+    "endpoint_digest": null,
+    "model": "deterministic-summary-v1",
+    "provider": "demo",
+    "role": "memory_summary"
+  },
+  "presentation_profile": "instant_message",
+  "prompt_template_version": "v1",
+  "schema_version": "1.0",
+  "tools_digest": "11111111111111111111111111111111"
+}

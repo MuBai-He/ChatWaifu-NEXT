@@ -19,6 +19,7 @@ from chatwaifu_runtime.providers.contracts import (
 )
 from chatwaifu_runtime.sticker_library.classifier import StickerClassification
 from PIL import Image
+from provider_test_support import use_recording_provider
 from test_inbound_image_lifecycle import VisionRecorder, connect, message
 
 
@@ -37,8 +38,10 @@ async def test_learning_source_and_revision_fences(
     runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch, scenario: str
 ) -> None:
     container = RuntimeContainer(runtime_settings)
-    monkeypatch.setattr(
-        container.agent, "_llm", BlockedVision() if scenario == "cancel" else VisionRecorder()
+    use_recording_provider(
+        monkeypatch,
+        container.model_configurations,
+        BlockedVision() if scenario == "cancel" else VisionRecorder(),
     )
     entered = asyncio.Event()
     release = asyncio.Event()
@@ -122,5 +125,118 @@ async def test_learning_source_and_revision_fences(
                 )
                 is None
             )
+    finally:
+        await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_learning_revision_fence_on_real_sticker_delete(
+    runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    container = RuntimeContainer(runtime_settings)
+    use_recording_provider(monkeypatch, container.model_configurations, VisionRecorder())
+
+    turn2_entered = asyncio.Event()
+    turn2_release = asyncio.Event()
+    classify_calls = 0
+
+    async def classify(
+        image: LlmInputImage, *, generation_id: UUID
+    ) -> StickerClassification | None:
+        nonlocal classify_calls
+        classify_calls += 1
+        if classify_calls == 1:
+            return StickerClassification(
+                suitable=True,
+                confidence=0.98,
+                label="第一只小猫",
+                description="第一只小猫表情",
+                expression="happy",
+            )
+        turn2_entered.set()
+        await turn2_release.wait()
+        return StickerClassification(
+            suitable=True,
+            confidence=0.99,
+            label="第二只小猫",
+            description="第二只小猫表情",
+            expression="happy",
+        )
+
+    monkeypatch.setattr(container.sticker_library._classifier, "classify", classify)
+
+    buffer1 = io.BytesIO()
+    Image.new("RGB", (16, 16), "white").save(buffer1, format="PNG")
+    img1_bytes = buffer1.getvalue()
+
+    buffer2 = io.BytesIO()
+    Image.new("RGB", (16, 16), "black").save(buffer2, format="PNG")
+    img2_bytes = buffer2.getvalue()
+
+    async def load1() -> LlmInputImage:
+        return LlmInputImage(data=img1_bytes, mime_type="image/png")
+
+    async def load2() -> LlmInputImage:
+        return LlmInputImage(data=img2_bytes, mime_type="image/png")
+
+    await container.start()
+    try:
+        connection_id, token = await connect(container)
+        await container.sticker_repository.update_settings(
+            "local", "default", learning_enabled=True, expected_revision=0
+        )
+
+        # 1. Ingest turn 1 to learn and physically persist a real, source-grounded sticker.
+        receipt1 = await container.external_channels.ingest(
+            message(connection_id, "real-image-turn-1"),
+            access_token=token,
+            image_input=ChannelInboundImageInput(source_fingerprint="1" * 64, load=load1),
+        )
+        finished1 = await container.external_channels.wait_for_turn(
+            connection_id, receipt1.channel_turn_id, wait_seconds=5
+        )
+        assert finished1.status is ChannelTurnStatus.COMPLETED
+
+        tasks1 = [task for _, task in container.sticker_library._tasks.values()]
+        if tasks1:
+            await asyncio.wait_for(asyncio.gather(*tasks1), 5)
+
+        snap1 = await container.sticker_repository.snapshot("local", "default")
+        assert len(snap1.items) == 1
+        saved_sticker = snap1.items[0]
+        assert saved_sticker.source_connection_id == connection_id
+        saved_id = saved_sticker.sticker_id
+        saved_img = await container.sticker_repository.get_image("local", "default", saved_id)
+        assert saved_img is not None
+        assert len(saved_img) > 0
+
+        # 2. Ingest turn 2 to start a second in-flight classifier.
+        receipt2 = await container.external_channels.ingest(
+            message(connection_id, "real-image-turn-2"),
+            access_token=token,
+            image_input=ChannelInboundImageInput(source_fingerprint="2" * 64, load=load2),
+        )
+        await asyncio.wait_for(turn2_entered.wait(), 5)
+        tasks2 = [task for _, task in container.sticker_library._tasks.values()]
+        assert len(tasks2) == 1
+
+        finished2 = await container.external_channels.wait_for_turn(
+            connection_id, receipt2.channel_turn_id, wait_seconds=5
+        )
+        assert finished2.status is ChannelTurnStatus.COMPLETED
+
+        # 3. Delete existing sticker while turn 2 classification is in-flight.
+        delete_result = await container.sticker_repository.delete("local", "default", saved_id)
+        assert delete_result.deleted is True
+        assert await container.sticker_repository.get_image("local", "default", saved_id) is None
+
+        # 4. Release in-flight classifier: revision fence rejects save.
+        turn2_release.set()
+        await asyncio.wait_for(asyncio.gather(*tasks2), 5)
+
+        # 5. Final snapshot has neither old nor new asset.
+        final_snapshot = await container.sticker_repository.snapshot("local", "default")
+        assert len(final_snapshot.items) == 0
+        assert await container.sticker_repository.get_image("local", "default", saved_id) is None
     finally:
         await container.stop()

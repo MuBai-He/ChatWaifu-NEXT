@@ -19,6 +19,7 @@ from chatwaifu_runtime.providers.contracts import (
     LlmToolDefinition,
     LlmToolExchange,
     LlmToolResult,
+    LlmUsage,
 )
 from chatwaifu_runtime.providers.demo_llm import DemoLlmProvider
 from chatwaifu_runtime.providers.openai_compatible import (
@@ -832,3 +833,239 @@ async def test_openai_stream_retries_transient_connection_error_then_succeeds(
     retry_records = [r for r in caplog.records if "OpenAI-compatible LLM retry" in r.message]
     assert len(retry_records) == 1
     assert "reason=connection_error" in retry_records[0].message
+
+
+@pytest.mark.asyncio
+async def test_openai_default_provider_payload_unchanged() -> None:
+    observed_default: list[dict[str, object]] = []
+    observed_with_usage: list[dict[str, object]] = []
+
+    async def handler_default(request: httpx2.Request) -> httpx2.Response:
+        observed_default.append(json.loads(request.content))
+        return _sse_response({"choices": [{"delta": {"content": "ok"}, "finish_reason": "stop"}]})
+
+    async def handler_with_usage(request: httpx2.Request) -> httpx2.Response:
+        observed_with_usage.append(json.loads(request.content))
+        return _sse_response({"choices": [{"delta": {"content": "ok"}, "finish_reason": "stop"}]})
+
+    # 1. Default provider: request_usage is False
+    provider_default = OpenAiCompatibleLlmProvider(
+        base_url="https://example.test/v1",
+        model="test-model",
+        api_key=None,
+        timeout_seconds=5,
+        transport=httpx2.MockTransport(handler_default),
+    )
+    req = LlmRequest(generation_id=uuid4(), user_text="hi", system_prompt="test")
+    await _events(provider_default, req)
+
+    assert len(observed_default) == 1
+    assert "stream_options" not in observed_default[0]
+    assert observed_default[0]["stream"] is True
+
+    # 2. Opt-in provider: request_usage is True
+    provider_usage = OpenAiCompatibleLlmProvider(
+        base_url="https://example.test/v1",
+        model="test-model",
+        api_key=None,
+        timeout_seconds=5,
+        transport=httpx2.MockTransport(handler_with_usage),
+        request_usage=True,
+    )
+    await _events(provider_usage, req)
+
+    assert len(observed_with_usage) == 1
+    assert observed_with_usage[0]["stream_options"] == {"include_usage": True}
+
+
+@pytest.mark.asyncio
+async def test_openai_stream_usage_after_finish_event() -> None:
+    async def handler(_request: httpx2.Request) -> httpx2.Response:
+        return _sse_response(
+            {"choices": [{"delta": {"content": "你好"}, "finish_reason": None}]},
+            {"choices": [{"delta": {}, "finish_reason": "stop"}]},
+            {
+                "choices": [],
+                "usage": {
+                    "prompt_tokens": 5,
+                    "completion_tokens": 1,
+                    "total_tokens": 111,
+                    "reasoning_tokens": 105,
+                },
+            },
+        )
+
+    provider = OpenAiCompatibleLlmProvider(
+        base_url="https://example.test/v1",
+        model="gemini-3.8-flash-high",
+        api_key=None,
+        timeout_seconds=5,
+        transport=httpx2.MockTransport(handler),
+        request_usage=True,
+    )
+    request = LlmRequest(generation_id=uuid4(), user_text="测试", system_prompt="test")
+
+    events = await _events(provider, request)
+
+    assert len(events) == 2
+    assert events[0] == LlmTextDelta("你好")
+    expected_usage = LlmUsage(
+        prompt_tokens=5,
+        completion_tokens=1,
+        total_tokens=111,
+        reasoning_tokens=105,
+    )
+    assert events[1] == LlmResponseCompleted("stop", usage=expected_usage)
+
+
+@pytest.mark.asyncio
+async def test_openai_stream_usage_in_completion_tokens_details() -> None:
+    async def handler(_request: httpx2.Request) -> httpx2.Response:
+        return _sse_response(
+            {"choices": [{"delta": {"content": "解答"}, "finish_reason": "stop"}]},
+            {
+                "choices": [],
+                "usage": {
+                    "prompt_tokens": 10,
+                    "completion_tokens": 50,
+                    "total_tokens": 60,
+                    "completion_tokens_details": {"reasoning_tokens": 30},
+                },
+            },
+        )
+
+    provider = OpenAiCompatibleLlmProvider(
+        base_url="https://example.test/v1",
+        model="claude-opus-4-6-thinking",
+        api_key=None,
+        timeout_seconds=5,
+        transport=httpx2.MockTransport(handler),
+        request_usage=True,
+    )
+    request = LlmRequest(generation_id=uuid4(), user_text="测试", system_prompt="test")
+
+    events = await _events(provider, request)
+
+    assert len(events) == 2
+    assert events[0] == LlmTextDelta("解答")
+    expected_usage = LlmUsage(
+        prompt_tokens=10,
+        completion_tokens=50,
+        total_tokens=60,
+        reasoning_tokens=30,
+    )
+    assert events[1] == LlmResponseCompleted("stop", usage=expected_usage)
+
+
+@pytest.mark.asyncio
+async def test_openai_stream_no_usage_fallback() -> None:
+    async def handler(_request: httpx2.Request) -> httpx2.Response:
+        return _sse_response(
+            {"choices": [{"delta": {"content": "普通回复"}, "finish_reason": "stop"}]}
+        )
+
+    provider = OpenAiCompatibleLlmProvider(
+        base_url="https://example.test/v1",
+        model="unsupported-usage-model",
+        api_key=None,
+        timeout_seconds=5,
+        transport=httpx2.MockTransport(handler),
+        request_usage=True,
+    )
+    request = LlmRequest(generation_id=uuid4(), user_text="测试", system_prompt="test")
+
+    events = await _events(provider, request)
+
+    assert len(events) == 2
+    assert events[0] == LlmTextDelta("普通回复")
+    assert events[1] == LlmResponseCompleted("stop", usage=None)
+
+
+@pytest.mark.asyncio
+async def test_openai_default_behavior_ignores_late_usage_and_returns_at_finish_reason() -> None:
+    events_read = 0
+
+    async def handler(_request: httpx2.Request) -> httpx2.Response:
+        nonlocal events_read
+        return _sse_response(
+            {"choices": [{"delta": {"content": "默认行为"}, "finish_reason": "stop"}]},
+            {
+                "choices": [],
+                "usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30},
+            },
+        )
+
+    # request_usage is default (False)
+    provider = OpenAiCompatibleLlmProvider(
+        base_url="https://example.test/v1",
+        model="test-model",
+        api_key=None,
+        timeout_seconds=5,
+        transport=httpx2.MockTransport(handler),
+    )
+    request = LlmRequest(generation_id=uuid4(), user_text="测试", system_prompt="test")
+
+    events = await _events(provider, request)
+
+    assert len(events) == 2
+    assert events[0] == LlmTextDelta("默认行为")
+    # In default mode, it returns immediately at finish_reason and usage is None
+    assert events[1] == LlmResponseCompleted("stop", usage=None)
+
+
+@pytest.mark.asyncio
+async def test_openai_tool_calls_with_request_usage() -> None:
+    async def handler(_request: httpx2.Request) -> httpx2.Response:
+        return _sse_response(
+            {
+                "choices": [
+                    {
+                        "delta": {
+                            "tool_calls": [
+                                {
+                                    "index": 0,
+                                    "id": "call_1",
+                                    "function": {"name": "runtime_status", "arguments": "{}"},
+                                }
+                            ]
+                        },
+                        "finish_reason": "tool_calls",
+                    }
+                ]
+            },
+            {
+                "choices": [],
+                "usage": {
+                    "prompt_tokens": 15,
+                    "completion_tokens": 8,
+                    "total_tokens": 23,
+                },
+            },
+        )
+
+    provider = OpenAiCompatibleLlmProvider(
+        base_url="https://example.test/v1",
+        model="test-model",
+        api_key=None,
+        timeout_seconds=5,
+        transport=httpx2.MockTransport(handler),
+        request_usage=True,
+    )
+    request = LlmRequest(
+        generation_id=uuid4(),
+        user_text="查状态",
+        system_prompt="test",
+        tools=(
+            LlmToolDefinition(
+                name="runtime_status", description="status", input_schema={"type": "object"}
+            ),
+        ),
+    )
+
+    events = await _events(provider, request)
+
+    assert len(events) == 2
+    assert isinstance(events[0], LlmToolCallRequested)
+    assert events[0].call.name == "runtime_status"
+    expected_usage = LlmUsage(prompt_tokens=15, completion_tokens=8, total_tokens=23)
+    assert events[1] == LlmResponseCompleted("tool_calls", usage=expected_usage)

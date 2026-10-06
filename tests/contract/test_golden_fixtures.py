@@ -7,6 +7,7 @@ from chatwaifu_protocol.channels import (
     ChannelPresentationPolicy,
     ChannelPresentationProfile,
 )
+from chatwaifu_protocol.character import PromptContextIdentity
 from chatwaifu_protocol.commands import TextSendCommand
 from chatwaifu_protocol.events import GENERIC_CORE_EVENT_TYPES, SessionCreatedEvent
 from chatwaifu_protocol.media import AudioFrameHeader
@@ -94,3 +95,14 @@ def test_channel_presentation_policy_defaults_and_parity() -> None:
     assert policy_im.profile == ChannelPresentationProfile.INSTANT_MESSAGE
     assert policy_im.profile == "instant_message"
     assert policy_im.max_parts == 2
+
+
+def test_prompt_context_identity_fixture_round_trips() -> None:
+    raw = load_fixture("prompt-context-identity.json")
+    identity = PromptContextIdentity.model_validate(raw)
+    assert identity.identity_hash
+    assert identity.schema_version == "1.0"
+    assert identity.character_id == "default-character"
+    assert identity.chat_route.model == "gpt-4o"
+    assert identity.chat_route.context_window == 128000
+    assert PromptContextIdentity.model_validate_json(identity.model_dump_json()) == identity

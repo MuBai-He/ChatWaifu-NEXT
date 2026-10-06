@@ -6,7 +6,7 @@ import asyncio
 import hashlib
 import json
 import re
-from collections.abc import AsyncIterator, Callable, Mapping
+from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Literal, Protocol, cast
 from uuid import UUID
@@ -102,6 +102,26 @@ class _ToolRound:
     finish_reason: str = "other"
 
 
+def compute_tools_digest(tools: Sequence[ProjectedAgentTool | LlmToolDefinition]) -> str:
+    if not tools:
+        return hashlib.sha256(b"no_tools").hexdigest()[:32]
+    sorted_tools = sorted(tools, key=lambda t: t.name)
+    hasher = hashlib.sha256()
+    for tool in sorted_tools:
+        chunk = json.dumps(
+            {
+                "name": tool.name,
+                "description": tool.description,
+                "input_schema": tool.input_schema,
+            },
+            sort_keys=True,
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+        hasher.update(chunk.encode("utf-8"))
+    return hasher.hexdigest()[:32]
+
+
 class AgentTurnOrchestrator:
     """Run a bounded permissioned tool loop before the final spoken reply.
 
@@ -123,6 +143,30 @@ class AgentTurnOrchestrator:
         self._skills = skills
         self._router = router
 
+    @property
+    def router(self) -> AgentSkillRouter:
+        return self._router
+
+    def select_tools(
+        self,
+        user_text: str,
+        *,
+        routing_previous_user_text: str | None = None,
+        allow_tools: bool = True,
+        supports_tool_calling: bool = True,
+    ) -> tuple[ProjectedAgentTool, ...]:
+        if not (allow_tools and supports_tool_calling):
+            return ()
+        projections = self._router.select(user_text)
+        if not projections and routing_previous_user_text and _READ_FOLLOWUP.search(user_text):
+            # Restore only the previous local user's subject for a short
+            # correction. Never reuse an earlier write capability here.
+            contextual = self._router.select(
+                f"{routing_previous_user_text[:240]}\n{user_text[:240]}"
+            )
+            projections = tuple(tool for tool in contextual if tool.side_effect is SideEffect.READ)
+        return projections
+
     async def stream(
         self,
         request: LlmRequest,
@@ -131,24 +175,26 @@ class AgentTurnOrchestrator:
         turn_id: UUID,
         ensure_current: Callable[[], None],
         allow_tools: bool = True,
+        llm: LlmProvider | None = None,
+        tools: tuple[ProjectedAgentTool, ...] | None = None,
     ) -> AsyncIterator[str]:
-        projections = ()
-        if allow_tools and self._llm.supports_tool_calling:
-            projections = self._router.select(request.user_text)
-            previous = request.routing_previous_user_text
-            if not projections and previous and _READ_FOLLOWUP.search(request.user_text):
-                # Restore only the previous local user's subject for a short
-                # correction. Never reuse an earlier write capability here.
-                contextual = self._router.select(f"{previous[:240]}\n{request.user_text[:240]}")
-                projections = tuple(
-                    tool for tool in contextual if tool.side_effect is SideEffect.READ
-                )
+        effective_llm = llm if llm is not None else self._llm
+        projections: tuple[ProjectedAgentTool, ...] = ()
+        if tools is not None:
+            projections = tools if allow_tools and effective_llm.supports_tool_calling else ()
+        elif allow_tools and effective_llm.supports_tool_calling:
+            projections = self.select_tools(
+                request.user_text,
+                routing_previous_user_text=request.routing_previous_user_text,
+                allow_tools=allow_tools,
+                supports_tool_calling=effective_llm.supports_tool_calling,
+            )
         if not projections:
-            async for text in self._stream_text_only(request, ensure_current):
+            async for text in self._stream_text_only(request, ensure_current, llm=effective_llm):
                 yield text
             return
 
-        tools = tuple(
+        tool_definitions = tuple(
             LlmToolDefinition(
                 name=projection.name,
                 description=projection.description,
@@ -160,7 +206,7 @@ class AgentTurnOrchestrator:
         tool_request = replace(
             request,
             system_prompt=request.system_prompt + _TOOL_POLICY,
-            tools=tools,
+            tools=tool_definitions,
             tool_exchanges=(),
         )
         exchanges: tuple[LlmToolExchange, ...] = ()
@@ -168,7 +214,9 @@ class AgentTurnOrchestrator:
         seen: set[str] = set()
         while True:
             try:
-                decision = await self._collect_tool_round(tool_request, ensure_current)
+                decision = await self._collect_tool_round(
+                    tool_request, ensure_current, llm=effective_llm
+                )
             except LlmToolCallingUnavailableError:
                 ensure_current()
                 yield (
@@ -221,7 +269,9 @@ class AgentTurnOrchestrator:
                 for call in calls
             ):
                 final_request = replace(tool_request, tools=(), tool_exchanges=exchanges)
-                async for text in self._stream_text_only(final_request, ensure_current):
+                async for text in self._stream_text_only(
+                    final_request, ensure_current, llm=effective_llm
+                ):
                     yield text
                 return
             if call_count >= MAX_AGENT_TOOL_CALLS:
@@ -236,7 +286,9 @@ class AgentTurnOrchestrator:
                     tools=(),
                     tool_exchanges=exchanges,
                 )
-                async for text in self._stream_text_only(final_request, ensure_current):
+                async for text in self._stream_text_only(
+                    final_request, ensure_current, llm=effective_llm
+                ):
                     yield text
                 return
             tool_request = replace(
@@ -246,9 +298,14 @@ class AgentTurnOrchestrator:
             )
 
     async def _stream_text_only(
-        self, request: LlmRequest, ensure_current: Callable[[], None]
+        self,
+        request: LlmRequest,
+        ensure_current: Callable[[], None],
+        *,
+        llm: LlmProvider | None = None,
     ) -> AsyncIterator[str]:
-        async for event in self._llm.stream(replace(request, tools=())):
+        provider = llm if llm is not None else self._llm
+        async for event in provider.stream(replace(request, tools=())):
             ensure_current()
             if isinstance(event, LlmTextDelta):
                 yield event.text
@@ -259,10 +316,15 @@ class AgentTurnOrchestrator:
                     raise RuntimeError("LLM ended a text-only response with tool calls")
 
     async def _collect_tool_round(
-        self, request: LlmRequest, ensure_current: Callable[[], None]
+        self,
+        request: LlmRequest,
+        ensure_current: Callable[[], None],
+        *,
+        llm: LlmProvider | None = None,
     ) -> _ToolRound:
+        provider = llm if llm is not None else self._llm
         result = _ToolRound(text_chunks=[], calls=[])
-        async for event in self._llm.stream(request):
+        async for event in provider.stream(request):
             ensure_current()
             if isinstance(event, LlmTextDelta):
                 result.text_chunks.append(event.text)

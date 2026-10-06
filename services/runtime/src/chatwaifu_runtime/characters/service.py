@@ -1,11 +1,39 @@
 """Load validated, renderer-independent character manifests."""
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, cast
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
+
+PACKAGE_FILES: tuple[str, ...] = (
+    "avatar.yaml",
+    "character.yaml",
+    "lexicon.yaml",
+    "persona.md",
+    "relationship-policy.yaml",
+    "voice.yaml",
+)
+
+
+def compute_package_hash(directory: Path) -> str:
+    hasher = hashlib.sha256()
+    yaml_path = directory / "character.yaml"
+    if yaml_path.exists():
+        for filename in PACKAGE_FILES:
+            file_path = directory / filename
+            if file_path.exists():
+                data = file_path.read_bytes()
+                hasher.update(f"{filename}:{len(data)}:".encode() + data)
+        return hasher.hexdigest()
+    json_path = directory / "character.json"
+    if json_path.exists():
+        data = json_path.read_bytes()
+        hasher.update(f"character.json:{len(data)}:".encode() + data)
+        return hasher.hexdigest()
+    return "0" * 64
 
 
 class CharacterVoiceProfile(BaseModel):
@@ -37,6 +65,7 @@ class CharacterProfile(BaseModel):
     relationship_policy: dict[str, Any] = Field(default_factory=dict)
     avatar_capabilities: dict[str, list[str]] = Field(default_factory=dict)
     lexicon: dict[str, Any] = Field(default_factory=dict)
+    package_hash: str = Field(default="", max_length=64)
 
 
 class CharacterService:
@@ -53,9 +82,12 @@ class CharacterService:
             if yaml_path.exists():
                 profile = self._load_package(directory)
             elif json_path.exists():
-                profile = CharacterProfile.model_validate(
-                    json.loads(json_path.read_text(encoding="utf-8"))
-                )
+                data = json.loads(json_path.read_text(encoding="utf-8"))
+                if isinstance(data, dict):
+                    cast(dict[str, Any], data).setdefault(
+                        "package_hash", compute_package_hash(directory)
+                    )
+                profile = CharacterProfile.model_validate(data)
             else:
                 continue
             expected_id = directory.name
@@ -76,6 +108,7 @@ class CharacterService:
         relationship = _read_yaml(directory / "relationship-policy.yaml")
         lexicon = _read_yaml(directory / "lexicon.yaml")
         persona = (directory / "persona.md").read_text(encoding="utf-8").strip()
+        package_hash = compute_package_hash(directory)
         return CharacterProfile.model_validate(
             {
                 **character,
@@ -84,6 +117,7 @@ class CharacterService:
                 "relationship_policy": relationship,
                 "avatar_capabilities": avatar,
                 "lexicon": lexicon,
+                "package_hash": package_hash,
             }
         )
 

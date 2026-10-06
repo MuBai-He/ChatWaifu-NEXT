@@ -98,6 +98,43 @@ def test_proactive_policy_respects_quiet_hours_busy_state_and_budget() -> None:
     )
 
 
+def test_cross_midnight_quiet_hours_release_without_sticky_silence() -> None:
+    china = timezone(timedelta(hours=8))
+    settings = CompanionSettings(
+        proactive_enabled=True,
+        quiet_hours_enabled=True,
+        quiet_start="23:00",
+        quiet_end="08:00",
+        proactive_idle_minutes=10,
+    )
+    before = datetime(2026, 9, 28, 22, 59, tzinfo=china)
+    start = datetime(2026, 9, 28, 23, 0, tzinfo=china)
+    overnight = datetime(2026, 9, 29, 7, 59, tzinfo=china)
+    end = datetime(2026, 9, 29, 8, 0, tzinfo=china)
+    assert [
+        is_quiet_time(moment, "23:00", "08:00") for moment in (before, start, overnight, end)
+    ] == [
+        False,
+        True,
+        True,
+        False,
+    ]
+
+    def decision(now: datetime, busy: bool):
+        return decide_proactive(
+            settings,
+            now=now,
+            idle_seconds=900,
+            generation_active=busy,
+            proactive_today=0,
+            last_proactive_at=None,
+        )
+
+    assert decision(overnight, False).reason == "quiet_hours"
+    assert decision(end, True).reason == "conversation_busy"
+    assert decision(end, False).reason == "idle_check_in"
+
+
 def test_manual_proactive_turn_is_audited_without_fabricating_user_text(
     client: TestClient,
 ) -> None:

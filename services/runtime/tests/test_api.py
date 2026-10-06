@@ -1131,7 +1131,13 @@ def test_reset_event_is_live_and_keeps_the_session_cursor_monotonic(
         ).json(),
     )
     generation_id = str(accepted["generation_id"])
-    assert completion_published.wait(timeout=2)
+    # This test checks event ordering, not generation latency. Use the same
+    # deadlock guard as runtime_wait while Windows persists the fake turn.
+    try:
+        assert completion_published.wait(timeout=15)
+    except BaseException:
+        portal.call(completion_release.set)
+        raise
 
     async def cancel_at_completion_barrier() -> bool:
         cancel_started = asyncio.Event()
