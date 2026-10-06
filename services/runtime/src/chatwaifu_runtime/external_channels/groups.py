@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import logging
 import secrets
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -32,6 +33,7 @@ from chatwaifu_protocol.channel_groups import (
 from chatwaifu_protocol.channels import (
     ChannelConnectionStatus,
     ChannelDeliveryPartStatus,
+    ChannelGroupDeliveryTarget,
     ChannelPresentationPolicy,
     ChannelTurnReceipt,
     ChannelTurnSnapshot,
@@ -61,6 +63,7 @@ from chatwaifu_runtime.external_channels.group_ports import ChannelGroupReposito
 from chatwaifu_runtime.external_channels.models import (
     ChannelConnectionRecord,
     ChannelDeliveryPlanRecord,
+    ChannelInboundImageInput,
     ChannelTurnRecord,
 )
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
@@ -75,8 +78,13 @@ from chatwaifu_runtime.external_channels.service import (
     ChannelConflictError,
     ChannelNotFoundError,
     ChannelPolicyError,
+    normalize_and_sanitize_inbound_images,
 )
+from chatwaifu_runtime.providers.contracts import LlmInputImage
 from chatwaifu_runtime.sessions.service import SessionService
+from chatwaifu_runtime.sticker_library.models import StickerLearningSource
+from chatwaifu_runtime.sticker_library.selection import selection_hints
+from chatwaifu_runtime.sticker_library.service import StickerLibraryService
 
 type AudienceReader = Callable[[UUID, str], Awaitable[tuple[str, tuple[str, ...]]]]
 type Authenticator = Callable[[UUID, str], Awaitable[ChannelConnectionRecord]]
@@ -86,6 +94,7 @@ _TERMINAL_EVENTS = frozenset(
 )
 _JOIN_SECONDS = 5.0
 _MAX_TRACKED_GROUP_EPOCHS = 128
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -109,6 +118,8 @@ class _Input:
     connection_epoch: int
     group_epoch: int
     presentation_policy: ChannelPresentationPolicy
+    image_input: ChannelInboundImageInput | None = None
+    learning_revision: int | None = None
     revoked: bool = False
     task: asyncio.Task[None] | None = None
 
@@ -117,6 +128,17 @@ class _Input:
 class _Gate:
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     users: int = 0
+
+
+@dataclass(slots=True)
+class _ImageReferenceContext:
+    route_id: UUID
+    route_revision: int
+    scene_id: str
+    settings_revision: int
+    image_input: ChannelInboundImageInput
+    expires_at: datetime
+    used_by: str | None = None
 
 
 class ChannelGroupService:
@@ -129,6 +151,7 @@ class ChannelGroupService:
         publisher: EventPublisher,
         *,
         conversation_repository: ConversationRepository,
+        sticker_library: StickerLibraryService | None = None,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
         self._repository = repository
@@ -137,6 +160,7 @@ class ChannelGroupService:
         self._sessions = sessions
         self._publisher = publisher
         self._conversation_repository = conversation_repository
+        self._sticker_library = sticker_library
         self._clock = clock
         self._delivery_plan_factory = InstantMessageDeliveryPlanFactory()
         self._audience_reader: AudienceReader | None = None
@@ -153,6 +177,7 @@ class ChannelGroupService:
         self._blocked_connections: set[UUID] = set()
         self._blocked_groups: set[tuple[UUID, str]] = set()
         self._blocked_scenes: set[str] = set()
+        self._image_context: dict[tuple[UUID, str, str], _ImageReferenceContext] = {}
         self._started = False
         self._stopping = False
 
@@ -172,6 +197,52 @@ class ChannelGroupService:
     def set_scheduler_wake_callback(self, wake: Callable[[UUID], None]) -> None:
         self._scheduler_wake = wake
 
+    async def sticker_library_scope(self, route_id: UUID) -> str:
+        """Operator-only callers get a scope derived from a durable current route."""
+        route = await self._repository.get_route(route_id)
+        if route is None or route.deleted_at is not None or route.character_id != "default":
+            raise ChannelNotFoundError("Group sticker library unavailable")
+        connection = await self._connection(route.connection_id)
+        if connection.deleted_at is not None:
+            raise ChannelNotFoundError("Group sticker library unavailable")
+        return f"scene:{route.scene_id}"
+
+    async def authorize_sticker_source(self, source: StickerLearningSource) -> bool:
+        target = source.group_target
+        if (
+            target is None
+            or source.principal_scope != f"scene:{target.scene_id}"
+            or source.connection_id != target.connection_id
+            or not self._started
+            or self._stopping
+            or not self._transport_ready(target.connection_id)
+            or target.connection_id in self._blocked_connections
+            or (target.connection_id, target.group_id) in self._blocked_groups
+            or target.scene_id in self._blocked_scenes
+        ):
+            return False
+        record = await self._repository.get_group_turn(target.channel_turn_id)
+        if (
+            record is None
+            or record.turn.generation_id != source.generation_id
+            or record.turn.status is not ChannelTurnStatus.COMPLETED
+            or record.lineage.route_id != target.route_id
+            or record.lineage.route_revision != target.route_revision
+            or record.lineage.scene_id != target.scene_id
+            or record.lineage.audience_fingerprint != target.audience_fingerprint
+        ):
+            return False
+        authorized = await self._repository.authorize_group_turn(record.lineage)
+        return (
+            authorized.allowed
+            and self._started
+            and not self._stopping
+            and self._transport_ready(target.connection_id)
+            and target.connection_id not in self._blocked_connections
+            and (target.connection_id, target.group_id) not in self._blocked_groups
+            and target.scene_id not in self._blocked_scenes
+        )
+
     async def start(self) -> None:
         if self._started:
             return
@@ -185,6 +256,7 @@ class ChannelGroupService:
         self._started = True
 
     async def stop(self) -> None:
+        self._image_context.clear()
         if not self._started and not self.active_count:
             self._stopping = True
             return
@@ -533,8 +605,42 @@ class ChannelGroupService:
                 registry.pop(key, None)
 
     async def ingest_group(
-        self, descriptor: ChannelGroupInboundDescriptor, *, access_token: str
+        self,
+        descriptor: ChannelGroupInboundDescriptor,
+        *,
+        access_token: str,
+        image_input: ChannelInboundImageInput | None = None,
     ) -> ChannelTurnReceipt:
+        receipt = await self._process_group(
+            descriptor, access_token=access_token, image_input=image_input
+        )
+        assert receipt is not None
+        return receipt
+
+    async def observe_group_image_reference(
+        self,
+        descriptor: ChannelGroupInboundDescriptor,
+        *,
+        access_token: str,
+        image_input: ChannelInboundImageInput,
+    ) -> None:
+        """Keep a short-lived descriptor only; no download, generation, learning or transcript."""
+        await self._process_group(
+            descriptor, access_token=access_token, image_input=image_input, observe_only=True
+        )
+
+    async def _process_group(
+        self,
+        descriptor: ChannelGroupInboundDescriptor,
+        *,
+        access_token: str,
+        image_input: ChannelInboundImageInput | None,
+        observe_only: bool = False,
+    ) -> ChannelTurnReceipt | None:
+        if descriptor.image_fingerprint != (
+            image_input.source_fingerprint if image_input is not None else None
+        ):
+            raise ChannelPolicyError("Group image descriptor differs from admitted content")
         # A synchronous host fence can revoke even an admission suspended in auth.
         task = asyncio.current_task()
         if task is None or not self._started or self._stopping:
@@ -570,6 +676,45 @@ class ChannelGroupService:
             self._check_admission(item)
             if route is None or not route.enabled or route.deleted_at is not None:
                 raise ChannelPolicyError("group route must be explicitly enabled")
+            now = self._clock()
+            for key, context in tuple(self._image_context.items()):
+                if context.expires_at <= now:
+                    self._image_context.pop(key, None)
+            context_key = (descriptor.connection_id, descriptor.group_id, descriptor.sender_key)
+            cached = self._image_context.get(context_key) if not observe_only else None
+            if (
+                image_input is None
+                and cached is not None
+                and (
+                    cached.route_id == route.route_id
+                    and cached.route_revision == route.revision
+                    and cached.scene_id == route.scene_id
+                    and cached.used_by in (None, descriptor.external_message_id)
+                )
+            ):
+                image_input = cached.image_input
+                descriptor = replace(descriptor, image_fingerprint=image_input.source_fingerprint)
+                item.message = descriptor
+            elif image_input is not None and not observe_only:
+                self._image_context.pop(context_key, None)
+                cached = None
+            learning_revision: int | None = None
+            if image_input is not None:
+                if self._sticker_library is None or route.character_id != "default":
+                    raise ChannelPolicyError("Group sticker learning unavailable")
+                settings = await self._sticker_library.repository.get_settings(
+                    f"scene:{route.scene_id}", route.character_id
+                )
+                self._check_admission(item)
+                if not settings.learning_enabled:
+                    raise ChannelPolicyError("Group image learning must be explicitly enabled")
+                if (
+                    cached is not None
+                    and image_input is cached.image_input
+                    and (settings.revision != cached.settings_revision)
+                ):
+                    raise ChannelPolicyError("Group image reference learning policy changed")
+                learning_revision = settings.revision
             item.route = route
             async with self._gate(self._gates, route.route_id):
                 self._check_admission(item)
@@ -582,6 +727,35 @@ class ChannelGroupService:
                 )
                 if member is None or not member.can_speak or fresh.scene_id in self._blocked_scenes:
                     raise ChannelPolicyError("group speaker is not granted")
+                if observe_only:
+                    link = await self._repository.get_link(member.link_id)
+                    self._check_admission(item)
+                    if (
+                        image_input is None
+                        or learning_revision is None
+                        or link is None
+                        or not link.enabled
+                        or link.provider_id != "qq_napcat"
+                        or link.participant_id != member.participant_id
+                        or link.sender_key != descriptor.sender_key
+                        or link.account_key != descriptor.account_key
+                        or fresh.account_key != descriptor.account_key
+                        or fresh.character_id != connection.configuration.character_id
+                    ):
+                        raise ChannelPolicyError("Group image reference speaker unavailable")
+                    if context_key not in self._image_context and len(self._image_context) >= 32:
+                        raise ChannelBusyError("Group image reference capacity reached")
+                    self._image_context[context_key] = _ImageReferenceContext(
+                        fresh.route_id,
+                        fresh.revision,
+                        fresh.scene_id,
+                        learning_revision,
+                        image_input,
+                        self._clock() + timedelta(seconds=60),
+                    )
+                    return None
+                if cached is not None and image_input is cached.image_input:
+                    cached.used_by = descriptor.external_message_id
                 duplicate = await self._repository.find_group_turn(
                     descriptor.connection_id, descriptor.group_id, descriptor.external_message_id
                 )
@@ -627,6 +801,8 @@ class ChannelGroupService:
                     item.connection_epoch,
                     item.group_epoch,
                     messaging_presentation_policy(connection.configuration.presentation_policy),
+                    image_input,
+                    learning_revision,
                 )
                 # Install the durable latest pending before an old actor can finish/release.
                 if admitted.dispatch_now:
@@ -703,6 +879,11 @@ class ChannelGroupService:
     def fence_connection(
         self, connection_id: UUID, reason: str, group_id: str | None = None
     ) -> None:
+        for key in tuple(self._image_context):
+            if key[0] == connection_id and (group_id is None or key[1] == group_id):
+                self._image_context.pop(key, None)
+        if self._sticker_library is not None:
+            self._sticker_library.request_cancel_group(connection_id, group_id=group_id)
         if group_id is not None:
             group_id = qq_id(group_id)
             if (connection_id, group_id) not in self._group_epochs and len(
@@ -731,6 +912,9 @@ class ChannelGroupService:
                 self._revoke(item, reason)
 
     def _fence_old_route(self, route: ChannelGroupRouteRecord, prior: frozenset[UUID]) -> None:
+        for key, context in tuple(self._image_context.items()):
+            if context.route_id == route.route_id and context.route_revision != route.revision:
+                self._image_context.pop(key, None)
         for key, item in tuple(self._admissions.items()):
             if (
                 item.message.connection_id != route.connection_id
@@ -819,6 +1003,8 @@ class ChannelGroupService:
         if scene_id is None or not await self._repository.is_group_scene(scene_id):
             return
         self._blocked_scenes.add(scene_id)
+        if self._sticker_library is not None:
+            self._sticker_library.request_cancel_group(scene_id=scene_id)
         for item in (
             *self._admissions.values(),
             *self._workflows.values(),
@@ -856,6 +1042,7 @@ class ChannelGroupService:
 
     async def _run(self, item: _Input) -> None:
         turn = item.admission.turn
+        completed: asyncio.Future[bool] = asyncio.get_running_loop().create_future()
         subscription = self._publisher.event_hub.subscribe(
             lambda event: (
                 event.get("generation_id") == str(turn.generation_id)
@@ -891,6 +1078,11 @@ class ChannelGroupService:
                     contextual_skill_ids=frozenset(),
                     trusted_identity=identity,
                     before_generation=lambda: self._guard(item),
+                    image_loader=self._learning_image_loader(item, completed),
+                    allow_shared_images=item.image_input is not None,
+                    failure_recovery_text="刚才发来的图片我没看清，能再发一次吗？"
+                    if item.image_input is not None
+                    else None,
                     source_context=ConversationSourceContext(
                         provider_id="qq_napcat",
                         connection_id=turn.connection_id,
@@ -920,7 +1112,12 @@ class ChannelGroupService:
             await self._settle_generation(turn, "group_revoked")
             await self._terminal(turn, ChannelTurnStatus.CANCELLED)
             raise
-        except Exception:
+        except Exception as exc:
+            logger.error(
+                "Group workflow failed generation_id=%s error_type=%s",
+                turn.generation_id,
+                type(exc).__name__,
+            )
             self._conversation.request_cancel(
                 turn.session_id, expected_generation_id=turn.generation_id, reason="group_failed"
             )
@@ -928,9 +1125,72 @@ class ChannelGroupService:
             await self._terminal(turn, ChannelTurnStatus.FAILED)
         finally:
             self._publisher.event_hub.unsubscribe(subscription)
+            if not completed.done():
+                fresh = await self._channels.get_turn(turn.channel_turn_id)
+                completed.set_result(
+                    fresh is not None
+                    and fresh.status is ChannelTurnStatus.COMPLETED
+                    and self._live(item)
+                )
             if self._conversation.active_generation_id(turn.session_id) != turn.generation_id:
                 self._workflows.pop(turn.channel_turn_id, None)
                 await self._release(item.admission)
+
+    def _learning_image_loader(
+        self,
+        item: _Input,
+        completed: asyncio.Future[bool],
+    ) -> Callable[[], Awaitable[tuple[LlmInputImage, ...]]] | None:
+        image_input = item.image_input
+        library = self._sticker_library
+        if image_input is None or library is None:
+            return None
+        turn = item.admission.turn
+        lineage = item.admission.lineage
+        assert turn.account_key is not None
+        target = ChannelGroupDeliveryTarget(
+            connection_id=turn.connection_id,
+            account_key=turn.account_key,
+            group_id=item.message.group_id,
+            route_id=lineage.route_id,
+            route_revision=lineage.route_revision,
+            channel_turn_id=turn.channel_turn_id,
+            scene_id=lineage.scene_id,
+            audience_fingerprint=lineage.audience_fingerprint,
+        )
+
+        async def wait_for_completion() -> bool:
+            return await asyncio.shield(completed)
+
+        async def load() -> tuple[LlmInputImage, ...]:
+            if not await self._guard(item):
+                raise ChannelPolicyError("Group image source revoked")
+            raw = await image_input.load()
+            images = normalize_and_sanitize_inbound_images(raw)
+            settings = await library.repository.get_settings(turn.principal_scope, "default")
+            if (
+                not await self._guard(item)
+                or not settings.learning_enabled
+                or settings.revision != item.learning_revision
+            ):
+                raise ChannelPolicyError("Group image learning changed")
+            await library.observe_batch(
+                StickerLearningSource(
+                    principal_scope=turn.principal_scope,
+                    character_id="default",
+                    connection_id=turn.connection_id,
+                    generation_id=turn.generation_id,
+                    group_target=target,
+                ),
+                image_input.sticker_learning_images(images)
+                if image_input.sticker_learning_images is not None
+                else images,
+                wait_for_completion=wait_for_completion,
+                on_saved=image_input.on_sticker_saved,
+            )
+            return images
+
+        return load
 
     async def _settle_generation(self, turn: ChannelTurnRecord, reason: str) -> None:
         try:
@@ -1065,13 +1325,38 @@ class ChannelGroupService:
             or len(result.output_text) > 20000
         ):
             return await self._terminal_unlocked(fresh, ChannelTurnStatus.FAILED)
+        learned_sticker = None
+        if registered.presentation_policy.stickers_enabled and self._sticker_library is not None:
+            try:
+                response_plan = await self._conversation_repository.generation_response_plan(
+                    turn.generation_id
+                )
+                hints = selection_hints(
+                    await self._conversation_repository.generation_user_input_context(
+                        turn.generation_id
+                    )
+                )
+                learned_sticker = await self._sticker_library.match(
+                    turn.principal_scope, "default", response_plan, hints=hints
+                )
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.warning(
+                    "Group sticker selection unavailable generation_id=%s", turn.generation_id
+                )
+            if not await self._guard(registered):
+                return await self._terminal_unlocked(turn, ChannelTurnStatus.CANCELLED)
         plan = await self._repository.create_group_plan(
             registered.admission.lineage,
             reply_text=result.output_text,
             delivery_id=uuid4(),
             completed_at=self._clock(),
             parts=self._delivery_plan_factory.create_parts(
-                result.output_text, policy=registered.presentation_policy
+                result.output_text,
+                policy=registered.presentation_policy,
+                can_send_sticker=learned_sticker is not None,
+                learned_sticker=learned_sticker,
             ),
         )
         if not self._live(registered):
@@ -1102,7 +1387,7 @@ class ChannelGroupService:
             or plan.channel_turn_id is None
             or target.channel_turn_id != plan.channel_turn_id
             or target.connection_id != plan.connection_id
-            or not 1 <= plan.part_count <= 10
+            or not 1 <= plan.part_count <= 11
         ):
             return False
         connection_id = target.connection_id
@@ -1131,7 +1416,9 @@ class ChannelGroupService:
             record.turn.account_key != target.account_key
             or record.turn.conversation_key != f"group:{target.group_id}"
             or record.turn.delivery_id != plan.delivery_id
-            or not group_text_parts_match_reply(plan.parts, record.turn.reply_text or "")
+            or not group_text_parts_match_reply(
+                plan.parts, record.turn.reply_text or "", allow_sticker=True
+            )
             or lineage.route_id != target.route_id
             or lineage.route_revision != target.route_revision
             or lineage.scene_id != target.scene_id

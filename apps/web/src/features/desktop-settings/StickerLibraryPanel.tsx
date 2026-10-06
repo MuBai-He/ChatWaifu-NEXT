@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   deleteLearnedSticker,
@@ -8,6 +8,7 @@ import {
   type LearnedSticker,
   type StickerLibrarySnapshot,
 } from "../chat/runtimeClient";
+import type { StickerGroupScope } from "../chat/runtime-client/stickerLibraryClient";
 import { StickerUsagePanel } from "./StickerUsagePanel";
 import { SettingsToggle } from "./SettingsPrimitives";
 
@@ -24,6 +25,7 @@ const EXPRESSION_LABELS: Record<LearnedSticker["expression"], string> = {
 interface StickerLibraryPanelProps {
   characterId: string;
   runtimeOnline: boolean;
+  groupScope?: StickerGroupScope;
 }
 
 // Bounded concurrent download pool (e.g. at most 6 parallel image downloads)
@@ -99,13 +101,28 @@ class AsyncConcurrencyPool {
 const previewDownloadPool = new AsyncConcurrencyPool(6);
 
 export function StickerLibraryPanel(props: StickerLibraryPanelProps) {
-  return <ScopedStickerLibraryPanel key={props.characterId} {...props} />;
+  return (
+    <ScopedStickerLibraryPanel
+      key={`${props.characterId}:${props.groupScope?.routeId ?? "private"}:${props.groupScope?.sceneId ?? ""}`}
+      {...props}
+    />
+  );
 }
 
 function ScopedStickerLibraryPanel({
   characterId,
   runtimeOnline,
+  groupScope: suppliedGroupScope,
 }: StickerLibraryPanelProps) {
+  const routeId = suppliedGroupScope?.routeId;
+  const sceneId = suppliedGroupScope?.sceneId;
+  const groupScope = useMemo(
+    () =>
+      routeId !== undefined && sceneId !== undefined
+        ? { routeId, sceneId }
+        : undefined,
+    [routeId, sceneId],
+  );
   const [snapshot, setSnapshot] = useState<StickerLibrarySnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -124,7 +141,7 @@ function ScopedStickerLibraryPanel({
     const request = ++life.request;
     const controller = new AbortController();
     life.controller = controller;
-    void getStickerLibrary(characterId, controller.signal)
+    void getStickerLibrary(characterId, controller.signal, groupScope)
       .then((data) => {
         if (life.mounted && request === life.request) setSnapshot(data);
       })
@@ -140,7 +157,7 @@ function ScopedStickerLibraryPanel({
       ++life.request;
       life.controller?.abort();
     };
-  }, [characterId]);
+  }, [characterId, groupScope]);
 
   const loadLibrary = useCallback(
     async (retainedError: string | null = null) => {
@@ -153,7 +170,11 @@ function ScopedStickerLibraryPanel({
       setLoading(true);
       setError(retainedError);
       try {
-        const data = await getStickerLibrary(characterId, controller.signal);
+        const data = await getStickerLibrary(
+          characterId,
+          controller.signal,
+          groupScope,
+        );
         if (life.mounted && request === life.request) setSnapshot(data);
       } catch (err: unknown) {
         if (life.mounted && request === life.request && !isAbortError(err))
@@ -162,7 +183,7 @@ function ScopedStickerLibraryPanel({
         if (life.mounted && request === life.request) setLoading(false);
       }
     },
-    [characterId],
+    [characterId, groupScope],
   );
 
   const handleManualRefresh = () => {
@@ -179,14 +200,19 @@ function ScopedStickerLibraryPanel({
     setSavingSettings(true);
     setError(null);
     try {
-      const updated = await updateStickerLibrarySettings(
-        {
-          schema_version: "1.0",
-          learning_enabled: enabled,
-          expected_revision: snapshot.settings.revision ?? 0,
-        },
-        characterId,
-      );
+      const payload = {
+        schema_version: "1.0" as const,
+        learning_enabled: enabled,
+        expected_revision: snapshot.settings.revision ?? 0,
+      };
+      const updated = await (groupScope
+        ? updateStickerLibrarySettings(
+            payload,
+            characterId,
+            undefined,
+            groupScope,
+          )
+        : updateStickerLibrarySettings(payload, characterId));
       if (life.mounted) {
         setSnapshot((prev) => (prev ? { ...prev, settings: updated } : prev));
         await loadLibrary();
@@ -215,7 +241,9 @@ function ScopedStickerLibraryPanel({
     setDeletingId(stickerId);
     setError(null);
     try {
-      const deleted = await deleteLearnedSticker(stickerId, characterId);
+      const deleted = await (groupScope
+        ? deleteLearnedSticker(stickerId, characterId, undefined, groupScope)
+        : deleteLearnedSticker(stickerId, characterId));
       if (life.mounted) {
         // Invalidate history immediately, even if the subsequent snapshot read fails.
         setSnapshot((previous) => {
@@ -257,16 +285,24 @@ function ScopedStickerLibraryPanel({
     <div className="sticker-library-panel" data-testid="sticker-library-panel">
       <div className="sticker-library-toggle-section">
         <SettingsToggle
-          label="学习我发来的表情"
-          description="开启后自动筛选并保存适合作表情的图片，普通照片不进入表情库。"
+          label={groupScope ? "学习本群发来的表情" : "学习我发来的表情"}
+          description={
+            groupScope
+              ? "仅筛选已授权成员 @ 宁宁发来的静态表情，保存在本群独立表情库。"
+              : "开启后自动筛选并保存适合作表情的图片，普通照片不进入表情库。"
+          }
           checked={learningEnabled}
           disabled={isBusy || !runtimeOnline || !snapshot}
           onChange={(enabled) => void handleToggleLearning(enabled)}
         />
         <div className="sticker-library-sub-notes">
-          <small className="sticker-library-sub-copy">
-            想让宁宁以后记得普通照片，请开启下方的“记住我发的照片”。
-          </small>
+          {groupScope ? (
+            <small>普通照片不保存，私人表情库不会在本群中使用。</small>
+          ) : (
+            <small className="sticker-library-sub-copy">
+              想让宁宁以后记得普通照片，请开启下方的“记住我发的照片”。
+            </small>
+          )}
           <small className="sticker-library-note-copy">
             已学习的表情会在开启“合适的时候发送表情”时由角色主动发出。
           </small>
@@ -295,6 +331,7 @@ function ScopedStickerLibraryPanel({
         characterId={characterId}
         runtimeOnline={runtimeOnline}
         refreshToken={snapshot}
+        groupScope={groupScope}
       />
 
       {error ? (
@@ -323,6 +360,7 @@ function ScopedStickerLibraryPanel({
               key={sticker.sticker_id}
               sticker={sticker}
               characterId={characterId}
+              groupScope={groupScope}
               isDeleting={deletingId === sticker.sticker_id}
               disabled={!runtimeOnline || isBusy}
               onDelete={() => void handleDelete(sticker.sticker_id)}
@@ -337,6 +375,7 @@ function ScopedStickerLibraryPanel({
 interface StickerTileProps {
   sticker: LearnedSticker;
   characterId: string;
+  groupScope?: StickerGroupScope;
   isDeleting: boolean;
   disabled: boolean;
   onDelete: () => void;
@@ -345,6 +384,7 @@ interface StickerTileProps {
 function StickerTile({
   sticker,
   characterId,
+  groupScope,
   isDeleting,
   disabled,
   onDelete,
@@ -405,6 +445,7 @@ function StickerTile({
       .enqueue(async () => {
         const url = await fetchStickerImageUrl(sticker.sticker_id, {
           characterId,
+          groupScope,
           signal: controller.signal,
           timeoutMs: 8_000,
         });
@@ -442,7 +483,7 @@ function StickerTile({
         currentUrlRef.current = null;
       }
     };
-  }, [sticker.sticker_id, characterId, isVisible]);
+  }, [sticker.sticker_id, characterId, groupScope, isVisible]);
 
   return (
     <div

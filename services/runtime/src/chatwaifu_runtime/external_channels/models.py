@@ -24,6 +24,7 @@ from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_protocol.events import GenericCoreEvent
 
 from chatwaifu_runtime.providers.contracts import LlmInputImage
+from chatwaifu_runtime.sticker_library.models import StickerSavedObserver
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,6 +57,10 @@ class ChannelInboundImageInput:
     load: Callable[[], Awaitable[LlmInputImage | tuple[LlmInputImage, ...]]] = field(
         repr=False, compare=False
     )
+    on_sticker_saved: StickerSavedObserver | None = field(default=None, repr=False, compare=False)
+    sticker_learning_images: (
+        Callable[[tuple[LlmInputImage, ...]], tuple[LlmInputImage, ...]] | None
+    ) = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         raw_fp = cast(object, self.source_fingerprint)

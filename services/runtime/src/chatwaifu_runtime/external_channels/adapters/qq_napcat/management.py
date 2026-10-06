@@ -33,7 +33,10 @@ from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.external_channels.credentials import ChannelCredentialStore
 from chatwaifu_runtime.external_channels.group_models import ChannelGroupInboundDescriptor
-from chatwaifu_runtime.external_channels.models import ChannelDeliveryPlanRecord
+from chatwaifu_runtime.external_channels.models import (
+    ChannelDeliveryPlanRecord,
+    ChannelInboundImageInput,
+)
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
 from chatwaifu_runtime.external_channels.scheduler import ChannelDeliveryScheduler
 from chatwaifu_runtime.external_channels.service import ExternalChannelError, ExternalChannelService
@@ -45,6 +48,7 @@ from chatwaifu_runtime.sticker_library.service import StickerLibraryService
 from .audio import NapCatAudioTranscriber, audio_input
 from .client import NapCatClient, NapCatError, validate_endpoint
 from .delivery import NapCatDelivery, reconcile_known_sends
+from .favorites import NapCatStickerFavorites
 from .groups import NapCatGroupMembershipNotice, normalize_group_notice, qq_group_identifier
 from .media import image_input
 from .messages import normalize, normalize_group_inbound, normalize_inbound
@@ -97,6 +101,7 @@ class NapCatManagement:
         self._factory = client_factory
         self._sticker_catalog = sticker_catalog
         self._sticker_library = sticker_library
+        self._favorites: dict[UUID, NapCatStickerFavorites] = {}
         self._audio_transcriber = NapCatAudioTranscriber(stt_backend or DisabledSttBackend())
         self._pairings: dict[UUID, ChannelPairingSnapshot] = {}
         self._pair_tasks: dict[UUID, asyncio.Task[None]] = {}
@@ -110,6 +115,7 @@ class NapCatManagement:
         self._journal_cursor: UUID | None = None
         self._journal_task: asyncio.Task[None] | None = None
         self._group_ingress_tasks: dict[asyncio.Task[None], UUID] = {}
+        self._group_ingress_order: dict[tuple[UUID, str], asyncio.Task[None]] = {}
         self._group_notice_pending: set[UUID] = set()
         self._group_stop_reasons: dict[UUID, ChannelGroupPauseReason] = {}
         if groups is not None:
@@ -154,6 +160,7 @@ class NapCatManagement:
 
     def _group_transport_invalidated(self, connection_id: UUID) -> None:
         self._group_notice_pending.add(connection_id)
+        self._gateway.fence_recent_images(connection_id)
         if self._groups is not None:
             self._groups.fence_connection(connection_id, reason="reconnect")
 
@@ -181,12 +188,24 @@ class NapCatManagement:
             account=account,
             group_id=group_id,
             allowed_senders=None,
+            allow_unmentioned_images=True,
         )
         if message is None:
             return
         if len(self._group_ingress_tasks) >= 32:
             logger.info("QQ group admission capacity exceeded")
             return
+        client = self._clients.get(connection_id)
+        favorite = self._favorites.get(connection_id)
+        incoming_image = (
+            image_input(
+                client,
+                message.images,
+                on_sticker_saved=favorite.observe_saved if favorite is not None else None,
+            )
+            if client is not None and message.images
+            else None
+        )
         descriptor = ChannelGroupInboundDescriptor(
             message.connection_id,
             message.account_key,
@@ -195,19 +214,47 @@ class NapCatManagement:
             message.external_message_id,
             message.text,
             message.received_at,
+            incoming_image.source_fingerprint if incoming_image is not None else None,
         )
-        task = asyncio.create_task(
-            self._ingest_group(descriptor, access_token), name="qq-group-admission"
-        )
+        key = (connection_id, group_id)
+        predecessor = self._group_ingress_order.get(key)
+
+        async def ordered_admission() -> None:
+            if predecessor is not None:
+                await asyncio.shield(predecessor)
+            await self._ingest_group(
+                descriptor, access_token, incoming_image, mentioned=message.bot_mentioned
+            )
+
+        task = asyncio.create_task(ordered_admission(), name="qq-group-admission")
+        self._group_ingress_order[key] = task
         self._group_ingress_tasks[task] = connection_id
-        task.add_done_callback(lambda finished: self._group_ingress_tasks.pop(finished, None))
+
+        def finished_admission(finished: asyncio.Task[None]) -> None:
+            self._group_ingress_tasks.pop(finished, None)
+            if self._group_ingress_order.get(key) is finished:
+                self._group_ingress_order.pop(key, None)
+
+        task.add_done_callback(finished_admission)
 
     async def _ingest_group(
-        self, descriptor: ChannelGroupInboundDescriptor, access_token: str
+        self,
+        descriptor: ChannelGroupInboundDescriptor,
+        access_token: str,
+        incoming_image: ChannelInboundImageInput | None = None,
+        *,
+        mentioned: bool = True,
     ) -> None:
         assert self._groups is not None
         try:
-            await self._groups.ingest_group(descriptor, access_token=access_token)
+            if mentioned:
+                await self._groups.ingest_group(
+                    descriptor, access_token=access_token, image_input=incoming_image
+                )
+            elif incoming_image is not None:
+                await self._groups.observe_group_image_reference(
+                    descriptor, access_token=access_token, image_input=incoming_image
+                )
         except asyncio.CancelledError:
             raise
         except ExternalChannelError as error:
@@ -499,6 +546,17 @@ class NapCatManagement:
                 await self._health(connection_id, ChannelConnectionStatus.READY)
                 client.bind_account(account)
                 self._clients[connection_id] = client
+                if self._sticker_library is not None:
+                    self._favorites[connection_id] = NapCatStickerFavorites(
+                        self._repository,
+                        self._sticker_library,
+                        client,
+                        connection_id,
+                        journal_lock=self._journal_locks.setdefault(connection_id, asyncio.Lock()),
+                        group_authorization=self._groups.authorize_sticker_source
+                        if self._groups is not None
+                        else None,
+                    )
                 retry = 0
                 scheduler = ChannelDeliveryScheduler(
                     self._repository,
@@ -574,10 +632,18 @@ class NapCatManagement:
                             inbound.message,
                             access_token=private["gateway_token"],
                             supersede_inflight=True,
-                            image_input=image_input(client, inbound.images)
+                            image_input=image_input(
+                                client,
+                                inbound.images,
+                                on_sticker_saved=self._favorites[connection_id].observe_saved
+                                if connection_id in self._favorites
+                                else None,
+                            )
                             if inbound.images
                             else None,
                             image_retention_allowed=False,
+                            sticker_learning_allowed=True,
+                            recent_image_context=True,
                             audio_input=audio_input(client, inbound.record, self._audio_transcriber)
                             if inbound.record is not None
                             else None,
@@ -593,8 +659,7 @@ class NapCatManagement:
                     connection_id, ChannelConnectionStatus.DEGRADED, "qq_connection_lost"
                 )
             finally:
-                if self._groups is not None:
-                    self._group_transport_invalidated(connection_id)
+                self._group_transport_invalidated(connection_id)
                 try:
                     await self._cancel_group_ingress(connection_id)
                     if self._groups is not None:
@@ -610,6 +675,9 @@ class NapCatManagement:
                             await scheduler.stop()
                     finally:
                         self._schedulers.pop(connection_id, None)
+                        if self._sticker_library is not None:
+                            await self._sticker_library.cancel_connection(connection_id)
+                        self._favorites.pop(connection_id, None)
                         self._clients.pop(connection_id, None)
                         try:
                             if client:
@@ -690,6 +758,7 @@ class NapCatManagement:
         cancel_pending: bool = True,
         group_reason: ChannelGroupPauseReason = ChannelGroupPauseReason.RECONNECT,
     ) -> None:
+        self._gateway.fence_recent_images(connection_id)
         if self._groups is not None:
             self._group_stop_reasons[connection_id] = group_reason
             self._group_transport_invalidated(connection_id)

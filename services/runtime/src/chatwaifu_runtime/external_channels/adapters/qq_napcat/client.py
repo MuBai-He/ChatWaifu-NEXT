@@ -5,11 +5,13 @@ from __future__ import annotations
 import asyncio
 import base64
 import binascii
+import hashlib
 import json
 import logging
 import re
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from pathlib import PurePosixPath, PureWindowsPath
 from typing import cast
 from urllib.parse import urlsplit
 from uuid import uuid4
@@ -18,6 +20,7 @@ from chatwaifu_protocol.base import JsonObject, JsonValue
 from websockets.asyncio.client import ClientConnection, connect
 from websockets.protocol import State
 
+from .expressions import FACE_LABELS
 from .groups import (
     GROUP_NOTICE_TYPES,
     NapCatGroupMemberList,
@@ -143,6 +146,7 @@ class NapCatClient:
         self._socket: ClientConnection | None = None
         self._reader: asyncio.Task[None] | None = None
         self._pending: dict[str, asyncio.Future[JsonObject]] = {}
+        self._upload_requests: set[str] = set()
         self._streams: dict[str, _ImageStream] = {}
         self._events: asyncio.Queue[JsonObject | None] = asyncio.Queue(maxsize=64)
         self._account: str | None = None
@@ -291,9 +295,16 @@ class NapCatClient:
                 elif isinstance(echo, str) and echo in self._pending:
                     future = self._pending[echo]
                     if not future.done():
-                        if event.get("stream") == "stream-action":
+                        if (
+                            event.get("stream") == "stream-action"
+                            and echo not in self._upload_requests
+                        ):
                             future.set_exception(
                                 NapCatUncertain("QQ returned an unexpected stream")
+                            )
+                        elif echo in self._upload_requests and len(raw) > 16_384:
+                            future.set_exception(
+                                NapCatError("QQ upload response exceeds its limit")
                             )
                         else:
                             future.set_result(event)
@@ -377,6 +388,10 @@ class NapCatClient:
         echo = uuid4().hex
         future: asyncio.Future[JsonObject] = asyncio.get_running_loop().create_future()
         self._pending[echo] = future
+        if action == "upload_file_stream":
+            # Pinned NapCat wraps each upload reply as stream-action, even though
+            # the action yields a single finite response for this request echo.
+            self._upload_requests.add(echo)
         try:
             async with asyncio.timeout(_RPC_TIMEOUT_SECONDS):
                 await self._socket.send(
@@ -385,6 +400,8 @@ class NapCatClient:
                 response = await future
             if response.get("status") != "ok" or response.get("retcode") != 0:
                 raise NapCatRejected("QQ rejected the requested operation")
+            if action == "upload_file_stream" and response.get("stream") != "stream-action":
+                raise NapCatError("QQ returned an invalid upload response")
             return response
         except asyncio.CancelledError:
             raise
@@ -394,6 +411,7 @@ class NapCatClient:
             raise NapCatUncertain("QQ request result is unknown") from error
         finally:
             self._pending.pop(echo, None)
+            self._upload_requests.discard(echo)
             if not future.done():
                 future.cancel()
 
@@ -417,6 +435,142 @@ class NapCatClient:
                 account, revision
             ):
                 raise NapCatRejected("QQ account changed before operation")
+
+    async def favorite_hashes(self) -> frozenset[str]:
+        """Read a bounded native favorite projection; provider URLs never leave the adapter."""
+        account, revision = self._account, self._account_revision
+        if account is None:
+            raise NapCatRejected("QQ favorites require a bound account")
+        await self._account_preflight(account, revision)
+        response = await self._request("fetch_custom_face_detail", {"count": 100})
+        entries = response.get("data")
+        if not isinstance(entries, list) or len(entries) > 100:
+            raise NapCatError("QQ returned invalid favorite details")
+        hashes: set[str] = set()
+        for entry in entries:
+            if not isinstance(entry, dict):
+                raise NapCatError("QQ returned invalid favorite details")
+            md5 = entry.get("md5")
+            if not isinstance(md5, str) or not re.fullmatch(r"[0-9a-fA-F]{32}", md5):
+                raise NapCatError("QQ returned invalid favorite hashes")
+            hashes.add(md5.lower())
+        await self._account_preflight(account, revision)
+        return frozenset(hashes)
+
+    async def add_sticker_favorite(
+        self,
+        image: bytes,
+        *,
+        before_add: Callable[[], Awaitable[bool]],
+        checkpoint: Callable[[], Awaitable[None]],
+    ) -> bool:
+        """Upload only normalized PNG bytes, then favorite our exact returned temporary file.
+
+        The caller durably fences unknown mutation results. A returned True requires
+        native MD5 readback; a transport receipt alone does not establish acceptance.
+        """
+        if not image.startswith(b"\x89PNG\r\n\x1a\n") or not 0 < len(image) <= _IMAGE_MAX_BYTES:
+            raise ValueError("QQ favorites require a bounded normalized PNG")
+        account, revision = self._account, self._account_revision
+        if account is None:
+            raise NapCatRejected("QQ favorites require a bound account")
+        stream_id = uuid4().hex
+        filename = f"cw2-sticker-{stream_id}.png"
+        sha = hashlib.sha256(image).hexdigest()
+        chunks = (len(image) + _IMAGE_CHUNK_BYTES - 1) // _IMAGE_CHUNK_BYTES
+        upload_completed = False
+        try:
+            async with asyncio.timeout(20):
+                await self._account_preflight(account, revision)
+                if not await before_add():
+                    raise NapCatRejected("QQ sticker source revoked before upload")
+                for index in range(chunks):
+                    if not self._account_matches(account, revision):
+                        raise NapCatRejected("QQ account changed during sticker upload")
+                    chunk = image[index * _IMAGE_CHUNK_BYTES : (index + 1) * _IMAGE_CHUNK_BYTES]
+                    uploaded = await self.call(
+                        "upload_file_stream",
+                        {
+                            "stream_id": stream_id,
+                            "filename": filename,
+                            "total_chunks": chunks,
+                            "file_size": len(image),
+                            "expected_sha256": sha,
+                            "file_retention": 120_000,
+                            "chunk_index": index,
+                            "chunk_data": base64.b64encode(chunk).decode("ascii"),
+                        },
+                    )
+                    if (
+                        uploaded.get("stream_id") != stream_id
+                        or uploaded.get("type") != "stream"
+                        or uploaded.get("status") != "chunk_received"
+                        or type(uploaded.get("received_chunks")) is not int
+                        or uploaded.get("received_chunks") != index + 1
+                        or type(uploaded.get("total_chunks")) is not int
+                        or uploaded.get("total_chunks") != chunks
+                    ):
+                        raise NapCatError("QQ returned invalid upload progress")
+                uploaded = await self.call(
+                    "upload_file_stream",
+                    {
+                        "stream_id": stream_id,
+                        "is_complete": True,
+                        "file_retention": 120_000,
+                    },
+                )
+                path = uploaded.get("file_path")
+                if (
+                    uploaded.get("stream_id") != stream_id
+                    or uploaded.get("type") != "response"
+                    or uploaded.get("status") != "file_complete"
+                    or type(uploaded.get("received_chunks")) is not int
+                    or uploaded.get("received_chunks") != chunks
+                    or type(uploaded.get("total_chunks")) is not int
+                    or uploaded.get("total_chunks") != chunks
+                    or type(uploaded.get("file_size")) is not int
+                    or uploaded.get("file_size") != len(image)
+                    or uploaded.get("sha256") != sha
+                    or not isinstance(path, str)
+                    or len(path) > 4096
+                    or any(ord(c) < 32 for c in path)
+                    or ".." in PurePosixPath(path).parts
+                    or ".." in PureWindowsPath(path).parts
+                    or not (
+                        (PurePosixPath(path).is_absolute() and PurePosixPath(path).name == filename)
+                        or (
+                            PureWindowsPath(path).is_absolute()
+                            and PureWindowsPath(path).name == filename
+                        )
+                    )
+                ):
+                    raise NapCatError("QQ returned invalid completed upload")
+                upload_completed = True
+                await self._account_preflight(account, revision)
+                if not await before_add():
+                    raise NapCatRejected("QQ sticker source revoked before favorite")
+                await checkpoint()
+                if not self._account_matches(account, revision) or not await before_add():
+                    raise NapCatRejected("QQ sticker source revoked before favorite")
+                await self.call("add_custom_face", {"file": path, "is_origin": True})
+                await self._account_preflight(account, revision)
+                md5 = hashlib.md5(image, usedforsecurity=False).hexdigest()
+                return md5 in await self.favorite_hashes()
+        except asyncio.CancelledError:
+            raise
+        finally:
+            if not upload_completed:
+                # Reset only our UUID-owned stream. Never run provider-global cleanup.
+                # NapCat reports a successful reset as a rejected RPC; cleanup is auxiliary.
+                try:
+                    async with asyncio.timeout(1):
+                        await self.call(
+                            "upload_file_stream", {"stream_id": stream_id, "reset": True}
+                        )
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    pass
 
     async def get_group_member_list(self, group_id: str) -> NapCatGroupMemberList:
         """Observe a small audience; no_cache is not proof of fresh membership."""
@@ -702,22 +856,59 @@ class NapCatClient:
         *,
         before_send: Callable[[], Awaitable[bool]],
     ) -> str:
-        """Send only captured text to a fixed group, after the caller's final guard."""
+        """Send captured text/native faces or one validated expression image to a fixed group."""
         if qq_group_identifier(group_id) != group_id:
             raise ValueError("QQ group must be a canonical identifier")
         if not 1 <= len(segments) <= 128:
             raise ValueError("QQ group replies require bounded text segments")
         captured: list[JsonValue] = []
         size = 0
+        images = 0
+        visible = False
         for segment in segments:
             data = segment.get("data")
             text = data.get("text") if isinstance(data, dict) else None
-            if segment.get("type") != "text" or not isinstance(text, str) or not text.strip():
-                raise ValueError("QQ group replies support nonempty text only")
-            size += len(text)
+            if segment.get("type") == "text" and isinstance(text, str) and text:
+                visible = visible or bool(text.strip())
+                size += len(text)
+                captured.append({"type": "text", "data": {"text": text}})
+            elif (
+                segment.get("type") == "face"
+                and isinstance(data, dict)
+                and isinstance(data.get("id"), str)
+                and data["id"] in FACE_LABELS
+            ):
+                visible = True
+                captured.append({"type": "face", "data": {"id": data["id"]}})
+            elif segment.get("type") == "image" and isinstance(data, dict):
+                file = data.get("file")
+                if (
+                    not isinstance(file, str)
+                    or not file.startswith("base64://")
+                    or len(file) > 7_000_000
+                ):
+                    raise ValueError("QQ group images require bounded owned Base64 bytes")
+                try:
+                    raw = base64.b64decode(file.removeprefix("base64://"), validate=True)
+                except (ValueError, binascii.Error):
+                    raise ValueError("QQ group image Base64 is invalid") from None
+                if (
+                    not 0 < len(raw) <= _IMAGE_MAX_BYTES
+                    or images
+                    or not raw.startswith((b"\x89PNG\r\n\x1a\n", b"\xff\xd8\xff"))
+                    or type(data.get("sub_type")) is not int
+                    or data.get("sub_type") != 1
+                ):
+                    raise ValueError("QQ group image is not an owned bounded expression")
+                images += 1
+                visible = True
+                captured.append({"type": "image", "data": {"file": file, "sub_type": 1}})
+            else:
+                raise ValueError("QQ group reply segment is unsupported")
             if size > 20_000:
                 raise ValueError("QQ group reply exceeds its text limit")
-            captured.append({"type": "text", "data": {"text": text}})
+        if not visible:
+            raise ValueError("QQ group replies require visible content")
         account, revision = self._account, self._account_revision
         if account is None or qq_group_identifier(account) != account:
             raise NapCatRejected("QQ group operations require a bound account")

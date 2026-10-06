@@ -7,7 +7,7 @@ import hashlib
 import io
 import logging
 from collections.abc import Awaitable, Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import replace
 from uuid import UUID
 
 from chatwaifu_protocol.channels import ChannelImageDeliveryPartPayload
@@ -17,7 +17,10 @@ from PIL import Image
 
 from chatwaifu_runtime.providers.contracts import LlmInputImage
 from chatwaifu_runtime.sticker_library.classifier import StickerClassifier
-from chatwaifu_runtime.sticker_library.models import StickerSaveCandidate
+from chatwaifu_runtime.sticker_library.models import (
+    StickerLearningSource as StickerLearningSource,
+)
+from chatwaifu_runtime.sticker_library.models import StickerSaveCandidate, StickerSavedObserver
 from chatwaifu_runtime.sticker_library.ports import StickerLibraryRepository
 from chatwaifu_runtime.sticker_library.ranking import least_recently_delivered
 from chatwaifu_runtime.sticker_library.selection import StickerSelectionHints, matches_interaction
@@ -27,14 +30,6 @@ logger = logging.getLogger(__name__)
 MAX_PENDING_IMAGES = 2
 MAX_LEARNING_SECONDS = 45
 USAGE_READ_TIMEOUT_SECONDS = 0.25
-
-
-@dataclass(frozen=True, slots=True)
-class StickerLearningSource:
-    principal_scope: str
-    character_id: str
-    connection_id: UUID
-    generation_id: UUID
 
 
 class StickerLibraryService:
@@ -49,6 +44,7 @@ class StickerLibraryService:
         self._classifier = classifier
         self._usage = usage
         self._tasks: dict[UUID, tuple[UUID, asyncio.Task[None]]] = {}
+        self._sources: dict[UUID, StickerLearningSource] = {}
         self._stopping = False
 
     def start(self) -> None:
@@ -62,6 +58,25 @@ class StickerLibraryService:
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
         self._tasks.clear()
+        self._sources.clear()
+
+    def request_cancel_group(
+        self,
+        connection_id: UUID | None = None,
+        *,
+        group_id: str | None = None,
+        scene_id: str | None = None,
+    ) -> None:
+        """Synchronously fence group learners, including already completed source turns."""
+        for generation_id, source in tuple(self._sources.items()):
+            target = source.group_target
+            if (
+                target is not None
+                and (connection_id is None or source.connection_id == connection_id)
+                and (group_id is None or target.group_id == group_id)
+                and (scene_id is None or target.scene_id == scene_id)
+            ):
+                self._tasks[generation_id][1].cancel()
 
     async def cancel_generation(self, generation_id: UUID) -> None:
         entry = self._tasks.get(generation_id)
@@ -82,6 +97,7 @@ class StickerLibraryService:
         images: Sequence[LlmInputImage],
         *,
         wait_for_completion: Callable[[], Awaitable[bool]],
+        on_saved: StickerSavedObserver | None = None,
     ) -> None:
         if self._stopping or source.generation_id in self._tasks or not images:
             return
@@ -98,11 +114,17 @@ class StickerLibraryService:
             return
         batch = tuple(images)
         task = asyncio.create_task(
-            self._learn_batch(source, batch, settings.revision, wait_for_completion),
+            self._learn_batch(source, batch, settings.revision, wait_for_completion, on_saved),
             name=f"sticker-learning-{source.generation_id}",
         )
         self._tasks[source.generation_id] = (source.connection_id, task)
-        task.add_done_callback(lambda _: self._tasks.pop(source.generation_id, None))
+        self._sources[source.generation_id] = source
+
+        def release(_task: asyncio.Task[None]) -> None:
+            self._tasks.pop(source.generation_id, None)
+            self._sources.pop(source.generation_id, None)
+
+        task.add_done_callback(release)
 
     async def observe(
         self,
@@ -110,8 +132,11 @@ class StickerLibraryService:
         image: LlmInputImage,
         *,
         wait_for_completion: Callable[[], Awaitable[bool]],
+        on_saved: StickerSavedObserver | None = None,
     ) -> None:
-        await self.observe_batch(source, (image,), wait_for_completion=wait_for_completion)
+        await self.observe_batch(
+            source, (image,), wait_for_completion=wait_for_completion, on_saved=on_saved
+        )
 
     async def _learn_batch(
         self,
@@ -119,6 +144,7 @@ class StickerLibraryService:
         images: tuple[LlmInputImage, ...],
         revision: int,
         wait_for_completion: Callable[[], Awaitable[bool]],
+        on_saved: StickerSavedObserver | None,
     ) -> None:
         try:
             total_budget = len(images) * MAX_LEARNING_SECONDS
@@ -128,7 +154,9 @@ class StickerLibraryService:
                         return
                     try:
                         async with asyncio.timeout(MAX_LEARNING_SECONDS):
-                            await self._learn(source, image, revision, wait_for_completion)
+                            await self._learn(
+                                source, image, revision, wait_for_completion, on_saved
+                            )
                     except asyncio.CancelledError:
                         raise
                     except Exception:
@@ -147,6 +175,7 @@ class StickerLibraryService:
         image: LlmInputImage,
         revision: int,
         wait_for_completion: Callable[[], Awaitable[bool]],
+        on_saved: StickerSavedObserver | None,
     ) -> None:
         try:
             async with asyncio.timeout(MAX_LEARNING_SECONDS):
@@ -167,6 +196,7 @@ class StickerLibraryService:
                         expression=classification.expression,
                         source_connection_id=source.connection_id,
                         generation_id=source.generation_id,
+                        group_target=source.group_target,
                     ),
                     expected_revision=revision,
                 )
@@ -175,6 +205,8 @@ class StickerLibraryService:
                     source.generation_id,
                     record is not None,
                 )
+                if record is not None and on_saved is not None and not self._stopping:
+                    await on_saved(replace(source, settings_revision=revision), record)
         except asyncio.CancelledError:
             raise
         except Exception:

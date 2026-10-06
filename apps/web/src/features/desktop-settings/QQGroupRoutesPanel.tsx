@@ -28,6 +28,7 @@ import {
   type ChannelParticipantLinkSnapshot,
 } from "../chat/runtime-client/channelGroupsClient";
 import { isConflictError } from "../chat/runtime-client/realtimeClient";
+import { StickerLibraryPanel } from "./StickerLibraryPanel";
 import "./qq-group-routes-panel.css";
 
 type Props = {
@@ -76,6 +77,7 @@ function QQGroupRoutesContent({
   const [lastOnline, setLastOnline] = useState(runtimeOnline);
   const [notice, setNotice] = useState<string | null>(null);
   const [operation, setOperation] = useState<Operation | null>(null);
+  const [showStickers, setShowStickers] = useState(false);
   const [groupId, setGroupId] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [creationObservation, setCreationObservation] =
@@ -540,7 +542,7 @@ function QQGroupRoutesContent({
       <h3>QQ 小群 · 独立管理</h3>
       <p>
         新路由默认关闭。仅注册成员的结构化 @
-        触发文字回复；群聊不支持主动消息、工具、语音、图片或引用。主人私聊设置独立保留。
+        触发回复；可单独开启本群静态表情学习。群聊不支持主动消息、工具或语音。主人私聊设置独立保留。
       </p>
       <p>
         成员须先在“对话设置 → 添加参与者”中注册。关联 QQ
@@ -679,7 +681,10 @@ function QQGroupRoutesContent({
             <button
               type="button"
               disabled={!readAvailable || busy}
-              onClick={() => selectRoute(route)}
+              onClick={() => {
+                setShowStickers(false);
+                selectRoute(route);
+              }}
             >
               管理 {route.display_name}
             </button>
@@ -723,6 +728,32 @@ function QQGroupRoutesContent({
             {pauseLabel(selected.pause_reason)}
           </p>
           <p>场景由服务器创建。成员变更时需新场景；不能沿用旧受众的上下文。</p>
+          {config.character_id === "default" ? (
+            <>
+              <button
+                type="button"
+                disabled={!readAvailable || busy}
+                onClick={() => setShowStickers((value) => !value)}
+              >
+                {showStickers ? "收起本群表情库" : "管理本群表情学习"}
+              </button>
+              {showStickers ? (
+                <StickerLibraryPanel
+                  characterId={config.character_id}
+                  runtimeOnline={
+                    runtimeOnline &&
+                    readAvailable &&
+                    connectionVerified &&
+                    !busy
+                  }
+                  groupScope={{
+                    routeId: selected.route_id,
+                    sceneId: selected.scene_id,
+                  }}
+                />
+              ) : null}
+            </>
+          ) : null}
           <fieldset
             disabled={!mutable || busy || !currentRoute}
             className="qq-group-fields"

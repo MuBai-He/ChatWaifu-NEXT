@@ -1057,7 +1057,10 @@ async def test_image_cross_machine_wire_shape_and_restart_fence(
                     "message": [
                         {
                             "type": "image",
-                            "data": {"file": "base64://" + base64.b64encode(data).decode("ascii")},
+                            "data": {
+                                "file": "base64://" + base64.b64encode(data).decode("ascii"),
+                                "sub_type": 1,
+                            },
                         }
                     ],
                 }

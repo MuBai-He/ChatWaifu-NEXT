@@ -965,7 +965,7 @@ class ConversationService:
                 or source.audience_ids != identity.audience_ids
                 or options.origin != "external_channel"
                 or options.before_generation is None
-                or options.image_loader is not None
+                or (options.image_loader is not None and not options.allow_shared_images)
                 or options.quoted_message_loader is not None
             ):
                 raise ValueError("external input does not match persisted shared identity")
