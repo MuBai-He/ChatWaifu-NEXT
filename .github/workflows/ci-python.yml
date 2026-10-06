@@ -73,8 +73,8 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    # The full SQLite-backed suite exceeds 25 minutes on hosted Windows runners.
-    timeout-minutes: ${{ matrix.os == 'windows-latest' && 45 || 25 }}
+    # Hosted Windows took 43 minutes for 3736 tests; allow room for the full suite.
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 60 || 25 }}
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v9.0.0
