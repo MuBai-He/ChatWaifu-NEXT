@@ -621,11 +621,13 @@ class MemoryService:
         query: str,
         *,
         token_budget: int = 700,
+        limit: int = 12,
     ) -> MemoryContextPacket:
         packet = await self._retriever.retrieve_context(
             query,
             await self.namespaces_for_session(session_id, character_id),
             token_budget=token_budget,
+            limit=limit,
         )
         excerpts = (
             packet.pinned_facts

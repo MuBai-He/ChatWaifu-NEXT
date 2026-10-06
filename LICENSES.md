@@ -31,6 +31,11 @@ The native WeChat iLink adapter implements HTTP and QR-login behavior from Tence
 `cef0bfc390393f716903e16d50408118047f87e0`. That reference is Copyright (C) 2026 Tencent and
 licensed under the MIT License. See `services/runtime/THIRD_PARTY_NOTICES.md`.
 
+The bundled `cl100k_base` input reference vocabulary and `tiktoken` 0.12.0 retain
+the MIT License, Copyright (c) 2022 OpenAI, Shantanu Jain. The vocabulary's license
+ships in `services/runtime/src/chatwaifu_runtime/providers/data/LICENSE.tiktoken`;
+source and checksum attribution are in `services/runtime/THIRD_PARTY_NOTICES.md`.
+
 Frontend functional icons are rendered with `lucide-react`. Lucide is Copyright (c) 2026 Lucide
 Icons and Contributors and licensed under the ISC License; portions derived from Feather are
 Copyright (c) 2013-present Cole Bemis and licensed under the MIT License. The AI-drawn ChatWaifu

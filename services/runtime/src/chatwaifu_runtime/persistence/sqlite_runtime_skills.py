@@ -110,6 +110,33 @@ class SQLiteRuntimeSkillRepository:
             )
         )
 
+    async def source_runs_for_generations(
+        self, session_id: UUID, generation_ids: tuple[UUID, ...], limit: int
+    ) -> list[Record]:
+        if not generation_ids:
+            return []
+        placeholders = ",".join("?" for _ in generation_ids)
+        return _records(
+            await self._database.fetchall(
+                f"""
+            SELECT * FROM skill_runs
+            WHERE session_id = ? AND generation_id IN ({placeholders})
+                AND origin = 'agent' AND plugin_id IS NULL AND mcp_connection_id IS NULL
+                AND state IN ('succeeded', 'failed', 'cancelled', 'expired')
+                AND json_extract(execution_plan_json, '$.adapter_kind') = 'builtin'
+                AND json_extract(execution_plan_json, '$.plugin_id') IS NULL
+                AND json_extract(execution_plan_json, '$.mcp_connection_id') IS NULL
+                AND ((skill_id = 'web.read' AND capability = 'read'
+                    AND json_extract(execution_plan_json, '$.adapter_target') = 'public_web_read')
+                    OR (skill_id = 'web.search' AND capability = 'search'
+                    AND json_extract(execution_plan_json, '$.adapter_target')
+                        = 'public_web_search'))
+            ORDER BY created_at DESC, skill_run_id DESC LIMIT ?
+            """,
+                (str(session_id), *(str(item) for item in generation_ids), limit),
+            )
+        )
+
     async def mark_run_cancelling(self, run_id: UUID, now: str, *, allow_running: bool) -> bool:
         cancellable_states = (
             "state IN ('created', 'waiting_for_confirmation', 'running')"

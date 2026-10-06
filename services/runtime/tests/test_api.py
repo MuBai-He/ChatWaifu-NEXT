@@ -294,6 +294,44 @@ def test_model_roles_are_independent_and_api_keys_never_echo(
         assert secret_file.stat().st_mode & 0o777 == 0o600
 
 
+def test_model_budget_api_persists_and_rejects_invalid_output_reservation(
+    client: TestClient,
+) -> None:
+    http = cast(RuntimeHttpClient, client)
+    config = {
+        "provider": "demo",
+        "model": "budget-model",
+        "context_window": 32768,
+        "budget": {
+            "output_reserve_tokens": 8192,
+            "max_output_tokens": 8192,
+            "estimate_margin_ratio": 0.15,
+            "section_policy": "scaled",
+            "history_turn_limit": 32,
+            "memory_candidate_limit": 24,
+            "tool_result_max_bytes": 131072,
+        },
+    }
+    response = http.put("/v1/model-configurations/chat", json=config)
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["budget"]["max_output_tokens"] == 8192
+    assert payload["budget"]["section_policy"] == "scaled"
+    bad = {**config, "budget": {"output_reserve_tokens": 100, "max_output_tokens": 8192}}
+    assert http.put("/v1/model-configurations/chat", json=bad).status_code == 422
+    unchanged = http.get("/v1/model-configurations").json()
+    assert next(item for item in unchanged["items"] if item["role"] == "chat") == payload
+    legacy_update = {key: value for key, value in config.items() if key != "budget"}
+    kept = http.put("/v1/model-configurations/chat", json=legacy_update)
+    assert kept.status_code == 200 and kept.json()["budget"] == payload["budget"]
+    switched = http.put(
+        "/v1/model-configurations/chat", json={**legacy_update, "model": "other-model"}
+    )
+    assert switched.status_code == 200
+    assert switched.json()["budget"]["max_output_tokens"] is None
+    assert switched.json()["budget"]["section_policy"] == "legacy"
+
+
 def test_aliyun_tts_configuration_is_persisted_without_echoing_api_key(
     client: TestClient, runtime_settings: Settings
 ) -> None:

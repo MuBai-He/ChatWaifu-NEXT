@@ -595,3 +595,43 @@ async def test_constrained_token_budget_truncation(
     packet_con = await retriever.retrieve_context("习惯", namespaces, token_budget=15)
     assert len(packet_con.relevant_memories) == 1
     assert packet_con.relevant_memories[0].memory_id == rec1.memory_id
+
+
+@pytest.mark.asyncio
+async def test_expanded_model_budget_recovers_records_at_sqlite_retrieval_boundary(
+    sqlite_retriever_setup: _RetrieverFixture,
+) -> None:
+    from chatwaifu_protocol.character import ModelContextBudget
+    from chatwaifu_runtime.providers.context_budget import resolve_context_budget
+
+    database, repository, _, retriever, session_id = sqlite_retriever_setup
+    records = [
+        await _insert_test_record(
+            database,
+            repository,
+            session_id,
+            text=f"budgetrecord item {index}: " + "verified context " * 5,
+        )
+        for index in range(16)
+    ]
+    legacy = await retriever.retrieve_context(
+        "budgetrecord", ["character/default/user/local"], token_budget=700, limit=12
+    )
+    configured = ModelContextBudget(
+        output_reserve_tokens=8192,
+        section_policy="scaled",
+        estimate_margin_ratio=0.15,
+        memory_candidate_limit=24,
+    )
+    resolved = resolve_context_budget(32768, configured)
+    expanded = await retriever.retrieve_context(
+        "budgetrecord",
+        ["character/default/user/local"],
+        token_budget=resolved.retrieval_characters,
+        limit=configured.memory_candidate_limit,
+    )
+    assert len(legacy.relevant_memories) < 12
+    assert {item.memory_id for item in expanded.relevant_memories} == {
+        record.memory_id for record in records
+    }
+    assert expanded.token_budget_used == sum(len(record.text) for record in records)

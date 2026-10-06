@@ -2,6 +2,18 @@
   "character_id": "default-character",
   "character_package_hash": "0000000000000000000000000000000000000000000000000000000000000000",
   "chat_route": {
+    "budget": {
+      "estimate_margin_ratio": 0.0,
+      "history_turn_limit": 16,
+      "input_token_limit": null,
+      "max_output_tokens": null,
+      "memory_candidate_limit": 12,
+      "output_reserve_tokens": 900,
+      "output_token_limit": null,
+      "section_policy": "legacy",
+      "tool_result_max_bytes": 32768,
+      "version": "1.0"
+    },
     "context_window": 128000,
     "endpoint_digest": "772062cee0b6010158740accacfb96b3d174ca06d157a3db0d6d93b4820cee6f",
     "model": "gpt-4o",
@@ -10,6 +22,18 @@
   },
   "identity_hash": "6864fe1a0c97658ef27f499bfe6b43f9b9e0241ada9ff23a0b92f001b070d9f4",
   "memory_summary_route": {
+    "budget": {
+      "estimate_margin_ratio": 0.0,
+      "history_turn_limit": 16,
+      "input_token_limit": null,
+      "max_output_tokens": null,
+      "memory_candidate_limit": 12,
+      "output_reserve_tokens": 900,
+      "output_token_limit": null,
+      "section_policy": "legacy",
+      "tool_result_max_bytes": 32768,
+      "version": "1.0"
+    },
     "context_window": 8192,
     "endpoint_digest": null,
     "model": "deterministic-summary-v1",

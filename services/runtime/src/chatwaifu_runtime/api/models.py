@@ -4,6 +4,7 @@ from typing import Literal
 from uuid import UUID
 
 from chatwaifu_protocol.base import JsonObject
+from chatwaifu_protocol.character import ModelContextBudget
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 
@@ -237,6 +238,7 @@ class ModelRoleConfigurationRequest(BaseModel):
     base_url: str = Field(default="", max_length=2048)
     timeout_seconds: float = Field(default=60, gt=0, le=600)
     context_window: int = Field(default=8192, ge=1024, le=2_000_000)
+    budget: ModelContextBudget | None = None
     enabled: bool = True
     api_key: str | None = Field(default=None, max_length=8192)
     clear_api_key: bool = False

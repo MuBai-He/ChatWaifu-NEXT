@@ -60,6 +60,7 @@ from chatwaifu_runtime.conversation.repository import (
     ConversationRepository,
 )
 from chatwaifu_runtime.conversation.reset import ExperienceResetRepository
+from chatwaifu_runtime.conversation.source_context import SourceContextPacket, SourceContextPort
 from chatwaifu_runtime.conversation.speech import ConversationSpeechPipeline
 from chatwaifu_runtime.conversation.text_segmenter import StreamingTextSegmenter
 from chatwaifu_runtime.eventing.publisher import EventPublisher
@@ -67,7 +68,14 @@ from chatwaifu_runtime.memory.service import MemoryService, UserTurnMemoryObserv
 from chatwaifu_runtime.photo_memory.annotations import PhotoAnnotationService
 from chatwaifu_runtime.photo_memory.recall import PhotoRecall, PhotoRecallService
 from chatwaifu_runtime.playback.service import PlaybackService
-from chatwaifu_runtime.providers.contracts import LlmInputImage, LlmProvider, LlmRequest
+from chatwaifu_runtime.providers.context_budget import resolve_context_budget
+from chatwaifu_runtime.providers.contracts import (
+    LlmEmptyResponseError,
+    LlmInputBudget,
+    LlmInputImage,
+    LlmProvider,
+    LlmRequest,
+)
 from chatwaifu_runtime.providers.factory import ProviderSet
 from chatwaifu_runtime.providers.model_config import (
     ModelConfigurationService,
@@ -113,6 +121,7 @@ class ConversationService:
         models: ModelConfigurationService,
         photo_recall: PhotoRecallService | None = None,
         photo_annotations: PhotoAnnotationService | None = None,
+        source_context: SourceContextPort | None = None,
     ) -> None:
         self._repository = repository
         self._reset_repository = reset_repository
@@ -128,6 +137,7 @@ class ConversationService:
         self._agent = agent
         self._photo_annotations = photo_annotations
         self._photo_recall = photo_recall
+        self._source_context = source_context
         self._avatar_planner = SemanticAvatarCuePlanner()
         self._models = models
         self._active: dict[UUID, _ActiveGeneration] = {}
@@ -143,6 +153,7 @@ class ConversationService:
         chat_config: ModelRoleConfig,
         summary_config: ModelRoleConfig,
         chat_provider: LlmProvider,
+        admitted_at: datetime,
         routing_previous_user_text: str | None = None,
     ) -> GenerationContextSnapshot:
         allow_tools = trigger == "user" and options.allow_tools
@@ -182,6 +193,7 @@ class ConversationService:
             chat_provider=chat_provider,
             visible_tools=visible_tools,
             identity=identity,
+            admitted_at=admitted_at,
         )
 
     @property
@@ -600,8 +612,11 @@ class ConversationService:
                 accepted.turn_id,
                 character.character_id,
                 "轻声主动关心用户",
+                **_retrieval_budget_options(chat_config),
             )
-            history = await self._recent_history(session_id, accepted.turn_id)
+            history = await self._recent_history(
+                session_id, accepted.turn_id, limit=chat_config.budget.history_turn_limit
+            )
             character_context = await self._character_kernel.plan_proactive_turn(
                 session_id=session_id,
                 turn_id=accepted.turn_id,
@@ -617,6 +632,7 @@ class ConversationService:
                 chat_config=chat_config,
                 summary_config=summary_config,
                 chat_provider=chat_provider,
+                admitted_at=events[0].occurred_at,
             )
             task = asyncio.create_task(
                 self._run_generation(
@@ -704,8 +720,11 @@ class ConversationService:
                     accepted.turn_id,
                     character.character_id,
                     normalized,
+                    **_retrieval_budget_options(chat_config),
                 )
-                history = await self._recent_history(session_id, accepted.turn_id)
+                history = await self._recent_history(
+                    session_id, accepted.turn_id, limit=chat_config.budget.history_turn_limit
+                )
                 character_context = await self._character_kernel.observe_user_turn(
                     session_id=session_id,
                     turn_id=accepted.turn_id,
@@ -721,6 +740,7 @@ class ConversationService:
                     chat_config=chat_config,
                     summary_config=summary_config,
                     chat_provider=chat_provider,
+                    admitted_at=events[0].occurred_at,
                     routing_previous_user_text=_previous_local_user_text(
                         history, options.source_context
                     ),
@@ -1200,16 +1220,50 @@ class ConversationService:
                 generation_id=accepted.generation_id,
                 user_text=user_text,
                 system_prompt=system_prompt,
+                tool_decision_system_prompt=compilation.tool_decision_system_prompt,
                 character_name=character.display_name,
                 context=compilation.context,
                 history=compilation.history,
                 routing_previous_user_text=_previous_local_user_text(
                     history, options.source_context
                 ),
+                tool_choice=self._agent.tool_choice_for(
+                    user_text,
+                    routing_previous_user_text=_previous_local_user_text(
+                        history, options.source_context
+                    ),
+                ),
                 recalled_memory_texts=compilation.recalled_memory_texts,
                 trigger=trigger,
                 images=loaded_images,
+                input_budget=LlmInputBudget(compilation.report.budget),
+                max_output_tokens=snapshot.chat_config.budget.max_output_tokens,
+                tool_result_max_bytes=snapshot.chat_config.budget.tool_result_max_bytes,
             )
+            sources = SourceContextPacket()
+            if self._source_context is not None and trigger == "user":
+                eligible: list[UUID] = []
+                for generation_id in compilation.source_generation_ids:
+                    prior = await self._repository.generation_result(generation_id)
+                    if (
+                        prior is not None
+                        and prior.session_id == accepted.session_id
+                        and prior.state is GenerationState.COMPLETED
+                    ):
+                        eligible.append(generation_id)
+                sources = await self._source_context.load_source_context(
+                    accepted.session_id, tuple(eligible)
+                )
+                self._ensure_current(accepted)
+                if sources.receipts or sources.truncated:
+                    logger.info(
+                        "conversation.source_context_loaded generation=%s receipts=%d "
+                        "originals=%d truncated=%s",
+                        accepted.generation_id,
+                        len(sources.receipts),
+                        sum(receipt.original_result_available for receipt in sources.receipts),
+                        sources.truncated,
+                    )
             async for delta in self._agent.stream(
                 request,
                 session_id=accepted.session_id,
@@ -1218,6 +1272,7 @@ class ConversationService:
                 allow_tools=trigger == "user" and options.allow_tools,
                 llm=snapshot.chat_provider,
                 tools=snapshot.visible_tools,
+                source_context=sources,
             ):
                 self._ensure_current(accepted)
                 output += delta
@@ -1243,7 +1298,9 @@ class ConversationService:
             raise
         except Exception as error:
             error_code = (
-                "image_input_error" if options.image_loader is not None else "provider_error"
+                "empty_model_response"
+                if isinstance(error, LlmEmptyResponseError)
+                else ("image_input_error" if options.image_loader is not None else "provider_error")
             )
             await self._failed(
                 accepted,
@@ -1440,6 +1497,9 @@ class ConversationService:
         source_context: ConversationSourceContext | None = None,
     ) -> None:
         now = datetime.now(UTC)
+        if isinstance(error, LlmEmptyResponseError) and error.has_tool_results:
+            # A failed summary must not encourage replaying recorded operations.
+            retryable = False
         if isinstance(error, StructuredError):
             structured = error
         else:
@@ -1562,6 +1622,14 @@ class ConversationService:
     def _is_current(self, accepted: GenerationAccepted) -> bool:
         active = self._active.get(accepted.session_id)
         return active is not None and active.generation_id == accepted.generation_id
+
+
+def _retrieval_budget_options(config: ModelRoleConfig) -> dict[str, int]:
+    limits = resolve_context_budget(config.context_window, config.budget)
+    options = {"token_budget": limits.retrieval_characters}
+    if config.budget.memory_candidate_limit != 12:
+        options["limit"] = config.budget.memory_candidate_limit
+    return options
 
 
 def _previous_local_user_text(

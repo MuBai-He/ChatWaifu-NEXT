@@ -3,14 +3,17 @@
 # pyright: reportPrivateUsage=false
 from __future__ import annotations
 
+import asyncio
 import json
 import sys
 from copy import deepcopy
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 import pytest
 from chatwaifu_protocol.character import (
+    ModelContextBudget,
     RelationshipState,
 )
 from chatwaifu_runtime.character_kernel.prompt import PromptCompilation, PromptCompiler
@@ -43,6 +46,166 @@ from tools.evaluate_character_scenarios import (
     parse_and_validate_initial_affect,
     parse_and_validate_initial_relationship,
 )
+
+
+@pytest.mark.asyncio
+async def test_evaluation_uses_configured_budget_and_rejects_mixed_budget_resume(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    requests: list[LlmRequest] = []
+    original = ControlledEvaluatorProvider.stream
+
+    async def capture(self: ControlledEvaluatorProvider, request: LlmRequest):
+        requests.append(request)
+        async for event in original(self, request):
+            yield event
+
+    monkeypatch.setattr(ControlledEvaluatorProvider, "stream", capture)
+    budget = ModelContextBudget(
+        output_reserve_tokens=8192,
+        max_output_tokens=8192,
+        estimate_margin_ratio=0.15,
+        section_policy="scaled",
+        tool_result_max_bytes=131072,
+    )
+    runner = EvaluationRunner(
+        output_dir=tmp_path,
+        provider="controlled",
+        repeats=1,
+        max_requests=1,
+        context_window=32768,
+        model_budget=budget,
+    )
+    variants = [("baseline", DEFAULT_CHARACTERS_DIR / "default" / "persona.md")]
+    dry = await asyncio.to_thread(runner.estimate_dry_run, variants, ["greeting"])
+    assert dry["context_window"] == 32768
+    assert dry["model_budget"]["max_output_tokens"] == 8192
+    await runner.execute(variants, ["greeting"])
+    assert len(requests) == 1
+    assert requests[0].input_budget is not None
+    assert requests[0].input_budget.estimated_token_limit == 21370
+    assert requests[0].max_output_tokens == 8192 and requests[0].tool_result_max_bytes == 131072
+    changed = EvaluationRunner(
+        output_dir=tmp_path,
+        provider="controlled",
+        repeats=1,
+        max_requests=1,
+        context_window=32768,
+        model_budget=budget.model_copy(update={"max_output_tokens": 4096}),
+    )
+    with pytest.raises(ValueError, match="resume"):
+        await changed.execute(variants, ["greeting"])
+    assert len(requests) == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("runtime_tools", [False, True])
+async def test_empty_model_answer_is_incomplete_with_reported_usage_retained(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, runtime_tools: bool
+) -> None:
+    from collections.abc import AsyncIterator
+
+    class Provider:
+        kind = "openai_compatible"
+        supports_tool_calling = True
+
+        def __init__(self, **kwargs: object) -> None:
+            pass
+
+        async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+            yield LlmTextDelta(" \n")
+            yield LlmResponseCompleted("stop", LlmUsage(7711, 8, 7719, None))
+
+    monkeypatch.setattr("tools.evaluate_character_scenarios.OpenAiCompatibleLlmProvider", Provider)
+    runner = EvaluationRunner(
+        output_dir=tmp_path,
+        provider="openai_compatible",
+        base_url="https://example.test",
+        model_name="synthetic-empty-model",
+        no_cost_ceiling=True,
+        max_requests=2,
+        max_provider_requests=2 if runtime_tools else None,
+        runtime_source_tools=runtime_tools,
+        allow_source_tools_once=runtime_tools,
+    )
+    samples = await runner.execute([("baseline", runner.variant_a_persona_path)], ["greeting"])
+    assert samples == []
+    assert not (tmp_path / "results.jsonl").exists() or not (tmp_path / "results.jsonl").read_text()
+    failures = [
+        json.loads(line)
+        for line in (tmp_path / "incomplete.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    assert len(failures) == 1 and failures[0]["reason"] == "empty_model_response"
+    if runtime_tools:
+        calls = failures[0]["runtime_source_trace"]["provider_calls"]
+        assert len(calls) == 1 and calls[0]["text"] == " \n"
+        assert calls[0]["usage"] == {
+            "prompt_tokens": 7711,
+            "completion_tokens": 8,
+            "total_tokens": 7719,
+            "reasoning_tokens": None,
+        }
+    else:
+        assert failures[0]["raw_reply"] == " \n"
+        assert failures[0]["provider_usage"]["total_tokens"] == 7719
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("runtime_tools", [False, True])
+async def test_prompt_clock_is_explicit_frozen_and_checked_on_resume(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, runtime_tools: bool
+) -> None:
+    requests: list[LlmRequest] = []
+    original = ControlledEvaluatorProvider.stream
+
+    async def record(self: ControlledEvaluatorProvider, request: LlmRequest):
+        requests.append(request)
+        async for event in original(self, request):
+            yield event
+
+    monkeypatch.setattr(ControlledEvaluatorProvider, "stream", record)
+    local_time = datetime(2026, 10, 1, 8, 1, tzinfo=timezone(timedelta(hours=8)))
+    options: dict[str, Any] = dict(
+        output_dir=tmp_path,
+        provider="controlled",
+        repeats=1,
+        runtime_source_tools=runtime_tools,
+        allow_source_tools_once=runtime_tools,
+        max_provider_requests=10 if runtime_tools else None,
+    )
+    first = EvaluationRunner(**options, max_requests=1, prompt_as_of=local_time)
+    variants = [("baseline", first.variant_a_persona_path)]
+    estimate = await asyncio.to_thread(first.estimate_dry_run, variants, ["greeting"])
+    expected = local_time.astimezone(UTC).isoformat()
+    assert estimate["prompt_as_of"] == expected
+    await first.execute(variants, ["greeting"])
+    metadata = json.loads((tmp_path / "metadata.json").read_text(encoding="utf-8"))
+    assert metadata["identity"]["prompt_as_of"] == expected
+    assert metadata["identity"]["state_time"] == _FIXED_TIME.isoformat()
+    assert expected in requests[0].system_prompt
+
+    # No explicit override: resume must reuse the saved instant rather than a fresh clock.
+    resumed = EvaluationRunner(**options)
+    assert resumed.prompt_as_of == local_time.astimezone(UTC)
+    completed = await resumed.execute(variants, ["greeting"])
+    assert [sample.turn_id for sample in completed] == [2, 3, 4]
+    assert len(requests) == 4
+    assert all(expected in request.system_prompt for request in requests)
+    before = (tmp_path / "results.jsonl").read_bytes()
+    changed = EvaluationRunner(**options, prompt_as_of=local_time + timedelta(days=1))
+    with pytest.raises(ValueError, match="differ"):
+        await changed.execute(variants, ["greeting"])
+    assert len(requests) == 4
+    assert (tmp_path / "results.jsonl").read_bytes() == before
+
+
+def test_prompt_clock_rejects_ambiguous_dates_and_cli_normalizes_offsets(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="timezone"):
+        EvaluationRunner(output_dir=tmp_path, prompt_as_of=datetime(2026, 10, 1))
+    args = build_arg_parser().parse_args(["--prompt-as-of", "2026-10-01T08:01:00+08:00"])
+    assert args.prompt_as_of == datetime(2026, 10, 1, 0, 1, tzinfo=UTC)
+    with pytest.raises(SystemExit):
+        build_arg_parser().parse_args(["--prompt-as-of", "2026-10-01"])
 
 
 def test_load_scenarios_validates_12_scenarios_and_48_turns() -> None:
@@ -79,6 +242,109 @@ def test_load_scenarios_validates_12_scenarios_and_48_turns() -> None:
             assert len(turn.expected_behavior) >= 1
             assert len(turn.forbidden_behavior) >= 1
             assert turn.review_criteria
+
+
+def test_runtime_source_mode_requires_explicit_permission_and_provider_round_bound(
+    tmp_path: Path,
+) -> None:
+    args = build_arg_parser().parse_args(
+        [
+            "--runtime-source-tools",
+            "--allow-source-tools-once",
+            "--max-provider-requests",
+            "12",
+            "--source-dns-resolver",
+            "cloudflare",
+        ]
+    )
+    assert args.runtime_source_tools and args.allow_source_tools_once
+    assert args.max_provider_requests == 12
+    with pytest.raises(ValueError, match="allow-source-tools-once"):
+        EvaluationRunner(output_dir=tmp_path, runtime_source_tools=True, max_provider_requests=12)
+    with pytest.raises(ValueError, match="max-provider-requests"):
+        EvaluationRunner(
+            output_dir=tmp_path, runtime_source_tools=True, allow_source_tools_once=True
+        )
+    with pytest.raises(ValueError, match="no-cost-ceiling"):
+        EvaluationRunner(
+            output_dir=tmp_path,
+            provider="openai_compatible",
+            runtime_source_tools=True,
+            allow_source_tools_once=True,
+            max_provider_requests=12,
+        )
+
+
+@pytest.mark.asyncio
+async def test_runtime_mode_preserves_trace_and_refuses_direct_path_resume(tmp_path: Path) -> None:
+    runner = EvaluationRunner(
+        output_dir=tmp_path,
+        provider="demo",
+        repeats=1,
+        max_requests=1,
+        runtime_source_tools=True,
+        allow_source_tools_once=True,
+        max_provider_requests=5,
+    )
+    variants = [("baseline", runner.variant_a_persona_path)]
+    samples = await runner.execute(variants, ["greeting"])
+    assert len(samples) == 1
+    assert samples[0].runtime_source_trace is not None
+    assert samples[0].runtime_source_trace["execution_path"] == "runtime_source_tools"
+    assert len(samples[0].runtime_source_trace["provider_calls"]) == 1
+    identity = json.loads((tmp_path / "metadata.json").read_text(encoding="utf-8"))["identity"]
+    assert identity["execution_path"] == "runtime_source_tools"
+    assert identity["runtime_source_config"]["permission_policy"] == "allow_once"
+    assert identity["runtime_source_config"]["implementation_sha256"]
+    estimate = await asyncio.to_thread(runner.estimate_dry_run, variants, ["greeting"])
+    assert estimate["provider_round_upper_bound"] == 4 * 6
+    journal = tmp_path / "provider-rounds.jsonl"
+    saved_journal = journal.read_text(encoding="utf-8")
+    journal.unlink()
+    with pytest.raises(ValueError, match="provider-rounds"):
+        await runner.execute(variants, ["greeting"])
+    journal.write_text(saved_journal, encoding="utf-8")
+    direct = EvaluationRunner(output_dir=tmp_path, provider="demo", repeats=1, max_requests=1)
+    with pytest.raises(ValueError, match="differ"):
+        await direct.execute(variants, ["greeting"])
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "services/runtime/src/chatwaifu_runtime/providers/input_estimation.py",
+        "services/runtime/src/chatwaifu_runtime/providers/data/cl100k_base.tiktoken",
+        "services/runtime/pyproject.toml",
+    ],
+)
+async def test_runtime_resume_rejects_changed_input_reference(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, relative: str
+) -> None:
+    runner = EvaluationRunner(
+        output_dir=tmp_path,
+        provider="demo",
+        repeats=1,
+        max_requests=1,
+        runtime_source_tools=True,
+        allow_source_tools_once=True,
+        max_provider_requests=5,
+    )
+    variants = [("baseline", runner.variant_a_persona_path)]
+    await runner.execute(variants, ["greeting"])
+    journal = tmp_path / "provider-rounds.jsonl"
+    before = journal.read_bytes()
+    original_read = Path.read_bytes
+    target = DEFAULT_CHARACTERS_DIR.parent / relative
+
+    def changed_read(path: Path) -> bytes:
+        data = original_read(path)
+        return data + b"changed input reference" if path == target else data
+
+    monkeypatch.setattr(Path, "read_bytes", changed_read)
+    with pytest.raises(ValueError, match="differ"):
+        await runner.execute(variants, ["greeting"])
+    assert journal.read_bytes() == before
 
 
 def test_pricing_estimation_known_and_unknown_models() -> None:

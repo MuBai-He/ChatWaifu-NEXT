@@ -394,6 +394,10 @@ def build_chat_completions_payload(
     request_usage: bool = False,
 ) -> dict[str, object]:
     payload: dict[str, object] = {"model": model, "messages": messages, "stream": True}
+    if request.max_output_tokens is not None:
+        if request.max_output_tokens < 1:
+            raise ValueError("max_output_tokens must be positive")
+        payload["max_tokens"] = request.max_output_tokens
     if request_usage:
         payload["stream_options"] = {"include_usage": True}
     if request.tools:

@@ -6,15 +6,17 @@ import json
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Literal, cast
 from uuid import UUID
 
 from chatwaifu_protocol.character import PromptContextIdentity
 from chatwaifu_protocol.session import GenerationState
 
-from chatwaifu_runtime.agent.tool_calling import ProjectedAgentTool
 from chatwaifu_runtime.providers.contracts import LlmInputImage, LlmProvider
 from chatwaifu_runtime.providers.model_config import ModelRoleConfig
+
+if TYPE_CHECKING:
+    from chatwaifu_runtime.agent.tool_calling import ProjectedAgentTool
 
 type ConversationOrigin = Literal["local_text", "voice", "proactive", "external_channel"]
 type ConversationOutputMode = Literal["text", "audio", "avatar"]
@@ -201,3 +203,4 @@ class GenerationContextSnapshot:
     chat_provider: LlmProvider
     visible_tools: tuple[ProjectedAgentTool, ...]
     identity: PromptContextIdentity
+    admitted_at: datetime

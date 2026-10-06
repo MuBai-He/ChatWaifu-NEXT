@@ -121,6 +121,7 @@ def _smoke_runtime(executable: Path, root: Path, timeout: float) -> str:
 
 
 def _smoke_plugin_runner(executable: Path, root: Path) -> None:
+    _smoke_offline_input_reference(executable, root)
     _smoke_packaged_channel_dependencies(executable, root)
     output = root / "plugin-result.txt"
     script = root / "plugin.py"
@@ -182,6 +183,43 @@ def _smoke_plugin_runner(executable: Path, root: Path) -> None:
         raise RuntimeError(f"Frozen MCP UTF-8 round trip failed: {response}")
 
     _smoke_silero_vad(executable, root)
+
+
+def _smoke_offline_input_reference(executable: Path, root: Path) -> None:
+    script = root / "input-reference-smoke.py"
+    script.write_text(
+        "import socket\n"
+        "import tiktoken\n"
+        "from uuid import uuid4\n"
+        "from chatwaifu_runtime.providers.contracts import LlmRequest\n"
+        "from chatwaifu_runtime.providers.input_estimation import (\n"
+        "    count_reference_tokens, estimate_reference_input_tokens)\n"
+        "def forbidden(*args, **kwargs):\n"
+        "    raise AssertionError('offline input reference attempted network/registry access')\n"
+        "socket.socket.connect = forbidden\n"
+        "tiktoken.get_encoding = forbidden\n"
+        "assert count_reference_tokens('hello world') == 2\n"
+        "assert count_reference_tokens('你好') == 2\n"
+        "assert count_reference_tokens('<|endoftext|>') > 1\n"
+        "assert estimate_reference_input_tokens(LlmRequest(uuid4(), '你好', 'safety')) > 32\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [str(executable), "--plugin-python", str(script)],
+        cwd=root,
+        env=_clean_environment(),
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=30,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"Frozen input reference failed ({result.returncode}): {result.stderr[-2_000:]}"
+        )
 
 
 def _smoke_packaged_channel_dependencies(executable: Path, root: Path) -> None:
