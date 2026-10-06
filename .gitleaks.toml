@@ -1,0 +1,118 @@
+title = "ChatWaifu secret scanning"
+
+[extend]
+useDefault = true
+
+# Reviewed 2026-10-06 with Gitleaks 8.24.3. Keep all default detection rules.
+# Each exception requires both an exact frozen path and a reviewed full match.
+# Source checksums were bound to Git blobs; sample_key values are evaluation UUIDs.
+# Private review key files remain withheld; only their recorded digests are allowed.
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Frozen source and review artifact checksums"
+condition = "AND"
+regexTarget = "match"
+paths = [
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-closure\-2026\-10\-04/autonomous\-discovery/live/dry/source\-tree\-after\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-closure\-2026\-10\-04/autonomous\-discovery/live/dry/source\-tree\-before\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-closure\-2026\-10\-04/autonomous\-discovery/live/source\-tree\-after\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-closure\-2026\-10\-04/autonomous\-discovery/live/source\-tree\-before\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-closure\-2026\-10\-04/budget\-reconstruction/live\-four\-turn/live\-server/source\-tree\-after\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-closure\-2026\-10\-04/budget\-reconstruction/live\-four\-turn/live\-server/source\-tree\-before\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-closure\-2026\-10\-04/budget\-reconstruction/offline\-server/baseline\-source\-tree\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-closure\-2026\-10\-04/budget\-reconstruction/offline\-server/candidate\-source\-tree\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-closure\-2026\-10\-04/existing\-material\-routing/source\-tree\-manifest\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-closure\-2026\-10\-04/final\-native\-v44/frozen\-guard\-control/server/code\-binding\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-closure\-2026\-10\-04/final\-native\-v44/server/source\-tree\-after\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-closure\-2026\-10\-04/final\-native\-v44/server/source\-tree\-before\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-closure\-2026\-10\-04/final\-native\-v44/source\-code\-binding\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-closure\-2026\-10\-04/latest\-history\-priority/server/source\-tree\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-closure\-2026\-10\-04/natural\-provided\-review/live/source\-tree\-manifest\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-closure\-2026\-10\-04/reader\-integration/baseline\-source\-manifest\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-closure\-2026\-10\-04/scope\-blocks/full\-source\-tree\-manifest\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-contract\-position\-control\-2026\-10\-04/manifest\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-frozen\-budget\-source\-scope\-2026\-10\-04/budget\-analysis/review\-freeze\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-frozen\-budget\-source\-scope\-2026\-10\-04/manifest\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-full\-sx\-crawl\-2026\-10\-03/masked\-review/primary\-artifact\-manifest\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-runtime\-contract\-budget\-guard\-2026\-10\-04/primary\-review/initial\-review\-freeze\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-runtime\-contract\-budget\-guard\-2026\-10\-04/runtime\-v26/snapshot\.json$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-v9\-sources\-2026\-10\-03/pdf\-probe/deployed\-092\-diagnostic\.json$''',
+]
+regexes = [
+    '''^\._async_secret_store\.py":\ "dd3e40061a4863e5b39847b2a92b9f6166c4db4d8432f3da13d3cd31327d2c67"$''',
+    '''^\._atomic_secret_store\.py":\ "dd3e40061a4863e5b39847b2a92b9f6166c4db4d8432f3da13d3cd31327d2c67"$''',
+    '''^\._credentials\.py":\ "dd3e40061a4863e5b39847b2a92b9f6166c4db4d8432f3da13d3cd31327d2c67"$''',
+    '''^\._encrypted_credentials\.py":\ "dd3e40061a4863e5b39847b2a92b9f6166c4db4d8432f3da13d3cd31327d2c67"$''',
+    '''^\._oauth\.py":\ "dd3e40061a4863e5b39847b2a92b9f6166c4db4d8432f3da13d3cd31327d2c67"$''',
+    '''^api_py_sha256":\ "5db478ad38282f16e475cbd41cb9b7f5403b29dbddd3c661a7411cf3e33552c6"$''',
+    '''^async_secret_store\.py":\ "ba3f550cc9fcc48c79b3047728c886d1d8d27276be83b7c4660fb5d33802f9ca"$''',
+    '''^atomic_secret_store\.py":\ "7751ee28be7f4ef647fb3e90618ef90ca7b0ef18b431d47021dcc18c4e45d9c9"$''',
+    '''^credentials\.py":\ "a4bfab02b30ebb0dcfe9f201ae5e89ab1a44204f4630cc21e74dc6cc8618698f"$''',
+    '''^encrypted_credentials\.py":\ "3cf6b45d3504f7b24e36eef24b8541df4dad891a3e42733d616fa1ae139d5e03"$''',
+    '''^encrypted_credentials\.py":\ "a49a0b924296e11e77527bbce2d91da085f70eec7dca998943a3e2e002c9d005"$''',
+    '''^initial\-review\-key\.json":\ "28fc75f65b7f4c62b157d8042b0a993a6e578e4113eadab7c6d377c84033493a"$''',
+    '''^mask\-key\.json":\ "f064a3f8a67375a5c215eb344fce437b8f5f47c23c2a62f1d22544918b77685f"$''',
+    '''^mask_key_sha256":\ "f064a3f8a67375a5c215eb344fce437b8f5f47c23c2a62f1d22544918b77685f"$''',
+    '''^oauth\.py":\ "f5cdd1e048c1ee7146d9c29ebfc19ac7028ce820e401b3719c289615b56dca9b"$''',
+    '''^private\-review\-key\.json":\ "08297a2ff374b639d11b709283fa64464a7098ae817310b831c86604a9aa6760"$''',
+    '''^private\-version\-key\.json":\ "12bf5e1d65753be9ba0a3fa460a24ff8388b2a03852e7ac5ba3f6fdcfa3771ea"$''',
+    '''^test_api\.py":\ "454f1e6de58ee6b6ef5cc3da8aeb18d004ff734556afdde48c158e2f39c1d3db"$''',
+    '''^test_encrypted_channel_credentials\.py":\ "bb6919774c01b3cfff7624f81943d8b0772ea6400e00a0b2669f6f36e7728e8d"$''',
+    '''^test_interaction_diagnostics_api\.py":\ "f7386b1e13a1fe7654b3ebe817c959dd095bce63b5d12b2454d5fa593dbb1daa"$''',
+    '''^test_sticker_library_api\.py":\ "8729414207274491c63766ef6510ff2b0eea0bb30edfee30504d117bc8a967e2"$''',
+]
+
+[[rules.allowlists]]
+description = "Frozen evaluation sample UUIDs"
+condition = "AND"
+regexTarget = "match"
+paths = [
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-closure\-2026\-10\-04/candidate\-one/provider\-rounds\.jsonl$''',
+    '''^docs/research/qq\-agent\-plus\-evidence/q02\-closure\-2026\-10\-04/frozen\-quality/provider\-rounds\.jsonl$''',
+]
+regexes = [
+    '''^sample_key":\ "0121cd39\-8590\-5466\-ac67\-135285bf9204"$''',
+    '''^sample_key":\ "06263069\-1d02\-549e\-b6bb\-4ee33d73c3e3"$''',
+    '''^sample_key":\ "11a28311\-dee8\-5c8a\-909c\-bd1b322eea1b"$''',
+    '''^sample_key":\ "1345a56f\-1c32\-52db\-81ff\-029ec4a377e2"$''',
+    '''^sample_key":\ "161cd217\-75ad\-5cf0\-8aa7\-17d2abfe7f77"$''',
+    '''^sample_key":\ "184b58bb\-167c\-5fe9\-b33a\-ee2d4c7acb80"$''',
+    '''^sample_key":\ "191c735a\-b560\-5912\-8855\-195b33121406"$''',
+    '''^sample_key":\ "23434bed\-6941\-5226\-bf4b\-3185684a1214"$''',
+    '''^sample_key":\ "24bed59e\-a441\-58b1\-b56e\-4102dc3576dc"$''',
+    '''^sample_key":\ "31efebfd\-e324\-5ecc\-9cdb\-0bee7bc7c292"$''',
+    '''^sample_key":\ "5e5729de\-1e6b\-5ead\-a58e\-9485ad2a96c9"$''',
+    '''^sample_key":\ "6c674298\-13bc\-5460\-911b\-e32207652c8e"$''',
+    '''^sample_key":\ "77fd08d1\-f66b\-58db\-8009\-21e4af101925"$''',
+    '''^sample_key":\ "7ec87d33\-d6e4\-5271\-a190\-7cf12409ea60"$''',
+    '''^sample_key":\ "8758e1c2\-d6f9\-53e3\-9b6f\-1571ea93b1a3"$''',
+    '''^sample_key":\ "8bf8b2e1\-fdac\-5f07\-91e4\-64f91181f005"$''',
+    '''^sample_key":\ "8f4ef496\-120c\-55f7\-8d70\-486f5232e82b"$''',
+    '''^sample_key":\ "934f2dd5\-42b6\-5a6a\-8b69\-2dc6d71f1f3f"$''',
+    '''^sample_key":\ "98b05277\-a0be\-5a96\-8f79\-db782475069d"$''',
+    '''^sample_key":\ "a3b12fe3\-4eea\-5648\-9299\-1b6cb1f8000e"$''',
+    '''^sample_key":\ "aeb30d25\-8ad6\-52b3\-9854\-4acb92501d17"$''',
+    '''^sample_key":\ "b17bc718\-811d\-5457\-a1f6\-4f09c54f2577"$''',
+    '''^sample_key":\ "b4b5ec9f\-b524\-5db3\-9bcf\-0f6f05bd2217"$''',
+    '''^sample_key":\ "bb199c8c\-a978\-5834\-b0b8\-69665f75e8c5"$''',
+    '''^sample_key":\ "bbf97667\-8b82\-5dcb\-b793\-fe6e27907c03"$''',
+    '''^sample_key":\ "be879fe4\-6349\-5211\-8f27\-df48ce2b0358"$''',
+    '''^sample_key":\ "c5b7758f\-0372\-50f5\-8f21\-2ad6bb7bb38e"$''',
+    '''^sample_key":\ "c731be46\-66a6\-54cd\-8bca\-5d7b971b1bb6"$''',
+    '''^sample_key":\ "c8006f92\-6e56\-5fd2\-bc1f\-2260f602da39"$''',
+    '''^sample_key":\ "caa69e2b\-c61d\-5806\-9c53\-d0559603c569"$''',
+    '''^sample_key":\ "d01a2906\-4dec\-5e71\-9eb2\-93727b97ca94"$''',
+]
+
+[[rules.allowlists]]
+description = "Generated conversation key type reference"
+condition = "AND"
+regexTarget = "match"
+paths = [
+    '''^packages/protocol\-typescript/src/generated/domain\.ts$''',
+]
+regexes = [
+    '''^conversation_key:\ ConversationKey1$''',
+]
