@@ -314,6 +314,14 @@ class NapCatClient:
                     self._events.put_nowait(event)
                 elif (
                     event.get("post_type") == "notice"
+                    and event.get("notice_type") == "notify"
+                    and event.get("sub_type") == "poke"
+                ):
+                    # Social events do not mutate group audiences. The manager
+                    # still checks the account, recipient, age and opt-in policy.
+                    self._events.put_nowait(event)
+                elif (
+                    event.get("post_type") == "notice"
                     and isinstance(event.get("notice_type"), str)
                     and event.get("notice_type") in GROUP_NOTICE_TYPES
                     and self._account is not None

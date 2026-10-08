@@ -288,6 +288,13 @@ function ChannelRuntimeSettingsContent({
                 onChange={(v) => toggle("qq_account_enabled", v)}
               />
               <SettingsToggle
+                label="QQ 自由交流"
+                description="宁宁自行决定是否回应主人私聊。常驻群友模式下，群文字、语音和戳一戳也进入自主判断；聊天接收范围仍由原接入配置决定。"
+                checked={draft.qq_free_chat_enabled ?? false}
+                disabled={disabled}
+                onChange={(v) => toggle("qq_free_chat_enabled", v)}
+              />
+              <SettingsToggle
                 label="允许 QQ 主人私聊发现 Agent 能力"
                 description="显示当前已安装的文件、文档、日历、任务与插件能力。写入和外部操作继续经过权限检查。"
                 checked={draft.qq_owner_agent_enabled ?? false}
@@ -303,7 +310,7 @@ function ChannelRuntimeSettingsContent({
               />
               <SettingsToggle
                 label="识别 QQ 私聊语音消息"
-                description={`仅配对主人可使用。语音识别服务：${snapshot?.stt_provider === "disabled" ? "未配置，请先在后端配置语音识别服务" : snapshot?.stt_provider}；群语音输入暂不支持。`}
+                description={`仅配对主人可使用。语音识别服务：${snapshot?.stt_provider === "disabled" ? "未配置，请先在后端配置语音识别服务" : snapshot?.stt_provider}；自由交流的常驻群友模式也可识别群语音。`}
                 checked={draft.qq_owner_voice_input_enabled ?? true}
                 disabled={disabled}
                 onChange={(v) => toggle("qq_owner_voice_input_enabled", v)}
@@ -322,7 +329,7 @@ function ChannelRuntimeSettingsContent({
             >
               <SettingsToggle
                 label="收集已授权群的讨论上下文"
-                description="普通文字只进入短期缓存；仅授权成员 @ 才触发回复。成员权限、私聊记忆和长期记忆规则独立。"
+                description="普通文字进入短期缓存；常驻群友模式由宁宁选择回复，其他群保持 @ 触发。成员权限、私聊记忆和长期记忆规则独立。"
                 checked={draft.group_discussion?.enabled ?? true}
                 disabled={disabled}
                 onChange={(v) =>

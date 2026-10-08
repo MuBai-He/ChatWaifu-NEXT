@@ -5541,6 +5541,11 @@
           "title": "Qq Account Enabled",
           "type": "boolean"
         },
+        "qq_free_chat_enabled": {
+          "default": false,
+          "title": "Qq Free Chat Enabled",
+          "type": "boolean"
+        },
         "qq_native_favorites_enabled": {
           "default": true,
           "title": "Qq Native Favorites Enabled",

@@ -125,6 +125,22 @@ describe("Runtime channel settings", () => {
     },
   );
 
+  it("saves free conversation without widening incoming or owner permissions", async () => {
+    vi.mocked(client.updateChannelRuntimeSettings).mockImplementation(
+      (policy, revision) =>
+        Promise.resolve({ ...snapshot(revision + 1), policy }),
+    );
+    render(<ChannelRuntimeSettingsPanel runtimeOnline />);
+    fireEvent.click(await screen.findByRole("switch", { name: "QQ 自由交流" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存渠道权限与预算" }));
+    await screen.findByText(/渠道设置已保存到当前 Runtime/u);
+    expect(client.updateChannelRuntimeSettings).toHaveBeenCalledWith(
+      { ...snapshot().policy, qq_free_chat_enabled: true },
+      3,
+      expect.any(Object),
+    );
+  });
+
   it("refuses a member quota larger than group capacity", async () => {
     render(<ChannelRuntimeSettingsPanel runtimeOnline />);
     await ready();

@@ -1,3 +1,14 @@
+qq_free_conversation:
+  status: deployed_model_and_live_group_text_verified_additional_media_acceptance_pending
+  adr: "0080"
+  evidence:
+    - Owner explicitly selected the existing two QQ groups and paired owner private chat. Deployed qq-free-chat-20261007; channel settings revision 2 enables qq_free_chat_enabled and both existing routes use member mode with matching current route revisions, unchanged audience/scene/speaking/voice grants, original budgets/quiet hours and memory_enabled false.
+    - Shared BehaviorDecisionService uses the same configured Gemini 3.8 Flash High and character. Private text or transcribed voice selects respond/clarify/wait; waits send nothing. Member groups voluntarily consider mentions and ordinary text, scoped voice transcripts and bot-targeted poke events; the socket reader now forwards poke notices without treating them as membership changes.
+    - Related Python regression passed 389 cases before the final socket-notice refinement; final transport/free-conversation suite passed 109. Web 457 and protocol 127 passed, then the final settings UI suite passed 11 including the new flag. Changed Python Ruff/format/strict Pyright, architecture boundaries, Web lint/types, both product builds and artifact isolation passed.
+    - Five isolated real-model behavior cases selected respond for private/group invitations, wait for private/group silence requests, and an allowed respond for a private poke observation. No QQ effects were executed in that probe. Isolated Linux Runtime startup and CAS policy save passed without production state.
+    - Release overlay has 20 verified source files and 10 served Web hashes; 1411 unrelated source files, protected configuration/model hashes, schema/migrations/old rows, 13 containers and 7 unrelated service PIDs were preserved; database integrity and hostname-verified HTTPS passed. No new migration or model configuration.
+    - A fresh autonomous group request at 17:09:47 selected respond in member mode and completed generation e7afd601-d939-4797-bd00-5636e602077b with a text reply. Owner reported ok. Additional native voice/poke and private silence acceptance remain distinct from model/fixture checks; see docs/operations/qq-free-conversation-server-2026-10-07.md.
+
 qq_account_operations:
   status: deployed_live_poke_model_provider_and_handset_verified
   adr: "0079"

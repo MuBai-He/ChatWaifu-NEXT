@@ -11,7 +11,7 @@ from uuid import UUID
 from chatwaifu_protocol.base import JsonObject
 
 if TYPE_CHECKING:
-    from .messages import NapCatImageReference
+    from .messages import NapCatImageReference, NapCatRecordReference
 
 GroupNoticeType = Literal["group_increase", "group_decrease", "group_admin"]
 GroupNoticeSubtype = Literal["approve", "invite", "leave", "kick", "kick_me", "set", "unset"]
@@ -42,6 +42,7 @@ class NapCatGroupInboundMessage:
     images: tuple[NapCatImageReference, ...] = field(default=(), repr=False)
     bot_mentioned: bool = True
     mention_only: bool = False
+    record: NapCatRecordReference | None = field(default=None, repr=False)
 
 
 @dataclass(frozen=True, slots=True)
