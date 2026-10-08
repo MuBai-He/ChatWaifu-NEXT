@@ -9,6 +9,7 @@ import logging
 import re
 import secrets
 from collections.abc import Awaitable, Callable
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -39,7 +40,9 @@ from chatwaifu_runtime.external_channels.group_models import (
 )
 from chatwaifu_runtime.external_channels.models import (
     ChannelDeliveryPlanRecord,
+    ChannelInboundAudioInput,
     ChannelInboundImageInput,
+    ChannelTranscriptionIdentity,
 )
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
 from chatwaifu_runtime.external_channels.scheduler import ChannelDeliveryScheduler
@@ -55,7 +58,7 @@ from .delivery import NapCatDelivery, reconcile_known_sends
 from .favorites import NapCatStickerFavorites
 from .groups import NapCatGroupMembershipNotice, normalize_group_notice, qq_group_identifier
 from .media import image_input
-from .messages import normalize, normalize_group_inbound, normalize_inbound
+from .messages import normalize, normalize_group_inbound, normalize_inbound, normalize_poke
 from .registration import PROVIDER_ID
 
 logger = logging.getLogger(__name__)
@@ -112,6 +115,10 @@ class NapCatManagement:
         self._proactive_on_terminal = proactive_on_terminal or gateway.proactive_delivery_terminal
         self._groups = groups
         self._private_voice_enabled = private_voice_enabled
+        self.free_chat_enabled: Callable[[], bool] = lambda: False
+        self.group_free_chat: Callable[[ChannelGroupInboundDescriptor], Awaitable[bool]] | None = (
+            None
+        )
         self._native_favorites_enabled = native_favorites_enabled
         self._factory = client_factory
         self._sticker_catalog = sticker_catalog
@@ -271,6 +278,7 @@ class NapCatManagement:
             allowed_senders=None,
             allow_unmentioned_images=True,
             allow_unmentioned_text=True,
+            allow_audio=self.free_chat_enabled(),
         )
         if message is None:
             return
@@ -307,6 +315,50 @@ class NapCatManagement:
             incoming_image.source_fingerprint if incoming_image is not None else None,
             mention_only=message.mention_only,
         )
+        incoming_audio = (
+            audio_input(client, message.record, self._audio_transcriber)
+            if client is not None and message.record is not None
+            else None
+        )
+
+        async def verify_audio() -> None:
+            if client is None or self._clients.get(connection_id) is not client:
+                raise NapCatError("group voice transport changed")
+            original = await client.call("get_msg", {"message_id": message.external_message_id})
+            # Filename lookup is account-global. First prove the reference belongs to
+            # this exact group message/speaker; never transcribe a private asset here.
+            sender = original.get("sender")
+            if (
+                original.get("message_type") != "group"
+                or qq_group_identifier(original.get("group_id")) != group_id
+                or not isinstance(sender, dict)
+                or qq_group_identifier(sender.get("user_id")) != message.sender_key
+            ):
+                raise NapCatError("group voice source does not match")
+            original.update(
+                {
+                    "post_type": "message",
+                    "self_id": account,
+                    "sub_type": "normal",
+                    "user_id": message.sender_key,
+                }
+            )
+            checked = normalize_group_inbound(
+                original,
+                connection_id=connection_id,
+                account=account,
+                group_id=group_id,
+                allowed_senders=frozenset({message.sender_key}),
+                allow_audio=True,
+                allow_unmentioned_text=True,
+            )
+            if (
+                checked is None
+                or checked.record != message.record
+                or checked.external_message_id != message.external_message_id
+            ):
+                raise NapCatError("group voice reference does not match")
+
         key = (connection_id, group_id)
         predecessor = self._group_ingress_order.get(key)
 
@@ -314,7 +366,12 @@ class NapCatManagement:
             if predecessor is not None:
                 await asyncio.shield(predecessor)
             await self._ingest_group(
-                descriptor, access_token, incoming_image, mentioned=message.bot_mentioned
+                descriptor,
+                access_token,
+                incoming_image,
+                mentioned=message.bot_mentioned,
+                incoming_audio=incoming_audio,
+                verify_audio=verify_audio,
             )
 
         task = asyncio.create_task(ordered_admission(), name="qq-group-admission")
@@ -338,10 +395,38 @@ class NapCatManagement:
         incoming_image: ChannelInboundImageInput | None = None,
         *,
         mentioned: bool = True,
+        incoming_audio: ChannelInboundAudioInput | None = None,
+        verify_audio: Callable[[], Awaitable[None]] | None = None,
     ) -> None:
         assert self._groups is not None
         try:
-            if mentioned:
+            free = self.group_free_chat is not None and await self.group_free_chat(descriptor)
+            if incoming_audio is not None:
+                if not free or verify_audio is None:
+                    return
+
+                async def load_transcript() -> str:
+                    assert self.group_free_chat is not None
+                    if not await self.group_free_chat(descriptor):
+                        raise NapCatError("group voice policy changed")
+                    await verify_audio()
+                    transcript = await incoming_audio.load(
+                        ChannelTranscriptionIdentity(
+                            session_id=uuid4(),
+                            turn_id=uuid4(),
+                            generation_id=uuid4(),
+                        )
+                    )
+                    if not await self.group_free_chat(descriptor):
+                        raise NapCatError("group voice policy changed")
+                    return transcript
+
+                await self._groups.observe_group_audio(
+                    descriptor,
+                    access_token=access_token,
+                    text_loader=load_transcript,
+                )
+            elif mentioned and not free:
                 await self._groups.ingest_group(
                     descriptor, access_token=access_token, image_input=incoming_image
                 )
@@ -349,7 +434,14 @@ class NapCatManagement:
                 await self._groups.observe_group_image_reference(
                     descriptor, access_token=access_token, image_input=incoming_image
                 )
+                if free:
+                    await self._groups.observe_group_text(
+                        replace(descriptor, image_fingerprint=None),
+                        access_token=access_token,
+                    )
             else:
+                if descriptor.mention_only:
+                    descriptor = replace(descriptor, mention_only=False)
                 await self._groups.observe_group_text(descriptor, access_token=access_token)
         except asyncio.CancelledError:
             raise
@@ -698,6 +790,13 @@ class NapCatManagement:
                             raise NapCatError("QQ account changed") from None
                         await self._health(connection_id, ChannelConnectionStatus.READY)
                         continue
+                    if event.get("post_type") == "notice" and event.get("sub_type") == "poke":
+                        if not self.free_chat_enabled():
+                            continue
+                        poke = normalize_poke(event, account=account)
+                        if poke is None:
+                            continue
+                        event = poke
                     if self._groups is not None and event.get("post_type") == "notice":
                         group_id = qq_group_identifier(event.get("group_id"))
                         notice = (

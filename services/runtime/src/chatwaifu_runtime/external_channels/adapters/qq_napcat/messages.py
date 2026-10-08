@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
@@ -46,6 +48,7 @@ def normalize_group_inbound(
     allowed_senders: frozenset[str] | None,
     allow_unmentioned_images: bool = False,
     allow_unmentioned_text: bool = False,
+    allow_audio: bool = False,
 ) -> NapCatGroupInboundMessage | None:
     """Normalize a structured mention, including its optional reply envelope.
 
@@ -82,6 +85,7 @@ def normalize_group_inbound(
         return None
     texts: list[str] = []
     images: list[NapCatImageReference] = []
+    record: NapCatRecordReference | None = None
     mentions = 0
     has_reply = False
     size = 0
@@ -117,6 +121,12 @@ def normalize_group_inbound(
             if context is None:
                 return None
             texts.append(context)
+        elif allow_audio and segment.get("type") == "record":
+            if record is not None:
+                return None
+            record = _record_reference(data)
+            if record is None:
+                return None
         elif segment.get("type") == "image":
             image = _image_reference(data)
             if image is None or len(images) >= 4:
@@ -140,6 +150,10 @@ def normalize_group_inbound(
         else:
             return None
     text = "".join(texts).strip()
+    if record is not None:
+        if text or images:
+            return None
+        text = "[语音]"
     if not text and images:
         text = "[图片]"
     if (
@@ -167,6 +181,7 @@ def normalize_group_inbound(
         tuple(images),
         mentions == 1,
         mentions == 1 and not text,
+        record,
     )
 
 
@@ -250,20 +265,9 @@ def _normalize(
         elif allow_media and segment.get("type") == "record":
             if record is not None:
                 return None
-            file_ref = data.get("file")
-            try:
-                valid_ref = validate_image_file_ref(file_ref)
-            except ValueError:
+            record = _record_reference(data)
+            if record is None:
                 return None
-            raw_size = data.get("file_size")
-            file_size = None
-            invalid_reason = None
-            if raw_size is not None:
-                if type(raw_size) in {str, int} and re.fullmatch(r"[0-9]{1,12}", str(raw_size)):
-                    file_size = int(str(raw_size))
-                else:
-                    invalid_reason = "invalid_size"
-            record = NapCatRecordReference(valid_ref, file_size, invalid_reason)
         else:
             # Mixed media must not be silently presented as complete text understanding.
             return None
@@ -307,3 +311,70 @@ def _image_reference(data: JsonObject) -> NapCatImageReference | None:
         else:
             invalid_reason = "invalid_size"
     return NapCatImageReference(file_ref, file_size, invalid_reason)
+
+
+def _record_reference(data: JsonObject) -> NapCatRecordReference | None:
+    try:
+        file_ref = validate_image_file_ref(data.get("file"))
+    except ValueError:
+        return None
+    raw_size = data.get("file_size")
+    file_size = None
+    invalid_reason = None
+    if raw_size is not None:
+        if type(raw_size) in {str, int} and re.fullmatch(r"[0-9]{1,12}", str(raw_size)):
+            file_size = int(str(raw_size))
+        else:
+            invalid_reason = "invalid_size"
+    return NapCatRecordReference(file_ref, file_size, invalid_reason)
+
+
+def normalize_poke(event: JsonObject, *, account: str) -> JsonObject | None:
+    """Map a stable, bot-targeted provider event to an untrusted conversation observation.
+
+    No fabricated command or user-supplied scope is introduced. The stable synthetic
+    message ID deduplicates retransmissions through the existing admission/cache path.
+    """
+    sender = qq_group_identifier(event.get("user_id"))
+    timestamp = event.get("time")
+    if (
+        event.get("post_type") != "notice"
+        or event.get("notice_type") != "notify"
+        or event.get("sub_type") != "poke"
+        or qq_group_identifier(event.get("self_id")) != account
+        or qq_group_identifier(event.get("target_id")) != account
+        or sender is None
+        or sender == account
+        or type(timestamp) is not int
+        or not datetime.now(UTC).timestamp() - 120
+        <= timestamp
+        <= datetime.now(UTC).timestamp() + 30
+    ):
+        return None
+    raw_group = event.get("group_id")
+    group = qq_group_identifier(raw_group)
+    if raw_group is not None and raw_group not in (0, "0") and group is None:
+        return None
+    encoded = json.dumps(event, sort_keys=True, ensure_ascii=False).encode()
+    if len(encoded) > 32_000:
+        return None
+    message_id = -max(1, int.from_bytes(hashlib.sha256(encoded).digest()[:8], "big") >> 1)
+    result: JsonObject = {
+        "post_type": "message",
+        "message_type": "group" if group is not None else "private",
+        "sub_type": "normal" if group is not None else "friend",
+        "self_id": account,
+        "user_id": sender,
+        "sender": {"user_id": sender},
+        "message_id": message_id,
+        "time": timestamp,
+        "message": [
+            {
+                "type": "text",
+                "data": {"text": "[QQ 事件: 当前发言者戳了你一下，并未发出文字请求。]"},
+            }
+        ],
+    }
+    if group is not None:
+        result["group_id"] = group
+    return result

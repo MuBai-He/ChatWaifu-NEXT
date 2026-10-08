@@ -664,6 +664,22 @@ class ChannelGroupService:
             descriptor, access_token=access_token, image_input=image_input, observe_only=True
         )
 
+    async def observe_group_audio(
+        self,
+        descriptor: ChannelGroupInboundDescriptor,
+        *,
+        access_token: str,
+        text_loader: Callable[[], Awaitable[str]],
+    ) -> None:
+        await self._process_group(
+            descriptor,
+            access_token=access_token,
+            image_input=None,
+            observe_only=True,
+            observe_text=True,
+            text_loader=text_loader,
+        )
+
     async def observe_group_text(
         self, descriptor: ChannelGroupInboundDescriptor, *, access_token: str
     ) -> None:
@@ -685,6 +701,7 @@ class ChannelGroupService:
         observe_only: bool = False,
         observe_text: bool = False,
         autonomy_revision: int | None = None,
+        text_loader: Callable[[], Awaitable[str]] | None = None,
     ) -> ChannelTurnReceipt | None:
         if descriptor.image_fingerprint != (
             image_input.source_fingerprint if image_input is not None else None
@@ -799,6 +816,17 @@ class ChannelGroupService:
                     ):
                         raise ChannelPolicyError("Group image reference speaker unavailable")
                     if observe_text:
+                        if text_loader is not None:
+                            async with asyncio.timeout(60):
+                                transcript = await text_loader()
+                            self._check_admission(item)
+                            current_route = await self._repository.get_route(fresh.route_id)
+                            current_link = await self._repository.get_link(member.link_id)
+                            self._check_admission(item)
+                            if current_route != fresh or current_link != link:
+                                raise ChannelPolicyError("group audio authority changed")
+                            descriptor = replace(descriptor, text=transcript)
+                            item.message = descriptor
                         result = self._discussion.observe(
                             descriptor, fresh, connection.revision, self._clock()
                         )

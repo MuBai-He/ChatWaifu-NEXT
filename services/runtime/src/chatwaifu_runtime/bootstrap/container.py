@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 import secrets
 import shutil
 import sys
@@ -24,6 +25,7 @@ from chatwaifu_protocol.agent import (
 )
 from chatwaifu_protocol.base import JsonObject
 from chatwaifu_protocol.channel_settings import ChannelRuntimePolicy
+from chatwaifu_protocol.channels import ChannelInboundTextMessage
 from pydantic import SecretStr
 
 from chatwaifu_runtime import __version__
@@ -63,10 +65,17 @@ from chatwaifu_runtime.external_channels.encrypted_credentials import (
 )
 from chatwaifu_runtime.external_channels.files import ChannelFileSkill
 from chatwaifu_runtime.external_channels.group_memory import GroupMemoryBridge
-from chatwaifu_runtime.external_channels.group_models import ChannelGroupRouteRecord
+from chatwaifu_runtime.external_channels.group_models import (
+    ChannelGroupInboundDescriptor,
+    ChannelGroupRouteRecord,
+)
 from chatwaifu_runtime.external_channels.groups import ChannelGroupService
 from chatwaifu_runtime.external_channels.management import ChannelManagementService
-from chatwaifu_runtime.external_channels.models import ChannelDeliveryPlanRecord, ChannelTurnRecord
+from chatwaifu_runtime.external_channels.models import (
+    ChannelConnectionRecord,
+    ChannelDeliveryPlanRecord,
+    ChannelTurnRecord,
+)
 from chatwaifu_runtime.external_channels.proactive import ChannelProactiveService
 from chatwaifu_runtime.external_channels.public_web import ChannelPublicWebPolicy
 from chatwaifu_runtime.external_channels.qq_account import QQAccountCapabilities
@@ -470,6 +479,7 @@ class RuntimeContainer:
         )
         self.channel_groups.set_authenticator(self.external_channels.authenticate_group_transport)
         self.behavior_decisions = BehaviorDecisionService(self.providers.llm, self._agent_model)
+        self.external_channels.response_decider = self._qq_response_decision
         self.agent_tasks.wake_decider = self._task_wake_decision
         self.group_autonomy = GroupAutonomyService(
             SQLiteBehaviorRepository(self.database), self.behavior_decisions, self.characters
@@ -527,6 +537,10 @@ class RuntimeContainer:
             artifacts=self.artifacts,
             catalog_versions=catalog_versions(settings.skills_dir),
         )
+        self.qq_channels.free_chat_enabled = lambda: (
+            self.channel_settings.get().policy.qq_free_chat_enabled
+        )
+        self.qq_channels.group_free_chat = self._qq_group_free_chat
         self.qq_scene_capabilities = QQSceneCapabilities(
             self.external_channel_repository,
             self.conversation_repository,
@@ -663,8 +677,64 @@ class RuntimeContainer:
         self, previous: ChannelRuntimePolicy, current: ChannelRuntimePolicy
     ) -> None:
         self.channel_groups.configure_discussion(current.group_discussion)
+        if previous.qq_free_chat_enabled != current.qq_free_chat_enabled:
+            await self.external_channels.cancel_response_decisions()
         if previous.qq_owner_voice_input_enabled and not current.qq_owner_voice_input_enabled:
             await self.external_channels.revoke_qq_voice_input()
+
+    async def _qq_group_free_chat(self, descriptor: ChannelGroupInboundDescriptor) -> bool:
+        if not self.channel_settings.get().policy.qq_free_chat_enabled:
+            return False
+        route = await self.channel_group_repository.find_route(
+            descriptor.connection_id, descriptor.group_id
+        )
+        if route is None or not route.enabled or route.deleted_at is not None:
+            return False
+        policy = await self.group_autonomy.policy(route)
+        return policy.mode == "member" and policy.route_revision == route.revision
+
+    async def _qq_response_decision(
+        self,
+        connection: ChannelConnectionRecord,
+        message: ChannelInboundTextMessage,
+        turn: ChannelTurnRecord,
+    ) -> bool:
+        if connection.configuration.provider_id != "qq_napcat":
+            return True
+        before = self.channel_settings.get()
+        if not before.policy.qq_free_chat_enabled:
+            return True
+        profile = self.characters.get(connection.configuration.character_id)
+        if profile is None:
+            raise ValueError("character unavailable")
+        ref = message.external_message_id
+        history = await self.conversation_repository.recent_history(
+            turn.session_id, turn.turn_id, limit=6
+        )
+        decision = await self.behavior_decisions.decide(
+            profile.system_prompt,
+            {
+                "chat_type": "owner_private",
+                "recent_history": [{"role": h.role, "text": h.text[:1200]} for h in history],
+                "messages": [
+                    {"source_ref": ref, "speaker": message.sender_key, "text": message.text}
+                ],
+                "available_actions": ["wait", "respond", "clarify"],
+                "reply_policy": (
+                    "Choose whether to reply to this owner message or QQ event. "
+                    "A poke is an event, not a mandatory request. Respect silence and avoid "
+                    "automatic acknowledgements. Respond includes performing an ordinary QQ "
+                    "action with tools during the reply, such as poking back."
+                ),
+            },
+            frozenset({ref}),
+        )
+        if self.channel_settings.get() != before:
+            return False
+        logging.getLogger(__name__).info(
+            "agent.private_decision generation=%s action=%s", turn.generation_id, decision.action
+        )
+        return decision.action in {"respond", "clarify"}
 
     async def group_agent_skills(self, route: ChannelGroupRouteRecord) -> frozenset[str]:
         policy = await self.group_autonomy.policy(route)

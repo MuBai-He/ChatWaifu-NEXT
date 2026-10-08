@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add opt-in QQ free conversation: paired owner messages use model-selected
+  respond/clarify/wait, and member groups consider mentions, ordinary text, scoped
+  voice transcripts and bot-targeted poke events. Wait stays silent; permission
+  changes cancel pending decisions. Verify group voice source identity before STT,
+  preserve incoming grants, delivery fences and existing text/voice reply rules.
+
 - Fix explicit QQ gesture requests such as “戳一戳我” producing only dialogue:
   require native tool selection and expose `send_poke` in the initial admitted
   QQ tool list. Keep definitions, quotes and negations on automatic selection;

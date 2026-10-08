@@ -272,6 +272,14 @@ class ExternalChannelService:
         self._providers = {item.provider_id: item for item in providers}
         self._tool_policy = tool_policy
         self._qq_voice_input_enabled = qq_voice_input_enabled
+        self.response_decider: (
+            Callable[
+                [ChannelConnectionRecord, ChannelInboundTextMessage, ChannelTurnRecord],
+                Awaitable[bool],
+            ]
+            | None
+        ) = None
+        self._response_tasks: dict[UUID, asyncio.Task[object]] = {}
         self._sticker_catalog = sticker_catalog
         self._sticker_library = sticker_library
         self._photo_observer = photo_observer
@@ -382,6 +390,7 @@ class ExternalChannelService:
 
     async def stop(self) -> None:
         self._stopping = True
+        await self.cancel_response_decisions()
         self.fence_recent_images()
         # Constructor-owned cleanup can run before the database is opened.
         # Only a started gateway can own durable admissions to fence.
@@ -644,6 +653,10 @@ class ExternalChannelService:
         image_retention_allowed: bool = True,
         sticker_learning_allowed: bool | None = None,
     ) -> ChannelTurnReceipt:
+        if not await self._decide_response(message, connection, binding, turn):
+            current = await self._repository.get_turn(turn.channel_turn_id)
+            assert current is not None
+            return self._turn_receipt(current, duplicate=False)
         source_context = ConversationSourceContext(
             provider_id=connection.configuration.provider_id,
             connection_id=connection.configuration.connection_id,
@@ -845,6 +858,78 @@ class ExternalChannelService:
             seen_at=datetime.now(UTC),
         )
         return self._turn_receipt(turn, duplicate=False)
+
+    async def cancel_response_decisions(self) -> None:
+        tasks = tuple(self._response_tasks.values())
+        for task in tasks:
+            if task is not asyncio.current_task():
+                task.cancel()
+        await asyncio.gather(
+            *(t for t in tasks if t is not asyncio.current_task()), return_exceptions=True
+        )
+
+    async def _decide_response(
+        self,
+        message: ChannelInboundTextMessage,
+        connection: ChannelConnectionRecord,
+        binding: ChannelBindingRecord,
+        turn: ChannelTurnRecord,
+    ) -> bool:
+        if self.response_decider is None:
+            return True
+        task = asyncio.current_task()
+        if task is None or len(self._response_tasks) >= 32:
+            raise ChannelBusyError("response decision capacity reached")
+        self._response_tasks[turn.channel_turn_id] = cast(asyncio.Task[object], task)
+        try:
+            should_respond = await self.response_decider(connection, message, turn)
+            current = await self._repository.get_turn(turn.channel_turn_id)
+            fresh = await self._repository.get_connection(turn.connection_id)
+            current_binding = await self._repository.find_binding(
+                turn.connection_id, turn.conversation_key
+            )
+            active = (
+                not self._stopping
+                and current is not None
+                and current.status is ChannelTurnStatus.ACCEPTED
+                and fresh is not None
+                and fresh.deleted_at is None
+                and fresh.revision == connection.revision
+                and fresh.configuration == connection.configuration
+                and current_binding == binding
+            )
+            if active:
+                assert fresh is not None
+                self._validate_ingress(
+                    fresh, message, has_audio=turn.input_kind is ChannelMessageKind.AUDIO
+                )
+            if active and should_respond:
+                return True
+            await self._set_turn_terminal(
+                turn.channel_turn_id,
+                status=ChannelTurnStatus.CANCELLED,
+                error=None,
+                completed_at=datetime.now(UTC),
+            )
+            return False
+        except asyncio.CancelledError:
+            await self._set_turn_terminal(
+                turn.channel_turn_id,
+                status=ChannelTurnStatus.CANCELLED,
+                error=None,
+                completed_at=datetime.now(UTC),
+            )
+            raise
+        except Exception:
+            await self._set_turn_terminal(
+                turn.channel_turn_id,
+                status=ChannelTurnStatus.FAILED,
+                error=_error("behavior_decision_failed", "Response decision was unavailable."),
+                completed_at=datetime.now(UTC),
+            )
+            return False
+        finally:
+            self._response_tasks.pop(turn.channel_turn_id, None)
 
     def _audio_is_current(self, turn: ChannelTurnRecord) -> bool:
         task = asyncio.current_task()
@@ -2367,6 +2452,8 @@ class ExternalChannelService:
                     await self._sync_turn(leader_turn)
                 refreshed = await self._repository.get_turn(turn.channel_turn_id)
                 return refreshed if refreshed is not None else turn
+            if turn.channel_turn_id in self._response_tasks:
+                return turn
             generation = await self._conversation_repository.generation_result(turn.generation_id)
             now = datetime.now(UTC)
             if generation is None:

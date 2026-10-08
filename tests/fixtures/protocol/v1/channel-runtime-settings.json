@@ -24,6 +24,7 @@
       "summary_timeout_seconds": 8.0
     },
     "qq_owner_agent_enabled": false,
+    "qq_free_chat_enabled": false,
     "qq_account_enabled": false
   },
   "updated_at": "2026-10-06T00:00:00Z",
