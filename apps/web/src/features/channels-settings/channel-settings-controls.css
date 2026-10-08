@@ -293,9 +293,6 @@
   font-size: 0.8rem;
   color: var(--settings-muted, #77707d);
 }
-.vn-settings-link {
-  color: inherit;
-}
 @media (max-width: 600px) {
   .channel-settings-fields {
     grid-template-columns: minmax(0, 1fr);

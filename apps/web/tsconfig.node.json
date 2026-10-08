@@ -26,6 +26,7 @@
     "playwright.channels.config.ts",
     "playwright.agent.config.ts",
     "playwright.settings.config.ts",
-    "playwright.glass.config.ts"
+    "playwright.glass.config.ts",
+    "playwright.chat.config.ts"
   ]
 }

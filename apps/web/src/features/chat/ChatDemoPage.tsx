@@ -14,6 +14,16 @@ import {
 } from "./ttsProviderPresentation";
 import { useChatSession } from "./useChatSession";
 
+const MINIMAL_INTERFACE_KEY = "chatwaifu.web.minimal-interface.v1";
+
+function readMinimalInterface(): boolean {
+  try {
+    return window.localStorage.getItem(MINIMAL_INTERFACE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
 type ChatDemoPageProps = {
   mediaOwner?: boolean;
 };
@@ -57,6 +67,16 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
     resetAll,
     refreshMemories,
   } = useChatSession({ playbackEnabled: mediaOwner });
+  const [minimalInterface, setMinimalInterface] =
+    useState(readMinimalInterface);
+  const changeMinimalInterface = (enabled: boolean) => {
+    setMinimalInterface(enabled);
+    try {
+      window.localStorage.setItem(MINIMAL_INTERFACE_KEY, String(enabled));
+    } catch {
+      // The current page still works when browser storage is unavailable.
+    }
+  };
   const [draft, setDraft] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -116,7 +136,9 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
   };
 
   return (
-    <main className="vn-shell">
+    <main
+      className={"vn-shell" + (minimalInterface ? " vn-shell-minimal" : "")}
+    >
       <SkillConfirmationPrompt sessionId={sessionId} />
       <section className="vn-stage" aria-label="Conversation">
         <div className="vn-sky" aria-hidden="true">
@@ -127,21 +149,23 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
         </div>
 
         <header className="vn-topbar">
-          <a className="vn-brand" href="/" aria-label="ChatWaifu NEXT home">
-            <span className="vn-brand-mark" aria-hidden="true">
-              <BrandMark />
-            </span>
-            <span className="vn-brand-copy">
-              <small>
-                {isRemoteRuntime()
-                  ? "CONNECTED CHARACTER STORY"
-                  : "LOCAL CHARACTER STORY"}
-              </small>
-              <strong>
-                ChatWaifu <em>NEXT</em>
-              </strong>
-            </span>
-          </a>
+          {!minimalInterface ? (
+            <a className="vn-brand" href="/" aria-label="ChatWaifu NEXT home">
+              <span className="vn-brand-mark" aria-hidden="true">
+                <BrandMark />
+              </span>
+              <span className="vn-brand-copy">
+                <small>
+                  {isRemoteRuntime()
+                    ? "CONNECTED CHARACTER STORY"
+                    : "LOCAL CHARACTER STORY"}
+                </small>
+                <strong>
+                  ChatWaifu <em>NEXT</em>
+                </strong>
+              </span>
+            </a>
+          ) : null}
           <div className={"vn-runtime " + connection}>
             <i />
             <span>
@@ -155,12 +179,13 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
           </div>
         </header>
 
-        <div className="vn-character-title">
-          <p>綾地 寧々</p>
-          <h1>{character?.display_name ?? "绫地宁宁"}</h1>
-          <span>{character?.tagline ?? "正在连接角色 Runtime…"}</span>
-        </div>
-
+        {!minimalInterface ? (
+          <div className="vn-character-title">
+            <p>綾地 寧々</p>
+            <h1>{character?.display_name ?? "绫地宁宁"}</h1>
+            <span>{character?.tagline ?? "正在连接角色 Runtime…"}</span>
+          </div>
+        ) : null}
         <button
           className={`avatar-frame vn-avatar framing-${avatarFraming}`}
           type="button"
@@ -269,11 +294,33 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
               </button>
             </header>
             <a className="vn-settings-link" href="/settings">
-              打开设置中心 →
+              <ProductIcon name="controlCenter" />
+              <span>打开设置中心</span>
+              <span className="vn-settings-link-arrow" aria-hidden="true">
+                →
+              </span>
             </a>
             <p className="vn-settings-hint">
               聊天行为、决策模型、记忆和任务统一在设置中心管理。
             </p>
+            <label className="vn-interface-toggle">
+              <span>
+                <strong>简洁界面</strong>
+                <small id="vn-minimal-interface-description">
+                  隐藏左上角标识、角色介绍和底部说明，仅保存在此浏览器。
+                </small>
+              </span>
+              <input
+                type="checkbox"
+                role="switch"
+                aria-label="简洁界面"
+                aria-describedby="vn-minimal-interface-description"
+                checked={minimalInterface}
+                onChange={(event) =>
+                  changeMinimalInterface(event.target.checked)
+                }
+              />
+            </label>
             <label>
               <span>角色构图</span>
               <select
@@ -505,18 +552,20 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
           </form>
         </section>
 
-        <div className="vn-disclosure">
-          <span>
-            {character?.content_notice ??
-              "非官方角色 Demo；语音与记忆均由 ChatWaifu Runtime 处理。"}
-          </span>
-          {avatarManifest?.attribution ? (
+        {!minimalInterface ? (
+          <div className="vn-disclosure">
             <span>
-              Live2D 模型作者：
-              {avatarManifest.attribution.modelAuthor ?? "资产未提供"}
+              {character?.content_notice ??
+                "非官方角色 Demo；语音与记忆均由 ChatWaifu Runtime 处理。"}
             </span>
-          ) : null}
-        </div>
+            {avatarManifest?.attribution ? (
+              <span>
+                Live2D 模型作者：
+                {avatarManifest.attribution.modelAuthor ?? "资产未提供"}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
       </section>
     </main>
   );
