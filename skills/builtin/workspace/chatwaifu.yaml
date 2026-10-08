@@ -1,0 +1,105 @@
+{
+  "schema_version": "1.0",
+  "instructions": "SKILL.md",
+  "definition":
+    {
+      "skill_id": "workspace.files",
+      "version": "1.0.0",
+      "name": "Workspace files 工作区文件",
+      "description": "Read, list, create and version-edit local Runtime workspace files. 工作区文件读取、目录浏览、新建文本和版本化修改。",
+      "capabilities":
+        [
+          {
+            "name": "list",
+            "description": "List the current authorized workspace directory. 列出工作区目录和文件。",
+            "input_schema":
+              {
+                "type": "object",
+                "properties":
+                  {
+                    "path":
+                      { "type": "string", "minLength": 1, "maxLength": 240 },
+                  },
+                "required": [],
+                "additionalProperties": false,
+                "x-chatwaifu-discovery-only": true,
+              },
+            "output_schema": { "type": "object", "additionalProperties": true },
+            "side_effect": "read",
+            "required_permissions": ["workspace.read"],
+            "confirmation_required": false,
+            "timeout_seconds": 30,
+            "adapter_tool": "workspace_list",
+          },
+          {
+            "name": "read",
+            "description": "Read a UTF-8 file and its current SHA256. 读取本地文本文件内容及校验值。",
+            "input_schema":
+              {
+                "type": "object",
+                "properties":
+                  {
+                    "path":
+                      { "type": "string", "minLength": 1, "maxLength": 240 },
+                  },
+                "required": ["path"],
+                "additionalProperties": false,
+                "x-chatwaifu-discovery-only": true,
+              },
+            "output_schema": { "type": "object", "additionalProperties": true },
+            "side_effect": "read",
+            "required_permissions": ["workspace.read"],
+            "confirmation_required": false,
+            "timeout_seconds": 30,
+            "adapter_tool": "workspace_read",
+          },
+          {
+            "name": "write",
+            "description": "Create or update a workspace text file; an existing file requires expected_sha256. 创建或修改本地文本文件。",
+            "input_schema":
+              {
+                "type": "object",
+                "properties":
+                  {
+                    "path":
+                      { "type": "string", "minLength": 1, "maxLength": 240 },
+                    "text": { "type": "string", "maxLength": 256000 },
+                    "expected_sha256":
+                      { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+                  },
+                "required": ["path", "text"],
+                "additionalProperties": false,
+                "x-chatwaifu-discovery-only": true,
+              },
+            "output_schema": { "type": "object", "additionalProperties": true },
+            "side_effect": "write",
+            "required_permissions": ["workspace.write"],
+            "confirmation_required": true,
+            "timeout_seconds": 30,
+            "adapter_tool": "workspace_write",
+          },
+          {
+            "name": "inspect_artifact",
+            "description": "Verify an artifact checksum and document structure. 检查产物文件校验值和文档结构。",
+            "input_schema":
+              {
+                "type": "object",
+                "properties":
+                  { "artifact_id": { "type": "string", "format": "uuid" } },
+                "required": ["artifact_id"],
+                "additionalProperties": false,
+                "x-chatwaifu-discovery-only": true,
+              },
+            "output_schema": { "type": "object", "additionalProperties": true },
+            "side_effect": "read",
+            "required_permissions": ["workspace.read"],
+            "confirmation_required": false,
+            "timeout_seconds": 30,
+            "adapter_tool": "artifact_inspect",
+          },
+        ],
+      "interruptible": true,
+      "background_allowed": true,
+    },
+  "adapter": { "kind": "builtin", "handler": "workspace_list" },
+}

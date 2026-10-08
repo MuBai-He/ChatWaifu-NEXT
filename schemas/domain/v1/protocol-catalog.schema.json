@@ -56,6 +56,542 @@
       "title": "AffectState",
       "type": "object"
     },
+    "AgentDevelopmentPolicy": {
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "revision": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "title": "AgentDevelopmentPolicy",
+      "type": "object"
+    },
+    "AgentEvent": {
+      "properties": {
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "input",
+            "work",
+            "wake"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "scope": {
+          "title": "Scope",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "source_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 96,
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "task_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Task Id"
+        }
+      },
+      "required": [
+        "event_id",
+        "session_id",
+        "scope",
+        "kind",
+        "occurred_at",
+        "expires_at"
+      ],
+      "title": "AgentEvent",
+      "type": "object"
+    },
+    "AgentTask": {
+      "properties": {
+        "active_seconds": {
+          "default": 0,
+          "title": "Active Seconds",
+          "type": "number"
+        },
+        "authorization": {
+          "$ref": "#/$defs/TaskAuthorization"
+        },
+        "blocked_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Blocked Reason"
+        },
+        "candidate_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Id"
+        },
+        "channel_binding": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TaskChannelBinding"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "completion_criteria": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Completion Criteria",
+          "type": "array"
+        },
+        "continuation": {
+          "anyOf": [
+            {
+              "maxLength": 8000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Continuation"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "delivery_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delivery Id"
+        },
+        "goal": {
+          "title": "Goal",
+          "type": "string"
+        },
+        "max_active_seconds": {
+          "title": "Max Active Seconds",
+          "type": "integer"
+        },
+        "max_tool_calls": {
+          "title": "Max Tool Calls",
+          "type": "integer"
+        },
+        "result_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Result Text"
+        },
+        "revision": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "scope": {
+          "title": "Scope",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/$defs/AgentTaskState"
+        },
+        "task_id": {
+          "format": "uuid",
+          "title": "Task Id",
+          "type": "string"
+        },
+        "tool_calls": {
+          "default": 0,
+          "title": "Tool Calls",
+          "type": "integer"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "wake_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wake At"
+        }
+      },
+      "required": [
+        "task_id",
+        "session_id",
+        "scope",
+        "goal",
+        "completion_criteria",
+        "authorization",
+        "state",
+        "max_tool_calls",
+        "max_active_seconds",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "AgentTask",
+      "type": "object"
+    },
+    "AgentTaskAction": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "enum": [
+            "pause",
+            "resume",
+            "cancel",
+            "defer"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "expected_revision": {
+          "minimum": 0,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "input_text": {
+          "anyOf": [
+            {
+              "maxLength": 8000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Input Text"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "wake_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wake At"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "action"
+      ],
+      "title": "AgentTaskAction",
+      "type": "object"
+    },
+    "AgentTaskCreate": {
+      "additionalProperties": false,
+      "properties": {
+        "authorization": {
+          "$ref": "#/$defs/TaskAuthorization"
+        },
+        "completion_criteria": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Completion Criteria",
+          "type": "array"
+        },
+        "goal": {
+          "maxLength": 8000,
+          "minLength": 1,
+          "title": "Goal",
+          "type": "string"
+        },
+        "max_active_seconds": {
+          "default": 1800,
+          "maximum": 1800,
+          "minimum": 1,
+          "title": "Max Active Seconds",
+          "type": "integer"
+        },
+        "max_tool_calls": {
+          "default": 100,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Max Tool Calls",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "goal",
+        "authorization"
+      ],
+      "title": "AgentTaskCreate",
+      "type": "object"
+    },
+    "AgentTaskJournal": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/JsonObject"
+          },
+          "maxItems": 100,
+          "title": "Items",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "title": "AgentTaskJournal",
+      "type": "object"
+    },
+    "AgentTaskPage": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/AgentTask"
+          },
+          "maxItems": 50,
+          "title": "Items",
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Next Cursor"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "title": "AgentTaskPage",
+      "type": "object"
+    },
+    "AgentTaskState": {
+      "enum": [
+        "queued",
+        "running",
+        "waiting_input",
+        "waiting_authorization",
+        "waiting_event",
+        "paused",
+        "succeeded",
+        "failed",
+        "cancelled"
+      ],
+      "title": "AgentTaskState",
+      "type": "string"
+    },
+    "ArtifactRef": {
+      "properties": {
+        "artifact_id": {
+          "format": "uuid",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "byte_length": {
+          "minimum": 0,
+          "title": "Byte Length",
+          "type": "integer"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "media_type": {
+          "title": "Media Type",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sha256": {
+          "title": "Sha256",
+          "type": "string"
+        },
+        "task_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Task Id"
+        },
+        "validation_status": {
+          "default": "pending",
+          "enum": [
+            "pending",
+            "structural",
+            "rendered",
+            "failed"
+          ],
+          "title": "Validation Status",
+          "type": "string"
+        },
+        "version": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "session_id",
+        "name",
+        "media_type",
+        "byte_length",
+        "sha256",
+        "created_at"
+      ],
+      "title": "ArtifactRef",
+      "type": "object"
+    },
     "AssistantGenerationStartedEvent": {
       "properties": {
         "causation_id": {
@@ -1340,6 +1876,364 @@
       "title": "AvatarInteractionEvent",
       "type": "object"
     },
+    "CandidateApproval": {
+      "properties": {
+        "expected_revision": {
+          "minimum": 0,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "package_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Package Sha256",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "package_sha256"
+      ],
+      "title": "CandidateApproval",
+      "type": "object"
+    },
+    "CandidateCreate": {
+      "properties": {
+        "goal": {
+          "maxLength": 4000,
+          "minLength": 1,
+          "title": "Goal",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "source_ref": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Source Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "goal",
+        "source_ref"
+      ],
+      "title": "CandidateCreate",
+      "type": "object"
+    },
+    "CandidateFeature": {
+      "properties": {
+        "artifact": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArtifactRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "candidate_id": {
+          "format": "uuid",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "goal": {
+          "title": "Goal",
+          "type": "string"
+        },
+        "package_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Package Sha256"
+        },
+        "plugin_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Plugin Id"
+        },
+        "revision": {
+          "default": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "source_ref": {
+          "title": "Source Ref",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "queued",
+            "developing",
+            "tested",
+            "blocked",
+            "failed",
+            "approved"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "test_summary": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Test Summary"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "session_id",
+        "goal",
+        "source_ref",
+        "state",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "CandidateFeature",
+      "type": "object"
+    },
+    "CapabilityDescriptor": {
+      "properties": {
+        "availability_reason": {
+          "anyOf": [
+            {
+              "maxLength": 400,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Availability Reason"
+        },
+        "capability_id": {
+          "title": "Capability Id",
+          "type": "string"
+        },
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "confirmation_required": {
+          "default": false,
+          "title": "Confirmation Required",
+          "type": "boolean"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "execution_location": {
+          "default": "runtime",
+          "enum": [
+            "runtime",
+            "paired_device",
+            "plugin"
+          ],
+          "title": "Execution Location",
+          "type": "string"
+        },
+        "fingerprint": {
+          "title": "Fingerprint",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "required_permissions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Permissions",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "side_effect": {
+          "$ref": "#/$defs/SideEffect"
+        },
+        "skill_id": {
+          "title": "Skill Id",
+          "type": "string"
+        },
+        "skill_version": {
+          "title": "Skill Version",
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "builtin",
+            "plugin",
+            "mcp_connection"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/CapabilityStatus"
+        }
+      },
+      "required": [
+        "capability_id",
+        "skill_id",
+        "skill_version",
+        "name",
+        "description",
+        "category",
+        "source",
+        "status",
+        "side_effect",
+        "fingerprint"
+      ],
+      "title": "CapabilityDescriptor",
+      "type": "object"
+    },
+    "CapabilityDetail": {
+      "properties": {
+        "descriptor": {
+          "$ref": "#/$defs/CapabilityDescriptor"
+        },
+        "input_schema": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "instructions": {
+          "title": "Instructions",
+          "type": "string"
+        },
+        "output_schema": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "descriptor",
+        "input_schema",
+        "output_schema",
+        "instructions"
+      ],
+      "title": "CapabilityDetail",
+      "type": "object"
+    },
+    "CapabilityPage": {
+      "properties": {
+        "categories": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 128,
+          "title": "Categories",
+          "type": "array"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/CapabilityDescriptor"
+          },
+          "maxItems": 32,
+          "title": "Items",
+          "type": "array"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Next Cursor"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "title": "CapabilityPage",
+      "type": "object"
+    },
+    "CapabilityStatus": {
+      "enum": [
+        "available",
+        "authorization_required",
+        "disabled",
+        "not_configured",
+        "adapter_required",
+        "unsupported"
+      ],
+      "title": "CapabilityStatus",
+      "type": "string"
+    },
     "ChannelAudioDeliveryPartPayload": {
       "properties": {
         "asset_id": {
@@ -2041,7 +2935,8 @@
       "enum": [
         "text",
         "image",
-        "audio"
+        "audio",
+        "file"
       ],
       "title": "ChannelDeliveryPartKind",
       "type": "string"
@@ -2152,6 +3047,7 @@
           "discriminator": {
             "mapping": {
               "audio": "#/$defs/ChannelAudioDeliveryPartPayload",
+              "file": "#/$defs/ChannelFileDeliveryPartPayload",
               "image": "#/$defs/ChannelImageDeliveryPartPayload",
               "text": "#/$defs/ChannelTextDeliveryPartPayload"
             },
@@ -2166,6 +3062,9 @@
             },
             {
               "$ref": "#/$defs/ChannelAudioDeliveryPartPayload"
+            },
+            {
+              "$ref": "#/$defs/ChannelFileDeliveryPartPayload"
             }
           ],
           "title": "Payload"
@@ -2356,13 +3255,27 @@
           "default": "1.0",
           "enum": [
             "1.0",
-            "1.1"
+            "1.1",
+            "1.2"
           ],
           "title": "Schema Version",
           "type": "string"
         },
         "status": {
           "$ref": "#/$defs/ChannelDeliveryStatus"
+        },
+        "task_delivery_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Task Delivery Id"
         },
         "updated_at": {
           "format": "date-time",
@@ -2529,13 +3442,27 @@
           "default": "1.0",
           "enum": [
             "1.0",
-            "1.1"
+            "1.1",
+            "1.2"
           ],
           "title": "Schema Version",
           "type": "string"
         },
         "status": {
           "$ref": "#/$defs/ChannelDeliveryStatus"
+        },
+        "task_delivery_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Task Delivery Id"
         },
         "updated_at": {
           "format": "date-time",
@@ -2622,6 +3549,60 @@
         "error"
       ],
       "title": "ChannelErrorResponse",
+      "type": "object"
+    },
+    "ChannelFileDeliveryPartPayload": {
+      "properties": {
+        "artifact_id": {
+          "format": "uuid",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "byte_length": {
+          "maximum": 33554432,
+          "minimum": 1,
+          "title": "Byte Length",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "file",
+          "default": "file",
+          "title": "Kind",
+          "type": "string"
+        },
+        "mime_type": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Mime Type",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[^/\\\\\\x00\\r\\n]+$",
+          "title": "Name",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "sha256",
+        "name",
+        "mime_type",
+        "byte_length"
+      ],
+      "title": "ChannelFileDeliveryPartPayload",
       "type": "object"
     },
     "ChannelGatewayStatus": {
@@ -3441,7 +4422,8 @@
       "enum": [
         "text",
         "image",
-        "audio"
+        "audio",
+        "file"
       ],
       "title": "ChannelMessageKind",
       "type": "string"
@@ -4559,6 +5541,11 @@
           "title": "Qq Native Favorites Enabled",
           "type": "boolean"
         },
+        "qq_owner_agent_enabled": {
+          "default": false,
+          "title": "Qq Owner Agent Enabled",
+          "type": "boolean"
+        },
         "qq_owner_public_web_enabled": {
           "default": false,
           "title": "Qq Owner Public Web Enabled",
@@ -5415,6 +6402,97 @@
       ],
       "title": "ConversationState",
       "type": "string"
+    },
+    "DecisionRecord": {
+      "properties": {
+        "action": {
+          "enum": [
+            "wait",
+            "respond",
+            "clarify",
+            "task",
+            "defer",
+            "capability_gap"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "goal": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Goal"
+        },
+        "memory_source_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8,
+          "title": "Memory Source Refs",
+          "type": "array"
+        },
+        "quiet_seconds": {
+          "anyOf": [
+            {
+              "maximum": 86400,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quiet Seconds"
+        },
+        "reason": {
+          "maxLength": 400,
+          "title": "Reason",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source_refs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "wake_after_seconds": {
+          "anyOf": [
+            {
+              "maximum": 86400,
+              "minimum": 30,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wake After Seconds"
+        }
+      },
+      "required": [
+        "action",
+        "reason",
+        "source_refs"
+      ],
+      "title": "DecisionRecord",
+      "type": "object"
     },
     "DiagnosticDeliveryPart": {
       "properties": {
@@ -6603,6 +7681,7 @@
         "memory.tombstoned",
         "memory.recalled",
         "memory.extraction_completed",
+        "agent.group_evidence",
         "character.state_changed",
         "character.response_planned",
         "character.prompt_compiled",
@@ -6636,6 +7715,132 @@
         "resource.models_woke"
       ],
       "type": "string"
+    },
+    "GroupAutonomyPolicy": {
+      "properties": {
+        "decision_interval_seconds": {
+          "default": 10,
+          "maximum": 60,
+          "minimum": 10,
+          "title": "Decision Interval Seconds",
+          "type": "integer"
+        },
+        "memory_enabled": {
+          "default": false,
+          "title": "Memory Enabled",
+          "type": "boolean"
+        },
+        "merge_seconds": {
+          "default": 3,
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Merge Seconds",
+          "type": "integer"
+        },
+        "message_interval_seconds": {
+          "default": 30,
+          "maximum": 3600,
+          "minimum": 30,
+          "title": "Message Interval Seconds",
+          "type": "integer"
+        },
+        "messages_per_hour": {
+          "default": 20,
+          "maximum": 20,
+          "minimum": 0,
+          "title": "Messages Per Hour",
+          "type": "integer"
+        },
+        "mode": {
+          "default": "off",
+          "enum": [
+            "off",
+            "shadow",
+            "member"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "observations_per_hour": {
+          "default": 240,
+          "maximum": 240,
+          "minimum": 1,
+          "title": "Observations Per Hour",
+          "type": "integer"
+        },
+        "quiet_end": {
+          "default": 8,
+          "maximum": 23,
+          "minimum": 0,
+          "title": "Quiet End",
+          "type": "integer"
+        },
+        "quiet_start": {
+          "default": 23,
+          "maximum": 23,
+          "minimum": 0,
+          "title": "Quiet Start",
+          "type": "integer"
+        },
+        "revision": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "route_id": {
+          "format": "uuid",
+          "title": "Route Id",
+          "type": "string"
+        },
+        "route_revision": {
+          "minimum": 1,
+          "title": "Route Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "timezone": {
+          "default": "Asia/Shanghai",
+          "maxLength": 64,
+          "title": "Timezone",
+          "type": "string"
+        }
+      },
+      "required": [
+        "route_id",
+        "route_revision"
+      ],
+      "title": "GroupAutonomyPolicy",
+      "type": "object"
+    },
+    "GroupAutonomyUpdate": {
+      "properties": {
+        "expected_revision": {
+          "minimum": 0,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "policy": {
+          "$ref": "#/$defs/GroupAutonomyPolicy"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "policy"
+      ],
+      "title": "GroupAutonomyUpdate",
+      "type": "object"
     },
     "GroupDiscussionPolicy": {
       "additionalProperties": false,
@@ -11270,6 +12475,322 @@
       "title": "StructuredError",
       "type": "object"
     },
+    "TaskAuthorization": {
+      "properties": {
+        "allow_writes": {
+          "default": false,
+          "title": "Allow Writes",
+          "type": "boolean"
+        },
+        "allowed_skill_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 64,
+          "title": "Allowed Skill Ids",
+          "type": "array"
+        },
+        "calendar_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Calendar Ids",
+          "type": "array"
+        },
+        "capability_fingerprints": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Capability Fingerprints",
+          "type": "object"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "resource_roots": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Resource Roots",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source_ref": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Source Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_ref",
+        "expires_at"
+      ],
+      "title": "TaskAuthorization",
+      "type": "object"
+    },
+    "TaskAuthorizationUpdate": {
+      "additionalProperties": false,
+      "properties": {
+        "authorization": {
+          "$ref": "#/$defs/TaskAuthorization"
+        },
+        "expected_revision": {
+          "minimum": 0,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "authorization"
+      ],
+      "title": "TaskAuthorizationUpdate",
+      "type": "object"
+    },
+    "TaskChannelBinding": {
+      "description": "Runtime-issued channel authority, never accepted from a model or task-create API.",
+      "properties": {
+        "account_key": {
+          "title": "Account Key",
+          "type": "string"
+        },
+        "audience_fingerprint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Audience Fingerprint"
+        },
+        "connection_id": {
+          "format": "uuid",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "conversation_key": {
+          "title": "Conversation Key",
+          "type": "string"
+        },
+        "link_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Link Id"
+        },
+        "link_revision": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Link Revision"
+        },
+        "policy_revision": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Policy Revision"
+        },
+        "route_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Route Id"
+        },
+        "route_revision": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Route Revision"
+        },
+        "scene_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scene Id"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sender_key": {
+          "title": "Sender Key",
+          "type": "string"
+        },
+        "source_ref": {
+          "title": "Source Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "connection_id",
+        "account_key",
+        "conversation_key",
+        "sender_key",
+        "source_ref"
+      ],
+      "title": "TaskChannelBinding",
+      "type": "object"
+    },
+    "TaskDeliveryTarget": {
+      "properties": {
+        "binding": {
+          "$ref": "#/$defs/TaskChannelBinding"
+        },
+        "generation_id": {
+          "format": "uuid",
+          "title": "Generation Id",
+          "type": "string"
+        },
+        "purpose": {
+          "default": "file",
+          "enum": [
+            "file",
+            "result"
+          ],
+          "title": "Purpose",
+          "type": "string"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "task_id": {
+          "format": "uuid",
+          "title": "Task Id",
+          "type": "string"
+        },
+        "turn_id": {
+          "format": "uuid",
+          "title": "Turn Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "task_id",
+        "session_id",
+        "turn_id",
+        "generation_id",
+        "binding"
+      ],
+      "title": "TaskDeliveryTarget",
+      "type": "object"
+    },
+    "TaskReconciliation": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_ref": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Evidence Ref",
+          "type": "string"
+        },
+        "expected_revision": {
+          "minimum": 0,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "outcome": {
+          "enum": [
+            "accepted",
+            "rejected"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "step_key": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Step Key",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "step_key",
+        "outcome",
+        "evidence_ref"
+      ],
+      "title": "TaskReconciliation",
+      "type": "object"
+    },
     "TextSendCommand": {
       "properties": {
         "command_id": {
@@ -12344,6 +13865,30 @@
   "$id": "https://chatwaifu.local/schemas/domain/v1/protocol-catalog.schema.json",
   "description": "Schema-only catalog used to generate a single conflict-free TypeScript module.",
   "properties": {
+    "agent_development_policy": {
+      "$ref": "#/$defs/AgentDevelopmentPolicy"
+    },
+    "agent_event": {
+      "$ref": "#/$defs/AgentEvent"
+    },
+    "agent_task": {
+      "$ref": "#/$defs/AgentTask"
+    },
+    "agent_task_action": {
+      "$ref": "#/$defs/AgentTaskAction"
+    },
+    "agent_task_create": {
+      "$ref": "#/$defs/AgentTaskCreate"
+    },
+    "agent_task_journal": {
+      "$ref": "#/$defs/AgentTaskJournal"
+    },
+    "agent_task_page": {
+      "$ref": "#/$defs/AgentTaskPage"
+    },
+    "artifact_ref": {
+      "$ref": "#/$defs/ArtifactRef"
+    },
     "audio_frame": {
       "$ref": "#/$defs/AudioFrameHeader"
     },
@@ -12355,6 +13900,24 @@
     },
     "avatar_interaction": {
       "$ref": "#/$defs/AvatarInteractionEvent"
+    },
+    "candidate_approval": {
+      "$ref": "#/$defs/CandidateApproval"
+    },
+    "candidate_create": {
+      "$ref": "#/$defs/CandidateCreate"
+    },
+    "candidate_feature": {
+      "$ref": "#/$defs/CandidateFeature"
+    },
+    "capability_descriptor": {
+      "$ref": "#/$defs/CapabilityDescriptor"
+    },
+    "capability_detail": {
+      "$ref": "#/$defs/CapabilityDetail"
+    },
+    "capability_page": {
+      "$ref": "#/$defs/CapabilityPage"
     },
     "channel_authorization": {
       "$ref": "#/$defs/ChannelAuthorizationSnapshot"
@@ -12535,6 +14098,9 @@
     "conversation_interruption": {
       "$ref": "#/$defs/ConversationInterruption"
     },
+    "decision_record": {
+      "$ref": "#/$defs/DecisionRecord"
+    },
     "error": {
       "$ref": "#/$defs/StructuredError"
     },
@@ -12543,6 +14109,12 @@
     },
     "generation": {
       "$ref": "#/$defs/GenerationSnapshot"
+    },
+    "group_autonomy_policy": {
+      "$ref": "#/$defs/GroupAutonomyPolicy"
+    },
+    "group_autonomy_update": {
+      "$ref": "#/$defs/GroupAutonomyUpdate"
     },
     "group_discussion_policy": {
       "$ref": "#/$defs/GroupDiscussionPolicy"
@@ -12664,6 +14236,21 @@
     "sticker_usage_record": {
       "$ref": "#/$defs/StickerUsageRecord"
     },
+    "task_authorization": {
+      "$ref": "#/$defs/TaskAuthorization"
+    },
+    "task_authorization_update": {
+      "$ref": "#/$defs/TaskAuthorizationUpdate"
+    },
+    "task_channel_binding": {
+      "$ref": "#/$defs/TaskChannelBinding"
+    },
+    "task_delivery_target": {
+      "$ref": "#/$defs/TaskDeliveryTarget"
+    },
+    "task_reconciliation": {
+      "$ref": "#/$defs/TaskReconciliation"
+    },
     "turn": {
       "$ref": "#/$defs/TurnSnapshot"
     },
@@ -12672,6 +14259,28 @@
     }
   },
   "required": [
+    "agent_development_policy",
+    "candidate_feature",
+    "candidate_create",
+    "candidate_approval",
+    "agent_event",
+    "decision_record",
+    "capability_descriptor",
+    "capability_detail",
+    "capability_page",
+    "task_channel_binding",
+    "task_delivery_target",
+    "task_authorization",
+    "artifact_ref",
+    "agent_task_create",
+    "agent_task",
+    "agent_task_page",
+    "agent_task_action",
+    "agent_task_journal",
+    "task_authorization_update",
+    "task_reconciliation",
+    "group_autonomy_policy",
+    "group_autonomy_update",
     "event",
     "command",
     "cloud_egress_receipt",

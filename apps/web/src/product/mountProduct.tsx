@@ -6,6 +6,7 @@ export type ProductSurface =
   | "application"
   | "avatar-lab"
   | "channels-settings"
+  | "agent-settings"
   | "desktop-pet"
   | "desktop-settings";
 

@@ -39,6 +39,7 @@ class ChannelRuntimePolicy(ProtocolModel):
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 
     qq_owner_public_web_enabled: bool = False
+    qq_owner_agent_enabled: bool = False
     qq_owner_voice_reply_enabled: bool = True
     qq_owner_voice_input_enabled: bool = True
     qq_native_favorites_enabled: bool = True

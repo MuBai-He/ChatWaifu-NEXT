@@ -112,6 +112,13 @@ class CalendarReadSkill:
                                 item.calendar.timezone,
                             )
                         )
+            allowed = (
+                await self._integration.task_calendar_scope()
+                if self._integration.task_calendar_scope
+                else None
+            )
+            if allowed is not None:
+                sources = [s for s in sources if s[1] in allowed or f"{s[0]}/{s[1]}" in allowed]
             if not sources:
                 raise SkillExecutionError(
                     "calendar_not_selected", "请先在个人助理设置中选择允许查询的日历。"

@@ -1,0 +1,119 @@
+{
+  "schema_version": "1.0",
+  "instructions": "SKILL.md",
+  "definition":
+    {
+      "skill_id": "documents.create",
+      "version": "1.0.0",
+      "name": "Document generation",
+      "description": "Create verified Word and PowerPoint artifacts from structured content. 生成 Word DOCX 和 PPT PPTX 并检查预览。",
+      "capabilities":
+        [
+          {
+            "name": "word",
+            "description": "Create a Word document from a title and sections.",
+            "input_schema":
+              {
+                "type": "object",
+                "properties":
+                  {
+                    "title":
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100,
+                        "pattern": "^[^/\\\\\\x00\\r\\n]+$",
+                      },
+                    "sections":
+                      {
+                        "type": "array",
+                        "items":
+                          {
+                            "type": "object",
+                            "properties":
+                              {
+                                "heading":
+                                  { "type": "string", "maxLength": 200 },
+                                "paragraphs":
+                                  {
+                                    "type": "array",
+                                    "items":
+                                      { "type": "string", "maxLength": 4000 },
+                                    "maxItems": 50,
+                                  },
+                              },
+                            "required": ["paragraphs"],
+                            "additionalProperties": false,
+                          },
+                        "minItems": 1,
+                        "maxItems": 40,
+                      },
+                  },
+                "required": ["title", "sections"],
+                "additionalProperties": false,
+                "x-chatwaifu-discovery-only": true,
+              },
+            "output_schema": { "type": "object", "additionalProperties": true },
+            "side_effect": "write",
+            "required_permissions": ["workspace.write"],
+            "confirmation_required": true,
+            "timeout_seconds": 150,
+            "adapter_tool": "document_word",
+          },
+          {
+            "name": "powerpoint",
+            "description": "Create a PowerPoint presentation with cover and content slides.",
+            "input_schema":
+              {
+                "type": "object",
+                "properties":
+                  {
+                    "title":
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100,
+                        "pattern": "^[^/\\\\\\x00\\r\\n]+$",
+                      },
+                    "slides":
+                      {
+                        "type": "array",
+                        "items":
+                          {
+                            "type": "object",
+                            "properties":
+                              {
+                                "title": { "type": "string", "maxLength": 100 },
+                                "bullets":
+                                  {
+                                    "type": "array",
+                                    "items":
+                                      { "type": "string", "maxLength": 300 },
+                                    "minItems": 1,
+                                    "maxItems": 8,
+                                  },
+                              },
+                            "required": ["title", "bullets"],
+                            "additionalProperties": false,
+                          },
+                        "minItems": 1,
+                        "maxItems": 40,
+                      },
+                  },
+                "required": ["title", "slides"],
+                "additionalProperties": false,
+                "x-chatwaifu-discovery-only": true,
+              },
+            "output_schema": { "type": "object", "additionalProperties": true },
+            "side_effect": "write",
+            "required_permissions": ["workspace.write"],
+            "confirmation_required": true,
+            "timeout_seconds": 150,
+            "adapter_tool": "document_powerpoint",
+          },
+        ],
+      "interruptible": true,
+      "background_allowed": true,
+    },
+  "adapter": { "kind": "builtin", "handler": "document_word" },
+}

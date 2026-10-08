@@ -1,0 +1,169 @@
+{
+  "$defs": {
+    "CapabilityDescriptor": {
+      "properties": {
+        "availability_reason": {
+          "anyOf": [
+            {
+              "maxLength": 400,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Availability Reason"
+        },
+        "capability_id": {
+          "title": "Capability Id",
+          "type": "string"
+        },
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "confirmation_required": {
+          "default": false,
+          "title": "Confirmation Required",
+          "type": "boolean"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "execution_location": {
+          "default": "runtime",
+          "enum": [
+            "runtime",
+            "paired_device",
+            "plugin"
+          ],
+          "title": "Execution Location",
+          "type": "string"
+        },
+        "fingerprint": {
+          "title": "Fingerprint",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "required_permissions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Permissions",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "side_effect": {
+          "$ref": "#/$defs/SideEffect"
+        },
+        "skill_id": {
+          "title": "Skill Id",
+          "type": "string"
+        },
+        "skill_version": {
+          "title": "Skill Version",
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "builtin",
+            "plugin",
+            "mcp_connection"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/CapabilityStatus"
+        }
+      },
+      "required": [
+        "capability_id",
+        "skill_id",
+        "skill_version",
+        "name",
+        "description",
+        "category",
+        "source",
+        "status",
+        "side_effect",
+        "fingerprint"
+      ],
+      "title": "CapabilityDescriptor",
+      "type": "object"
+    },
+    "CapabilityStatus": {
+      "enum": [
+        "available",
+        "authorization_required",
+        "disabled",
+        "not_configured",
+        "adapter_required",
+        "unsupported"
+      ],
+      "title": "CapabilityStatus",
+      "type": "string"
+    },
+    "SideEffect": {
+      "enum": [
+        "read",
+        "write",
+        "destructive",
+        "external_communication",
+        "device_control"
+      ],
+      "title": "SideEffect",
+      "type": "string"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/capability-page.schema.json",
+  "properties": {
+    "categories": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 128,
+      "title": "Categories",
+      "type": "array"
+    },
+    "items": {
+      "items": {
+        "$ref": "#/$defs/CapabilityDescriptor"
+      },
+      "maxItems": 32,
+      "title": "Items",
+      "type": "array"
+    },
+    "next_cursor": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Next Cursor"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "title": "CapabilityPage",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "instructions": "SKILL.md",
+  "definition":
+    {
+      "skill_id": "agent.develop",
+      "version": "1.0.0",
+      "name": "Develop candidate capability",
+      "description": "Record a missing capability and develop an isolated stateless candidate plugin for owner review. 为能力缺口开发候选插件。",
+      "capabilities":
+        [
+          {
+            "name": "candidate",
+            "description": "Create a candidate development job when owner opted in. Never enables the plugin. One candidate per day.",
+            "input_schema":
+              {
+                "type": "object",
+                "properties":
+                  {
+                    "goal":
+                      { "type": "string", "minLength": 1, "maxLength": 4000 },
+                  },
+                "required": ["goal"],
+                "additionalProperties": false,
+                "x-chatwaifu-discovery-only": true,
+              },
+            "output_schema": { "type": "object", "additionalProperties": true },
+            "side_effect": "write",
+            "required_permissions": ["agent.candidate.develop"],
+            "confirmation_required": true,
+            "timeout_seconds": 30,
+          },
+        ],
+      "interruptible": true,
+      "background_allowed": false,
+    },
+  "adapter": { "kind": "builtin", "handler": "agent_develop_candidate" },
+}

@@ -1,0 +1,386 @@
+{
+  "$defs": {
+    "AgentTaskState": {
+      "enum": [
+        "queued",
+        "running",
+        "waiting_input",
+        "waiting_authorization",
+        "waiting_event",
+        "paused",
+        "succeeded",
+        "failed",
+        "cancelled"
+      ],
+      "title": "AgentTaskState",
+      "type": "string"
+    },
+    "TaskAuthorization": {
+      "properties": {
+        "allow_writes": {
+          "default": false,
+          "title": "Allow Writes",
+          "type": "boolean"
+        },
+        "allowed_skill_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 64,
+          "title": "Allowed Skill Ids",
+          "type": "array"
+        },
+        "calendar_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Calendar Ids",
+          "type": "array"
+        },
+        "capability_fingerprints": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Capability Fingerprints",
+          "type": "object"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "resource_roots": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Resource Roots",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source_ref": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Source Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_ref",
+        "expires_at"
+      ],
+      "title": "TaskAuthorization",
+      "type": "object"
+    },
+    "TaskChannelBinding": {
+      "description": "Runtime-issued channel authority, never accepted from a model or task-create API.",
+      "properties": {
+        "account_key": {
+          "title": "Account Key",
+          "type": "string"
+        },
+        "audience_fingerprint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Audience Fingerprint"
+        },
+        "connection_id": {
+          "format": "uuid",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "conversation_key": {
+          "title": "Conversation Key",
+          "type": "string"
+        },
+        "link_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Link Id"
+        },
+        "link_revision": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Link Revision"
+        },
+        "policy_revision": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Policy Revision"
+        },
+        "route_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Route Id"
+        },
+        "route_revision": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Route Revision"
+        },
+        "scene_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scene Id"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sender_key": {
+          "title": "Sender Key",
+          "type": "string"
+        },
+        "source_ref": {
+          "title": "Source Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "connection_id",
+        "account_key",
+        "conversation_key",
+        "sender_key",
+        "source_ref"
+      ],
+      "title": "TaskChannelBinding",
+      "type": "object"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/agent-task.schema.json",
+  "properties": {
+    "active_seconds": {
+      "default": 0,
+      "title": "Active Seconds",
+      "type": "number"
+    },
+    "authorization": {
+      "$ref": "#/$defs/TaskAuthorization"
+    },
+    "blocked_reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Blocked Reason"
+    },
+    "candidate_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Candidate Id"
+    },
+    "channel_binding": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TaskChannelBinding"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "completion_criteria": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Completion Criteria",
+      "type": "array"
+    },
+    "continuation": {
+      "anyOf": [
+        {
+          "maxLength": 8000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Continuation"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "delivery_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Delivery Id"
+    },
+    "goal": {
+      "title": "Goal",
+      "type": "string"
+    },
+    "max_active_seconds": {
+      "title": "Max Active Seconds",
+      "type": "integer"
+    },
+    "max_tool_calls": {
+      "title": "Max Tool Calls",
+      "type": "integer"
+    },
+    "result_text": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Result Text"
+    },
+    "revision": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "scope": {
+      "title": "Scope",
+      "type": "string"
+    },
+    "session_id": {
+      "format": "uuid",
+      "title": "Session Id",
+      "type": "string"
+    },
+    "state": {
+      "$ref": "#/$defs/AgentTaskState"
+    },
+    "task_id": {
+      "format": "uuid",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "tool_calls": {
+      "default": 0,
+      "title": "Tool Calls",
+      "type": "integer"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "wake_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Wake At"
+    }
+  },
+  "required": [
+    "task_id",
+    "session_id",
+    "scope",
+    "goal",
+    "completion_criteria",
+    "authorization",
+    "state",
+    "max_tool_calls",
+    "max_active_seconds",
+    "created_at",
+    "updated_at"
+  ],
+  "title": "AgentTask",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

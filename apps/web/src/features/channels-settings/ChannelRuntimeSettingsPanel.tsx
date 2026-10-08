@@ -281,6 +281,13 @@ function ChannelRuntimeSettingsContent({
                 onChange={(v) => toggle("qq_owner_public_web_enabled", v)}
               />
               <SettingsToggle
+                label="允许 QQ 主人私聊发现 Agent 能力"
+                description="显示当前已安装的文件、文档、日历、任务与插件能力。写入和外部操作继续经过权限检查。"
+                checked={draft.qq_owner_agent_enabled ?? false}
+                disabled={disabled}
+                onChange={(v) => toggle("qq_owner_agent_enabled", v)}
+              />
+              <SettingsToggle
                 label="允许 QQ 私聊语音回复"
                 description="允许角色按当前语义选择语音；关闭后私聊只回复文字，不改变各群按需语音设置。"
                 checked={draft.qq_owner_voice_reply_enabled ?? true}

@@ -305,6 +305,9 @@ export const companionSettingsSchema = z
     quiet_start: z.string(),
     quiet_end: z.string(),
     proactive_enabled: z.boolean(),
+    proactive_decision_mode: z
+      .enum(["legacy", "shadow", "model"])
+      .default("legacy"),
     proactive_idle_minutes: z.number().int().nonnegative(),
     proactive_cooldown_minutes: z.number().int().nonnegative(),
     proactive_daily_budget: z.number().int().nonnegative(),

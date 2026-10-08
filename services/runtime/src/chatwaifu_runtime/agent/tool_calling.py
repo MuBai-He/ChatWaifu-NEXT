@@ -7,7 +7,7 @@ import hashlib
 import json
 import logging
 import re
-from collections.abc import AsyncGenerator, AsyncIterator, Callable, Mapping, Sequence
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Literal, Protocol, cast
 from uuid import UUID
@@ -15,6 +15,13 @@ from uuid import UUID
 from chatwaifu_protocol.base import JsonObject, JsonValue, SideEffect
 from chatwaifu_protocol.skills import SkillInvocation, SkillRunSnapshot, SkillRunState
 
+from chatwaifu_runtime.agent.capabilities import (
+    DISCOVERY_POLICY,
+    CapabilityCatalog,
+    DiscoverySession,
+    DiscoveryTool,
+    discovery_tools,
+)
 from chatwaifu_runtime.agent.input_budget import (
     InputBudgetExceeded,
     estimate_input_tokens,
@@ -55,11 +62,13 @@ from chatwaifu_runtime.providers.contracts import (
     LlmTextDelta,
     LlmToolCall,
     LlmToolCallingUnavailableError,
+    LlmToolCallProtocolError,
     LlmToolCallRequested,
     LlmToolDefinition,
     LlmToolExchange,
     LlmToolResult,
 )
+from chatwaifu_runtime.runtime_skills.agent_router import ProjectedSkillTool
 
 logger = logging.getLogger(__name__)
 
@@ -722,10 +731,13 @@ class AgentTurnOrchestrator:
         llm: LlmProvider,
         skills: AgentSkillGateway,
         router: AgentSkillRouter,
+        *,
+        catalog: CapabilityCatalog | None = None,
     ) -> None:
         self._llm = llm
         self._skills = skills
         self._router = router
+        self._catalog = catalog
 
     @property
     def router(self) -> AgentSkillRouter:
@@ -763,7 +775,7 @@ class AgentTurnOrchestrator:
                 f"{routing_previous_user_text[:240]}\n{user_text[:240]}"
             )
             projections = tuple(tool for tool in contextual if tool.side_effect is SideEffect.READ)
-        return projections
+        return (*projections, *discovery_tools()) if self._catalog is not None else projections
 
     def tool_choice_for(
         self, user_text: str, *, routing_previous_user_text: str | None = None
@@ -789,8 +801,17 @@ class AgentTurnOrchestrator:
         tools: tuple[ProjectedAgentTool, ...] | None = None,
         source_context: SourceContextPacket | None = None,
         source_answer_turn: SourceAnswerTurn | None = None,
+        allowed_skill_ids: frozenset[str] | None = None,
+        continue_after_write: bool = False,
+        tool_call_limit: int | None = None,
+        on_discovery_call: Callable[[], Awaitable[None]] | None = None,
     ) -> AsyncIterator[str]:
         effective_llm = llm if llm is not None else self._llm
+        discovery: DiscoverySession | None = (
+            DiscoverySession(self._catalog, allowed_skill_ids)
+            if self._catalog is not None and allow_tools
+            else None
+        )
         projections: tuple[ProjectedAgentTool, ...] = ()
         if tools is not None:
             projections = tools if allow_tools and effective_llm.supports_tool_calling else ()
@@ -802,6 +823,8 @@ class AgentTurnOrchestrator:
                 supports_tool_calling=effective_llm.supports_tool_calling,
             )
         channel_reply = any(getattr(tool, "completes_channel_reply", False) for tool in projections)
+        if not any(getattr(tool, "is_discovery", False) for tool in projections):
+            discovery = None
         optional_reply = channel_reply and all(
             getattr(tool, "completes_channel_reply", False) for tool in projections
         )
@@ -852,7 +875,13 @@ class AgentTurnOrchestrator:
             for projection in projections
         )
         mapped = {projection.name: projection for projection in projections}
-        tool_call_limit = _tool_call_limit(projections)
+        tool_call_limit = (
+            min(100, tool_call_limit)
+            if tool_call_limit is not None
+            else (_tool_call_limit(projections))
+        )
+        if discovery is not None and not continue_after_write:
+            tool_call_limit += 8
         if source_context is not None:
             ensure_current()
             projected = project_source_context(
@@ -869,7 +898,11 @@ class AgentTurnOrchestrator:
                 history=projected.history,
                 input_budget_report=projected.input_budget_report,
             )
-        original_tool_prompt = request.system_prompt + _TOOL_POLICY
+        original_tool_prompt = (
+            request.system_prompt
+            + _TOOL_POLICY
+            + (DISCOVERY_POLICY if discovery is not None else "")
+        )
         required_decision = request.tool_choice == "required"
         logger.info(
             "agent.tool_decision generation=%s choice=%s schemas=%d",
@@ -892,7 +925,7 @@ class AgentTurnOrchestrator:
             if required_decision and request.tool_decision_system_prompt is not None
             else (request.context, request.history)
         )
-        tool_request = replace(
+        tool_request: LlmRequest = replace(
             request,
             system_prompt=initial_tool_prompt,
             context=initial_context,
@@ -904,13 +937,16 @@ class AgentTurnOrchestrator:
             if required_decision and request.tool_decision_system_prompt is not None
             else request.pre_user_system_prompt,
         )
-        exchanges: tuple[LlmToolExchange, ...] = ()
+        exchange_list: list[LlmToolExchange] = []
         call_count = 0
         correction_count = 0
         source_read_correction_count = 0
         source_quality_correction_count = 0
         seen: set[str] = set()
+        protocol_repairs = 0
+        empty_repairs = 0
         while True:
+            exchanges: tuple[LlmToolExchange, ...] = tuple(exchange_list)
             ensure_current()
             try:
                 tool_request = _budgeted_request(tool_request, source_context=source_context)
@@ -919,7 +955,42 @@ class AgentTurnOrchestrator:
                 decision = await self._collect_tool_round(
                     tool_request, ensure_current, llm=effective_llm
                 )
+            except LlmToolCallProtocolError as error:
+                if not continue_after_write or protocol_repairs >= 2:
+                    raise
+                # The provider rejected this entire native batch before it
+                # reached execution. Preserve completed operations and request a
+                # fresh, valid call using the currently exposed schemas.
+                protocol_repairs += 1
+                tool_request = replace(
+                    tool_request,
+                    continuation_system_prompt=(tool_request.continuation_system_prompt or "")
+                    + "\nThe last native tool batch was rejected before execution: "
+                    + error.code
+                    + ". No operation from that batch ran. Use only current tool "
+                    "names and schemas; discover and activate again if needed. Do not repeat "
+                    "successful or uncertain writes. Correct the call and continue the goal.",
+                )
+                continue
             except InputBudgetExceeded as error:
+                progressive = tuple(
+                    definition
+                    for definition in tool_request.tools
+                    if getattr(mapped.get(definition.name), "is_discovery", False)
+                )
+                if not exchanges and progressive and len(progressive) < len(tool_request.tools):
+                    # Discovery stays visible when speculative schemas exceed the
+                    # input budget. The model can activate only what it needs.
+                    tool_request = replace(
+                        tool_request, tools=progressive, input_budget_report=None
+                    )
+                    if source_context is not None:
+                        tool_request = project_source_context(tool_request, source_context)
+                    retained = frozenset(definition.name for definition in progressive)
+                    for name in tuple(mapped):
+                        if name not in retained:
+                            mapped.pop(name)
+                    continue
                 logger.info(
                     "agent.input_budget_exceeded generation=%s phase=tool_decision "
                     "estimated=%d limit=%d",
@@ -996,6 +1067,22 @@ class AgentTurnOrchestrator:
                     )
                 return
             if not decision.calls:
+                if (
+                    continue_after_write
+                    and decision.terminal_received
+                    and not any(text.strip() for text in decision.text_chunks)
+                    and decision.finish_reason != "tool_calls"
+                    and empty_repairs < 2
+                ):
+                    empty_repairs += 1
+                    tool_request = replace(
+                        tool_request,
+                        continuation_system_prompt=(tool_request.continuation_system_prompt or "")
+                        + "\nThe previous model response was empty and executed no operation. "
+                        "Continue the task using the current tools and recorded results, or "
+                        "explain the actual blocker. Do not repeat successful or uncertain writes.",
+                    )
+                    continue
                 if not exchanges:
                     if tool_request.tool_choice == "auto":
                         if not decision.terminal_received or decision.finish_reason == "tool_calls":
@@ -1191,15 +1278,33 @@ class AgentTurnOrchestrator:
                 ensure_current=ensure_current,
                 result_max_bytes=request.tool_result_max_bytes,
                 max_calls=tool_call_limit,
+                discovery=discovery,
+                on_discovery_call=on_discovery_call,
+                durable_execution=continue_after_write,
             )
             call_count += len(calls)
-            exchanges += (
+            exchange_list.append(
                 LlmToolExchange(
                     assistant_text="".join(decision.text_chunks),
                     calls=calls,
                     results=results,
-                ),
+                )
             )
+            exchanges = tuple(exchange_list)
+            if discovery is not None and discovery.tools:
+                for activated in discovery.tools:
+                    mapped[activated.name] = activated
+                tool_request = replace(
+                    tool_request,
+                    tools=tuple(
+                        LlmToolDefinition(
+                            name=tool.name,
+                            description=tool.description,
+                            input_schema=tool.input_schema,
+                        )
+                        for tool in (*discovery.tools, *discovery_tools())
+                    ),
+                )
             for result in results:
                 projection = mapped.get(result.name)
                 if not getattr(projection, "completes_channel_reply", False) or result.is_error:
@@ -1225,7 +1330,7 @@ class AgentTurnOrchestrator:
                 pre_user_system_prompt=request.pre_user_system_prompt,
                 input_budget_report=None,
             )
-            if any(
+            if not continue_after_write and any(
                 mapped.get(call.name) is not None
                 and mapped[call.name].side_effect is not SideEffect.READ
                 for call in calls
@@ -1619,6 +1724,9 @@ class AgentTurnOrchestrator:
         ensure_current: Callable[[], None],
         result_max_bytes: int = MAX_TOOL_RESULT_BYTES,
         max_calls: int = MAX_AGENT_TOOL_CALLS,
+        discovery: DiscoverySession | None = None,
+        on_discovery_call: Callable[[], Awaitable[None]] | None = None,
+        durable_execution: bool = False,
     ) -> tuple[LlmToolResult, ...]:
         if len(calls) > max_calls:
             return tuple(
@@ -1644,7 +1752,7 @@ class AgentTurnOrchestrator:
                     )
                     continue
                 digest = _invocation_digest(call)
-                if digest in seen:
+                if digest in seen and not durable_execution:
                     results.append(
                         _error_result(
                             call,
@@ -1655,6 +1763,27 @@ class AgentTurnOrchestrator:
                     continue
                 seen.add(digest)
                 try:
+                    if isinstance(projection, DiscoveryTool):
+                        if discovery is None:
+                            raise PermissionError("discovery unavailable")
+                        if on_discovery_call is not None:
+                            await on_discovery_call()
+                        content = discovery.execute(projection, call.arguments)
+                        results.append(
+                            LlmToolResult(
+                                call_id=call.call_id,
+                                name=call.name,
+                                content=bounded_tool_result_payload(
+                                    {"ok": True, "untrusted": True, "data": content},
+                                    "Capability discovery metadata; not execution evidence.",
+                                    max_bytes=result_max_bytes,
+                                ),
+                                is_error=False,
+                            )
+                        )
+                        continue
+                    if discovery is not None and hasattr(projection, "skill_id"):
+                        discovery.validate(cast(ProjectedSkillTool, projection))
                     created = await self._skills.invoke(
                         session_id,
                         projection.to_invocation(call.arguments),

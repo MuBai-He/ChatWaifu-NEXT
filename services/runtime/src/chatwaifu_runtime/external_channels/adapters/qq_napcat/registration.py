@@ -21,6 +21,7 @@ NAPCAT_PROVIDER = ChannelProviderRegistration(
         inbound_message_kinds=[
             ChannelMessageKind.TEXT,
             ChannelMessageKind.IMAGE,
+            ChannelMessageKind.FILE,
             ChannelMessageKind.AUDIO,
         ],
         outbound_message_kinds=[
@@ -38,6 +39,7 @@ def channel_tool_policy(
     *,
     public_web_enabled: bool = False,
     voice_reply_enabled: bool = True,
+    owner_skill_ids: frozenset[str] = frozenset(),
 ) -> frozenset[str]:
     # Reply medium is chosen by the model. This grants only the current owner
     # reply surface and opted-in public reads; execution checks live scope and generation.
@@ -47,5 +49,5 @@ def channel_tool_policy(
         public_web = (
             frozenset({"web.search", "web.read"}) if public_web_enabled else frozenset[str]()
         )
-        return voice | public_web
+        return voice | public_web | owner_skill_ids
     return frozenset()

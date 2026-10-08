@@ -28,6 +28,7 @@ const fallbackSettings: CompanionSettings = {
   quiet_start: "23:00",
   quiet_end: "08:00",
   proactive_enabled: false,
+  proactive_decision_mode: "legacy",
   proactive_idle_minutes: 45,
   proactive_cooldown_minutes: 60,
   proactive_daily_budget: 3,
@@ -102,6 +103,7 @@ export function CompanionSettingsPanel() {
           quiet_start: settings.quiet_start,
           quiet_end: settings.quiet_end,
           proactive_enabled: settings.proactive_enabled,
+          proactive_decision_mode: settings.proactive_decision_mode,
           proactive_idle_minutes: settings.proactive_idle_minutes,
           proactive_cooldown_minutes: settings.proactive_cooldown_minutes,
           proactive_daily_budget: settings.proactive_daily_budget,
@@ -236,6 +238,25 @@ export function CompanionSettingsPanel() {
             setSettings((current) => ({ ...current, proactive_enabled }))
           }
         />
+        <label>
+          参与决策
+          <select
+            aria-label="桌宠参与决策"
+            value={settings.proactive_decision_mode}
+            onChange={(event) =>
+              setSettings({
+                ...settings,
+                proactive_decision_mode: event.target
+                  .value as CompanionSettings["proactive_decision_mode"],
+              })
+            }
+          >
+            <option value="legacy">现有行为</option>
+            <option value="shadow">模型影子判断</option>
+            <option value="model">模型自主判断</option>
+          </select>
+        </label>
+
         <NumberRow
           label="等待时间"
           suffix="分钟"

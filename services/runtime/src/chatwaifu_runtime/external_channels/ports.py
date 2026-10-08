@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
+from chatwaifu_protocol.agent import TaskDeliveryTarget
 from chatwaifu_protocol.channels import (
     ChannelConnectionConfiguration,
     ChannelConnectionStatus,
@@ -37,6 +38,14 @@ from chatwaifu_runtime.external_channels.models import (
 
 
 class ExternalChannelRepository(Protocol):
+    async def create_task_delivery_plan(
+        self,
+        target: TaskDeliveryTarget,
+        *,
+        delivery_id: UUID,
+        parts: Sequence[ChannelDeliveryPartDraft],
+        created_at: datetime,
+    ) -> DeliveryTransitionResult: ...
     async def list_connections(self) -> tuple[ChannelConnectionRecord, ...]: ...
 
     async def get_connection(
@@ -191,6 +200,12 @@ class ExternalChannelRepository(Protocol):
         *,
         cancel_sending_lease_id: UUID | None = None,
     ) -> DeliveryTransitionResult: ...
+
+    async def cancel_autonomous_task_deliveries(
+        self,
+        route_id: UUID,
+        cancel_request: ChannelDeliveryPartsCancelRequest,
+    ) -> list[DeliveryTransitionResult]: ...
 
     async def cancel_active_delivery_plans_for_connection(
         self,

@@ -1,6 +1,7 @@
 """Optional Runtime-owned personal assistant lifecycle."""
 
 import asyncio
+from collections.abc import Awaitable, Callable
 from contextlib import suppress
 from typing import Literal
 
@@ -34,6 +35,7 @@ class PersonalAssistantIntegration:
         self._tasks_adapter: GoogleTasksAdapter | None = None
         self._maintenance: asyncio.Task[None] | None = None
         self.agenda: AgendaService | None = None
+        self.task_calendar_scope: Callable[[], Awaitable[frozenset[str] | None]] | None = None
         if not config.enabled:
             return
         self.agenda = AgendaService(repository, None, self.tasks)

@@ -23,6 +23,7 @@
     "vite.config.ts",
     "playwright.config.ts",
     "playwright.desktop.config.ts",
-    "playwright.channels.config.ts"
+    "playwright.channels.config.ts",
+    "playwright.agent.config.ts"
   ]
 }

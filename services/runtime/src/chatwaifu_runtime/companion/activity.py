@@ -23,3 +23,6 @@ class ActivityTracker:
     def session_idle_seconds(self, session_id: UUID) -> float:
         last = self._sessions.setdefault(session_id, self._monotonic())
         return max(0.0, self._monotonic() - last)
+
+    def revision(self, session_id: UUID) -> float:
+        return self._sessions.setdefault(session_id, self._monotonic())

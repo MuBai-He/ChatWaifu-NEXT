@@ -18,6 +18,7 @@ class CompanionSettings(BaseModel):
     quiet_start: str = "23:00"
     quiet_end: str = "08:00"
     proactive_enabled: bool = False
+    proactive_decision_mode: Literal["legacy", "shadow", "model"] = "legacy"
     proactive_idle_minutes: int = Field(default=45, ge=1, le=1440)
     proactive_cooldown_minutes: int = Field(default=60, ge=1, le=10080)
     proactive_daily_budget: int = Field(default=3, ge=0, le=24)
@@ -60,6 +61,7 @@ class CompanionSettingsUpdate(BaseModel):
     quiet_start: str
     quiet_end: str
     proactive_enabled: bool
+    proactive_decision_mode: Literal["legacy", "shadow", "model"] = "legacy"
     proactive_idle_minutes: int = Field(ge=1, le=1440)
     proactive_cooldown_minutes: int = Field(ge=1, le=10080)
     proactive_daily_budget: int = Field(ge=0, le=24)

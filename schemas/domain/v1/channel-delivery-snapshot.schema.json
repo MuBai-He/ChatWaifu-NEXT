@@ -243,13 +243,27 @@
       "default": "1.0",
       "enum": [
         "1.0",
-        "1.1"
+        "1.1",
+        "1.2"
       ],
       "title": "Schema Version",
       "type": "string"
     },
     "status": {
       "$ref": "#/$defs/ChannelDeliveryStatus"
+    },
+    "task_delivery_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Task Delivery Id"
     },
     "updated_at": {
       "format": "date-time",

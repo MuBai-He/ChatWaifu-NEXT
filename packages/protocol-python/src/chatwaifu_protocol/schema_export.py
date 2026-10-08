@@ -6,6 +6,30 @@ from typing import Any
 
 from pydantic import BaseModel, TypeAdapter
 
+from chatwaifu_protocol.agent import (
+    AgentDevelopmentPolicy,
+    AgentEvent,
+    AgentTask,
+    AgentTaskAction,
+    AgentTaskCreate,
+    AgentTaskJournal,
+    AgentTaskPage,
+    ArtifactRef,
+    CandidateApproval,
+    CandidateCreate,
+    CandidateFeature,
+    CapabilityDescriptor,
+    CapabilityDetail,
+    CapabilityPage,
+    DecisionRecord,
+    GroupAutonomyPolicy,
+    GroupAutonomyUpdate,
+    TaskAuthorization,
+    TaskAuthorizationUpdate,
+    TaskChannelBinding,
+    TaskDeliveryTarget,
+    TaskReconciliation,
+)
 from chatwaifu_protocol.avatar import AvatarCapabilityManifest, AvatarCue, AvatarInteractionEvent
 from chatwaifu_protocol.base import ProtocolModel
 from chatwaifu_protocol.channel_groups import (
@@ -127,6 +151,28 @@ from chatwaifu_protocol.sticker_library import (
 class ProtocolCatalog(ProtocolModel):
     """Schema-only catalog used to generate a single conflict-free TypeScript module."""
 
+    agent_development_policy: AgentDevelopmentPolicy
+    candidate_feature: CandidateFeature
+    candidate_create: CandidateCreate
+    candidate_approval: CandidateApproval
+    agent_event: AgentEvent
+    decision_record: DecisionRecord
+    capability_descriptor: CapabilityDescriptor
+    capability_detail: CapabilityDetail
+    capability_page: CapabilityPage
+    task_channel_binding: TaskChannelBinding
+    task_delivery_target: TaskDeliveryTarget
+    task_authorization: TaskAuthorization
+    artifact_ref: ArtifactRef
+    agent_task_create: AgentTaskCreate
+    agent_task: AgentTask
+    agent_task_page: AgentTaskPage
+    agent_task_action: AgentTaskAction
+    agent_task_journal: AgentTaskJournal
+    task_authorization_update: TaskAuthorizationUpdate
+    task_reconciliation: TaskReconciliation
+    group_autonomy_policy: GroupAutonomyPolicy
+    group_autonomy_update: GroupAutonomyUpdate
     event: EventModel
     command: CommandModel
     cloud_egress_receipt: EgressReceiptPayload
@@ -234,6 +280,28 @@ class ProtocolCatalog(ProtocolModel):
 
 
 SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
+    "agent-development-policy": AgentDevelopmentPolicy,
+    "candidate-feature": CandidateFeature,
+    "candidate-create": CandidateCreate,
+    "candidate-approval": CandidateApproval,
+    "agent-event": AgentEvent,
+    "decision-record": DecisionRecord,
+    "capability-descriptor": CapabilityDescriptor,
+    "capability-detail": CapabilityDetail,
+    "capability-page": CapabilityPage,
+    "task-channel-binding": TaskChannelBinding,
+    "task-delivery-target": TaskDeliveryTarget,
+    "task-authorization": TaskAuthorization,
+    "task-authorization-update": TaskAuthorizationUpdate,
+    "task-reconciliation": TaskReconciliation,
+    "agent-task-journal": AgentTaskJournal,
+    "artifact-ref": ArtifactRef,
+    "agent-task-create": AgentTaskCreate,
+    "agent-task": AgentTask,
+    "agent-task-page": AgentTaskPage,
+    "agent-task-action": AgentTaskAction,
+    "group-autonomy-policy": GroupAutonomyPolicy,
+    "group-autonomy-update": GroupAutonomyUpdate,
     "channel-runtime-policy": ChannelRuntimePolicy,
     "channel-runtime-settings-response": ChannelRuntimeSettingsResponse,
     "channel-runtime-settings-snapshot": ChannelRuntimeSettingsSnapshot,

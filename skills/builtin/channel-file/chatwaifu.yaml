@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "instructions": "SKILL.md",
+  "definition":
+    {
+      "skill_id": "channel.file",
+      "version": "1.0.0",
+      "name": "QQ file reply",
+      "description": "Send a generated artifact to the current paired QQ owner. 把生成的文件发回当前 QQ 主人私聊。",
+      "capabilities":
+        [
+          {
+            "name": "send",
+            "description": "Send a verified artifact to the current QQ reply target. Acceptance is not proof of user receipt.",
+            "input_schema":
+              {
+                "type": "object",
+                "properties":
+                  { "artifact_id": { "type": "string", "format": "uuid" } },
+                "required": ["artifact_id"],
+                "additionalProperties": false,
+                "x-chatwaifu-discovery-only": true,
+              },
+            "output_schema": { "type": "object", "additionalProperties": true },
+            "side_effect": "external_communication",
+            "required_permissions": ["channel.current_reply.file"],
+            "confirmation_required": true,
+            "timeout_seconds": 120,
+          },
+        ],
+      "interruptible": true,
+      "background_allowed": false,
+    },
+  "adapter": { "kind": "builtin", "handler": "channel_file" },
+}

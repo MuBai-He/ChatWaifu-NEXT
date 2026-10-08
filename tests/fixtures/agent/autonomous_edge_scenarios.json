@@ -1,0 +1,84 @@
+{
+  "version": "1.0",
+  "scenarios": [
+    {
+      "id": "rf0",
+      "kind": "task",
+      "task_type": "file",
+      "inject_failure": true,
+      "initial": "真实资料: 42 和宁宁",
+      "expected_marker": "REPAIRED0",
+      "text": "读取 input.txt，保留全部原文，加一行 REPAIRED0，写入 result.txt 后读回来核实。若操作失败，自行核对并修复继续完成。"
+    },
+    {
+      "id": "rf1",
+      "kind": "task",
+      "task_type": "file",
+      "inject_failure": true,
+      "initial": "真实资料: 42 和宁宁",
+      "expected_marker": "REPAIRED1",
+      "text": "读取 input.txt，保留全部原文，加一行 REPAIRED1，写入 result.txt 后读回来核实。若操作失败，自行核对并修复继续完成。"
+    },
+    {
+      "id": "rd0",
+      "kind": "task",
+      "task_type": "word",
+      "inject_failure": true,
+      "initial": "会议结论: 预算 42，截止明天。",
+      "expected_marker": "宁宁",
+      "text": "读取 input.txt，把所有内容做成 Word，并确认渲染后仍包含数字42和全部结论。生成或验证失败时修复并继续，不要只报告失败。"
+    },
+    {
+      "id": "rd1",
+      "kind": "task",
+      "task_type": "word",
+      "inject_failure": true,
+      "initial": "会议结论: 预算 42，截止明天。",
+      "expected_marker": "宁宁",
+      "text": "读取 input.txt，把所有内容做成 Word，并确认渲染后仍包含数字42和全部结论。生成或验证失败时修复并继续，不要只报告失败。"
+    },
+    {
+      "id": "dn0",
+      "kind": "discovery",
+      "register": true,
+      "text": "用新接入的能力统计这段文字有多少字",
+      "expected_capability": "fixture.new-tool/count"
+    },
+    {
+      "id": "dn1",
+      "kind": "discovery",
+      "register": true,
+      "text": "有哪些新功能可以算中文字符数",
+      "expected_capability": "fixture.new-tool/count"
+    },
+    {
+      "id": "dm0",
+      "kind": "discovery",
+      "first_miss": true,
+      "text": "先搜索 zzzxxyy_unique_absence。它应该没结果，请继续换说法或浏览目录，找到能够读取宁宁工作区文件的能力并查看参数。",
+      "expected_capability": "workspace.files/read"
+    },
+    {
+      "id": "dm1",
+      "kind": "discovery",
+      "first_miss": true,
+      "text": "先搜索 zzzxxyy_unique_absence。它应该没结果，请继续换说法或浏览目录，找到能够读取宁宁工作区文件的能力并查看参数。",
+      "expected_capability": "workspace.files/read"
+    },
+    {
+      "id": "c0",
+      "kind": "candidate",
+      "text": "实现将一段文本转为大写的纯JSON能力，输入text，输出text。"
+    },
+    {
+      "id": "c1",
+      "kind": "candidate",
+      "text": "实现给输入的字符串列表去重并保持原有顺序的纯JSON能力。"
+    },
+    {
+      "id": "c2",
+      "kind": "candidate",
+      "text": "实现将输入的摄氏温度数值换算为华氏温度数值的纯JSON能力。"
+    }
+  ]
+}

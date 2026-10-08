@@ -1,0 +1,117 @@
+schema_version: "1.0"
+instructions: SKILL.md
+definition:
+  skill_id: agent.tasks
+  version: 1.0.0
+  name: 持久化后台目标与任务 Durable agent tasks
+  description: 创建持续执行的任务，查询任务状态。Create and inspect durable tasks.
+  capabilities:
+    - name: create
+      description:
+        Create a durable background task with a goal, criteria and explicit
+        capability/resource grant. Does not mean the goal is completed. 创建持续执行的后台任务和目标，跨聊天继续完成这件事。
+      input_schema:
+        type: object
+        additionalProperties: false
+        properties:
+          goal:
+            type: string
+            minLength: 1
+            maxLength: 8000
+          completion_criteria:
+            type: array
+            items:
+              type: string
+              maxLength: 1000
+            maxItems: 16
+          allowed_skill_ids:
+            type: array
+            items:
+              type: string
+              maxLength: 128
+            minItems: 1
+            maxItems: 64
+          resource_roots:
+            type: array
+            items:
+              type: string
+              maxLength: 240
+            maxItems: 16
+          allow_writes:
+            type: boolean
+          calendar_ids:
+            type: array
+            items:
+              type: string
+              maxLength: 256
+            maxItems: 32
+        required:
+          - goal
+          - allowed_skill_ids
+        x-chatwaifu-discovery-only: true
+      output_schema:
+        type: object
+        additionalProperties: true
+      side_effect: write
+      required_permissions:
+        - agent.tasks.create
+      confirmation_required: true
+      timeout_seconds: 30
+      adapter_tool: agent_task_create
+    - name: status
+      description:
+        Read the actual task status and result in the current owner scope.
+        查看后台任务的进展、当前状态和结果。
+      input_schema:
+        type: object
+        additionalProperties: false
+        properties:
+          task_id:
+            type: string
+            format: uuid
+        required:
+          - task_id
+        x-chatwaifu-discovery-only: true
+      output_schema:
+        type: object
+        additionalProperties: true
+      side_effect: read
+      required_permissions:
+        - agent.tasks.read
+      confirmation_required: false
+      timeout_seconds: 30
+      adapter_tool: agent_task_status
+    - name: defer
+      adapter_tool: agent_task_defer
+      description:
+        Pause the current authorized task until a stated time. No idle polling.
+        按明确理由延后检查当前任务。 延后当前任务，晚点再检查和跟进，以定时唤醒继续执行。
+      input_schema:
+        type: object
+        properties:
+          seconds:
+            type: integer
+            minimum: 30
+            maximum: 86400
+          reason:
+            type: string
+            minLength: 1
+            maxLength: 1000
+        required:
+          - seconds
+          - reason
+        additionalProperties: false
+        x-chatwaifu-discovery-only: true
+      output_schema:
+        type: object
+        additionalProperties: true
+      side_effect: write
+      required_permissions:
+        - agent.tasks.defer
+      confirmation_required: true
+      timeout_seconds: 10
+  interruptible: true
+  background_allowed: false
+adapter:
+  kind: builtin
+  handler: agent_task_create

@@ -1,17 +1,40 @@
 """Composition root and ordered Runtime lifecycle."""
 
 import asyncio
+import json
 import secrets
+import shutil
+import sys
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from typing import cast
-from uuid import UUID
+from uuid import UUID, uuid4
 
+from chatwaifu_protocol.agent import (
+    AgentEvent,
+    AgentTask,
+    AgentTaskCreate,
+    CandidateCreate,
+    CapabilityStatus,
+    DecisionRecord,
+    GroupAutonomyPolicy,
+    TaskAuthorization,
+    TaskChannelBinding,
+)
+from chatwaifu_protocol.base import JsonObject
 from chatwaifu_protocol.channel_settings import ChannelRuntimePolicy
 from pydantic import SecretStr
 
 from chatwaifu_runtime import __version__
+from chatwaifu_runtime.agent.artifacts import ArtifactService
+from chatwaifu_runtime.agent.behavior import BehaviorDecisionService
+from chatwaifu_runtime.agent.capabilities import CapabilityCatalog
+from chatwaifu_runtime.agent.development import CandidateDevelopmentService
+from chatwaifu_runtime.agent.task_skills import TaskSkills
+from chatwaifu_runtime.agent.tasks import AgentTaskService
 from chatwaifu_runtime.agent.tool_calling import AgentTurnOrchestrator
+from chatwaifu_runtime.agent.workspace import WorkspaceSkills
 from chatwaifu_runtime.api.guard import WebSocketTicketStore
 from chatwaifu_runtime.audio.store import AudioAssetStore
 from chatwaifu_runtime.audio.streaming import AudioStreamHub
@@ -26,20 +49,27 @@ from chatwaifu_runtime.config.settings import OpenAIRealtimeConfig, Settings
 from chatwaifu_runtime.conversation.service import ConversationService
 from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.eventing.publisher import EventPublisher
+from chatwaifu_runtime.external_channels.adapters.qq_napcat.catalog import catalog_versions
 from chatwaifu_runtime.external_channels.adapters.qq_napcat.management import NapCatManagement
 from chatwaifu_runtime.external_channels.adapters.qq_napcat.registration import (
     NAPCAT_PROVIDER,
     channel_tool_policy,
 )
 from chatwaifu_runtime.external_channels.adapters.weixin_ilink.client import WeixinILinkClient
+from chatwaifu_runtime.external_channels.autonomy import GroupAutonomyService, GroupObservation
 from chatwaifu_runtime.external_channels.credentials import KeyringChannelCredentialStore
 from chatwaifu_runtime.external_channels.encrypted_credentials import (
     EncryptedFileChannelCredentialStore,
 )
+from chatwaifu_runtime.external_channels.files import ChannelFileSkill
+from chatwaifu_runtime.external_channels.group_memory import GroupMemoryBridge
+from chatwaifu_runtime.external_channels.group_models import ChannelGroupRouteRecord
 from chatwaifu_runtime.external_channels.groups import ChannelGroupService
 from chatwaifu_runtime.external_channels.management import ChannelManagementService
+from chatwaifu_runtime.external_channels.models import ChannelDeliveryPlanRecord, ChannelTurnRecord
 from chatwaifu_runtime.external_channels.proactive import ChannelProactiveService
 from chatwaifu_runtime.external_channels.public_web import ChannelPublicWebPolicy
+from chatwaifu_runtime.external_channels.qq_capabilities import QQSceneCapabilities
 from chatwaifu_runtime.external_channels.service import (
     WEIXIN_ILINK_PROVIDER,
     ExternalChannelService,
@@ -53,6 +83,10 @@ from chatwaifu_runtime.memory.service import MemoryService
 from chatwaifu_runtime.memory.spoken_observer import SpokenMemoryObserver
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.event_store import EventStore
+from chatwaifu_runtime.persistence.sqlite_agent_artifacts import SQLiteArtifactRepository
+from chatwaifu_runtime.persistence.sqlite_agent_behavior import SQLiteBehaviorRepository
+from chatwaifu_runtime.persistence.sqlite_agent_development import SQLiteDevelopmentRepository
+from chatwaifu_runtime.persistence.sqlite_agent_tasks import SQLiteAgentTaskRepository
 from chatwaifu_runtime.persistence.sqlite_assistant_tasks import SQLiteTaskRepository
 from chatwaifu_runtime.persistence.sqlite_channel_groups import SQLiteChannelGroupRepository
 from chatwaifu_runtime.persistence.sqlite_channel_proactive import SQLiteChannelProactiveRepository
@@ -86,6 +120,7 @@ from chatwaifu_runtime.photo_memory.observer import PhotoMemoryObserver
 from chatwaifu_runtime.photo_memory.recall import PhotoRecallService
 from chatwaifu_runtime.photo_memory.semantic import PhotoSemanticService
 from chatwaifu_runtime.playback.service import PlaybackService
+from chatwaifu_runtime.providers.contracts import LlmProvider
 from chatwaifu_runtime.providers.factory import build_providers
 from chatwaifu_runtime.providers.model_config import ModelConfigurationService
 from chatwaifu_runtime.providers.tts_config import TtsConfigurationService
@@ -104,7 +139,9 @@ from chatwaifu_runtime.realtime.configuration import (
 from chatwaifu_runtime.realtime.pipecat.session import PipecatMediaAdapter
 from chatwaifu_runtime.realtime.service import VoiceMediaService
 from chatwaifu_runtime.realtime.stt import build_stt_backend
+from chatwaifu_runtime.runtime_skills.adapters import GenerationSkillContext
 from chatwaifu_runtime.runtime_skills.agent_router import RuntimeSkillRouter
+from chatwaifu_runtime.runtime_skills.execution_context import authorized_task
 from chatwaifu_runtime.runtime_skills.sandbox import RuntimeSandboxLauncher, SandboxPlanner
 from chatwaifu_runtime.runtime_skills.service import RuntimeSkillService
 from chatwaifu_runtime.sessions.service import SessionService
@@ -222,14 +259,20 @@ class RuntimeContainer:
             self.event_publisher,
             settings.data_dir / "channel-audio",
             self._channel_active_generation,
-            lambda provider_id: any(
-                item.provider_id == provider_id
-                and "audio" in item.capabilities.outbound_message_kinds
-                for item in self.external_channels.providers()
-            ),
+            self._channel_supports_audio,
             private_voice_enabled=lambda: (
                 self.channel_settings.get().policy.qq_owner_voice_reply_enabled
             ),
+        )
+        self.artifacts = ArtifactService(
+            settings.data_dir / "agent-artifacts",
+            SQLiteArtifactRepository(self.database),
+            self.sessions,
+        )
+        self.workspace_skills = WorkspaceSkills(
+            settings.data_dir / "agent-workspace",
+            self.artifacts,
+            settings.skills_dir,
         )
         self.runtime_skills = RuntimeSkillService(
             settings.skills_dir,
@@ -246,10 +289,16 @@ class RuntimeContainer:
             shared_generation_handler_targets=frozenset({"channel_voice"}),
             generation_permission_policy=ChannelPublicWebPolicy(
                 self.external_channel_repository,
-                lambda session_id: self.conversation.active_generation_id(session_id),
+                self._channel_active_generation,
                 enabled=lambda: self.channel_settings.get().policy.qq_owner_public_web_enabled,
             ),
             session_builtin_handlers={
+                "workspace_list": self.workspace_skills.list,
+                "workspace_read": self.workspace_skills.read,
+                "workspace_write": self.workspace_skills.write,
+                "artifact_inspect": self.workspace_skills.inspect,
+                "document_word": self.workspace_skills.word,
+                "document_powerpoint": self.workspace_skills.powerpoint,
                 "calendar_read": CalendarReadSkill(self.personal_assistant),
                 "agenda_manage": AgendaManageSkill(self.personal_assistant),
                 "google_tasks_read": GoogleTasksReadSkill(self.personal_assistant),
@@ -266,10 +315,41 @@ class RuntimeContainer:
                 },
             },
         )
+        self.capabilities = CapabilityCatalog(
+            self.runtime_skills.list,
+            self.runtime_skills.instructions,
+            availability=self._agent_capability_availability,
+        )
+        self.agent_tasks = AgentTaskService(
+            SQLiteAgentTaskRepository(self.database),
+            self.sessions,
+            self.runtime_skills,
+            self.capabilities,
+            self.providers.llm,
+            model_factory=self._agent_model,
+            context_builder=self._agent_task_context,
+        )
+        self.runtime_skills.task_permission_policy = self.agent_tasks.authorize
+        self.agent_development = CandidateDevelopmentService(
+            SQLiteDevelopmentRepository(self.database),
+            self.artifacts,
+            self.runtime_skills,
+            settings.data_dir / "agent-candidates",
+            sandbox_launcher or RuntimeSandboxLauncher(),
+            self._agent_model,
+        )
+        self.runtime_skills.register_session_builtin(
+            "agent_develop_candidate", self.agent_development.create_skill
+        )
+        task_skills = TaskSkills(self.agent_tasks)
+        self.runtime_skills.register_session_builtin("agent_task_create", task_skills.create)
+        self.runtime_skills.register_session_builtin("agent_task_status", task_skills.status)
+        self.runtime_skills.register_session_builtin("agent_task_defer", task_skills.defer)
         self.agent = AgentTurnOrchestrator(
             self.providers.llm,
             self.runtime_skills,
             RuntimeSkillRouter(self.runtime_skills.list),
+            catalog=self.capabilities,
         )
         self.photo_repository = SQLitePhotoMemoryRepository(self.database)
         self.photo_semantic_adapter = SQLitePhotoSemanticAdapter(self.database)
@@ -347,6 +427,15 @@ class RuntimeContainer:
                 text,
                 public_web_enabled=self.channel_settings.get().policy.qq_owner_public_web_enabled,
                 voice_reply_enabled=self.channel_settings.get().policy.qq_owner_voice_reply_enabled,
+                owner_skill_ids=(
+                    frozenset(
+                        s.skill_id
+                        for s in self.runtime_skills.list()
+                        if s.skill_id != "channel.voice"
+                    )
+                    if self.channel_settings.get().policy.qq_owner_agent_enabled
+                    else frozenset()
+                ),
             ),
             qq_voice_input_enabled=lambda: (
                 self.channel_settings.get().policy.qq_owner_voice_input_enabled
@@ -374,6 +463,18 @@ class RuntimeContainer:
             discussion_policy=self.channel_settings.get().policy.group_discussion,
         )
         self.channel_groups.set_authenticator(self.external_channels.authenticate_group_transport)
+        self.behavior_decisions = BehaviorDecisionService(self.providers.llm, self._agent_model)
+        self.agent_tasks.wake_decider = self._task_wake_decision
+        self.group_autonomy = GroupAutonomyService(
+            SQLiteBehaviorRepository(self.database), self.behavior_decisions, self.characters
+        )
+        self.channel_groups.observation_handler = self.group_autonomy.observe
+        self.channel_groups.autonomous_admission = self.group_autonomy.repository.mark_turn
+        self.channel_groups.autonomous_authorization = self.group_autonomy.repository.authorize_turn
+        self.group_autonomy.revoke_actions = self.channel_groups.revoke_autonomous
+        self.group_memory = GroupMemoryBridge(self.sessions, self.memory, self.event_publisher)
+        self.group_autonomy.context_reader = self._group_working_context
+        self.group_autonomy.memory_writer = self.group_memory.observe
         self.external_channels.set_group_service(self.channel_groups)
         self.channel_voice.set_group_service(self.channel_groups)
         self.conversation.set_before_scope_reset_hook(self.channel_groups.before_scope_reset)
@@ -404,7 +505,7 @@ class RuntimeContainer:
             self.event_publisher,
             self.event_hub,
             self.channel_voice.audio_root,
-            self.channel_voice.on_plan_terminal,
+            self._channel_plan_terminal,
             sticker_catalog=self.sticker_catalog,
             sticker_library=self.sticker_library,
             stt_backend=self.stt,
@@ -417,7 +518,38 @@ class RuntimeContainer:
             native_favorites_enabled=lambda: (
                 self.channel_settings.get().policy.qq_native_favorites_enabled
             ),
+            artifacts=self.artifacts,
+            catalog_versions=catalog_versions(settings.skills_dir),
         )
+        self.qq_scene_capabilities = QQSceneCapabilities(
+            self.external_channel_repository,
+            self.conversation_repository,
+            self.channel_groups,
+            self._channel_active_generation,
+            self.qq_channels.scoped_agent_call,
+        )
+        self.qq_scene_capabilities.scene_enabled = self._qq_agent_scene_enabled
+        self.qq_scene_capabilities.task_reader = self.agent_tasks.repository.get
+        self.qq_scene_capabilities.binding_authorizer = self._authorize_task_channel
+        self.agent_tasks.scene_authorizer = self._authorize_task_channel
+        self.qq_channels.task_authorization = self._authorize_task_delivery
+        task_skills.scene = self.qq_scene_capabilities
+        self.runtime_skills.scene_session_policy = self._scene_session_skills
+        self.group_autonomy.task_creator = self._group_task
+        self.runtime_skills.register_generation_handler(
+            "qq_scene", self.qq_scene_capabilities, shared=True
+        )
+        self.channel_files = ChannelFileSkill(
+            self.external_channel_repository,
+            self.artifacts,
+            self.qq_scene_capabilities,
+            self.event_publisher,
+            lambda: self.channel_settings.get().policy.qq_owner_agent_enabled,
+        )
+        self.runtime_skills.register_generation_handler(
+            "channel_file", self.channel_files, shared=True
+        )
+        self.channel_groups.scene_skill_policy = self.group_agent_skills
         self.channel_settings.set_apply_callback(self._apply_channel_policy)
         self.resources = ResourceLifecycleService(
             self.companion_settings,
@@ -444,6 +576,10 @@ class RuntimeContainer:
             on_trigger=self.resources.touch,
             session_allowed=self._desktop_proactive_session_allowed,
         )
+        self.ambient.model_decider = self._ambient_decision
+        self.agent_tasks.result_publisher = self.channel_files.publish_task_result
+        self.personal_assistant.task_calendar_scope = self._task_calendar_scope
+        self.agent_tasks.capability_gap_handler = self._task_capability_gap
         cloud_bridge_factory: Callable[[UUID], Awaitable[CloudRealtimeMediaBridge]] | None = None
         self.cloud_realtime_backend: CloudRealtimeBackend | None = None
         self.cloud_egress_gateway: CloudEgressGateway | None = None
@@ -515,6 +651,311 @@ class RuntimeContainer:
         if previous.qq_owner_voice_input_enabled and not current.qq_owner_voice_input_enabled:
             await self.external_channels.revoke_qq_voice_input()
 
+    async def group_agent_skills(self, route: ChannelGroupRouteRecord) -> frozenset[str]:
+        policy = await self.group_autonomy.policy(route)
+        return (
+            frozenset(
+                {"qq.scene", "agent.tasks", "workspace.files", "documents.create", "channel.file"}
+            )
+            if policy.mode != "off" and policy.route_revision == route.revision
+            else frozenset()
+        )
+
+    async def _qq_agent_scene_enabled(self, turn: ChannelTurnRecord) -> bool:
+        if turn.group_route_id is None:
+            return self.channel_settings.get().policy.qq_owner_agent_enabled
+        route = await self.channel_group_repository.get_route(turn.group_route_id)
+        return route is not None and "qq.scene" in await self.group_agent_skills(route)
+
+    async def _scene_session_skills(self, context: GenerationSkillContext, skill_id: str) -> bool:
+        turn = await self.qq_scene_capabilities.current(context)
+        if turn is None or turn.group_route_id is None:
+            return False
+        route = await self.channel_group_repository.get_route(turn.group_route_id)
+        return route is not None and skill_id in await self.group_agent_skills(route)
+
+    async def _authorize_task_channel(self, binding: TaskChannelBinding) -> bool:
+        connection = await self.external_channel_repository.get_connection(binding.connection_id)
+        if (
+            connection is None
+            or not connection.configuration.enabled
+            or connection.configuration.provider_id != "qq_napcat"
+            or connection.configuration.account_key != binding.account_key
+        ):
+            return False
+        if binding.route_id is None:
+            return (
+                self.channel_settings.get().policy.qq_owner_agent_enabled
+                and connection.configuration.allowed_sender_keys == [binding.sender_key]
+                and binding.conversation_key == "direct:" + binding.sender_key
+            )
+        route = await self.channel_group_repository.get_route(binding.route_id)
+        if route is None:
+            return False
+        policy = await self.group_autonomy.policy(route)
+        return (
+            policy.mode != "off"
+            and policy.route_revision == binding.route_revision
+            and (
+                binding.policy_revision is None
+                or (policy.mode == "member" and policy.revision == binding.policy_revision)
+            )
+            and await self.channel_groups.authorize_task_binding(binding)
+        )
+
+    async def _authorize_task_delivery(self, plan: ChannelDeliveryPlanRecord) -> bool:
+        target = plan.task_target
+        if target is None:
+            return False
+        task = await self.agent_tasks.repository.get(target.task_id)
+        return bool(
+            task
+            and task.session_id == target.session_id
+            and task.channel_binding == target.binding
+            and (
+                (
+                    target.purpose == "result"
+                    and task.state.value
+                    in {"succeeded", "failed", "waiting_input", "waiting_authorization"}
+                )
+                or (
+                    target.purpose == "file"
+                    and task.state.value in {"running", "waiting_authorization"}
+                    and "channel.file" in task.authorization.allowed_skill_ids
+                    and task.authorization.allow_writes
+                )
+            )
+            and task.authorization.expires_at > datetime.now(UTC)
+            and await self._authorize_task_channel(target.binding)
+        )
+
+    async def _group_working_context(self, observation: GroupObservation) -> JsonObject:
+        scope = "scene:" + observation.route.scene_id
+        tasks = await self.agent_tasks.repository.page(scope)
+        capabilities = self.capabilities.search(
+            allowed_skill_ids=await self.group_agent_skills(observation.route), limit=32
+        )
+        visible = [c for c in capabilities.items if c.status != CapabilityStatus.ADAPTER_REQUIRED]
+        cursor = capabilities.next_cursor
+        while cursor is not None and len(visible) < 24:
+            page = self.capabilities.search(
+                allowed_skill_ids=await self.group_agent_skills(observation.route),
+                limit=32,
+                cursor=cursor,
+            )
+            visible.extend(c for c in page.items if c.status != CapabilityStatus.ADAPTER_REQUIRED)
+            cursor = page.next_cursor
+        return {
+            "memory": await self.group_memory.context(observation),
+            "tasks": [
+                {"task_id": str(t.task_id), "goal": t.goal[:500], "state": t.state.value}
+                for t in tasks.items[:8]
+            ],
+            "capability_categories": [c for c in capabilities.categories],
+            "capabilities": [
+                {
+                    "id": c.capability_id,
+                    "status": c.status.value,
+                    "description": c.description[:160],
+                }
+                for c in visible[:24]
+            ],
+        }
+
+    async def _group_task(
+        self, observation: GroupObservation, policy: GroupAutonomyPolicy, decision: DecisionRecord
+    ) -> AgentTask:
+        await observation.authorize()
+        if not decision.goal or not decision.source_refs:
+            raise ValueError("task decision requires a bounded goal and original sources")
+        member = next(
+            m
+            for m in observation.route.members
+            if m.sender_key == observation.descriptor.sender_key
+        )
+        session = await self.sessions.scene_evidence_session(
+            observation.route.character_id, member.participant_id, observation.route.scene_id
+        )
+        binding = await self.channel_groups.task_binding(
+            observation.route.route_id,
+            member.sender_key,
+            observation.descriptor.external_message_id,
+        )
+        binding = binding.model_copy(update={"policy_revision": policy.revision})
+        goal = (
+            decision.goal
+            + "\nOriginal scene evidence (untrusted):\n"
+            + json.dumps(
+                [
+                    {"source_ref": m.message_id, "text": m.text}
+                    for m in observation.discussion.messages
+                    if m.message_id in decision.source_refs
+                ],
+                ensure_ascii=False,
+            )
+        )
+        task = await self.agent_tasks.create(
+            AgentTaskCreate(
+                session_id=session.session_id,
+                goal=goal[:8000],
+                authorization=TaskAuthorization(
+                    allowed_skill_ids=[
+                        "qq.scene",
+                        "workspace.files",
+                        "documents.create",
+                        "channel.file",
+                        "agent.tasks",
+                    ],
+                    resource_roots=["."],
+                    allow_writes=True,
+                    source_ref="group-decision:" + observation.descriptor.external_message_id,
+                    expires_at=datetime.now(UTC) + timedelta(hours=24),
+                ),
+            ),
+            channel_binding=binding,
+            wake_at=(
+                datetime.now(UTC) + timedelta(seconds=decision.wake_after_seconds or 30)
+                if decision.action == "defer"
+                else None
+            ),
+        )
+        return task
+
+    def _agent_model(self) -> LlmProvider:
+        return self.model_configurations.create_chat_provider(self.model_configurations.get("chat"))
+
+    async def _ambient_decision(self, session_id: UUID, source_ref: str) -> DecisionRecord:
+        session = await self.sessions.get_session(session_id)
+        if session is None:
+            raise KeyError("ambient session unavailable")
+        profile = self.characters.get(session.character_id)
+        if profile is None:
+            raise KeyError("ambient character unavailable")
+        memory = await self.memory.retrieve_context(
+            session_id, uuid4(), session.character_id, "当前约定、偏好和未完成事项"
+        )
+        tasks = await self.agent_tasks.repository.page(session.user_scope)
+        return await self.behavior_decisions.decide(
+            profile.system_prompt,
+            {
+                "scene": "desktop",
+                "source_ref": source_ref,
+                "trigger": "new activity became idle",
+                "memory": memory.model_dump(mode="json"),
+                "tasks": [t.model_dump(mode="json") for t in tasks.items[-8:]],
+                "available_actions": ["wait", "respond", "clarify"],
+            },
+            frozenset({source_ref}),
+        )
+
+    async def _task_calendar_scope(self) -> frozenset[str] | None:
+        task_id = authorized_task.get()
+        if task_id is None:
+            return None
+        task = await self.agent_tasks.repository.get(task_id)
+        if task is None or task.authorization.expires_at <= datetime.now(UTC):
+            raise PermissionError("task calendar authorization expired")
+        return (
+            frozenset(task.authorization.calendar_ids) if task.authorization.calendar_ids else None
+        )
+
+    async def _task_capability_gap(self, task: AgentTask, missing: str) -> UUID | None:
+        if task.scope != "local" or not (await self.agent_development.repository.policy()).enabled:
+            return None
+        try:
+            candidate = await self.agent_development.create(
+                CandidateCreate(
+                    session_id=task.session_id,
+                    source_ref=f"task:{task.task_id}",
+                    goal=("Missing capability: " + missing + "\nAuthorized goal: " + task.goal)[
+                        :4000
+                    ],
+                )
+            )
+        except PermissionError:
+            return None
+        return candidate.candidate_id
+
+    async def _task_wake_decision(self, task: AgentTask, event: AgentEvent) -> DecisionRecord:
+        source_refs = frozenset(event.source_refs)
+        if not self._agent_model().supports_tool_calling:
+            return DecisionRecord(
+                action="task", reason="explicit due task", source_refs=list(source_refs)
+            )
+        persona, memory = await self._agent_task_context(task)
+        return await self.behavior_decisions.decide(
+            persona,
+            {
+                "trigger": "authorized task wake",
+                "event": event.model_dump(mode="json"),
+                "task": task.model_dump(mode="json"),
+                "memory": memory,
+                "operations": json.dumps(await self.agent_tasks.repository.steps(task.task_id)),
+                "available_actions": ["task", "wait", "defer", "capability_gap"],
+                "instruction": "Continue the goal unless evidence gives a reason to wait.",
+            },
+            source_refs,
+        )
+
+    def _agent_capability_availability(
+        self, skill_id: str, capability: str
+    ) -> tuple[CapabilityStatus, str] | None:
+        if skill_id == "qq.scene" and capability == "read_file" and getattr(sys, "frozen", False):
+            return CapabilityStatus.NOT_CONFIGURED, "打包版尚未配置资料解析工作进程"
+        if skill_id == "qq.scene" and capability not in {
+            "get_msg",
+            "get_group_info",
+            "get_group_root_files",
+            "get_group_file_system_info",
+            "get_group_files_by_folder",
+            "get_group_file_url",
+            "get_group_msg_history",
+            "read_file",
+        }:
+            return (
+                CapabilityStatus.ADAPTER_REQUIRED,
+                "已导入官方接口;仍需审核对象作用域或实现专用适配",
+            )
+        if skill_id == "documents.create":
+            if getattr(sys, "frozen", False):
+                return CapabilityStatus.NOT_CONFIGURED, "打包版尚未配置独立文档工作进程"
+            if capability == "powerpoint" and shutil.which("node") is None:
+                return CapabilityStatus.NOT_CONFIGURED, "运行主机缺少 Node.js 文档工作进程"
+            if shutil.which("soffice") is None:
+                return CapabilityStatus.NOT_CONFIGURED, "运行主机未配置文档渲染器，无法完成渲染验证"
+        if (
+            skill_id in {"calendar.read", "google-tasks.read", "agenda.manage"}
+            and self.personal_assistant.state != "ready"
+        ):
+            return CapabilityStatus.NOT_CONFIGURED, "个人助理账户连接尚未配置"
+        if skill_id in {"qq.scene", "channel.file"} and not self.qq_channels.agent_available:
+            return CapabilityStatus.NOT_CONFIGURED, "QQ 尚无已连接的通道;操作还需要当前场景授权"
+        return None
+
+    def _channel_supports_audio(self, provider_id: str) -> bool:
+        return any(
+            item.provider_id == provider_id and "audio" in item.capabilities.outbound_message_kinds
+            for item in self.external_channels.providers()
+        )
+
+    async def _channel_plan_terminal(self, plan: ChannelDeliveryPlanRecord) -> None:
+        await self.channel_voice.on_plan_terminal(plan)
+        await self.channel_files.on_terminal(plan)
+
+    async def _agent_task_context(self, task: AgentTask) -> tuple[str, str]:
+        session = await self.sessions.get_session(task.session_id)
+        if session is None:
+            raise KeyError("task session no longer available")
+        profile = self.characters.get(session.character_id)
+        if profile is None:
+            raise KeyError("task character unavailable")
+        packet = await self.memory.retrieve_context(
+            task.session_id, uuid4(), session.character_id, task.goal
+        )
+        return profile.system_prompt, json.dumps(
+            packet.model_dump(mode="json"), ensure_ascii=False
+        )[:8000]
+
     async def start(self) -> None:
         async with self._lifecycle_lock:
             if self._state == "started":
@@ -545,6 +986,8 @@ class RuntimeContainer:
 
                 await self.memory.start()
                 await self.runtime_skills.start()
+                await self.agent_development.start()
+                await self.agent_tasks.start()
                 self.sticker_library.start()
                 await self.photo_semantic.sync_epoch()
                 self.photo_semantic.start()
@@ -552,6 +995,7 @@ class RuntimeContainer:
                 self.photo_observer.start()
                 await self.spoken_memory_observer.start()
                 await self.channel_groups.start()
+                await self.group_autonomy.start()
                 await self.external_channels.start()
                 await self.channel_voice.cleanup()
                 await self.channel_management.start()
@@ -620,6 +1064,9 @@ class RuntimeContainer:
         steps = [
             _CleanupStep("personal_assistant", lambda: self.personal_assistant.close()),
             _CleanupStep("ambient", lambda: self.ambient.stop()),
+            _CleanupStep("agent_tasks", lambda: self.agent_tasks.stop()),
+            _CleanupStep("agent_development", lambda: self.agent_development.stop()),
+            _CleanupStep("group_autonomy", lambda: self.group_autonomy.stop()),
             _CleanupStep("channel_proactive", lambda: self.channel_proactive.stop()),
             _CleanupStep("resources", lambda: self.resources.stop()),
             _CleanupStep("voice_media", lambda: self.voice_media.close()),

@@ -8,6 +8,7 @@ import logging
 import math
 import secrets
 from collections import OrderedDict
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal, NoReturn, cast
@@ -58,6 +59,10 @@ from chatwaifu_runtime.runtime_skills.audit import (
     sanitize_audit_payload,
 )
 from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
+from chatwaifu_runtime.runtime_skills.execution_context import (
+    authorized_generation,
+    authorized_task,
+)
 from chatwaifu_runtime.runtime_skills.execution_plan import (
     ExecutionPlan,
     build_execution_plan,
@@ -147,6 +152,7 @@ class RuntimeSkillService:
         self._shared_generation_handler_targets = shared_generation_handler_targets
         self._generation_permission_policy = generation_permission_policy
         self._policy_authorized_runs: set[UUID] = set()
+        self._task_authorized_runs: dict[UUID, UUID] = {}
         self._builtin.register("runtime_status", self._runtime_status)
         provider_config = public_web_config or PublicWebConfig()
         self._public_web = PublicWebReader(provider_config=provider_config)
@@ -169,6 +175,42 @@ class RuntimeSkillService:
         self._terminal_waiters: dict[UUID, set[asyncio.Future[None]]] = {}
         self._audit_digest_key = secrets.token_bytes(32)
         self._registry_reload_lock = asyncio.Lock()
+        self.task_permission_policy: (
+            Callable[[UUID, UUID, ExecutionPlan, JsonObject], Awaitable[bool]] | None
+        ) = None
+        self.scene_session_policy: (
+            Callable[[GenerationSkillContext, str], Awaitable[bool]] | None
+        ) = None
+
+    async def execution_subject(self, skill_id: str, capability_name: str) -> str:
+        entry = self._registry.get(skill_id)
+        if entry is None or not entry.definition.enabled:
+            raise KeyError("skill unavailable")
+        capability = _capability(entry, capability_name)
+        revision = (
+            await self._mcp_connections.revision(entry.definition.mcp_connection_id)
+            if entry.definition.mcp_connection_id is not None
+            else None
+        )
+        return build_execution_plan(
+            entry,
+            capability,
+            {},
+            audit_digest_key=self._audit_digest_key,
+            mcp_connection_revision=revision,
+        ).permission_subject_fingerprint()
+
+    def register_session_builtin(self, name: str, handler: SessionBuiltinHandler) -> None:
+        self._builtin.register_session(name, handler)
+
+    def register_generation_handler(
+        self, name: str, handler: AuthorizedGenerationHandler, *, shared: bool = False
+    ) -> None:
+        if name in self._authorized_generation_handlers:
+            raise ValueError("generation handler already registered")
+        self._authorized_generation_handlers[name] = handler
+        if shared:
+            self._shared_generation_handler_targets |= frozenset({name})
 
     async def start(self) -> None:
         await self._plugins.start()
@@ -241,6 +283,7 @@ class RuntimeSkillService:
         self._pending_arguments.clear()
         self._outcome_ready.clear()
         self._ephemeral_results.clear()
+        self._task_authorized_runs.clear()
 
     def list(self) -> list[SkillDefinition]:
         return self._registry.list()
@@ -398,6 +441,7 @@ class RuntimeSkillService:
         provider_tool_call_id: str | None = None,
         allow_confirmation: bool = True,
         require_cloud_readonly: bool = False,
+        task_id: UUID | None = None,
     ) -> SkillRunSnapshot:
         if (
             provider_tool_call_id is not None
@@ -416,18 +460,36 @@ class RuntimeSkillService:
             if entry.definition.source == "builtin" and entry.adapter.kind == "builtin"
             else None
         )
+        scene_authorized = False
         if not owner_scope and (
             generation_handler is None
             or entry.adapter.target not in self._shared_generation_handler_targets
         ):
-            raise ValueError(
-                "Owner skill permissions are not available in participant or shared scenes"
+            scene_authorized = invocation.skill_id in {
+                "workspace.files",
+                "documents.create",
+                "agent.tasks",
+                "channel.file",
+                "qq.scene",
+            } and (
+                task_id is not None
+                or (
+                    self.scene_session_policy is not None
+                    and await self.scene_session_policy(
+                        GenerationSkillContext(session_id, turn_id, generation_id, origin),
+                        invocation.skill_id,
+                    )
+                )
             )
-        generation_authorized = False
+            if not scene_authorized:
+                raise ValueError(
+                    "Owner skill permissions are not available in participant or shared scenes"
+                )
+        generation_authorized = scene_authorized and task_id is None
         policy_authorized = False
         if generation_handler is not None:
             generation_authorized = await generation_handler.authorize(
-                GenerationSkillContext(session_id, turn_id, generation_id, origin)
+                GenerationSkillContext(session_id, turn_id, generation_id, origin, task_id)
             )
             if not generation_authorized:
                 raise PermissionError(
@@ -465,7 +527,16 @@ class RuntimeSkillService:
             mcp_connection_revision=mcp_revision,
             background_requested=invocation.background,
         )
+        if task_id is not None:
+            if self.task_permission_policy is None:
+                raise PermissionError("task authorization unavailable")
+            task_authorized = await self.task_permission_policy(
+                task_id, session_id, plan, invocation.arguments
+            )
+            generation_authorized = generation_authorized or task_authorized
         run_id = uuid4()
+        if task_id is not None:
+            self._task_authorized_runs[run_id] = task_id
         now = _now().isoformat()
         self._pending_arguments[run_id] = invocation.arguments
         try:
@@ -903,6 +974,7 @@ class RuntimeSkillService:
                 )
 
     def _execution_finished(self, run_id: UUID, task: asyncio.Task[None]) -> None:
+        self._task_authorized_runs.pop(run_id, None)
         self._policy_authorized_runs.discard(run_id)
         self._tasks.pop(run_id, None)
         self._pending_arguments.pop(run_id, None)
@@ -1041,7 +1113,31 @@ class RuntimeSkillService:
             )
             return
         tool_call_id: UUID | None = None
+        task_token = authorized_task.set(self._task_authorized_runs.get(run_id))
+        run_context = await self.get_run(run_id)
+        context = GenerationSkillContext(
+            session_id,
+            run_context.turn_id,
+            run_context.generation_id,
+            run_context.origin,
+            self._task_authorized_runs.get(run_id),
+        )
+        context_token = authorized_generation.set(context)
         try:
+            task_id = self._task_authorized_runs.get(run_id)
+            if task_id is not None:
+                if self.task_permission_policy is None:
+                    raise PermissionError("task execution authorization unavailable")
+                await self.task_permission_policy(task_id, session_id, plan, arguments)
+            elif (
+                await self._repository.session_user_scope(session_id) != "local"
+                and entry.adapter.target not in self._shared_generation_handler_targets
+                and run_id not in self._policy_authorized_runs
+            ):
+                if self.scene_session_policy is None or not await self.scene_session_policy(
+                    context, plan.skill_id
+                ):
+                    raise PermissionError("scene execution permission revoked")
             now = _now().isoformat()
             if not await self._repository.mark_run_running(run_id, now):
                 return
@@ -1074,11 +1170,13 @@ class RuntimeSkillService:
                             "stale_channel_request",
                             "The authorized owner request is no longer active",
                         )
-                generation_handler = self._authorized_generation_handlers.get(plan.adapter_target)
+                generation_handler = self._authorized_generation_handlers.get(
+                    plan.adapter_target
+                ) or self._authorized_generation_handlers.get(entry.adapter.target)
                 if generation_handler is not None:
                     run = await self.get_run(run_id)
                     context = GenerationSkillContext(
-                        session_id, run.turn_id, run.generation_id, run.origin
+                        session_id, run.turn_id, run.generation_id, run.origin, task_id
                     )
                     if not await generation_handler.authorize(context):
                         raise SkillExecutionError(
@@ -1251,6 +1349,9 @@ class RuntimeSkillService:
                 details={"exception_type": type(error).__name__},
             )
             await self._fail_execution(run_id, session_id, tool_call_id, structured)
+        finally:
+            authorized_task.reset(task_token)
+            authorized_generation.reset(context_token)
 
     async def _invoke_mcp_connection_tool(
         self,
@@ -1320,6 +1421,7 @@ class RuntimeSkillService:
 
         self._policy_authorized_runs.discard(run_id)
         self._pending_arguments.pop(run_id, None)
+        self._task_authorized_runs.pop(run_id, None)
         failures: list[BaseException] = []
         try:
             await self._cancel_task_bounded(self._tasks.get(run_id))

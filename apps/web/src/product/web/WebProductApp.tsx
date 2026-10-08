@@ -2,6 +2,7 @@ import { ConversationScopeGate } from "../../features/chat/ConversationScopeGate
 import { AvatarLabPage } from "../../features/avatar-lab/AvatarLabPage";
 import { ChatDemoPage } from "../../features/chat/ChatDemoPage";
 import { ChannelsSettingsPage } from "../../features/channels-settings/ChannelsSettingsPage";
+import { AgentSettingsPage } from "../../features/agent-settings/AgentSettingsPage";
 import { resolveWebSurface, type WebSurface } from "./webSurface";
 
 interface WebProductAppProps {
@@ -14,9 +15,11 @@ export function WebProductApp({
   return surface === "avatar-lab" ? (
     <AvatarLabPage />
   ) : (
-    <ConversationScopeGate showSwitch={surface !== "channels-settings"}>
+    <ConversationScopeGate showSwitch={surface === "application"}>
       {surface === "channels-settings" ? (
         <ChannelsSettingsPage />
+      ) : surface === "agent-settings" ? (
+        <AgentSettingsPage />
       ) : (
         <ChatDemoPage />
       )}

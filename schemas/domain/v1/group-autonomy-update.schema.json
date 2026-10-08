@@ -1,0 +1,130 @@
+{
+  "$defs": {
+    "GroupAutonomyPolicy": {
+      "properties": {
+        "decision_interval_seconds": {
+          "default": 10,
+          "maximum": 60,
+          "minimum": 10,
+          "title": "Decision Interval Seconds",
+          "type": "integer"
+        },
+        "memory_enabled": {
+          "default": false,
+          "title": "Memory Enabled",
+          "type": "boolean"
+        },
+        "merge_seconds": {
+          "default": 3,
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Merge Seconds",
+          "type": "integer"
+        },
+        "message_interval_seconds": {
+          "default": 30,
+          "maximum": 3600,
+          "minimum": 30,
+          "title": "Message Interval Seconds",
+          "type": "integer"
+        },
+        "messages_per_hour": {
+          "default": 20,
+          "maximum": 20,
+          "minimum": 0,
+          "title": "Messages Per Hour",
+          "type": "integer"
+        },
+        "mode": {
+          "default": "off",
+          "enum": [
+            "off",
+            "shadow",
+            "member"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "observations_per_hour": {
+          "default": 240,
+          "maximum": 240,
+          "minimum": 1,
+          "title": "Observations Per Hour",
+          "type": "integer"
+        },
+        "quiet_end": {
+          "default": 8,
+          "maximum": 23,
+          "minimum": 0,
+          "title": "Quiet End",
+          "type": "integer"
+        },
+        "quiet_start": {
+          "default": 23,
+          "maximum": 23,
+          "minimum": 0,
+          "title": "Quiet Start",
+          "type": "integer"
+        },
+        "revision": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "route_id": {
+          "format": "uuid",
+          "title": "Route Id",
+          "type": "string"
+        },
+        "route_revision": {
+          "minimum": 1,
+          "title": "Route Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "timezone": {
+          "default": "Asia/Shanghai",
+          "maxLength": 64,
+          "title": "Timezone",
+          "type": "string"
+        }
+      },
+      "required": [
+        "route_id",
+        "route_revision"
+      ],
+      "title": "GroupAutonomyPolicy",
+      "type": "object"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/group-autonomy-update.schema.json",
+  "properties": {
+    "expected_revision": {
+      "minimum": 0,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "policy": {
+      "$ref": "#/$defs/GroupAutonomyPolicy"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "expected_revision",
+    "policy"
+  ],
+  "title": "GroupAutonomyUpdate",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

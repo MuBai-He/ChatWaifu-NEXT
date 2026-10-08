@@ -122,6 +122,11 @@
       "title": "Qq Native Favorites Enabled",
       "type": "boolean"
     },
+    "qq_owner_agent_enabled": {
+      "default": false,
+      "title": "Qq Owner Agent Enabled",
+      "type": "boolean"
+    },
     "qq_owner_public_web_enabled": {
       "default": false,
       "title": "Qq Owner Public Web Enabled",

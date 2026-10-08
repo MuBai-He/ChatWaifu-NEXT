@@ -1,0 +1,93 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/decision-record.schema.json",
+  "properties": {
+    "action": {
+      "enum": [
+        "wait",
+        "respond",
+        "clarify",
+        "task",
+        "defer",
+        "capability_gap"
+      ],
+      "title": "Action",
+      "type": "string"
+    },
+    "goal": {
+      "anyOf": [
+        {
+          "maxLength": 2000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Goal"
+    },
+    "memory_source_refs": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 8,
+      "title": "Memory Source Refs",
+      "type": "array"
+    },
+    "quiet_seconds": {
+      "anyOf": [
+        {
+          "maximum": 86400,
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Quiet Seconds"
+    },
+    "reason": {
+      "maxLength": 400,
+      "title": "Reason",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_refs": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 16,
+      "title": "Source Refs",
+      "type": "array"
+    },
+    "wake_after_seconds": {
+      "anyOf": [
+        {
+          "maximum": 86400,
+          "minimum": 30,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Wake After Seconds"
+    }
+  },
+  "required": [
+    "action",
+    "reason",
+    "source_refs"
+  ],
+  "title": "DecisionRecord",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

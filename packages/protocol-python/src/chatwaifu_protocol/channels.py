@@ -37,6 +37,7 @@ class ChannelMessageKind(StrEnum):
     TEXT = "text"
     IMAGE = "image"
     AUDIO = "audio"
+    FILE = "file"
 
 
 class ChannelConnectionStatus(StrEnum):
@@ -524,10 +525,11 @@ class ChannelDeliveryAcknowledgement(ChannelVersionedModel):
 
 
 class ChannelDeliverySnapshot(ProtocolModel):
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     delivery_id: UUID
     channel_turn_id: UUID | None = None
     outbound_intent_id: UUID | None = None
+    task_delivery_id: UUID | None = None
     connection_id: UUID
     status: ChannelDeliveryStatus
     attempt: int = Field(default=1, ge=1)
@@ -556,8 +558,14 @@ class ChannelDeliverySnapshot(ProtocolModel):
         inbound = self.channel_turn_id is not None and self.outbound_intent_id is None
         outbound = self.channel_turn_id is None and self.outbound_intent_id is not None
         if not (
-            (self.schema_version == "1.0" and inbound)
-            or (self.schema_version == "1.1" and outbound)
+            (self.schema_version == "1.0" and inbound and self.task_delivery_id is None)
+            or (self.schema_version == "1.1" and outbound and self.task_delivery_id is None)
+            or (
+                self.schema_version == "1.2"
+                and self.task_delivery_id is not None
+                and self.channel_turn_id is None
+                and self.outbound_intent_id is None
+            )
         ):
             raise ValueError("delivery source must be inbound 1.0 or outbound 1.1")
         return self
@@ -567,6 +575,7 @@ class ChannelDeliveryPartKind(StrEnum):
     TEXT = "text"
     IMAGE = "image"
     AUDIO = "audio"
+    FILE = "file"
 
 
 class ChannelDeliveryPartStatus(StrEnum):
@@ -614,10 +623,20 @@ class ChannelAudioDeliveryPartPayload(ChannelVersionedModel):
     text: str = Field(min_length=1, max_length=2000)
 
 
+class ChannelFileDeliveryPartPayload(ChannelVersionedModel):
+    kind: Literal[ChannelDeliveryPartKind.FILE] = ChannelDeliveryPartKind.FILE
+    artifact_id: UUID
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    name: str = Field(min_length=1, max_length=128, pattern=r"^[^/\\\x00\r\n]+$")
+    mime_type: str = Field(min_length=1, max_length=128)
+    byte_length: int = Field(ge=1, le=32 * 1024 * 1024)
+
+
 ChannelDeliveryPartPayload = Annotated[
     ChannelTextDeliveryPartPayload
     | ChannelImageDeliveryPartPayload
-    | ChannelAudioDeliveryPartPayload,
+    | ChannelAudioDeliveryPartPayload
+    | ChannelFileDeliveryPartPayload,
     Field(discriminator="kind"),
 ]
 
@@ -717,10 +736,11 @@ class ChannelGroupDeliveryTarget(ChannelVersionedModel):
 
 
 class ChannelDeliveryPlanSnapshot(ProtocolModel):
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     delivery_id: UUID
     channel_turn_id: UUID | None = None
     outbound_intent_id: UUID | None = None
+    task_delivery_id: UUID | None = None
     connection_id: UUID
     group_target: ChannelGroupDeliveryTarget | None = None
     status: ChannelDeliveryStatus
@@ -741,8 +761,14 @@ class ChannelDeliveryPlanSnapshot(ProtocolModel):
         inbound = self.channel_turn_id is not None and self.outbound_intent_id is None
         outbound = self.channel_turn_id is None and self.outbound_intent_id is not None
         if not (
-            (self.schema_version == "1.0" and inbound)
-            or (self.schema_version == "1.1" and outbound)
+            (self.schema_version == "1.0" and inbound and self.task_delivery_id is None)
+            or (self.schema_version == "1.1" and outbound and self.task_delivery_id is None)
+            or (
+                self.schema_version == "1.2"
+                and self.task_delivery_id is not None
+                and self.channel_turn_id is None
+                and self.outbound_intent_id is None
+            )
         ):
             raise ValueError("delivery source must be inbound 1.0 or outbound 1.1")
         if self.group_target is not None and (

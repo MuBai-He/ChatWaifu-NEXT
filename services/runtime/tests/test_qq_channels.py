@@ -262,10 +262,10 @@ class _Model:
             }
         ):
             # Scripted LLM decisions belong only to this protocol fixture.
-            assert len(request.tools) == 1
-            assert "语音" in request.tools[0].description
+            voice_tools = [t for t in request.tools if "语音" in t.description]
+            assert len(voice_tools) == 1
             yield LlmToolCallRequested(
-                LlmToolCall("voice-call", request.tools[0].name, {"text": SPOKEN})
+                LlmToolCall("voice-call", voice_tools[0].name, {"text": SPOKEN})
             )
             yield LlmResponseCompleted("tool_calls")
         else:
@@ -1166,7 +1166,13 @@ async def test_public_web_opt_in_keeps_ordinary_reply_medium_a_model_choice(
         harness.model.voice_decision = True
         await _ingest(harness, connection_id, "今天有点累", 203)
         sent = await asyncio.wait_for(harness.peer.sends.get(), 5)
-        assert len(harness.model.requests[0].tools) == 1
+        tools = harness.model.requests[0].tools
+        assert len(tools) == 4
+        assert {t.name for t in tools} >= {
+            "discover_capabilities",
+            "inspect_capability",
+            "activate_capabilities",
+        }
         assert _segments(sent)[0]["type"] == "record"
         assert len(harness.synthesis) == 1
 

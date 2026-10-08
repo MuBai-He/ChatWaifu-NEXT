@@ -59,7 +59,8 @@
       "enum": [
         "text",
         "image",
-        "audio"
+        "audio",
+        "file"
       ],
       "title": "ChannelDeliveryPartKind",
       "type": "string"
@@ -75,6 +76,60 @@
       ],
       "title": "ChannelDeliveryPartStatus",
       "type": "string"
+    },
+    "ChannelFileDeliveryPartPayload": {
+      "properties": {
+        "artifact_id": {
+          "format": "uuid",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "byte_length": {
+          "maximum": 33554432,
+          "minimum": 1,
+          "title": "Byte Length",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "file",
+          "default": "file",
+          "title": "Kind",
+          "type": "string"
+        },
+        "mime_type": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Mime Type",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[^/\\\\\\x00\\r\\n]+$",
+          "title": "Name",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "sha256",
+        "name",
+        "mime_type",
+        "byte_length"
+      ],
+      "title": "ChannelFileDeliveryPartPayload",
+      "type": "object"
     },
     "ChannelImageDeliveryPartPayload": {
       "properties": {
@@ -340,6 +395,7 @@
       "discriminator": {
         "mapping": {
           "audio": "#/$defs/ChannelAudioDeliveryPartPayload",
+          "file": "#/$defs/ChannelFileDeliveryPartPayload",
           "image": "#/$defs/ChannelImageDeliveryPartPayload",
           "text": "#/$defs/ChannelTextDeliveryPartPayload"
         },
@@ -354,6 +410,9 @@
         },
         {
           "$ref": "#/$defs/ChannelAudioDeliveryPartPayload"
+        },
+        {
+          "$ref": "#/$defs/ChannelFileDeliveryPartPayload"
         }
       ],
       "title": "Payload"

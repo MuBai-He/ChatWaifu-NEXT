@@ -9,7 +9,8 @@ import hashlib
 import json
 import logging
 import re
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import cast
@@ -456,6 +457,126 @@ class NapCatClient:
             hashes.add(md5.lower())
         await self._account_preflight(account, revision)
         return frozenset(hashes)
+
+    async def send_file(
+        self,
+        user_id: str,
+        content: bytes,
+        name: str,
+        *,
+        before_send: Callable[[], Awaitable[bool]],
+        checkpoint: Callable[[], Awaitable[None]],
+        group_id: str | None = None,
+    ) -> str | None:
+        """Upload verified bytes to our UUID-owned stream; fence the final file RPC."""
+        if not 0 < len(content) <= 32 * 1024 * 1024:
+            raise ValueError("file size exceeds limit")
+        if not name or len(name) > 128 or any(c in name for c in "/\\\x00\r\n"):
+            raise ValueError("invalid file name")
+        account, revision = self._account, self._account_revision
+        if account is None:
+            raise NapCatRejected("QQ file transfer requires a bound account")
+        stream_id = uuid4().hex
+        filename = f"cw2-file-{stream_id}" + PurePosixPath(name).suffix
+        digest = hashlib.sha256(content).hexdigest()
+        chunks = (len(content) + _IMAGE_CHUNK_BYTES - 1) // _IMAGE_CHUNK_BYTES
+        async with self._owned_file_stream(stream_id) as completed, asyncio.timeout(90):
+            await self._account_preflight(account, revision)
+            for index in range(chunks):
+                if not self._account_matches(account, revision) or not await before_send():
+                    raise NapCatRejected("QQ file permission changed")
+                chunk = content[index * _IMAGE_CHUNK_BYTES : (index + 1) * _IMAGE_CHUNK_BYTES]
+                reply = await self.call(
+                    "upload_file_stream",
+                    {
+                        "stream_id": stream_id,
+                        "filename": filename,
+                        "total_chunks": chunks,
+                        "file_size": len(content),
+                        "expected_sha256": digest,
+                        "file_retention": 120_000,
+                        "chunk_index": index,
+                        "chunk_data": base64.b64encode(chunk).decode("ascii"),
+                    },
+                )
+                if (
+                    reply.get("stream_id") != stream_id
+                    or reply.get("type") != "stream"
+                    or reply.get("status") != "chunk_received"
+                    or type(reply.get("received_chunks")) is not int
+                    or type(reply.get("total_chunks")) is not int
+                    or reply.get("received_chunks") != index + 1
+                    or reply.get("total_chunks") != chunks
+                ):
+                    raise NapCatError("QQ returned invalid file upload progress")
+            reply = await self.call(
+                "upload_file_stream",
+                {
+                    "stream_id": stream_id,
+                    "is_complete": True,
+                    "file_retention": 120_000,
+                },
+            )
+            path = reply.get("file_path")
+            if (
+                reply.get("stream_id") != stream_id
+                or reply.get("status") != "file_complete"
+                or reply.get("type") != "response"
+                or reply.get("file_size") != len(content)
+                or reply.get("sha256") != digest
+                or not isinstance(path, str)
+                or len(path) > 4096
+                or any(ord(c) < 32 for c in path)
+                or ".." in PurePosixPath(path).parts
+                or ".." in PureWindowsPath(path).parts
+                or not (
+                    (PurePosixPath(path).is_absolute() and PurePosixPath(path).name == filename)
+                    or (
+                        PureWindowsPath(path).is_absolute()
+                        and PureWindowsPath(path).name == filename
+                    )
+                )
+            ):
+                raise NapCatError("QQ returned invalid completed file upload")
+            completed[0] = True
+            await self._account_preflight(account, revision)
+            if not await before_send():
+                raise NapCatRejected("QQ file source revoked before send")
+            await checkpoint()
+            if not await before_send() or not self._account_matches(account, revision):
+                raise NapCatRejected("QQ file source revoked before send")
+            if group_id is not None and not self.group_dispatch_ready:
+                raise NapCatRejected("QQ group file route not ready")
+            sent = await self.call(
+                "upload_group_file" if group_id is not None else "upload_private_file",
+                {
+                    ("group_id" if group_id is not None else "user_id"): group_id or user_id,
+                    "file": path,
+                    "name": name,
+                    **({"upload_file": True} if group_id is not None else {}),
+                },
+            )
+            if not self._account_matches(account, revision):
+                raise NapCatError("QQ file outcome uncertain after account change")
+            message_id = sent.get("message_id")
+            return str(message_id) if type(message_id) in {str, int} and message_id else None
+
+    @asynccontextmanager
+    async def _owned_file_stream(self, stream_id: str) -> AsyncGenerator[list[bool], None]:
+        completed = [False]
+        try:
+            yield completed
+        finally:
+            if not completed[0]:
+                try:
+                    async with asyncio.timeout(1):
+                        await self.call(
+                            "upload_file_stream", {"stream_id": stream_id, "reset": True}
+                        )
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    pass
 
     async def add_sticker_favorite(
         self,

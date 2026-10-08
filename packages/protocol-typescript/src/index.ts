@@ -1,4 +1,16 @@
 export type * from "./generated/domain";
+export {
+  parseCandidateFeature,
+  parseDevelopmentPolicy,
+  parseDecisionRecord,
+  parseAgentEvent,
+  parseCapabilityPage,
+  parseCapabilityDetail,
+  parseAgentTask,
+  parseAgentTaskPage,
+  parseArtifactRef,
+  parseGroupAutonomyPolicy,
+} from "./parsers/agent";
 export type { DomainCommand, DomainEvent } from "./parsers/protocol";
 export {
   decodeAudioFrameHeader,

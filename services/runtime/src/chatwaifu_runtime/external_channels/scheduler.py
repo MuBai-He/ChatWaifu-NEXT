@@ -303,6 +303,7 @@ class ChannelDeliveryScheduler:
             if claimed_part.kind not in (
                 ChannelDeliveryPartKind.TEXT,
                 ChannelDeliveryPartKind.IMAGE,
+                ChannelDeliveryPartKind.FILE,
                 ChannelDeliveryPartKind.AUDIO,
             ):
                 post_time = self._now(now)

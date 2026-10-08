@@ -22,7 +22,8 @@
       "enum": [
         "text",
         "image",
-        "audio"
+        "audio",
+        "file"
       ],
       "title": "ChannelMessageKind",
       "type": "string"

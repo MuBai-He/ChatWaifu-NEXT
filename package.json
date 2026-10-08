@@ -20,6 +20,9 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "protocol:generate": "uv run python tools/generate_protocol_schemas.py && pnpm --filter @chatwaifu/protocol generate"
   },
+  "dependencies": {
+    "pptxgenjs": "^4.0.1"
+  },
   "devDependencies": {
     "prettier": "^3.8.2"
   }

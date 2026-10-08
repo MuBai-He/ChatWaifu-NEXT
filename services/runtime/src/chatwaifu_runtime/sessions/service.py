@@ -238,6 +238,22 @@ class SessionService:
             updated_at=now,
         )
 
+    async def scene_evidence_session(
+        self, character_id: str, participant_id: str, scene_id: str
+    ) -> SessionSnapshot:
+        row = await self._database.fetchone(
+            "SELECT session_id FROM sessions WHERE character_id=? AND participant_id=? "
+            "AND scene_id=? AND state=? ORDER BY created_at LIMIT 1",
+            (character_id, participant_id, scene_id, SessionState.READY.value),
+        )
+        if row is not None:
+            session = await self.get_session(UUID(str(row["session_id"])))
+            if session is not None:
+                return session
+        return await self.create_session(
+            character_id, participant_id=participant_id, scene_id=scene_id
+        )
+
     async def get_session(self, session_id: UUID) -> SessionSnapshot | None:
         row = await self._database.fetchone(
             "SELECT * FROM sessions WHERE session_id = ?", (str(session_id),)

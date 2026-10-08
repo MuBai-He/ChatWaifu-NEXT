@@ -113,6 +113,14 @@ def sanitize_audit_payload(
     return minimal if len(_encode(minimal)) <= max_bytes else {"_audit_summary": True}
 
 
+def checkpoint_payload(value: JsonObject, schema: JsonObject) -> JsonObject:
+    """Keep bounded task evidence while removing credential fields and annotations."""
+    preview = _confirmation_preview_value(
+        value, [schema], root=schema, key=None, depth=0, state=_ConfirmationPreviewState()
+    )
+    return cast(JsonObject, preview)
+
+
 def payload_digest(value: JsonValue, *, key: bytes) -> str:
     """Return a runtime-keyed digest without enabling offline value guessing."""
 

@@ -10,6 +10,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from chatwaifu_runtime.api.agent_routes import router as agent_router
 from chatwaifu_runtime.api.channel_group_routes import router as channel_group_router
 from chatwaifu_runtime.api.channel_pairing_routes import router as channel_pairing_router
 from chatwaifu_runtime.api.channel_proactive_routes import router as channel_proactive_router
@@ -133,6 +134,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ticket_store=container.ws_ticket_store,
     )
     app.include_router(router)
+    app.include_router(agent_router)
     app.include_router(channel_pairing_router)
     app.include_router(channel_proactive_router)
     app.include_router(channel_group_router)

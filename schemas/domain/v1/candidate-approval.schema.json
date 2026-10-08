@@ -1,0 +1,28 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/candidate-approval.schema.json",
+  "properties": {
+    "expected_revision": {
+      "minimum": 0,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "package_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Package Sha256",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "expected_revision",
+    "package_sha256"
+  ],
+  "title": "CandidateApproval",
+  "type": "object",
+  "x-schema-version": "1.0"
+}
