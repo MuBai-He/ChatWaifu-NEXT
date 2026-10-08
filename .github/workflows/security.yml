@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: "7 1 * * *"
   workflow_dispatch:
 
 permissions:
@@ -11,7 +13,7 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   secrets:
@@ -29,19 +31,33 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      # This required job always exists, even when manifests are unchanged.
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Select dependency ecosystems to audit
+        id: scope
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python tools/ci/change_scope.py
       - uses: astral-sh/setup-uv@v9.0.0
+        if: steps.scope.outputs.python_dependencies == 'true'
         with:
           version: "0.12.5"
           python-version: "3.12"
+          enable-cache: true
       - uses: pnpm/setup@v1
+        if: steps.scope.outputs.javascript_dependencies == 'true'
         with:
           version: 11.19.0
           runtime: node@22
           cache: true
           install: false
-      - run: uv sync --all-packages --all-groups --locked
-      - run: pnpm install --frozen-lockfile
+      - if: steps.scope.outputs.python_dependencies == 'true'
+        run: uv sync --all-packages --all-groups --locked
+      - if: steps.scope.outputs.javascript_dependencies == 'true'
+        run: pnpm install --frozen-lockfile
       # PYSEC-2026-3740 / CVE-2026-81726:
       # Affects NLTK model-artifact import/export APIs that bypass pathsec:
       # TransitionParser, AveragedPerceptron, PerceptronTagger.save_to_json,
@@ -51,5 +67,7 @@ jobs:
       # paths. NLTK is present only as a transitive/runtime resource dependency.
       # Re-review: 2026-10-31.
       # Remove this ignore when an upstream patched version is available.
-      - run: uv run --with pip-audit pip-audit --ignore-vuln PYSEC-2026-3740
-      - run: pnpm audit --audit-level high
+      - if: steps.scope.outputs.python_dependencies == 'true'
+        run: uv run --with pip-audit pip-audit --ignore-vuln PYSEC-2026-3740
+      - if: steps.scope.outputs.javascript_dependencies == 'true'
+        run: pnpm audit --audit-level high

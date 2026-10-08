@@ -7,7 +7,8 @@ on:
       - ".github/workflows/ci-python.yml"
       - "**/*.py"
       - "services/**"
-      - "packages/**"
+      - "packages/model-worker-sdk-python/**"
+      - "packages/protocol-python/**"
       - "workers/**"
       - "tools/**"
       - "tests/**"
@@ -27,7 +28,8 @@ on:
       - ".github/workflows/ci-python.yml"
       - "**/*.py"
       - "services/**"
-      - "packages/**"
+      - "packages/model-worker-sdk-python/**"
+      - "packages/protocol-python/**"
       - "workers/**"
       - "tools/**"
       - "tests/**"
@@ -42,6 +44,8 @@ on:
       - "apps/desktop/src-tauri/tauri.conf.json"
       - "pyproject.toml"
       - "uv.lock"
+  schedule:
+    - cron: "17 2 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -49,14 +53,24 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   python-static:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      neural-worker: ${{ steps.scope.outputs.neural_worker }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Select optional worker check
+        id: scope
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python tools/ci/change_scope.py
       - uses: astral-sh/setup-uv@v9.0.0
         with:
           version: "0.12.5"
@@ -71,9 +85,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # PR/main: complete Linux suite in four isolated runners. Weekly/manual:
+        # complete, unsharded suite on all three supported platforms.
+        include: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '[{"os":"ubuntu-latest","shard":0,"count":1},{"os":"macos-latest","shard":0,"count":1},{"os":"windows-latest","shard":0,"count":1}]' || '[{"os":"ubuntu-latest","shard":0,"count":4},{"os":"ubuntu-latest","shard":1,"count":4},{"os":"ubuntu-latest","shard":2,"count":4},{"os":"ubuntu-latest","shard":3,"count":4}]') }}
     runs-on: ${{ matrix.os }}
-    # Hosted Windows took 43 minutes for 3736 tests; allow room for the full suite.
     timeout-minutes: ${{ matrix.os == 'windows-latest' && 60 || 25 }}
     steps:
       - uses: actions/checkout@v6
@@ -85,20 +100,25 @@ jobs:
       - run: uv sync --all-packages --all-groups --locked
       # Report the exact test and first failure before a later teardown can hang.
       # The watchdog dumps thread stacks without cancelling or skipping tests.
-      - run: uv run pytest -vv -x --tb=short --durations=25 --junitxml=pytest-results.xml -o faulthandler_timeout=120
+      - name: Run every collected test in its shard
+        run: uv run pytest -p tools.ci.pytest_shard --ci-shard-index=${{ matrix.shard }} --ci-shard-count=${{ matrix.count }} --ci-shard-manifest=pytest-shard.json -q -x --tb=short --durations=25 --junitxml=pytest-results.xml -o faulthandler_timeout=120
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: python-pytest-${{ matrix.os }}
-          path: pytest-results.xml
+          name: python-pytest-${{ matrix.os }}-${{ matrix.shard }}
+          path: |
+            pytest-results.xml
+            pytest-shard.json
           if-no-files-found: ignore
           retention-days: 7
 
   neural-worker:
+    needs: python-static
+    if: needs.python-static.outputs.neural-worker == 'true'
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
@@ -122,3 +142,33 @@ jobs:
         working-directory: workers/tts-neural
       - run: uv run pytest
         working-directory: workers/tts-neural
+
+  python-suite:
+    needs: [python-static, python, neural-worker]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail if a required Python job failed or was cancelled
+        env:
+          STATIC_RESULT: ${{ needs.python-static.result }}
+          TEST_RESULT: ${{ needs.python.result }}
+          WORKER_RESULT: ${{ needs.neural-worker.result }}
+        run: |
+          test "$STATIC_RESULT" = success
+          test "$TEST_RESULT" = success
+          test "$WORKER_RESULT" = success || test "$WORKER_RESULT" = skipped
+      - uses: actions/checkout@v6
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+      - uses: actions/setup-python@v6
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        with:
+          pattern: python-pytest-ubuntu-latest-*
+          path: pytest-shards
+      - name: Prove all collected tests ran exactly once
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        run: python tools/ci/verify_pytest_shards.py pytest-shards --count 4
