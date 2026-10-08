@@ -7,12 +7,15 @@ import shutil
 import sys
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager
 from dataclasses import replace
 from pathlib import Path
 from threading import Barrier
 from typing import Protocol, cast
+from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
+import mcp.types as mcp_types
 import pytest
 from chatwaifu_protocol.skills import McpConnectionConfiguration
 from chatwaifu_runtime.config.settings import Settings, StorageConfig
@@ -22,6 +25,7 @@ from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
 from chatwaifu_runtime.runtime_skills.host_connections import (
     McpConnectionManager,
     McpConnectionSecretStore,
+    _list_resource_templates,  # pyright: ignore[reportPrivateUsage]
 )
 from chatwaifu_runtime.runtime_skills.transports import (
     McpClientTransport,
@@ -29,6 +33,7 @@ from chatwaifu_runtime.runtime_skills.transports import (
 )
 from fastapi.testclient import TestClient
 from httpx2 import Response
+from mcp.shared.exceptions import MCPError
 
 
 class RuntimeHttpClient(Protocol):
@@ -173,3 +178,251 @@ def test_api_reports_actual_macos_seatbelt_backend(
     updated_body = cast(dict[str, object], updated.json())
     assert updated_body["status"] == "untested"
     assert updated_body["sandbox_backend"] is None
+
+
+@pytest.mark.asyncio
+async def test_list_resource_templates_tolerates_missing_method_only_on_initial_page() -> None:
+    session = AsyncMock()
+
+    # Initial page: -32601 returns []
+    session.list_resource_templates.side_effect = MCPError(code=-32601, message="Method not found")
+    assert await _list_resource_templates(session) == []
+
+    # Initial page: other error codes raise MCPError
+    session.list_resource_templates.side_effect = MCPError(code=-32600, message="Invalid Request")
+    with pytest.raises(MCPError) as exc_info:
+        await _list_resource_templates(session)
+    assert exc_info.value.code == -32600
+
+    # Paginated: page 1 returns items + nextCursor; page 2 raises -32601 -> raises MCPError
+    page1 = mcp_types.ListResourceTemplatesResult(
+        resource_templates=[
+            mcp_types.ResourceTemplate(
+                uri_template="homeassistant://devices/{id}",
+                name="Device Template",
+            )
+        ],
+        next_cursor="cursor_page_2",
+    )
+    session.list_resource_templates.side_effect = [
+        page1,
+        MCPError(code=-32601, message="Method not found on cursor"),
+    ]
+    with pytest.raises(MCPError) as exc_info:
+        await _list_resource_templates(session)
+    assert exc_info.value.code == -32601
+
+    # Normal pagination: page 1 + page 2 successfully collected
+    page2 = mcp_types.ListResourceTemplatesResult(
+        resource_templates=[
+            mcp_types.ResourceTemplate(
+                uri_template="homeassistant://entities/{id}",
+                name="Entity Template",
+            )
+        ],
+        next_cursor=None,
+    )
+    session.list_resource_templates.side_effect = [page1, page2]
+    templates = await _list_resource_templates(session)
+    assert len(templates) == 2
+    assert templates[0].name == "Device Template"
+    assert templates[1].name == "Entity Template"
+
+
+@pytest.mark.asyncio
+async def test_discover_preserves_tools_resources_and_prompts_when_templates_method_absent(
+    tmp_path: Path,
+) -> None:
+    session = AsyncMock()
+    server_info = MagicMock()
+    server_info.name = "homeassistant"
+    server_info.version = "2026.1.0"
+    init_result = MagicMock(
+        protocol_version="2025-03-26",
+        server_info=server_info,
+        capabilities=MagicMock(tools=MagicMock(), resources=MagicMock(), prompts=MagicMock()),
+    )
+
+    session.list_tools.return_value = mcp_types.ListToolsResult(
+        tools=[
+            mcp_types.Tool(
+                name="intent__HassTurnOn",
+                description="Turns on a device",
+                input_schema={"type": "object"},
+            )
+        ]
+    )
+    session.list_resources.return_value = mcp_types.ListResourcesResult(
+        resources=[
+            mcp_types.Resource(
+                uri="homeassistant://assist-context",
+                name="Assist Context",
+                description="Static assist context",
+            )
+        ]
+    )
+    session.list_prompts.return_value = mcp_types.ListPromptsResult(
+        prompts=[mcp_types.Prompt(name="ha_prompt", description="HA Prompt")]
+    )
+    session.list_resource_templates.side_effect = MCPError(code=-32601, message="Method not found")
+
+    transport = MagicMock()
+
+    @asynccontextmanager
+    async def fake_session(*args: object, **kwargs: object):
+        yield (session, init_result)
+
+    transport.connection_session = fake_session
+
+    manager = McpConnectionManager(MagicMock(), tmp_path, transport)
+    config = McpConnectionConfiguration(
+        connection_id=uuid4(),
+        name="HA Test",
+        transport="streamable_http",
+        url="http://192.168.10.216:8123/api/mcp",
+        allow_remote=True,
+        sandbox_mode="disabled",
+        network_policy="allow",
+        timeout_seconds=5,
+    )
+
+    snapshot = await manager.discover(config)
+    assert len(snapshot.tools) == 1
+    assert snapshot.tools[0].name == "intent__HassTurnOn"
+    assert len(snapshot.resources) == 1
+    assert snapshot.resources[0].uri == "homeassistant://assist-context"
+    assert snapshot.resource_templates == []
+    assert len(snapshot.prompts) == 1
+    assert snapshot.prompts[0].name == "ha_prompt"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("error_code", [-32600, -32000])
+async def test_discover_fails_when_templates_fails_with_other_error(
+    tmp_path: Path, error_code: int
+) -> None:
+    session = AsyncMock()
+    server_info = MagicMock()
+    server_info.name = "homeassistant"
+    server_info.version = "2026.1.0"
+    init_result = MagicMock(
+        protocol_version="2025-03-26",
+        server_info=server_info,
+        capabilities=MagicMock(tools=MagicMock(), resources=MagicMock(), prompts=None),
+    )
+    session.list_tools.return_value = mcp_types.ListToolsResult(tools=[])
+    session.list_resources.return_value = mcp_types.ListResourcesResult(resources=[])
+    session.list_resource_templates.side_effect = MCPError(code=error_code, message="Other Error")
+
+    transport = MagicMock()
+
+    @asynccontextmanager
+    async def fake_session(*args: object, **kwargs: object):
+        yield (session, init_result)
+
+    transport.connection_session = fake_session
+
+    manager = McpConnectionManager(MagicMock(), tmp_path, transport)
+    config = McpConnectionConfiguration(
+        connection_id=uuid4(),
+        name="HA Test",
+        transport="streamable_http",
+        url="http://192.168.10.216:8123/api/mcp",
+        allow_remote=True,
+        sandbox_mode="disabled",
+        network_policy="allow",
+        timeout_seconds=5,
+    )
+    with pytest.raises(SkillExecutionError) as exc_info:
+        await manager.discover(config)
+    assert exc_info.value.structured.code == "mcp_connection_failed"
+
+
+@pytest.mark.asyncio
+async def test_discover_fails_when_templates_fails_on_later_page(tmp_path: Path) -> None:
+    session = AsyncMock()
+    server_info = MagicMock()
+    server_info.name = "homeassistant"
+    server_info.version = "2026.1.0"
+    init_result = MagicMock(
+        protocol_version="2025-03-26",
+        server_info=server_info,
+        capabilities=MagicMock(tools=MagicMock(), resources=MagicMock(), prompts=None),
+    )
+    session.list_tools.return_value = mcp_types.ListToolsResult(tools=[])
+    session.list_resources.return_value = mcp_types.ListResourcesResult(resources=[])
+    page1 = mcp_types.ListResourceTemplatesResult(
+        resource_templates=[
+            mcp_types.ResourceTemplate(
+                uri_template="homeassistant://devices/{id}",
+                name="Device Template",
+            )
+        ],
+        next_cursor="cursor_page_2",
+    )
+    session.list_resource_templates.side_effect = [
+        page1,
+        MCPError(code=-32601, message="Method not found on cursor"),
+    ]
+
+    transport = MagicMock()
+
+    @asynccontextmanager
+    async def fake_session(*args: object, **kwargs: object):
+        yield (session, init_result)
+
+    transport.connection_session = fake_session
+
+    manager = McpConnectionManager(MagicMock(), tmp_path, transport)
+    config = McpConnectionConfiguration(
+        connection_id=uuid4(),
+        name="HA Test",
+        transport="streamable_http",
+        url="http://192.168.10.216:8123/api/mcp",
+        allow_remote=True,
+        sandbox_mode="disabled",
+        network_policy="allow",
+        timeout_seconds=5,
+    )
+    with pytest.raises(SkillExecutionError) as exc_info:
+        await manager.discover(config)
+    assert exc_info.value.structured.code == "mcp_connection_failed"
+
+
+@pytest.mark.asyncio
+async def test_discover_fails_when_required_list_tools_returns_missing_method(
+    tmp_path: Path,
+) -> None:
+    session = AsyncMock()
+    server_info = MagicMock()
+    server_info.name = "homeassistant"
+    server_info.version = "2026.1.0"
+    init_result = MagicMock(
+        protocol_version="2025-03-26",
+        server_info=server_info,
+        capabilities=MagicMock(tools=MagicMock(), resources=None, prompts=None),
+    )
+    session.list_tools.side_effect = MCPError(code=-32601, message="Method not found")
+
+    transport = MagicMock()
+
+    @asynccontextmanager
+    async def fake_session(*args: object, **kwargs: object):
+        yield (session, init_result)
+
+    transport.connection_session = fake_session
+
+    manager = McpConnectionManager(MagicMock(), tmp_path, transport)
+    config = McpConnectionConfiguration(
+        connection_id=uuid4(),
+        name="HA Test",
+        transport="streamable_http",
+        url="http://192.168.10.216:8123/api/mcp",
+        allow_remote=True,
+        sandbox_mode="disabled",
+        network_policy="allow",
+        timeout_seconds=5,
+    )
+    with pytest.raises(SkillExecutionError) as exc_info:
+        await manager.discover(config)
+    assert exc_info.value.structured.code == "mcp_connection_failed"
