@@ -194,12 +194,14 @@ ci-e2e-fake.yml
 security.yml
 ```
 
-基础矩阵：
+验证分层（具体触发范围与命令见 [CI 验证策略](testing/ci.md)）：
 
-- Linux 跑全部无 UI 测试。
-- Windows 跑 Python、TS、Rust 构建。
-- macOS 跑 Tauri compile smoke test。
-- GPU 测试单独手动触发，不进入每次 PR。
+- PR 按领域触发检查；Python 完整用例在四个 Linux runner 上分组执行，保留静态与浏览器检查。
+- Web PR 在 Linux 验证共享前端测试和 Web/Desktop UI 构建；只有桌面宿主或 Rust 工具链改动触发 PR 原生检查。
+- main 保留完整 Linux 用例与产品验证，桌面产品改动保留三平台真实 Tauri 构建。
+- 每周与手动运行完整三平台 Python、neural worker 与原生宿主检查，以及 Linux/Windows Web 验证。
+- 安全检查每个 PR 都存在；清单变化时审计对应依赖，每天、main 与手动运行全量依赖审计。
+- GPU 测试单独手动触发，不进入每次 PR；发布 tag 的严格检查保持独立。
 
 ## 0.9 ADR
 

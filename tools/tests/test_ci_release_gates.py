@@ -21,11 +21,13 @@ def test_rust_ci_builds_the_real_tauri_application_on_every_platform() -> None:
     assert '"services/runtime/**"' in workflow
 
 
-def test_web_ci_builds_only_the_web_product_graph() -> None:
+def test_web_ci_builds_frontend_products_without_a_native_host() -> None:
     workflow = (ROOT / ".github/workflows/ci-web.yml").read_text(encoding="utf-8")
 
     assert "pnpm --filter @chatwaifu/web build:web" in workflow
     assert "tools/verify_product_artifacts.py --product web" in workflow
+    assert "pnpm --filter @chatwaifu/web build:desktop" in workflow
+    assert "tools/verify_product_artifacts.py --product desktop" in workflow
     assert "@chatwaifu/desktop" not in workflow
     assert "cargo " not in workflow
     assert "branches: [main]" in workflow

@@ -45,7 +45,7 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   web-smoke:
@@ -88,7 +88,7 @@ jobs:
             nohup uv run python tools/run_runtime.py \
               > "$RUNNER_TEMP/chatwaifu-runtime.log" 2>&1 &
           echo "CHATWAIFU_RUNTIME_PID=$!" >> "$GITHUB_ENV"
-          for attempt in $(seq 1 60); do
+          for _ in $(seq 1 60); do
             if curl --fail --silent http://127.0.0.1:8765/v1/runtime/health >/dev/null; then
               exit 0
             fi

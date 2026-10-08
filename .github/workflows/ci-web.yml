@@ -30,6 +30,8 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+  schedule:
+    - cron: "31 2 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -37,14 +39,14 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   web:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '["ubuntu-latest","windows-latest"]' || '["ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
@@ -59,10 +61,14 @@ jobs:
         with:
           python-version: "3.12"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec prettier --check apps/web release/products.json
-      - run: pnpm --filter @chatwaifu/web lint
-      - run: pnpm --filter @chatwaifu/web typecheck
-      - run: pnpm --filter @chatwaifu/web test
+      - run: pnpm exec prettier --check apps/web packages/avatar-sdk packages/protocol-typescript release/products.json
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
       - run: python tools/product_release.py verify --product web
       - run: pnpm --filter @chatwaifu/web build:web
       - run: python tools/verify_product_artifacts.py --product web
+      - name: Build and verify Desktop UI without a native host build
+        run: |
+          pnpm --filter @chatwaifu/web build:desktop
+          python tools/verify_product_artifacts.py --product desktop
