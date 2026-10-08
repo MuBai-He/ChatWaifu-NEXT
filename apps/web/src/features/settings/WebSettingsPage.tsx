@@ -150,7 +150,7 @@ function WebSettingsContent({ initialSection }: { initialSection: string }) {
           const Component = section.component;
           return (
             <div key={section.id} hidden={section.id !== selectedId}>
-              <Component context={context} />
+              <Component context={context} active={section.id === selectedId} />
             </div>
           );
         })}

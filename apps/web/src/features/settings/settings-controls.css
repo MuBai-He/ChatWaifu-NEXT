@@ -1,6 +1,7 @@
 /* Shared form controls for settings pages and opt-in portalled dialogs. */
 :is(
   .settings-shell,
+  .settings-surface,
   .desktop-settings-page,
   .channels-settings-section,
   .conversation-scope-dialog
@@ -15,6 +16,7 @@
 
 :is(
     .settings-shell,
+    .settings-surface,
     .desktop-settings-page,
     .channels-settings-section,
     .conversation-scope-dialog
@@ -51,6 +53,7 @@
 
 :is(
     .settings-shell,
+    .settings-surface,
     .desktop-settings-page,
     .channels-settings-section,
     .conversation-scope-dialog
@@ -69,6 +72,7 @@
 
 :is(
     .settings-shell,
+    .settings-surface,
     .desktop-settings-page,
     .channels-settings-section,
     .conversation-scope-dialog
@@ -80,6 +84,7 @@
 
 :is(
     .settings-shell,
+    .settings-surface,
     .desktop-settings-page,
     .channels-settings-section,
     .conversation-scope-dialog
@@ -90,6 +95,7 @@
 
 :is(
     .settings-shell,
+    .settings-surface,
     .desktop-settings-page,
     .channels-settings-section,
     .conversation-scope-dialog
@@ -101,29 +107,32 @@
 
 :is(
     .settings-shell,
+    .settings-surface,
     .desktop-settings-page,
     .channels-settings-section,
     .conversation-scope-dialog
   ).settings-controls
   :is(input, textarea)::placeholder {
-  color: #938b97;
+  color: var(--settings-placeholder, #938b97);
 }
 
 :is(
     .settings-shell,
+    .settings-surface,
     .desktop-settings-page,
     .channels-settings-section,
     .conversation-scope-dialog
   ).settings-controls
   :is(input, select, textarea):disabled {
   cursor: default;
-  color: #827a87;
-  background-color: #f3eff4;
+  color: var(--settings-disabled-text, #827a87);
+  background-color: var(--settings-disabled-background, #f3eff4);
   opacity: 0.7;
 }
 
 :is(
     .settings-shell,
+    .settings-surface,
     .desktop-settings-page,
     .channels-settings-section,
     .conversation-scope-dialog
@@ -133,6 +142,7 @@
 }
 
 .desktop-settings-page .desktop-settings-scroll button:not([aria-label]),
+.settings-surface.settings-controls button:not([aria-label]),
 .channels-settings-section button:not([aria-label]),
 .conversation-scope-dialog.settings-controls button:not([aria-label]) {
   min-height: var(--settings-control-height);
@@ -145,6 +155,7 @@
 @media (prefers-contrast: more) {
   :is(
     .settings-shell,
+    .settings-surface,
     .desktop-settings-page,
     .channels-settings-section,
     .conversation-scope-dialog

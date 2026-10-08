@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -393,5 +394,85 @@ describe("McpConnectionsPanel", () => {
         localConnection.connection_id,
       ),
     );
+  });
+  it("preserves ordinary embedded drafts but clears token input when hidden", async () => {
+    const { rerender } = render(
+      <McpConnectionsPanel sessionId={sessionId} presentation="embedded" />,
+    );
+    await waitFor(() => expect(getMcpConnections).toHaveBeenCalledOnce());
+    fireEvent.change(screen.getByLabelText("MCP 连接名称"), {
+      target: { value: "未保存的草稿" },
+    });
+    fireEvent.change(screen.getByLabelText("MCP 传输类型"), {
+      target: { value: "streamable_http" },
+    });
+    fireEvent.change(screen.getByLabelText("MCP Bearer Token"), {
+      target: { value: "ephemeral-test-token" },
+    });
+    rerender(
+      <McpConnectionsPanel
+        sessionId={sessionId}
+        presentation="embedded"
+        active={false}
+      />,
+    );
+    expect(screen.queryByDisplayValue("ephemeral-test-token")).toBeNull();
+    expect(screen.getByDisplayValue("未保存的草稿")).toBeTruthy();
+    rerender(
+      <McpConnectionsPanel sessionId={sessionId} presentation="embedded" />,
+    );
+    await waitFor(() => expect(getMcpConnections).toHaveBeenCalledTimes(2));
+    expect(screen.getByDisplayValue("未保存的草稿")).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(createMcpConnection).not.toHaveBeenCalled();
+  });
+
+  it("discards a resource result that arrives after leaving the selected connection", async () => {
+    vi.mocked(getMcpConnections).mockResolvedValue([
+      {
+        ...localConnection,
+        capabilities: {
+          ...emptyCapabilities(localConnection.connection_id),
+          resources: [
+            {
+              uri: "notes://private",
+              name: "private",
+              description: "本地读取",
+            },
+          ],
+        },
+      },
+    ]);
+    let finish!: (result: { contents: { text: string }[] }) => void;
+    vi.mocked(readMcpResource).mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const view = render(
+      <McpConnectionsPanel sessionId={sessionId} presentation="embedded" />,
+    );
+    await screen.findByDisplayValue("本地笔记");
+    fireEvent.click(screen.getByRole("button", { name: /本地笔记/ }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "读取资源 notes://private" }),
+    );
+    await waitFor(() => expect(readMcpResource).toHaveBeenCalledOnce());
+    view.rerender(
+      <McpConnectionsPanel
+        sessionId={sessionId}
+        presentation="embedded"
+        active={false}
+      />,
+    );
+    await act(async () => {
+      finish({ contents: [{ text: "不应重新显示的私有结果" }] });
+      await Promise.resolve();
+    });
+    view.rerender(
+      <McpConnectionsPanel sessionId={sessionId} presentation="embedded" />,
+    );
+    await waitFor(() => expect(getMcpConnections).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText(/不应重新显示的私有结果/)).toBeNull();
   });
 });

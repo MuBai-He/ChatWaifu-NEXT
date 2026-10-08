@@ -20,6 +20,7 @@ import {
 } from "../chat/runtime-client/agentClient";
 import { AgentDevelopmentPanel } from "./AgentDevelopmentPanel";
 import { SkillConfirmationPrompt } from "../chat/SkillConfirmationPrompt";
+import "./agent-settings.css";
 
 const PdfArtifactPreview = lazy(() => import("./PdfArtifactPreview"));
 
@@ -45,6 +46,7 @@ const taskStatus: Record<string, string> = {
 
 export function AgentSettingsSection(props: {
   context: { sessionId: string | null };
+  active?: boolean;
 }) {
   return (
     <AgentSettingsState key={props.context.sessionId ?? "pending"} {...props} />
@@ -53,8 +55,10 @@ export function AgentSettingsSection(props: {
 
 function AgentSettingsState({
   context,
+  active = true,
 }: {
   context: { sessionId: string | null };
+  active?: boolean;
 }) {
   const sessionId = context.sessionId;
   const [capabilities, setCapabilities] = useState<CapabilityDescriptor[]>([]);
@@ -121,7 +125,7 @@ function AgentSettingsState({
   }
   useEffect(() => {
     const expected = ++epoch.current;
-    if (sessionId)
+    if (active && sessionId)
       void refresh(expected).catch((e: unknown) => {
         if (expected === epoch.current)
           setNotice(e instanceof Error ? e.message : "读取失败");
@@ -131,10 +135,11 @@ function AgentSettingsState({
     };
     // Search runs on the explicit refresh button.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId]);
+  }, [active, sessionId]);
 
   useEffect(() => {
     if (
+      !active ||
       !sessionId ||
       !tasks.some((task) =>
         [
@@ -159,7 +164,7 @@ function AgentSettingsState({
         .catch(() => undefined);
     }, 2000);
     return () => window.clearTimeout(timer);
-  }, [sessionId, tasks]);
+  }, [active, sessionId, tasks]);
   async function operate(action: () => Promise<unknown>, refreshAfter = true) {
     const expected = epoch.current;
     setBusy(true);
@@ -171,15 +176,17 @@ function AgentSettingsState({
       if (expected === epoch.current)
         setNotice(e instanceof Error ? e.message : "操作失败");
     } finally {
-      if (expected === epoch.current) setBusy(false);
+      setBusy(false);
     }
   }
   return (
-    <div className="settings-section">
+    <div className="settings-section agent-settings">
       <SkillConfirmationPrompt
         sessionId={
-          tasks.find((t) => t.state === "waiting_authorization")?.session_id ??
-          sessionId
+          active
+            ? (tasks.find((t) => t.state === "waiting_authorization")
+                ?.session_id ?? sessionId)
+            : null
         }
       />
       <h2>宁宁的能力与任务</h2>

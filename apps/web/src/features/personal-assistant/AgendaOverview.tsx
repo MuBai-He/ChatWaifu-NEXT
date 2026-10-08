@@ -143,7 +143,13 @@ function appleReadSources(
   return { selected, total: available.length };
 }
 
-export function AgendaOverview({ sessionId }: { sessionId: string }) {
+export function AgendaOverview({
+  sessionId,
+  active = true,
+}: {
+  sessionId: string;
+  active?: boolean;
+}) {
   const [days, setDays] = useState<1 | 7 | 30>(7);
   const [entries, setEntries] = useState<AgendaEntry[]>([]);
   const [organizer, setOrganizer] = useState<Organizer | null>(null);
@@ -384,6 +390,7 @@ export function AgendaOverview({ sessionId }: { sessionId: string }) {
   );
 
   useEffect(() => {
+    if (!active) return;
     const controller = new AbortController();
     void Promise.resolve()
       .then(() => load(controller.signal))
@@ -396,10 +403,10 @@ export function AgendaOverview({ sessionId }: { sessionId: string }) {
         }
       });
     return () => controller.abort();
-  }, [load, refresh]);
+  }, [active, load, refresh]);
 
   useEffect(() => {
-    if (!appleReads.length) return;
+    if (!active || !appleReads.length) return;
     let disposed = false;
     const rangeEnd = windowFor(days).end.getTime();
     const poll = async () => {
@@ -478,7 +485,7 @@ export function AgendaOverview({ sessionId }: { sessionId: string }) {
       disposed = true;
       window.clearInterval(timer);
     };
-  }, [appleReads, days, sessionId]);
+  }, [active, appleReads, days, sessionId]);
 
   const visible = useMemo(
     () =>

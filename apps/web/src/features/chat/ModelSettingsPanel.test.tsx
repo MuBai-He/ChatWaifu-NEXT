@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -119,6 +120,48 @@ describe("ModelSettingsPanel", () => {
       status: "ok",
       characters: 12,
     });
+  });
+
+  it("pauses a running index poll while hidden and resumes with the draft intact", async () => {
+    vi.mocked(runtimeClient.getIndexRebuildStatus).mockResolvedValue({
+      schema_version: "1.0",
+      job_id: "running-fixture",
+      state: "running",
+      domains: {},
+    });
+    vi.useFakeTimers();
+    try {
+      const { rerender } = render(
+        <ModelSettingsPanel sessionId={null} compact />,
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+      const input = screen.getByLabelText("聊天模型 模型 ID");
+      fireEvent.change(input, { target: { value: "retained-chat-draft" } });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(600);
+      });
+      const before = vi.mocked(runtimeClient.getIndexRebuildStatus).mock.calls
+        .length;
+      expect(before).toBeGreaterThan(1);
+      rerender(<ModelSettingsPanel sessionId={null} compact active={false} />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10_000);
+      });
+      expect(runtimeClient.getIndexRebuildStatus).toHaveBeenCalledTimes(before);
+      rerender(<ModelSettingsPanel sessionId={null} compact />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(600);
+      });
+      expect(runtimeClient.getIndexRebuildStatus).toHaveBeenCalledTimes(
+        before + 1,
+      );
+      expect((input as HTMLInputElement).value).toBe("retained-chat-draft");
+    } finally {
+      cleanup();
+      vi.useRealTimers();
+    }
   });
 
   it("retains drafts between model purposes and marks a saved compact card", async () => {

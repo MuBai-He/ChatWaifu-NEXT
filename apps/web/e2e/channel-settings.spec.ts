@@ -46,7 +46,7 @@ test("channel settings persist through real Runtime API and reload in both produ
     await page.goto(desktop ? "/desktop-settings" : "/settings/channels");
     if (desktop)
       await page
-        .getByRole("navigation", { name: "设置分类" })
+        .getByRole("navigation", { name: "设置分类", exact: true })
         .getByRole("button", { name: /渠道/ })
         .click();
     await expect(
@@ -95,7 +95,7 @@ test("channel settings persist through real Runtime API and reload in both produ
     const nextBudget =
       original.policy.group_discussion?.input_tokens === 2048 ? 3072 : 2048;
     await budget.fill(String(nextBudget));
-    await page.getByRole("button", { name: "保存渠道交流与权限" }).click();
+    await page.getByRole("button", { name: "保存交流与权限" }).click();
     await expect(page.getByText(/渠道设置已保存到当前 Runtime/)).toBeVisible();
     const saved = await read();
     expect(saved.revision).toBe(original.revision + 1);
@@ -114,7 +114,7 @@ test("channel settings persist through real Runtime API and reload in both produ
     await page.reload();
     if (desktop)
       await page
-        .getByRole("navigation", { name: "设置分类" })
+        .getByRole("navigation", { name: "设置分类", exact: true })
         .getByRole("button", { name: /渠道/ })
         .click();
     await page.getByRole("button", { name: "交流与权限", exact: true }).click();
@@ -201,7 +201,7 @@ test("settings controls share sizes, keyboard focus and narrow-screen layout", a
   await page.goto(desktop ? "/desktop-settings" : "/settings/channels");
   if (desktop)
     await page
-      .getByRole("navigation", { name: "设置分类" })
+      .getByRole("navigation", { name: "设置分类", exact: true })
       .getByRole("button", { name: /渠道/ })
       .click();
   const selector = page.getByRole("combobox", {
@@ -211,7 +211,7 @@ test("settings controls share sizes, keyboard focus and narrow-screen layout", a
   await expect(selector).toBeEnabled();
   await expect(selector).toHaveCSS("appearance", "none");
   await expect(selector).toHaveCSS("padding-right", "36px");
-  await expect(selector).toHaveCSS("border-radius", "10px");
+  await expect(selector).toHaveCSS("border-radius", "12px");
   expect((await selector.boundingBox())!.height).toBeGreaterThanOrEqual(40);
   await page.getByText("回复样式与发送节奏", { exact: true }).click();
   const name = page.getByLabel("连接名称", { exact: true });
@@ -220,8 +220,8 @@ test("settings controls share sizes, keyboard focus and narrow-screen layout", a
     exact: true,
   });
   await expect(name).toBeEnabled();
-  await expect(name).toHaveCSS("font-size", "13px");
-  await expect(name).toHaveCSS("border-radius", "10px");
+  await expect(name).toHaveCSS("font-size", "14px");
+  await expect(name).toHaveCSS("border-radius", "12px");
   expect((await name.boundingBox())!.height).toBeGreaterThanOrEqual(40);
   await name.press("Tab");
   await expect(presentation).toBeFocused();
@@ -231,7 +231,7 @@ test("settings controls share sizes, keyboard focus and narrow-screen layout", a
   await expect(name).toHaveCSS("outline-width", "2px");
   const toggle = page.getByRole("switch", { name: "启用微信消息" });
   expect((await toggle.boundingBox())!.height).toBe(22);
-  expect((await toggle.boundingBox())!.width).toBe(38);
+  expect((await toggle.boundingBox())!.width).toBe(40);
   await page.screenshot({
     path: info.outputPath("weixin-controls.png"),
     fullPage: true,
@@ -239,8 +239,8 @@ test("settings controls share sizes, keyboard focus and narrow-screen layout", a
   await page.getByRole("button", { name: "QQ", exact: true }).click();
   await page.getByRole("button", { name: "设置 QQ 连接" }).click();
   const endpoint = page.getByLabel("NapCat WebSocket 地址", { exact: true });
-  await expect(endpoint).toHaveCSS("font-size", "13px");
-  await expect(endpoint).toHaveCSS("border-radius", "10px");
+  await expect(endpoint).toHaveCSS("font-size", "14px");
+  await expect(endpoint).toHaveCSS("border-radius", "12px");
   expect((await endpoint.boundingBox())!.height).toBeGreaterThanOrEqual(40);
   expect((await endpoint.boundingBox())!.width).toBeGreaterThan(300);
   await page.screenshot({
@@ -251,7 +251,7 @@ test("settings controls share sizes, keyboard focus and narrow-screen layout", a
   await page.getByText("群聊旁听与按需压缩", { exact: true }).click();
   await expect(page.getByLabel("单条字符上限", { exact: true })).toHaveCSS(
     "border-radius",
-    "10px",
+    "12px",
   );
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
@@ -267,13 +267,16 @@ test("settings controls share sizes, keyboard focus and narrow-screen layout", a
   expect(writes).toEqual(["/v1/sessions"]);
   if (desktop) {
     await page.setViewportSize({ width: 960, height: 760 });
-    const sections = page.getByRole("navigation", { name: "设置分类" });
+    const sections = page.getByRole("navigation", {
+      name: "设置分类",
+      exact: true,
+    });
     await sections.getByRole("button", { name: /陪伴/ }).click();
     const compactNumber = page
       .locator(".companion-settings-number-row input")
       .first();
     await expect(compactNumber).toHaveCSS("width", "84px");
-    await expect(compactNumber).toHaveCSS("border-radius", "10px");
+    await expect(compactNumber).toHaveCSS("border-radius", "12px");
     await sections.getByRole("button", { name: /声音/ }).click();
     const compactSelect = page.locator(".desktop-settings-select-row select");
     await expect(compactSelect).toBeVisible();
@@ -334,7 +337,7 @@ test("conversation scope settings controls preserve names, identity and modal na
   const openConnectionSection = async () => {
     if (desktop)
       await page
-        .getByRole("navigation", { name: "设置分类" })
+        .getByRole("navigation", { name: "设置分类", exact: true })
         .getByRole("button", { name: /^连接/ })
         .click();
   };
@@ -419,7 +422,7 @@ test("conversation scope settings controls preserve names, identity and modal na
           font: style.fontSize,
         };
       }),
-    ).toMatchObject({ height: 40, radius: "10px", font: "13px" });
+    ).toMatchObject({ height: 40, radius: "12px", font: "14px" });
   }
   expect(
     await speaker.evaluate((node) => getComputedStyle(node).appearance),

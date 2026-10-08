@@ -1,3 +1,5 @@
+import "../settings/settings-glass.css";
+import "../settings/settings-controls.css";
 import { useEffect, useState, useRef, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { ScopeControlsContext } from "../connection/clientControls";
@@ -221,7 +223,7 @@ export function ConversationScopeGate({
               role="dialog"
               aria-modal="true"
               aria-labelledby="conversation-scope-title"
-              className="conversation-scope-dialog settings-controls"
+              className="conversation-scope-dialog settings-material settings-surface settings-controls"
             >
               <header className="conversation-scope-heading">
                 <h2 id="conversation-scope-title">参与者与场景</h2>

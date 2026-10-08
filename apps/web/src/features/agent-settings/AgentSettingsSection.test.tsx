@@ -129,3 +129,30 @@ it.each(["waiting_event", "waiting_input"])(
     expect(reads).toHaveBeenCalledTimes(settledReads);
   },
 );
+
+it("pauses task polling while hidden and retains an ordinary task draft", async () => {
+  vi.useFakeTimers();
+  const task = parseAgentTask({ ...fixtures.task, state: "waiting_event" });
+  reads.mockResolvedValue({ items: [task] });
+  const context = { sessionId: task.session_id };
+  let view!: ReturnType<typeof render>;
+  await act(async () => {
+    view = render(<AgentSettingsSection context={context} />);
+    await Promise.resolve();
+  });
+  fireEvent.click(screen.getByText("创建授权任务", { exact: true }));
+  const input = screen.getByRole("textbox", { name: "目标" });
+  fireEvent.change(input, { target: { value: "尚未提交的目标" } });
+  view.rerender(<AgentSettingsSection context={context} active={false} />);
+  const before = reads.mock.calls.length;
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(7000);
+  });
+  expect(reads).toHaveBeenCalledTimes(before);
+  expect((input as HTMLTextAreaElement).value).toBe("尚未提交的目标");
+  await act(async () => {
+    view.rerender(<AgentSettingsSection context={context} />);
+    await Promise.resolve();
+  });
+  expect(reads).toHaveBeenCalledTimes(before + 1);
+});

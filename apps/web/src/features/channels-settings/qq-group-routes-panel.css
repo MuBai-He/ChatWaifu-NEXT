@@ -13,7 +13,7 @@
 }
 .qq-group-risk {
   padding: 12px;
-  border: 1px solid #b9813e;
+  border: 1px solid var(--settings-line, #b9813e);
   border-radius: 9px;
 }
 .qq-group-fields {

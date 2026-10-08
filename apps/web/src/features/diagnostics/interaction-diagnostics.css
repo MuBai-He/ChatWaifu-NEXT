@@ -48,15 +48,15 @@
   padding: 5px 9px;
   border: 1px solid var(--settings-line);
   border-radius: 7px;
-  color: #7a4568;
-  background: rgb(231 205 222 / 42%);
+  color: var(--settings-accent, #7a4568);
+  background: var(--settings-control-background, rgb(231 205 222 / 42%));
   cursor: pointer;
   text-align: left;
 }
 
 .interaction-diagnostics-panel button[aria-pressed="true"] {
-  border-color: #9e698b;
-  background: rgb(231 205 222 / 78%);
+  border-color: var(--settings-control-border, #9e698b);
+  background: var(--settings-accent-soft, rgb(231 205 222 / 78%));
 }
 
 .vn-settings-panel .interaction-diagnostics-panel {
@@ -64,26 +64,26 @@
   max-width: none;
   margin: 16px 20px 0;
   padding: 12px;
-  border-color: rgb(255 224 243 / 25%);
-  color: #fff7fc;
-  background: rgb(255 255 255 / 5%);
+  border-color: var(--settings-line, rgb(255 224 243 / 25%));
+  color: var(--settings-text, #fff7fc);
+  background: var(--settings-card, rgb(255 255 255 / 5%));
 }
 
 .vn-settings-panel .interaction-diagnostics-panel p,
 .vn-settings-panel .interaction-diagnostics-panel small {
-  color: rgb(255 246 252 / 70%);
+  color: var(--settings-text, rgb(255 246 252 / 70%));
 }
 
 .vn-settings-panel .interaction-diagnostics-panel section,
 .vn-settings-panel .interaction-diagnostics-panel button {
-  border-color: rgb(255 224 243 / 25%);
+  border-color: var(--settings-control-border, rgb(255 224 243 / 25%));
 }
 
 .vn-settings-panel .interaction-diagnostics-panel button {
-  color: #fff7fc;
-  background: rgb(255 255 255 / 9%);
+  color: var(--settings-text, #fff7fc);
+  background: var(--settings-control-background, rgb(255 255 255 / 9%));
 }
 
 .vn-settings-panel .interaction-diagnostics-panel button[aria-pressed="true"] {
-  background: rgb(206 139 181 / 35%);
+  background: var(--settings-accent-soft, rgb(206 139 181 / 35%));
 }

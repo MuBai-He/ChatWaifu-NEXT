@@ -4,7 +4,7 @@ for (const width of [1280, 390]) {
   test(`settings navigation and drafts at ${width}px`, async ({
     page,
   }, info) => {
-    const desktop = info.project.name === "settings-desktop";
+    const desktop = info.project.name.startsWith("settings-desktop");
     const sockets: string[] = [];
     page.on("websocket", (socket) => sockets.push(socket.url()));
     await page.setViewportSize({ width, height: 900 });

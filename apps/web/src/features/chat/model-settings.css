@@ -225,6 +225,9 @@
 
 .reindex-warning-modal {
   max-width: 480px;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   width: 100%;
   padding: 20px;
   border: 1px solid rgb(234 177 209 / 35%);

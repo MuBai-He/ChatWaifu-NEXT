@@ -66,7 +66,10 @@ function DesktopSettingsContent() {
           <button
             className="settings-guide"
             type="button"
-            onClick={() => setOnboardingOpen(true)}
+            onClick={(event) => {
+              event.currentTarget.focus();
+              setOnboardingOpen(true);
+            }}
           >
             <ProductIcon name="story" />
             <span>
@@ -81,7 +84,10 @@ function DesktopSettingsContent() {
             const Component = section.component;
             return (
               <div key={section.id} hidden={section.id !== sectionId}>
-                <Component context={context} />
+                <Component
+                  context={context}
+                  active={section.id === sectionId}
+                />
               </div>
             );
           })}

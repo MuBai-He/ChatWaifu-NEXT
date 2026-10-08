@@ -4,8 +4,10 @@ import { SettingsSectionIntro } from "./SettingsPrimitives";
 
 export function ModelsSettingsSection({
   context,
+  active = true,
 }: {
   context: CommonSettingsContext;
+  active?: boolean;
 }) {
   return (
     <section className="desktop-settings-models" aria-label="模型设置">
@@ -14,7 +16,11 @@ export function ModelsSettingsSection({
         title="模型路由"
         description="分别选择正式回复、行为决策、记忆和向量检索使用的模型。"
       />
-      <ModelSettingsPanel sessionId={context.sessionId} compact />
+      <ModelSettingsPanel
+        sessionId={context.sessionId}
+        compact
+        active={active}
+      />
     </section>
   );
 }

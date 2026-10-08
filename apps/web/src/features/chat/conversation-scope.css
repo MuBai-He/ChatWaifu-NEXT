@@ -6,10 +6,10 @@
   left: 12px;
   bottom: 12px;
   z-index: 80;
-  border: 1px solid #c9c3d8;
+  border: 1px solid var(--settings-line, #c9c3d8);
   border-radius: 18px;
-  background: #fffc;
-  color: #362f48;
+  background: var(--settings-card, #fffc);
+  color: var(--settings-text, #362f48);
   padding: 6px 12px;
   font-size: 12px;
   cursor: pointer;
@@ -20,7 +20,7 @@
   z-index: 10000;
   display: grid;
   place-items: center;
-  background: rgb(41 36 45 / 38%);
+  background: var(--settings-raised, rgb(41 36 45 / 38%));
   padding: 24px;
 }
 .conversation-scope-dialog {
@@ -34,10 +34,10 @@
   max-height: min(740px, calc(100dvh - 48px));
   min-height: 0;
   overflow: hidden;
-  border: 1px solid rgb(255 255 255 / 78%);
+  border: 1px solid var(--settings-line, rgb(255 255 255 / 78%));
   border-radius: 18px;
   color: var(--settings-text);
-  background: #f6f2f5;
+  background: var(--settings-card, #f6f2f5);
   font-size: 13px;
   box-shadow: 0 20px 80px rgb(41 36 45 / 24%);
 }
@@ -55,13 +55,13 @@
   font-weight: 600;
 }
 .conversation-scope-dialog button {
-  border: 1px solid rgb(86 67 91 / 18%);
-  color: #845981;
-  background: rgb(255 255 255 / 88%);
+  border: 1px solid var(--settings-control-border, rgb(86 67 91 / 18%));
+  color: var(--settings-accent, #845981);
+  background: var(--settings-control-background, rgb(255 255 255 / 88%));
   cursor: pointer;
 }
 .conversation-scope-dialog button:hover:not(:disabled) {
-  background: #efe5ee;
+  background: var(--settings-control-background, #efe5ee);
 }
 .conversation-scope-dialog button:disabled {
   opacity: 0.45;
@@ -120,7 +120,7 @@
   overflow: clip;
   border: 1px solid var(--settings-line);
   border-radius: 12px;
-  background: rgb(255 255 255 / 65%);
+  background: var(--settings-card, rgb(255 255 255 / 65%));
 }
 .conversation-scope-editor summary {
   padding: 14px 16px;
@@ -128,7 +128,7 @@
   cursor: pointer;
 }
 .conversation-scope-editor summary::marker {
-  color: #845981;
+  color: var(--settings-accent, #845981);
 }
 .conversation-scope-editor-body {
   display: grid;
@@ -164,12 +164,12 @@
   padding: 8px 12px;
   border: 1px solid var(--settings-line);
   border-radius: 10px;
-  background: rgb(255 255 255 / 70%);
+  background: var(--settings-card, rgb(255 255 255 / 70%));
   cursor: pointer;
 }
 .conversation-scope-member:has(input:checked) {
-  border-color: rgb(141 82 125 / 45%);
-  background: #f2e9f0;
+  border-color: var(--settings-control-border, rgb(141 82 125 / 45%));
+  background: var(--settings-control-background, #f2e9f0);
 }
 .conversation-scope-member input[type="checkbox"] {
   flex: 0 0 auto;
@@ -189,8 +189,8 @@
 .conversation-scope-dialog [role="alert"] {
   padding: 12px;
   border-radius: 10px;
-  color: #9b425e;
-  background: #f5e4eb;
+  color: var(--settings-danger, #9b425e);
+  background: var(--settings-card, #f5e4eb);
   overflow-wrap: anywhere;
 }
 .conversation-scope-dialog footer {
@@ -200,16 +200,16 @@
   gap: 10px;
   padding: 16px 24px;
   border-top: 1px solid var(--settings-line);
-  background: rgb(255 255 255 / 65%);
+  background: var(--settings-card, rgb(255 255 255 / 65%));
 }
 .conversation-scope-dialog button.conversation-scope-primary {
-  border-color: #8d527d;
-  color: #fff;
-  background: #8d527d;
+  border-color: var(--settings-control-border, #8d527d);
+  color: var(--settings-text, #fff);
+  background: var(--settings-primary, #8d527d);
 }
 .conversation-scope-dialog
   button.conversation-scope-primary:hover:not(:disabled) {
-  background: #79456c;
+  background: var(--settings-primary, #79456c);
 }
 @media (max-width: 480px) {
   .conversation-scope-overlay {

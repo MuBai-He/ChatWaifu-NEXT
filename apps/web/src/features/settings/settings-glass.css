@@ -1,0 +1,257 @@
+@import "../../plum-theme.css";
+
+.settings-material.settings-controls {
+  color-scheme: dark;
+  --settings-text: var(--plum-text);
+  --settings-muted: var(--plum-muted);
+  --settings-line: var(--plum-line);
+  --settings-card: rgb(38 30 44 / 96%);
+  --settings-card-bg: var(--settings-card);
+  --settings-placeholder: #b3a0bc;
+  --settings-disabled-text: #bbaec2;
+  --settings-disabled-background: #302536;
+  --settings-danger-fill: #753c50;
+  --settings-raised: var(--plum-raised);
+  --settings-accent: var(--plum-accent);
+  --settings-primary: var(--plum-primary);
+  --settings-primary-hover: var(--plum-primary-hover);
+  --settings-primary-text: var(--plum-primary-text);
+  --settings-primary-fill: var(--plum-primary-fill);
+  --settings-accent-soft: #3b2b3b;
+  --settings-danger: var(--plum-danger);
+  --settings-danger-soft: var(--plum-danger-soft);
+  --settings-success: var(--plum-success);
+  --settings-success-soft: var(--plum-success-soft);
+  --settings-warning: var(--plum-warning);
+  --settings-warning-soft: var(--plum-warning-soft);
+  --settings-glass: rgb(44 33 51 / 78%);
+  --settings-dialog-glass: rgb(38 29 45 / 98%);
+  --settings-glass-border: rgb(199 172 198 / 24%);
+  --settings-glass-shadow:
+    0 16px 48px rgb(5 3 8 / 24%), 0 2px 7px rgb(5 3 8 / 18%),
+    inset 0 1px 0 rgb(240 214 236 / 7%);
+  --ink: var(--settings-text);
+  --muted: var(--settings-muted);
+  --accent: var(--settings-accent);
+  --line: var(--settings-line);
+  --line-strong: var(--settings-control-border);
+  --faint: var(--settings-muted);
+  color: var(--settings-text);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+}
+/* Legacy standalone channel defaults must not reset a parent settings theme. */
+.settings-material .channels-settings-section {
+  --settings-text: inherit;
+  --settings-muted: inherit;
+  --settings-line: inherit;
+  --settings-card: inherit;
+}
+.settings-material.settings-controls,
+.settings-surface.settings-material.settings-controls,
+.settings-shell.settings-material.settings-controls,
+.settings-dialog-overlay.settings-material.settings-controls,
+.settings-material.settings-controls .settings-controls {
+  --settings-control-height: 40px;
+  --settings-control-radius: 12px;
+  --settings-control-font: 0.875rem;
+  --settings-control-border: var(--plum-control-line);
+  --settings-control-background: var(--plum-control);
+  --settings-control-focus: var(--plum-focus);
+}
+.settings-material *,
+.settings-material *::before,
+.settings-material *::after {
+  box-sizing: border-box;
+}
+.settings-material :is(button, input, select, textarea) {
+  font-family: inherit;
+}
+.settings-material.settings-controls :is(h1, h2, h3, h4) {
+  font-family: inherit;
+}
+.settings-surface.settings-material.settings-controls
+  button:not([role="switch"]) {
+  min-width: var(--settings-control-height);
+  min-height: var(--settings-control-height);
+  font-size: var(--settings-control-font);
+}
+.settings-material
+  :is(button, a, summary, input, select, textarea):focus-visible {
+  outline: 2px solid var(--settings-accent);
+  outline-offset: 3px;
+}
+.settings-material :is(button, a) {
+  touch-action: manipulation;
+}
+/* A complete baseline also covers buttons without a feature-specific class. */
+:where(.settings-material) button:where(:not([role="switch"])) {
+  -webkit-appearance: none;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--settings-control-height, 40px);
+  padding: 9px 14px;
+  gap: 7px;
+  border: 1px solid var(--settings-control-border);
+  border-radius: var(--settings-control-radius, 12px);
+  background: var(--settings-control-background);
+  color: var(--settings-accent);
+  font-size: var(--settings-control-font, 14px);
+  line-height: 1.5;
+  cursor: pointer;
+}
+:where(.settings-material)
+  button:where(:not([role="switch"])):hover:not(:disabled) {
+  background-color: var(--settings-accent-soft);
+}
+.settings-material button > svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+}
+.settings-shell.settings-controls .settings-scroll button:not([role="switch"]),
+.settings-dialog-body button:not([role="switch"]) {
+  min-height: var(--settings-control-height, 40px);
+  font-size: var(--settings-control-font, 14px);
+  line-height: 1.5;
+}
+.settings-shell.settings-controls .settings-scroll :is(p, label),
+.settings-dialog-body p {
+  font-size: 14px;
+}
+.settings-shell.settings-controls .settings-scroll small {
+  font-size: 12px;
+}
+.settings-dialog-overlay {
+  position: fixed;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  inset: 0;
+  padding: 24px;
+  background: rgb(8 5 12 / 62%);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  overscroll-behavior: contain;
+}
+.settings-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(1120px, 100%);
+  max-height: calc(100dvh - 48px);
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--settings-glass-border);
+  border-radius: 28px;
+  background: var(--settings-dialog-glass);
+  -webkit-backdrop-filter: blur(28px) saturate(1.35);
+  backdrop-filter: blur(28px) saturate(1.35);
+  box-shadow:
+    0 32px 100px rgb(5 3 8 / 48%),
+    inset 0 1px 0 rgb(240 214 236 / 8%);
+}
+.settings-dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px 26px;
+  border-bottom: 1px solid var(--settings-line);
+  background: transparent;
+}
+.settings-dialog-heading h2 {
+  margin: 0;
+  font-size: 23px;
+  letter-spacing: -0.6px;
+  line-height: 1.4;
+}
+.settings-dialog-heading p {
+  margin: 5px 0 0;
+  color: var(--settings-muted);
+  font-size: 13px;
+}
+.settings-dialog-heading button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 1px solid var(--settings-glass-border);
+  border-radius: 50%;
+  color: var(--settings-muted);
+  background: var(--settings-raised);
+  cursor: pointer;
+}
+.settings-dialog-body {
+  min-height: 0;
+  padding: 24px 26px;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+@media (pointer: coarse) {
+  .settings-material.settings-controls,
+  .settings-surface.settings-material.settings-controls,
+  .settings-shell.settings-material.settings-controls,
+  .settings-dialog-overlay.settings-material.settings-controls,
+  .settings-material.settings-controls .settings-controls {
+    --settings-control-height: 44px;
+  }
+  .settings-dialog-heading button {
+    width: 44px;
+    height: 44px;
+  }
+}
+@media (max-width: 700px) {
+  .settings-dialog-overlay {
+    padding: 10px;
+  }
+  .settings-dialog {
+    max-height: calc(100dvh - 20px);
+    border-radius: 22px;
+  }
+  .settings-dialog-heading,
+  .settings-dialog-body {
+    padding: 18px;
+  }
+}
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  .settings-material.settings-controls {
+    --settings-glass: #261e2c;
+    --settings-dialog-glass: #261e2c;
+    --settings-glass-border: #806985;
+  }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .settings-material.settings-controls {
+    --settings-glass: #261e2c;
+    --settings-dialog-glass: #261e2c;
+    --settings-card: #261e2c;
+  }
+  .settings-dialog-overlay {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+@media (prefers-contrast: more) {
+  .settings-material.settings-controls {
+    --settings-muted: #ddd0e2;
+    --settings-line: #ac8fac;
+    --settings-glass-border: #ac8fac;
+  }
+  .settings-material.settings-controls,
+  .settings-surface.settings-material.settings-controls,
+  .settings-shell.settings-material.settings-controls,
+  .settings-dialog-overlay.settings-material.settings-controls,
+  .settings-material.settings-controls .settings-controls {
+    --settings-control-border: #ac8fac;
+  }
+}

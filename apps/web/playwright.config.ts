@@ -2,7 +2,8 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
-  testIgnore: "**/desktop-product.spec.ts",
+  // The glass suite requires its dedicated disposable Runtime configuration.
+  testIgnore: ["**/desktop-product.spec.ts", "**/settings-glass.spec.ts"],
   // Real Cubism/WebGL cases are intentionally serialized in this shared local
   // server: parallel contexts can starve requestAnimationFrame long enough to
   // hide short semantic cues and create machine-load-dependent results.

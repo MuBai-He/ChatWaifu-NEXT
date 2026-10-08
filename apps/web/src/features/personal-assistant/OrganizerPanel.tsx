@@ -51,7 +51,13 @@ const localDate = (seconds: number) => {
     .slice(0, 16);
 };
 
-export function OrganizerPanel({ sessionId }: { sessionId: string }) {
+export function OrganizerPanel({
+  sessionId,
+  active = true,
+}: {
+  sessionId: string;
+  active?: boolean;
+}) {
   const [page, setPage] = useState<"tasks" | "apple" | "devices">("tasks");
   const [data, setData] = useState<Organizer>(empty);
   const [destinations, setDestinations] = useState<WriteDestination[]>([]);
@@ -79,11 +85,13 @@ export function OrganizerPanel({ sessionId }: { sessionId: string }) {
   const refresh = useCallback(async () => {
     const rev = epoch.current.value;
     const connection = await resolveRuntimeConnection();
+    if (rev !== epoch.current.value) return;
     const result = await organizerRequest<Organizer>(
       `/organizer?session_id=${encodeURIComponent(sessionId)}`,
       undefined,
       connection,
     );
+    if (rev !== epoch.current.value) return;
     const defaults = await organizerRequest<{ items: WriteDestination[] }>(
       `/destinations?session_id=${encodeURIComponent(sessionId)}`,
       undefined,
@@ -106,15 +114,19 @@ export function OrganizerPanel({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     const revision = epoch.current;
     ++revision.value;
+    if (!active) return;
+    const expected = revision.value;
     const refreshSafe = () =>
-      void refresh().catch((e) => setError(errorText(e)));
+      void refresh().catch((e) => {
+        if (expected === revision.value) setError(errorText(e));
+      });
     refreshSafe();
     const timer = setInterval(refreshSafe, 5000);
     return () => {
       ++revision.value;
       clearInterval(timer);
     };
-  }, [refresh]);
+  }, [active, refresh]);
   const run = async (work: () => Promise<void>) => {
     setBusy(true);
     setError(null);

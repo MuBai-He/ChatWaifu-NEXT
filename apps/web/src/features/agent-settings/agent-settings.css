@@ -1,0 +1,54 @@
+/* Expanded task and development forms use the same vertical field rhythm. */
+.settings-shell .agent-settings label {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  margin-block: 16px;
+  overflow-wrap: anywhere;
+}
+.settings-shell .agent-settings label:has(input[type="checkbox"]) {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.settings-shell .agent-settings input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0;
+  accent-color: var(--settings-primary);
+}
+.settings-shell .agent-settings :is(input:not([type="checkbox"]), textarea) {
+  width: 100%;
+  min-width: 0;
+}
+.settings-shell .agent-settings textarea {
+  min-height: 128px;
+}
+.settings-shell .agent-settings fieldset {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  min-width: 0;
+  margin: 20px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--settings-line);
+  border-radius: 12px;
+  gap: 10px;
+}
+.settings-shell .agent-settings fieldset legend {
+  padding-inline: 6px;
+  color: var(--settings-muted);
+}
+.settings-shell .agent-settings fieldset label {
+  margin: 0;
+}
+.settings-shell .agent-settings :is(li, pre, code) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.settings-shell .agent-settings li {
+  padding-block: 8px;
+}
+.settings-shell .agent-settings button + button {
+  margin: 8px 0 0 8px;
+}

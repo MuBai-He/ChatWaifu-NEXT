@@ -69,14 +69,14 @@
   font-size: 0.85rem;
 }
 .channel-settings-tabs button[aria-current="page"] {
-  color: #754a6c;
-  border-color: #ae638f;
-  background: #f4e7f0;
+  color: var(--settings-accent, #754a6c);
+  border-color: var(--settings-control-border, #ae638f);
+  background: var(--settings-control-background, #f4e7f0);
 }
 .channel-settings-disclosure {
   border: 1px solid var(--settings-line);
   border-radius: 12px;
-  background: rgb(255 255 255 / 35%);
+  background: var(--settings-card, rgb(255 255 255 / 35%));
   min-width: 0;
 }
 .channel-settings-disclosure > summary {
@@ -137,7 +137,7 @@
   flex-wrap: wrap;
   gap: 12px;
   padding: 14px;
-  border: 1px solid #bd8297;
+  border: 1px solid var(--settings-line, #bd8297);
   border-radius: 10px;
 }
 .channel-settings-confirm p {
@@ -176,9 +176,9 @@
   width: 38px;
   height: 22px;
   margin: 0;
-  border: 1px solid rgb(87 70 92 / 16%);
+  border: 1px solid var(--settings-control-border, rgb(87 70 92 / 16%));
   border-radius: 999px;
-  background: #d5cfd6;
+  background: var(--settings-control-background, #d5cfd6);
   cursor: pointer;
 }
 .channels-settings-section
@@ -197,8 +197,8 @@
 .channels-settings-section
   .desktop-settings-toggle-row
   input[role="switch"]:checked {
-  background: #a65f8c;
-  border-color: #9c5c86;
+  background: var(--settings-primary, #a65f8c);
+  border-color: var(--settings-control-border, #9c5c86);
 }
 .channels-settings-section
   .desktop-settings-toggle-row
@@ -217,8 +217,8 @@
   width: 38px;
   height: 38px;
   border-radius: 11px;
-  color: #8d527d;
-  background: rgb(173 91 141 / 10%);
+  color: var(--settings-accent, #8d527d);
+  background: var(--settings-raised, rgb(173 91 141 / 10%));
 }
 .channels-settings-section .desktop-settings-section-intro svg {
   width: 20px;
@@ -261,7 +261,7 @@
 .qq-group-routes-panel button {
   padding: 8px 12px;
   color: var(--settings-text);
-  background: white;
+  background: var(--settings-control-background, white);
   border: 1px solid var(--settings-line);
   border-radius: 8px;
   cursor: pointer;
@@ -271,8 +271,8 @@
   box-sizing: border-box;
   min-height: 100dvh;
   padding: 28px max(20px, calc((100vw - 900px) / 2));
-  color: #29242d;
-  background: linear-gradient(145deg, #f6f2f5, #eee8ef);
+  color: var(--settings-text, #29242d);
+  background: var(--settings-card, linear-gradient(145deg, #f6f2f5, #eee8ef));
   overflow-y: auto;
 }
 .channel-settings-page-header {
@@ -286,12 +286,12 @@
   font-size: 1.4rem;
 }
 .channel-settings-page-header :is(a, button) {
-  color: #754a6c;
+  color: var(--settings-accent, #754a6c);
   font-size: 0.85rem;
 }
 .channel-settings-page-header > span {
   font-size: 0.8rem;
-  color: #77707d;
+  color: var(--settings-muted, #77707d);
 }
 .vn-settings-link {
   color: inherit;
