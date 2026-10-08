@@ -5536,6 +5536,11 @@
         "group_discussion": {
           "$ref": "#/$defs/GroupDiscussionPolicy"
         },
+        "qq_account_enabled": {
+          "default": false,
+          "title": "Qq Account Enabled",
+          "type": "boolean"
+        },
         "qq_native_favorites_enabled": {
           "default": true,
           "title": "Qq Native Favorites Enabled",

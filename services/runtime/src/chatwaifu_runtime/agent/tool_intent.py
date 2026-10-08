@@ -32,6 +32,17 @@ _OPERATION = re.compile(
     r"download|install|uninstall|move|rename)\b)",
     re.IGNORECASE,
 )
+# A requested QQ gesture is an external operation, not a fictional dialogue cue.
+# Require an imperative plus a recipient (or an objectless command), so mentions,
+# quoted examples, definitions and explicit negations retain automatic selection.
+_QQ_POKE_REQUEST = re.compile(
+    _CLAUSE_START
+    + _POLITE
+    + r"(?:(?:你)?(?:戳一戳|戳戳|戳|拍一拍)(?=\s*(?:我|他|她|一下|[1-9]\d{4,10}\b|$))|"
+    r"(?:please\s+|can\s+you\s+|could\s+you\s+|would\s+you\s+)*"
+    r"(?:poke|nudge)\s+(?:me|him|her|[1-9]\d{4,10})\b)",
+    re.IGNORECASE,
+)
 _REMINDER = re.compile(r"提醒我|叫醒我|\b(?:remind|wake)\s+me\b", re.IGNORECASE)
 _NO_CONVERSATIONAL_FOLLOWUP = re.compile(
     r"^" + _POLITE + r"(?:(?:不(?:用|必|要)|别)(?:再|继续)?(?:提醒我|追问我|跟进)(?:了|啦)?|"
@@ -177,6 +188,7 @@ def requires_external_operation(user_text: str) -> bool:
     return bool(
         _URL.search(intent_text)
         or external_command
+        or _QQ_POKE_REQUEST.search(operation_text)
         or _REMINDER.search(operation_text)
         or _CLOCK_QUESTION.search(operation_text)
         or _PERSONAL_DATA_REQUEST.search(operation_text)

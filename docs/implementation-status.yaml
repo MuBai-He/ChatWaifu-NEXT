@@ -1,3 +1,15 @@
+qq_account_operations:
+  status: deployed_live_poke_model_provider_and_handset_verified
+  adr: "0079"
+  evidence:
+    - Owner requested QQ account-wide foreground operations on 2026-10-07; explicit policy enables 158 NapCat 4.18.28 capabilities including real poke, with live account/generation/route/version checks and recorded provider results.
+    - Existing incoming conversation grants and group participation policy are preserved; QQ authority is separate from desktop, Calendar, memory and durable task permissions. No migration or blind transport retry is introduced.
+    - Deployed qq-account-20261007; settings revision 1 enables QQ account operations. Both original groups were restored from fresh matching audiences, same scenes/grants, participation off. Configuration/models, old database rows, 13 containers and 7 unrelated services were preserved; 10 served Web hashes and hostname-verified HTTPS passed.
+    - Owner's live 16:29 and 16:31 poke requests produced no tools despite active permissions. Gesture intent now requires native selection and exposes send_poke initially. The real configured Gemini 3.8 Flash High selected send_poke with empty params in an isolated no-execution probe. Deployed qq-poke-20261007 with five source overlays, 1425 unrelated source hashes preserved, same policy revision and audiences, model/config/database checks, 13 containers, 7 unrelated services and 10 unchanged Web artifacts verified; handset poke remains pending.
+    - Poke fix passed 153 intent/account/group/routing/catalog tests and 179 tool/shared-conversation/cancellation/settings tests, changed-code Ruff/format/strict Pyright and architecture checks. No frontend, protocol or schema change in this follow-up.
+    - Fresh owner QQ group request at 16:42:41 selected required native tools with four schemas; generation d3ae0213-5098-4420-93ac-8a74bd3a5a95 produced succeeded qq.account/send_poke run 322689ea-ee4a-476c-a507-f625ff717f74 at 16:42:53. Channel turn completed and owner confirmed actual QQ poke. This accepts this poke flow, not all 158 account actions.
+    - Broad related Python regression passed 798 cases before final shared-conversation and discovery refinements; final QQ/settings chain passed 23, shared/group/cancellation/catalog suite passed 121 with two routing failures subsequently repaired and all 35 routing/account/catalog cases passed. Web 457 and protocol 127 passed; changed-code Ruff/strict types, architecture and Web lint/build passed. Global protocol lint retains one existing no-control-regex finding in an unchanged parser.
+
 schema_version: "1.0"
 updated_at: "2026-10-06"
 current_phase: "13.6"

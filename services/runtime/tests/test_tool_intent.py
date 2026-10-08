@@ -201,3 +201,37 @@ def test_technical_specification_requirements_need_a_recorded_source(text: str) 
 )
 def test_supplied_content_and_general_algorithms_do_not_force_a_lookup(text: str) -> None:
     assert not requires_external_operation(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "戳一戳我",
+        "你戳一戳我",
+        "请戳我一下",
+        "帮我戳一戳",
+        "拍一拍我",
+        "Poke me",
+        "Please nudge me",
+    ],
+)
+def test_qq_gesture_command_requires_a_real_operation(text: str) -> None:
+    assert requires_external_operation(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "戳一戳是什么",
+        "戳一戳有哪些用法？",
+        "不要戳一戳我",
+        "请别戳我",
+        "我刚才戳了你",
+        "有人说戳一戳我",
+        "请解释“戳一戳我”是什么意思",
+        '"戳一戳我"',
+        "Don't poke me",
+    ],
+)
+def test_qq_gesture_mentions_and_negations_are_not_operation_requests(text: str) -> None:
+    assert not requires_external_operation(text)

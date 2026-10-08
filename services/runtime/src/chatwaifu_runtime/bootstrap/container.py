@@ -69,6 +69,7 @@ from chatwaifu_runtime.external_channels.management import ChannelManagementServ
 from chatwaifu_runtime.external_channels.models import ChannelDeliveryPlanRecord, ChannelTurnRecord
 from chatwaifu_runtime.external_channels.proactive import ChannelProactiveService
 from chatwaifu_runtime.external_channels.public_web import ChannelPublicWebPolicy
+from chatwaifu_runtime.external_channels.qq_account import QQAccountCapabilities
 from chatwaifu_runtime.external_channels.qq_capabilities import QQSceneCapabilities
 from chatwaifu_runtime.external_channels.service import (
     WEIXIN_ILINK_PROVIDER,
@@ -434,7 +435,12 @@ class RuntimeContainer:
                         if s.skill_id != "channel.voice"
                     )
                     if self.channel_settings.get().policy.qq_owner_agent_enabled
-                    else frozenset()
+                    else frozenset[str]()
+                )
+                | (
+                    frozenset({"qq.scene", "qq.account"})
+                    if self.channel_settings.get().policy.qq_account_enabled
+                    else frozenset[str]()
                 ),
             ),
             qq_voice_input_enabled=lambda: (
@@ -538,6 +544,15 @@ class RuntimeContainer:
         self.group_autonomy.task_creator = self._group_task
         self.runtime_skills.register_generation_handler(
             "qq_scene", self.qq_scene_capabilities, shared=True
+        )
+        self.qq_account_capabilities = QQAccountCapabilities(
+            self.qq_scene_capabilities,
+            lambda: self.channel_settings.get().policy.qq_account_enabled,
+            self.qq_channels.account_agent_call,
+            settings.skills_dir / "builtin" / "qq-account" / "openapi.json",
+        )
+        self.runtime_skills.register_generation_handler(
+            "qq_account", self.qq_account_capabilities, shared=True
         )
         self.channel_files = ChannelFileSkill(
             self.external_channel_repository,
@@ -658,12 +673,19 @@ class RuntimeContainer:
                 {"qq.scene", "agent.tasks", "workspace.files", "documents.create", "channel.file"}
             )
             if policy.mode != "off" and policy.route_revision == route.revision
-            else frozenset()
+            else frozenset[str]()
+        ) | (
+            frozenset({"qq.scene", "qq.account"})
+            if self.channel_settings.get().policy.qq_account_enabled
+            else frozenset[str]()
         )
 
     async def _qq_agent_scene_enabled(self, turn: ChannelTurnRecord) -> bool:
         if turn.group_route_id is None:
-            return self.channel_settings.get().policy.qq_owner_agent_enabled
+            return (
+                self.channel_settings.get().policy.qq_owner_agent_enabled
+                or self.channel_settings.get().policy.qq_account_enabled
+            )
         route = await self.channel_group_repository.get_route(turn.group_route_id)
         return route is not None and "qq.scene" in await self.group_agent_skills(route)
 
@@ -900,6 +922,8 @@ class RuntimeContainer:
     def _agent_capability_availability(
         self, skill_id: str, capability: str
     ) -> tuple[CapabilityStatus, str] | None:
+        if skill_id == "qq.account" and not self.channel_settings.get().policy.qq_account_enabled:
+            return CapabilityStatus.NOT_CONFIGURED, "尚未启用角色 QQ 账号操作权限"
         if skill_id == "qq.scene" and capability == "read_file" and getattr(sys, "frozen", False):
             return CapabilityStatus.NOT_CONFIGURED, "打包版尚未配置资料解析工作进程"
         if skill_id == "qq.scene" and capability not in {
@@ -928,8 +952,13 @@ class RuntimeContainer:
             and self.personal_assistant.state != "ready"
         ):
             return CapabilityStatus.NOT_CONFIGURED, "个人助理账户连接尚未配置"
-        if skill_id in {"qq.scene", "channel.file"} and not self.qq_channels.agent_available:
+        if (
+            skill_id in {"qq.scene", "qq.account", "channel.file"}
+            and not self.qq_channels.agent_available
+        ):
             return CapabilityStatus.NOT_CONFIGURED, "QQ 尚无已连接的通道;操作还需要当前场景授权"
+        if skill_id == "qq.account":
+            return CapabilityStatus.AVAILABLE, "已由账号所有者启用 QQ 账号级操作权限"
         return None
 
     def _channel_supports_audio(self, provider_id: str) -> bool:

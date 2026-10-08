@@ -281,6 +281,13 @@ function ChannelRuntimeSettingsContent({
                 onChange={(v) => toggle("qq_owner_public_web_enabled", v)}
               />
               <SettingsToggle
+                label="将 QQ 作为角色自己的账号"
+                description="角色可在已接入的聊天中操作整个 QQ 账号：好友、群、戳一戳、消息、资料与群管理。QQ 操作无需逐次桌面确认；电脑和其他服务权限独立。"
+                checked={draft.qq_account_enabled ?? false}
+                disabled={disabled}
+                onChange={(v) => toggle("qq_account_enabled", v)}
+              />
+              <SettingsToggle
                 label="允许 QQ 主人私聊发现 Agent 能力"
                 description="显示当前已安装的文件、文档、日历、任务与插件能力。写入和外部操作继续经过权限检查。"
                 checked={draft.qq_owner_agent_enabled ?? false}

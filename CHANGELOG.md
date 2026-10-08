@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Fix explicit QQ gesture requests such as “戳一戳我” producing only dialogue:
+  require native tool selection and expose `send_poke` in the initial admitted
+  QQ tool list. Keep definitions, quotes and negations on automatic selection;
+  other account operations retain progressive discovery.
+
+- Add an explicit owner-controlled QQ account mode with 158 version-pinned NapCat
+  operations, including actual poke execution and recorded provider results. Existing
+  admitted private/group turns can operate the same bot account without per-call
+  desktop confirmation; live generation, scene, account and version checks remain.
+  Keep incoming grants and group participation unchanged, with progressive capability
+  activation and a separate permission setting from desktop and other services.
+
 - Let a genuine QQ group mention without text invite a reply to recent admitted
   discussion, asking for a topic when none is available. Keep its explicit trigger
   marker outside listening/memory extraction and preserve speaker grants. Place

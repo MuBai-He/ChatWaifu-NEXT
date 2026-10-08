@@ -116,3 +116,10 @@ paths = [
 regexes = [
     '''^conversation_key:\ ConversationKey[1-4]$''',
 ]
+
+[[rules.allowlists]]
+description = "Exact public NapCat 4.18.28 OpenAPI clientkey example; upstream bytes verified"
+condition = "AND"
+regexTarget = "match"
+paths = ['''^skills/builtin/qq-account/openapi\.json$''']
+regexes = ['''^clientkey":\ "abcdef123456"$''']

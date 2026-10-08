@@ -89,6 +89,24 @@ describe("Runtime channel settings", () => {
     ).toBe(true);
   });
 
+  it("saves QQ account authority independently of owner agent and public web", async () => {
+    vi.mocked(client.updateChannelRuntimeSettings).mockImplementation(
+      (policy, revision) =>
+        Promise.resolve({ ...snapshot(revision + 1), policy }),
+    );
+    render(<ChannelRuntimeSettingsPanel runtimeOnline />);
+    fireEvent.click(
+      await screen.findByRole("switch", { name: "将 QQ 作为角色自己的账号" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "保存渠道权限与预算" }));
+    await screen.findByText(/渠道设置已保存到当前 Runtime/u);
+    expect(client.updateChannelRuntimeSettings).toHaveBeenCalledWith(
+      { ...snapshot().policy, qq_account_enabled: true },
+      3,
+      expect.any(Object),
+    );
+  });
+
   it.each(["", "127", "8193"])(
     "rejects invalid input budget %j before any mutation",
     async (value) => {

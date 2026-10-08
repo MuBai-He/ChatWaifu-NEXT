@@ -501,6 +501,11 @@ def _model_description(skill: SkillDefinition, capability: SkillCapability) -> s
             " Runtime rechecks the active authorized QQ reply and generation."
             " This current reply needs no separate desktop confirmation."
         )
+    if skill.source == "builtin" and skill.skill_id == "qq.account":
+        confirmation = (
+            " Runtime requires operator-enabled QQ account authority and a live QQ request."
+            " Enabled account operations need no separate desktop confirmation."
+        )
     value = (
         f"{_clean_text(skill.name)}: {_clean_text(capability.description)} "
         f"Source: {source}.{confirmation}"
