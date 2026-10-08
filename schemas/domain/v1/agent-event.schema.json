@@ -1,0 +1,76 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/agent-event.schema.json",
+  "properties": {
+    "event_id": {
+      "format": "uuid",
+      "title": "Event Id",
+      "type": "string"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "input",
+        "work",
+        "wake"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "occurred_at": {
+      "format": "date-time",
+      "title": "Occurred At",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "scope": {
+      "title": "Scope",
+      "type": "string"
+    },
+    "session_id": {
+      "format": "uuid",
+      "title": "Session Id",
+      "type": "string"
+    },
+    "source_refs": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 96,
+      "title": "Source Refs",
+      "type": "array"
+    },
+    "task_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Task Id"
+    }
+  },
+  "required": [
+    "event_id",
+    "session_id",
+    "scope",
+    "kind",
+    "occurred_at",
+    "expires_at"
+  ],
+  "title": "AgentEvent",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

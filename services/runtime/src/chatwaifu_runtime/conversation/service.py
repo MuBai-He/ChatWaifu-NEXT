@@ -198,7 +198,11 @@ class ConversationService:
             visible_tools = tuple(
                 tool
                 for tool in visible_tools
-                if tool.to_invocation({}).skill_id in options.allowed_skill_ids
+                if (
+                    getattr(tool, "is_discovery", False)
+                    and bool(options.allowed_skill_ids - {"channel.voice"})
+                )
+                or tool.to_invocation({}).skill_id in options.allowed_skill_ids
             )
         else:
             # Current channel replies require an explicit channel capability policy.
@@ -990,15 +994,21 @@ class ConversationService:
                 frozenset({"channel.voice"})
                 if options.allow_shared_voice
                 and options.allow_tools
-                and options.allowed_skill_ids == frozenset({"channel.voice"})
+                and options.allowed_skill_ids is not None
+                and "channel.voice" in options.allowed_skill_ids
                 else frozenset()
             )
             options = replace(
                 options,
                 output_modes=frozenset({"text"}),
-                allow_tools=bool(shared_voice_skills),
-                allowed_skill_ids=shared_voice_skills,
-                contextual_skill_ids=shared_voice_skills,
+                allow_tools=bool(
+                    shared_voice_skills
+                    | (options.allowed_shared_skill_ids & frozenset({"qq.scene"}))
+                ),
+                allowed_skill_ids=shared_voice_skills
+                | (options.allowed_shared_skill_ids & frozenset({"qq.scene"})),
+                contextual_skill_ids=shared_voice_skills
+                | (options.allowed_shared_skill_ids & frozenset({"qq.scene"})),
             )
             # Invalid identity never cancels another valid generation. Cancellation
             # joins owned work before replacing its active-generation entry.
@@ -1765,6 +1775,7 @@ class ConversationService:
                 tools=snapshot.visible_tools,
                 source_context=sources,
                 source_answer_turn=answer_turn,
+                allowed_skill_ids=options.allowed_skill_ids,
             ):
                 self._ensure_current(accepted)
                 output += delta

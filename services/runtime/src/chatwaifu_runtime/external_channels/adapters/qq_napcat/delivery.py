@@ -22,6 +22,7 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryPartKind,
     ChannelDeliveryPartStatus,
     ChannelDeliveryStatus,
+    ChannelFileDeliveryPartPayload,
     ChannelImageDeliveryPartPayload,
     ChannelMessageKind,
     ChannelTextDeliveryPartPayload,
@@ -30,6 +31,7 @@ from chatwaifu_protocol.channels import (
 from chatwaifu_protocol.errors import StructuredError
 from PIL import Image
 
+from chatwaifu_runtime.agent.artifacts import ArtifactService
 from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.external_channels.models import (
     ChannelConnectionRecord,
@@ -94,6 +96,8 @@ async def reconcile_known_sends(
                 continue
             if receipt == "unknown":
                 continue
+            if receipt == "file:accepted":
+                continue
             if not re.fullmatch(r"-?[0-9]{1,20}", receipt):
                 conflicts.add(key)
                 continue
@@ -146,6 +150,8 @@ class NapCatDelivery:
         group_authorization: Callable[[ChannelDeliveryPlanRecord], Awaitable[bool]] | None = None,
         journal_lock: asyncio.Lock | None = None,
         private_voice_enabled: Callable[[], bool] = lambda: True,
+        artifacts: ArtifactService | None = None,
+        task_authorization: Callable[[ChannelDeliveryPlanRecord], Awaitable[bool]] | None = None,
     ) -> None:
         self._repository = repository
         self._client = client
@@ -158,6 +164,8 @@ class NapCatDelivery:
         self._group_authorization = group_authorization
         self._journal_lock = journal_lock or asyncio.Lock()
         self._private_voice_enabled = private_voice_enabled
+        self._artifacts = artifacts
+        self._task_authorization = task_authorization
 
     async def execute_part(
         self, plan: ChannelDeliveryPlanRecord, part: ChannelDeliveryPartRecord
@@ -173,12 +181,22 @@ class NapCatDelivery:
         journal: dict[str, str] = json.loads(cursor) if cursor else {}
         key = part.provider_client_id
         known = journal.get(key)
+        if known == "file:accepted":
+            return DeliveryPartExecutionResult(DeliveryPartOutcome.DELIVERED)
         if known and known != "unknown":
             return DeliveryPartExecutionResult(
                 DeliveryPartOutcome.DELIVERED, provider_message_id=known
             )
         if known == "unknown":
             return _failed("qq_delivery_unknown", "发送结果待确认，为避免重复消息，未自动重发。")
+        if plan.task_target is not None:
+            if not await self._authorized(plan):
+                return _failed("qq_task_authority_revoked", "任务的渠道授权已失效。")
+            if isinstance(part.payload, ChannelFileDeliveryPartPayload):
+                return await self._execute_file(plan, part, journal)
+            if isinstance(part.payload, ChannelTextDeliveryPartPayload):
+                return await self._execute_task_text(plan, part, journal)
+            return _failed("qq_task_delivery_invalid", "任务投递格式不受支持。")
         if plan.group_target is not None:
             return await self._execute_group(plan, part, journal)
         if plan.channel_turn_id is not None:
@@ -199,6 +217,8 @@ class NapCatDelivery:
             or current.cancel_requested_at is not None
         ):
             return _failed("qq_delivery_cancelled", "QQ 投递已停止。")
+        if isinstance(part.payload, ChannelFileDeliveryPartPayload):
+            return await self._execute_file(plan, part, journal)
         segments: list[JsonObject]
         try:
             if isinstance(part.payload, ChannelTextDeliveryPartPayload):
@@ -313,6 +333,155 @@ class NapCatDelivery:
         except Exception:
             return _failed("qq_delivery_unknown", "发送结果待确认，未自动重发。")
 
+    async def _execute_task_text(
+        self,
+        plan: ChannelDeliveryPlanRecord,
+        part: ChannelDeliveryPartRecord,
+        journal: dict[str, str],
+    ) -> DeliveryPartExecutionResult:
+        assert isinstance(part.payload, ChannelTextDeliveryPartPayload)
+        target = plan.task_target
+        assert target is not None
+        key = part.provider_client_id
+
+        async def allowed() -> bool:
+            connection = await self._repository.get_connection(self._connection_id)
+            current = await self._repository.get_delivery_plan(plan.delivery_id)
+            claimed = current.parts[part.ordinal] if current else None
+            return bool(
+                connection
+                and connection.configuration.enabled
+                and connection.configuration.allowed_sender_keys == [self._owner]
+                and current
+                and current.task_target == target
+                and current.cancel_requested_at is None
+                and claimed
+                and claimed.payload == part.payload
+                and claimed.lease_id == part.lease_id
+                and claimed.status is ChannelDeliveryPartStatus.SENDING
+                and claimed.lease_expires_at is not None
+                and claimed.lease_expires_at > datetime.now(UTC)
+                and await self._authorized(plan)
+            )
+
+        try:
+            if send_journal_size(journal) >= 256 or not await allowed():
+                return _failed("qq_task_authority_revoked", "任务投递已停止。")
+            journal[key] = "unknown"
+            await self._save(journal)
+            segments = native_text_segments(part.payload.text)
+            if target.binding.route_id is not None:
+                receipt = await self._client.send_group(
+                    target.binding.conversation_key.removeprefix("group:"),
+                    segments,
+                    before_send=allowed,
+                )
+            else:
+                receipt = await self._client.send(
+                    target.binding.sender_key, segments, before_send=allowed
+                )
+            journal[key] = receipt
+            await self._save(journal)
+            return DeliveryPartExecutionResult(
+                DeliveryPartOutcome.DELIVERED, provider_message_id=receipt
+            )
+        except NapCatRejected:
+            journal.pop(key, None)
+            await self._save(journal)
+            return _failed("qq_task_authority_revoked", "任务投递已停止。")
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            return _failed("qq_delivery_unknown", "发送结果待确认，未自动重发。")
+
+    async def _execute_file(
+        self,
+        plan: ChannelDeliveryPlanRecord,
+        part: ChannelDeliveryPartRecord,
+        journal: dict[str, str],
+    ) -> DeliveryPartExecutionResult:
+        assert isinstance(part.payload, ChannelFileDeliveryPartPayload)
+        if self._artifacts is None or (plan.channel_turn_id is None and plan.task_target is None):
+            return _failed("qq_file_unavailable", "文件投递服务未配置。")
+        key = part.provider_client_id
+        try:
+            target = plan.task_target
+            if target is None:
+                source = (
+                    await self._repository.get_turn(plan.channel_turn_id)
+                    if plan.channel_turn_id
+                    else None
+                )
+                if source is None or source.chat_type is not ChannelChatType.DIRECT:
+                    return _failed("qq_file_scope_invalid", "文件不属于当前私聊。")
+                session_id, recipient, group_id = source.session_id, self._owner, None
+            else:
+                session_id = target.session_id
+                recipient = target.binding.sender_key
+                group_id = (
+                    target.binding.conversation_key.removeprefix("group:")
+                    if target.binding.route_id
+                    else None
+                )
+            artifact, content = await self._artifacts.read(session_id, part.payload.artifact_id)
+            if (
+                artifact.sha256 != part.payload.sha256
+                or artifact.name != part.payload.name
+                or artifact.byte_length != part.payload.byte_length
+                or hashlib.sha256(content).hexdigest() != artifact.sha256
+            ):
+                return _failed("qq_file_changed", "文件版本已改变。")
+
+            async def file_allowed() -> bool:
+                fresh = await self._repository.get_connection(self._connection_id)
+                current = await self._repository.get_delivery_plan(plan.delivery_id)
+                claimed = current.parts[part.ordinal] if current else None
+                return bool(
+                    fresh
+                    and fresh.configuration.enabled
+                    and fresh.configuration.allowed_sender_keys == [self._owner]
+                    and current
+                    and current.cancel_requested_at is None
+                    and current.task_target == plan.task_target
+                    and current.parts[part.ordinal].part_id == part.part_id
+                    and current.parts[part.ordinal].payload == part.payload
+                    and current.parts[part.ordinal].lease_id == part.lease_id
+                    and claimed
+                    and claimed.lease_expires_at is not None
+                    and claimed.lease_expires_at > datetime.now(UTC)
+                    and current.parts[part.ordinal].status is ChannelDeliveryPartStatus.SENDING
+                    and await self._authorized(plan)
+                )
+
+            async def checkpoint_file() -> None:
+                if send_journal_size(journal) >= 256:
+                    raise NapCatRejected("QQ send journal capacity reached")
+                journal[key] = "unknown"
+                await self._save(journal)
+
+            try:
+                receipt = await self._client.send_file(
+                    recipient,
+                    content,
+                    artifact.name,
+                    group_id=group_id,
+                    before_send=file_allowed,
+                    checkpoint=checkpoint_file,
+                )
+            except NapCatRejected:
+                journal.pop(key, None)
+                await self._save(journal)
+                return _failed("qq_file_rejected", "QQ 拒绝了文件传输。")
+            journal[key] = receipt or "file:accepted"
+            await self._save(journal)
+            return DeliveryPartExecutionResult(
+                DeliveryPartOutcome.DELIVERED, provider_message_id=receipt
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            return _failed("qq_delivery_unknown", "文件发送结果待确认，未自动重发。")
+
     async def _execute_group(
         self,
         plan: ChannelDeliveryPlanRecord,
@@ -344,6 +513,8 @@ class NapCatDelivery:
                         "data": {"file": "base64://" + base64.b64encode(audio).decode("ascii")},
                     }
                 ]
+            elif isinstance(part.payload, ChannelFileDeliveryPartPayload):
+                return _failed("qq_group_file_adapter_required", "群文件投递需要任务作用域适配。")
             else:
                 if self._sticker_library is None:
                     return _failed("qq_image_unavailable", "群表情图片不可用。")
@@ -561,6 +732,8 @@ class NapCatDelivery:
         )
 
     async def _authorized(self, plan: ChannelDeliveryPlanRecord) -> bool:
+        if plan.task_target is not None:
+            return self._task_authorization is not None and await self._task_authorization(plan)
         if plan.outbound_intent_id is None:
             return True
         return self._proactive_authorization is not None and await self._proactive_authorization(

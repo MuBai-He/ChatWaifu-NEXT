@@ -107,12 +107,12 @@ regexes = [
 ]
 
 [[rules.allowlists]]
-description = "Generated conversation key type reference"
+description = "Reviewed generated conversation key type references (1 through 4)"
 condition = "AND"
 regexTarget = "match"
 paths = [
     '''^packages/protocol\-typescript/src/generated/domain\.ts$''',
 ]
 regexes = [
-    '''^conversation_key:\ ConversationKey1$''',
+    '''^conversation_key:\ ConversationKey[1-4]$''',
 ]

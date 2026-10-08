@@ -28,6 +28,7 @@ from chatwaifu_protocol.channels import (
 )
 from chatwaifu_protocol.errors import StructuredError
 
+from chatwaifu_runtime.agent.artifacts import ArtifactService
 from chatwaifu_runtime.characters.service import CharacterService
 from chatwaifu_runtime.eventing.hub import EventHub
 from chatwaifu_runtime.eventing.publisher import EventPublisher
@@ -89,6 +90,8 @@ class NapCatManagement:
         groups: ChannelGroupService | None = None,
         private_voice_enabled: Callable[[], bool] = lambda: True,
         native_favorites_enabled: Callable[[], bool] = lambda: True,
+        artifacts: ArtifactService | None = None,
+        catalog_versions: frozenset[str] = frozenset({"4.18.33"}),
     ) -> None:
         self._gateway = gateway
         self._repository = repository
@@ -97,6 +100,11 @@ class NapCatManagement:
         self._publisher = publisher
         self._hub = hub
         self._audio_root = audio_root
+        self._artifacts = artifacts
+        self._catalog_versions = catalog_versions
+        self.task_authorization: Callable[[ChannelDeliveryPlanRecord], Awaitable[bool]] | None = (
+            None
+        )
         self._on_terminal = on_plan_terminal
         self._proactive_authorization = (
             proactive_authorization or gateway.authorize_proactive_delivery
@@ -156,6 +164,45 @@ class NapCatManagement:
         ):
             raise NapCatError("QQ group transport changed during audience observation")
         return members.account_key, members.member_ids
+
+    async def scoped_agent_call(
+        self,
+        connection_id: UUID,
+        account_key: str,
+        action: str,
+        params: JsonObject,
+        guard: Callable[[], Awaitable[bool]],
+    ) -> JsonObject:
+        client = self._clients.get(connection_id)
+        if client is None or not await guard():
+            raise NapCatError("QQ request unavailable")
+        login = await client.call("get_login_info", {})
+        if str(login.get("user_id")) != account_key or not await guard():
+            raise NapCatError("QQ account changed")
+        if "group_id" in params and not self._group_transport_ready(connection_id):
+            raise NapCatError("QQ group transport unavailable")
+        version = await client.call("get_version_info", {})
+        if str(version.get("app_version", "")).removeprefix("v") not in self._catalog_versions:
+            raise NapCatError(
+                "QQ OpenAPI version differs from reviewed catalog; adapt catalog first"
+            )
+        if (
+            self._clients.get(connection_id) is not client
+            or ("group_id" in params and not self._group_transport_ready(connection_id))
+            or not await guard()
+        ):
+            raise NapCatError("QQ authorization changed during version preflight")
+        data = await client.call(action, params)
+        if self._clients.get(connection_id) is not client or not await guard():
+            raise NapCatError("QQ request changed during operation")
+        return data
+
+    @property
+    def agent_available(self) -> bool:
+        return bool(self._clients)
+
+    async def authorize_task_delivery(self, plan: ChannelDeliveryPlanRecord) -> bool:
+        return self.task_authorization is not None and await self.task_authorization(plan)
 
     def _group_notice_observed(
         self, connection_id: UUID, notice: NapCatGroupMembershipNotice
@@ -590,6 +637,8 @@ class NapCatManagement:
                         connection_id,
                         config.allowed_sender_keys[0],
                         self._audio_root,
+                        artifacts=self._artifacts,
+                        task_authorization=self.authorize_task_delivery,
                         sticker_catalog=self._sticker_catalog,
                         sticker_library=self._sticker_library,
                         proactive_authorization=self._proactive_authorization,

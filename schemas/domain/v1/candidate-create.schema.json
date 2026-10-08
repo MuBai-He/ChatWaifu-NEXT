@@ -1,0 +1,36 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/candidate-create.schema.json",
+  "properties": {
+    "goal": {
+      "maxLength": 4000,
+      "minLength": 1,
+      "title": "Goal",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "session_id": {
+      "format": "uuid",
+      "title": "Session Id",
+      "type": "string"
+    },
+    "source_ref": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Source Ref",
+      "type": "string"
+    }
+  },
+  "required": [
+    "session_id",
+    "goal",
+    "source_ref"
+  ],
+  "title": "CandidateCreate",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

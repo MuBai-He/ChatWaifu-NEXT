@@ -1,0 +1,94 @@
+{
+  "task": {
+    "schema_version": "1.0",
+    "task_id": "12345678-1234-4234-8234-123456789abc",
+    "session_id": "12345678-1234-4234-8234-123456789abc",
+    "scope": "local",
+    "goal": "写入后读取核实",
+    "completion_criteria": [
+      "readback"
+    ],
+    "authorization": {
+      "schema_version": "1.0",
+      "allowed_skill_ids": [
+        "workspace.files"
+      ],
+      "resource_roots": [
+        "notes"
+      ],
+      "calendar_ids": [
+        "work"
+      ],
+      "source_ref": "owner:fixture",
+      "allow_writes": true,
+      "capability_fingerprints": {},
+      "expires_at": "2026-10-07T01:00:00Z"
+    },
+    "channel_binding": null,
+    "state": "waiting_input",
+    "revision": 0,
+    "max_tool_calls": 100,
+    "max_active_seconds": 1800,
+    "tool_calls": 0,
+    "active_seconds": 0.0,
+    "result_text": null,
+    "blocked_reason": null,
+    "wake_at": null,
+    "continuation": null,
+    "candidate_id": null,
+    "delivery_id": null,
+    "created_at": "2026-10-07T00:00:00Z",
+    "updated_at": "2026-10-07T00:00:00Z"
+  },
+  "capabilities": {
+    "schema_version": "1.0",
+    "items": [
+      {
+        "schema_version": "1.0",
+        "capability_id": "workspace.files/read",
+        "skill_id": "workspace.files",
+        "skill_version": "1.0.0",
+        "name": "read",
+        "description": "读取工作区",
+        "category": "workspace",
+        "source": "builtin",
+        "status": "authorization_required",
+        "availability_reason": null,
+        "side_effect": "read",
+        "required_permissions": [],
+        "confirmation_required": false,
+        "execution_location": "runtime",
+        "fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    ],
+    "next_cursor": null,
+    "categories": [
+      "workspace"
+    ]
+  },
+  "decision": {
+    "schema_version": "1.0",
+    "action": "task",
+    "reason": "有明确待办",
+    "source_refs": [
+      "message:original"
+    ],
+    "goal": "读取材料",
+    "wake_after_seconds": null,
+    "quiet_seconds": null,
+    "memory_source_refs": []
+  },
+  "artifact": {
+    "schema_version": "1.0",
+    "artifact_id": "12345678-1234-4234-8234-123456789abc",
+    "task_id": null,
+    "session_id": "12345678-1234-4234-8234-123456789abc",
+    "name": "资料.pptx",
+    "media_type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "byte_length": 42,
+    "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "version": 1,
+    "created_at": "2026-10-07T00:00:00Z",
+    "validation_status": "rendered"
+  }
+}

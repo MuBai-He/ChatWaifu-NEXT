@@ -1,4 +1,5 @@
 import { ConnectionSettingsSection } from "./ConnectionSettingsSection";
+import { AgentSettingsSection } from "../agent-settings/AgentSettingsSection";
 import { AppearanceSettingsSection } from "./AppearanceSettingsSection";
 import { ChannelsSettingsSection } from "../channels-settings/ChannelsSettingsSection";
 import { CompanionSettingsPanel } from "./CompanionSettingsPanel";
@@ -59,6 +60,13 @@ export const desktopSettingsRegistry =
       description: "记忆与扩展",
       icon: "data",
       component: DataSettingsSection,
+    },
+    {
+      id: "agent",
+      label: "能力与任务",
+      description: "工具权限、后台任务与文件",
+      icon: "data",
+      component: AgentSettingsSection,
     },
     {
       id: "personal-assistant",

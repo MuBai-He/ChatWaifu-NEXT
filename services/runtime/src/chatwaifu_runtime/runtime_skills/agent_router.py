@@ -136,7 +136,7 @@ class ProjectedSkillTool:
 
 
 @dataclass(frozen=True, slots=True)
-class _Candidate:
+class CapabilityCandidate:
     skill: SkillDefinition
     capability: SkillCapability
     description: str
@@ -169,12 +169,12 @@ class RuntimeSkillRouter:
         bounded_limit = min(limit, MAX_AGENT_TOOL_LIMIT)
         bounded_budget = min(schema_budget_bytes, MAX_AGENT_SCHEMA_BUDGET_BYTES)
         definitions = tuple(self._definitions())
-        candidates: list[_Candidate] = []
+        candidates: list[CapabilityCandidate] = []
         for skill in definitions:
             if not skill.enabled:
                 continue
             for capability in skill.capabilities:
-                candidate = _project_candidate(
+                candidate = project_capability_candidate(
                     skill,
                     capability,
                     query=query,
@@ -184,7 +184,7 @@ class RuntimeSkillRouter:
                     candidates.append(candidate)
 
         candidates.sort(key=_candidate_sort_key)
-        selected: list[_Candidate] = []
+        selected: list[CapabilityCandidate] = []
         consumed = 0
         for candidate in candidates:
             if len(selected) >= bounded_limit:
@@ -218,7 +218,7 @@ class RuntimeSkillRouter:
                         or capability.side_effect is not SideEffect.READ
                     ):
                         continue
-                    companion = _project_candidate(
+                    companion = project_capability_candidate(
                         skill, capability, query=query, require_relevance=False
                     )
                     if companion is None:
@@ -251,14 +251,16 @@ class RuntimeSkillRouter:
         )
 
 
-def _project_candidate(
+def project_capability_candidate(
     skill: SkillDefinition,
     capability: SkillCapability,
     *,
     query: str,
     require_relevance: bool = True,
     contextual: bool = False,
-) -> _Candidate | None:
+) -> CapabilityCandidate | None:
+    if require_relevance and capability.input_schema.get("x-chatwaifu-discovery-only") is True:
+        return None
     if capability.adapter_operation != "invoke":
         return None
     if skill.source not in {"builtin", "plugin", "mcp_connection"}:
@@ -277,6 +279,7 @@ def _project_candidate(
         # A manifest declaration alone must not allow autonomous side effects.
         return None
     schema = deepcopy(capability.input_schema)
+    schema.pop("x-chatwaifu-discovery-only", None)
     if not _safe_object_schema(schema):
         return None
     try:
@@ -288,11 +291,11 @@ def _project_candidate(
     if len(encoded_schema) > MAX_AGENT_TOOL_SCHEMA_BYTES:
         return None
 
-    score = _relevance_score(query, skill, capability)
+    score = score_capability_metadata(query, skill, capability)
     if require_relevance and score <= 0 and not contextual:
         return None
     description = _model_description(skill, capability)
-    return _Candidate(
+    return CapabilityCandidate(
         skill=skill,
         capability=capability,
         description=description,
@@ -364,6 +367,8 @@ def project_cloud_realtime_tools(
     candidates: list[tuple[SkillDefinition, SkillCapability, str, JsonObject, int]] = []
     for skill in definitions:
         for capability in skill.capabilities:
+            if capability.input_schema.get("x-chatwaifu-discovery-only") is True:
+                continue
             if not cloud_realtime_eligible(skill, capability):
                 continue
             schema = deepcopy(capability.input_schema)
@@ -414,7 +419,9 @@ def project_cloud_realtime_tools(
     )
 
 
-def _relevance_score(query: str, skill: SkillDefinition, capability: SkillCapability) -> int:
+def score_capability_metadata(
+    query: str, skill: SkillDefinition, capability: SkillCapability
+) -> int:
     query_features = _features(query)
     if not query_features:
         return 0
@@ -508,7 +515,7 @@ def _clean_text(value: str) -> str:
     return " ".join(_CONTROL.sub(" ", value).split())
 
 
-def _candidate_sort_key(candidate: _Candidate) -> tuple[bool, int, int, int, str, str]:
+def _candidate_sort_key(candidate: CapabilityCandidate) -> tuple[bool, int, int, int, str, str]:
     source_rank = {"builtin": 0, "plugin": 1, "mcp_connection": 2}[candidate.skill.source]
     side_effect_rank = {
         SideEffect.READ: 0,

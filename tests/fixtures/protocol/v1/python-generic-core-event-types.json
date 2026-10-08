@@ -33,6 +33,7 @@
   "memory.tombstoned",
   "memory.recalled",
   "memory.extraction_completed",
+  "agent.group_evidence",
   "character.state_changed",
   "character.response_planned",
   "character.prompt_compiled",

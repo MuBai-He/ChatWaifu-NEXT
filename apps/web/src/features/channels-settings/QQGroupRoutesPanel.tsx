@@ -29,6 +29,7 @@ import {
 } from "../chat/runtime-client/channelGroupsClient";
 import { isConflictError } from "../chat/runtime-client/realtimeClient";
 import { StickerLibraryPanel } from "./StickerLibraryPanel";
+import { GroupAutonomyPanel } from "./GroupAutonomyPanel";
 import { SettingsToggle } from "../settings/SettingsPrimitives";
 import { useScopeControls } from "../connection/clientControls";
 import "./qq-group-routes-panel.css";
@@ -747,6 +748,13 @@ function QQGroupRoutesContent({
       {selected ? (
         <div className="qq-group-editor">
           <h4>管理：{selected.display_name}</h4>
+          <details>
+            <summary>自主参与与预算</summary>
+            <GroupAutonomyPanel
+              routeId={selected.route_id}
+              routeRevision={selected.revision}
+            />
+          </details>
           <p>
             群 {selected.group_id} · 版本 {selected.revision} ·{" "}
             {pauseLabel(selected.pause_reason)}

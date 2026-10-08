@@ -82,6 +82,23 @@ class AgendaManageSkill:
                 "请提供明确的事项类型、操作、标题和时间。修改时需使用查询得到的来源标识与版本。",
             ) from None
         try:
+            allowed = (
+                await self.integration.task_calendar_scope()
+                if self.integration.task_calendar_scope
+                else None
+            )
+            if allowed is not None and mutation.kind == "calendar":
+                if mutation.action == "create":
+                    destination = next(
+                        (d for d in await agenda.destinations(session_id) if d.kind == "calendar"),
+                        None,
+                    )
+                    collection = destination.collection_id if destination else None
+                    account = destination.account_id if destination else None
+                else:
+                    collection, account = mutation.collection_id, mutation.account_id
+                if collection not in allowed and f"{account}/{collection}" not in allowed:
+                    raise AssistantAccessError("calendar_outside_task_grant")
             if mutation.action == "create":
                 assert mutation.title is not None
                 result = await agenda.create(

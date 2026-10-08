@@ -1,5 +1,7 @@
 """Ordered SQLite migrations for the local Runtime."""
 
+from chatwaifu_runtime.persistence.agent_delivery_migration import AGENT_DELIVERY_MIGRATION_SQL
+
 _BASE_MIGRATIONS: tuple[tuple[int, str], ...] = (
     (
         1,
@@ -2111,7 +2113,7 @@ CREATE TABLE channel_runtime_settings (
 );
 """
 
-MIGRATIONS = (
+_CHANNEL_MIGRATIONS = (
     *_BASE_MIGRATIONS,
     (40, GROUP_MIGRATION40_SQL),
     (41, GROUP_BUBBLES_MIGRATION41_SQL),
@@ -2119,3 +2121,55 @@ MIGRATIONS = (
     (43, GROUP_VOICE_MIGRATION43_SQL),
     (44, CHANNEL_SETTINGS_MIGRATION44_SQL),
 )
+
+
+_AGENT_TASK_MIGRATION = """
+CREATE TABLE agent_tasks (
+ task_id TEXT PRIMARY KEY, scope TEXT NOT NULL, revision INTEGER NOT NULL,
+ state TEXT NOT NULL, payload_json TEXT NOT NULL
+);
+CREATE INDEX agent_tasks_scope_idx ON agent_tasks(scope,task_id);
+CREATE TABLE agent_task_steps (
+ sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+ task_id TEXT NOT NULL REFERENCES agent_tasks(task_id) ON DELETE CASCADE,
+ step_key TEXT NOT NULL, payload_json TEXT NOT NULL, UNIQUE(task_id,step_key)
+);
+CREATE TABLE agent_events (
+ event_id TEXT PRIMARY KEY, task_id TEXT REFERENCES agent_tasks(task_id) ON DELETE CASCADE,
+ settled INTEGER NOT NULL DEFAULT 0, payload_json TEXT NOT NULL
+);
+CREATE TABLE agent_artifacts (
+ artifact_id TEXT PRIMARY KEY, scope TEXT NOT NULL, payload_json TEXT NOT NULL,
+ relative_path TEXT NOT NULL UNIQUE
+);
+CREATE INDEX agent_artifacts_scope_idx ON agent_artifacts(scope,artifact_id);
+CREATE TABLE agent_group_policies (
+  route_id TEXT PRIMARY KEY, revision INTEGER NOT NULL, policy_json TEXT NOT NULL
+);
+CREATE TABLE agent_behavior_reservations (
+  route_id TEXT NOT NULL, kind TEXT NOT NULL, occurred_at TEXT NOT NULL
+);
+CREATE TABLE agent_group_quiet (
+  route_id TEXT PRIMARY KEY, until_at TEXT NOT NULL
+);
+CREATE TABLE agent_autonomous_turns (
+  turn_id TEXT PRIMARY KEY REFERENCES channel_turns(channel_turn_id) ON DELETE CASCADE,
+  route_id TEXT NOT NULL, policy_revision INTEGER NOT NULL
+);
+CREATE INDEX agent_behavior_budget_idx
+  ON agent_behavior_reservations(route_id,kind,occurred_at);
+CREATE TABLE agent_decisions (
+  sequence INTEGER PRIMARY KEY AUTOINCREMENT, route_id TEXT NOT NULL,
+  policy_revision INTEGER NOT NULL, occurred_at TEXT NOT NULL, decision_json TEXT NOT NULL
+);
+CREATE TABLE agent_development_policy (
+  singleton INTEGER PRIMARY KEY CHECK(singleton=1), revision INTEGER NOT NULL,
+  payload_json TEXT NOT NULL
+);
+CREATE TABLE agent_candidates (
+  candidate_id TEXT PRIMARY KEY, day TEXT NOT NULL UNIQUE, payload_json TEXT NOT NULL,
+  revision INTEGER NOT NULL
+);
+"""
+
+MIGRATIONS = (*_CHANNEL_MIGRATIONS, (45, _AGENT_TASK_MIGRATION), (46, AGENT_DELIVERY_MIGRATION_SQL))

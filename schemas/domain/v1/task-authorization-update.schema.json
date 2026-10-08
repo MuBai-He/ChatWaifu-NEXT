@@ -1,0 +1,92 @@
+{
+  "$defs": {
+    "TaskAuthorization": {
+      "properties": {
+        "allow_writes": {
+          "default": false,
+          "title": "Allow Writes",
+          "type": "boolean"
+        },
+        "allowed_skill_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 64,
+          "title": "Allowed Skill Ids",
+          "type": "array"
+        },
+        "calendar_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Calendar Ids",
+          "type": "array"
+        },
+        "capability_fingerprints": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Capability Fingerprints",
+          "type": "object"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "resource_roots": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Resource Roots",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source_ref": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Source Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_ref",
+        "expires_at"
+      ],
+      "title": "TaskAuthorization",
+      "type": "object"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/task-authorization-update.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "authorization": {
+      "$ref": "#/$defs/TaskAuthorization"
+    },
+    "expected_revision": {
+      "minimum": 0,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "expected_revision",
+    "authorization"
+  ],
+  "title": "TaskAuthorizationUpdate",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

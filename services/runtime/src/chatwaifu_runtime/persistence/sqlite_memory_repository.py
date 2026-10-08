@@ -85,6 +85,11 @@ class SQLiteMemoryRepository(MemoryRepository):
         envelope = cast(dict[str, object], json.loads(str(row["envelope_json"])))
         turn_id = envelope.get("turn_id")
         occurred_at = datetime.fromisoformat(str(row["occurred_at"]))
+        source_context = row["source_context_json"]
+        if str(row["event_type"]) == "agent.group_evidence":
+            payload = envelope.get("payload")
+            if isinstance(payload, dict):
+                source_context = json.dumps(cast(dict[str, object], payload).get("source_context"))
         return MemoryEventEvidence(
             event_id=UUID(str(row["event_id"])),
             session_id=UUID(str(row["session_id"])),
@@ -92,7 +97,7 @@ class SQLiteMemoryRepository(MemoryRepository):
             occurred_at=occurred_at,
             event_type=str(row["event_type"]),
             channel_attribution=_channel_attribution_from_source_context(
-                row["source_context_json"], fallback_received_at=occurred_at
+                source_context, fallback_received_at=occurred_at
             ),
             identity=TrustedConversationIdentity(
                 participant_id=str(row["participant_id"]),

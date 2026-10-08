@@ -265,6 +265,9 @@ class MemoryService:
     def parse_explicit_command(self, text: str) -> ExplicitMemoryCommand | None:
         return self._extractor.parse_explicit_command(text)
 
+    async def source_event_exists(self, event_id: UUID) -> bool:
+        return await self._repository.event_exists(event_id)
+
     async def observe_user_turn(
         self,
         session_id: UUID,
@@ -287,7 +290,10 @@ class MemoryService:
             if evidence.identity is not None and evidence.identity.scene_id is not None
             else None
         )
-        if scene_subject is not None and evidence.event_type == "user.turn_committed":
+        if scene_subject is not None and evidence.event_type in {
+            "user.turn_committed",
+            "agent.group_evidence",
+        }:
             text = evidence.source_text or ""
             command = self.parse_explicit_command(text)
         if command is not None and command.operation == "forget":
@@ -998,7 +1004,7 @@ class MemoryService:
         if (
             evidence.identity is not None
             and evidence.identity.scene_id is not None
-            and evidence.event_type == "user.turn_committed"
+            and evidence.event_type in {"user.turn_committed", "agent.group_evidence"}
         ):
             subject = f"participant:{evidence.identity.participant_id}"
             source_text = evidence.source_text or ""
@@ -1197,7 +1203,12 @@ class MemoryService:
         if (
             identity is None
             or identity.scene_id is None
-            or evidence.event_type not in {"user.turn_committed", "assistant.spoken_text_committed"}
+            or evidence.event_type
+            not in {
+                "user.turn_committed",
+                "agent.group_evidence",
+                "assistant.spoken_text_committed",
+            }
         ):
             return
         target = await self._repository.get(target_id)
@@ -1254,7 +1265,7 @@ class MemoryService:
             raise ValueError("memory proposal omits its trusted source")
         await self._validate_scene_evidence(primary_evidence, proposal.evidence_event_ids)
         if primary_evidence.identity is not None and primary_evidence.identity.scene_id is not None:
-            if primary_evidence.event_type == "user.turn_committed":
+            if primary_evidence.event_type in {"user.turn_committed", "agent.group_evidence"}:
                 source_text = primary_evidence.source_text or ""
                 command = self.parse_explicit_command(source_text)
                 content = command.content if command is not None else source_text

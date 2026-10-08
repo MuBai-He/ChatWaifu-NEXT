@@ -31,6 +31,7 @@ class GenerationSkillContext:
     turn_id: UUID | None
     generation_id: UUID | None
     origin: str
+    task_id: UUID | None = None
 
 
 GenerationPermissionPolicy = Callable[[GenerationSkillContext, str], Awaitable[bool]]

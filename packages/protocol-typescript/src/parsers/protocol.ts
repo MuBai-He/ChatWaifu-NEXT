@@ -385,6 +385,7 @@ const genericCoreEventTypes = [
   "memory.tombstoned",
   "memory.recalled",
   "memory.extraction_completed",
+  "agent.group_evidence",
   "character.state_changed",
   "character.response_planned",
   "character.prompt_compiled",
@@ -710,7 +711,7 @@ const channelDeliveryStatusSchema = z.enum([
   "failed",
   "cancelled",
 ]);
-const channelMessageKindSchema = z.enum(["text", "image", "audio"]);
+const channelMessageKindSchema = z.enum(["text", "image", "audio", "file"]);
 
 const channelProviderCapabilitiesSchema = z
   .object({
@@ -1092,10 +1093,11 @@ const channelDeliveryClaimRequestSchema = z
 
 const channelDeliverySnapshotSchema = z
   .object({
-    schema_version: z.enum(["1.0", "1.1"]).default("1.0"),
+    schema_version: z.enum(["1.0", "1.1", "1.2"]).default("1.0"),
     delivery_id: uuid,
     channel_turn_id: uuid.nullable(),
     outbound_intent_id: uuid.nullish(),
+    task_delivery_id: uuid.nullish(),
     connection_id: uuid,
     status: channelDeliveryStatusSchema,
     attempt: z.number().int().min(1).default(1),
@@ -1126,7 +1128,12 @@ const channelDeliverySnapshotSchema = z
     }
   });
 
-const channelDeliveryPartKindSchema = z.enum(["text", "image", "audio"]);
+const channelDeliveryPartKindSchema = z.enum([
+  "text",
+  "image",
+  "audio",
+  "file",
+]);
 
 const channelDeliveryPartStatusSchema = z.enum([
   "pending",
@@ -1167,10 +1174,31 @@ const channelAudioDeliveryPartPayloadSchema = z
   })
   .passthrough();
 
+const channelFileDeliveryPartPayloadSchema = z
+  .object({
+    schema_version: channelSchemaVersion.default("1.0"),
+    kind: z.literal("file"),
+    artifact_id: uuid,
+    sha256: z.string().regex(/^[0-9a-f]{64}$/),
+    name: z
+      .string()
+      .min(1)
+      .max(128)
+      // eslint-disable-next-line no-control-regex -- Filenames deliberately reject NUL.
+      .regex(/^[^/\\\x00\r\n]+$/),
+    mime_type: z.string().min(1).max(128),
+    byte_length: z
+      .number()
+      .int()
+      .min(1)
+      .max(32 * 1024 * 1024),
+  })
+  .passthrough();
 const channelDeliveryPartPayloadSchema = z.discriminatedUnion("kind", [
   channelTextDeliveryPartPayloadSchema,
   channelImageDeliveryPartPayloadSchema,
   channelAudioDeliveryPartPayloadSchema,
+  channelFileDeliveryPartPayloadSchema,
 ]);
 
 const channelDeliveryPartSnapshotSchema = z
@@ -1257,10 +1285,11 @@ const channelDeliveryPartAcknowledgementSchema = z
 
 const channelDeliveryPlanSnapshotSchema = z
   .object({
-    schema_version: z.enum(["1.0", "1.1"]).default("1.0"),
+    schema_version: z.enum(["1.0", "1.1", "1.2"]).default("1.0"),
     delivery_id: uuid,
     channel_turn_id: uuid.nullable(),
     outbound_intent_id: uuid.nullish(),
+    task_delivery_id: uuid.nullish(),
     connection_id: uuid,
     group_target: channelGroupDeliveryTargetSchema.nullish(),
     status: channelDeliveryStatusSchema,
@@ -1305,13 +1334,22 @@ function validateDeliverySource(
     schema_version: string;
     channel_turn_id: string | null;
     outbound_intent_id?: string | null;
+    task_delivery_id?: string | null;
   },
   context: z.RefinementCtx,
 ) {
   const valid =
     source.schema_version === "1.0"
-      ? source.channel_turn_id !== null && !source.outbound_intent_id
-      : source.channel_turn_id === null && Boolean(source.outbound_intent_id);
+      ? source.channel_turn_id !== null &&
+        !source.outbound_intent_id &&
+        !source.task_delivery_id
+      : source.schema_version === "1.1"
+        ? source.channel_turn_id === null &&
+          Boolean(source.outbound_intent_id) &&
+          !source.task_delivery_id
+        : source.channel_turn_id === null &&
+          !source.outbound_intent_id &&
+          Boolean(source.task_delivery_id);
   if (!valid)
     context.addIssue({
       code: "custom",
@@ -2162,3 +2200,16 @@ export function parsePhotoMemoryDeleteResult(
 ): PhotoMemoryDeleteResult {
   return photoMemoryDeleteResultSchema.parse(value);
 }
+
+export {
+  parseCapabilityPage,
+  parseCapabilityDetail,
+  parseAgentTask,
+  parseAgentTaskPage,
+  parseArtifactRef,
+  parseGroupAutonomyPolicy,
+  parseDevelopmentPolicy,
+  parseCandidateFeature,
+  parseDecisionRecord,
+  parseAgentEvent,
+} from "./agent";

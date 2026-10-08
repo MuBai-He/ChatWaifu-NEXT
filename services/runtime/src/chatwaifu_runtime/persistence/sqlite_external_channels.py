@@ -11,6 +11,7 @@ from typing import cast
 from uuid import UUID, uuid4
 
 import aiosqlite
+from chatwaifu_protocol.agent import TaskDeliveryTarget
 from chatwaifu_protocol.channels import (
     ChannelChatType,
     ChannelConnectionConfiguration,
@@ -69,12 +70,14 @@ class _TurnDeliveryContext:
     chat_type: ChannelChatType
     conversation_key: str
     sender_key: str
+    task_delivery_id: UUID | None = None
 
     @property
     def source_payload(self) -> dict[str, str | None]:
         return {
             "channel_turn_id": str(self.channel_turn_id) if self.channel_turn_id else None,
             "outbound_intent_id": str(self.outbound_intent_id) if self.outbound_intent_id else None,
+            "task_delivery_id": str(self.task_delivery_id) if self.task_delivery_id else None,
         }
 
 
@@ -118,6 +121,9 @@ def _validate_delivery_part_drafts(parts: Sequence[ChannelDeliveryPartDraft]) ->
             elif draft.kind is ChannelDeliveryPartKind.AUDIO:
                 if num_parts != 1 or not draft.required:
                     raise ValueError("audio delivery must be the sole required part")
+            elif draft.kind is ChannelDeliveryPartKind.FILE:
+                if num_parts != 1 or not draft.required:
+                    raise ValueError("file delivery must be the sole required part")
             else:
                 raise ValueError(f"unsupported delivery part kind {draft.kind}")
 
@@ -836,7 +842,7 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 )
                 first = await cursor.fetchone()
                 await cursor.close()
-                existing_audio = first is not None and first["kind"] == "audio"
+                existing_audio = first is not None and first["kind"] in {"audio", "file"}
             if row["status"] not in allowed_statuses or (
                 row["delivery_id"] is not None and not existing_audio
             ):
@@ -1060,7 +1066,10 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
             if turn_row is None:
                 raise KeyError(f"unknown channel turn {channel_turn_id}")
             connection_id = str(turn_row["connection_id"])
-            if any(draft.kind is ChannelDeliveryPartKind.AUDIO for draft in parts):
+            if any(
+                draft.kind in {ChannelDeliveryPartKind.AUDIO, ChannelDeliveryPartKind.FILE}
+                for draft in parts
+            ):
                 if (
                     turn_row["status"] not in {"accepted", "processing"}
                     or turn_row["delivery_id"] is not None
@@ -1188,6 +1197,171 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
         async with self._database.transaction() as connection:
             return await self._get_delivery_plan_tx(connection, delivery_id)
 
+    async def create_task_delivery_plan(
+        self,
+        target: TaskDeliveryTarget,
+        *,
+        delivery_id: UUID,
+        parts: Sequence[ChannelDeliveryPartDraft],
+        created_at: datetime,
+    ) -> DeliveryTransitionResult:
+        _validate_delivery_part_drafts(parts)
+        expected_kind = (
+            ChannelDeliveryPartKind.FILE
+            if target.purpose == "file"
+            else ChannelDeliveryPartKind.TEXT
+        )
+        if len(parts) != 1 or parts[0].kind is not expected_kind:
+            raise ValueError("task delivery format differs from its Runtime-issued purpose")
+        async with self._database.transaction() as connection:
+            existing = await (
+                await connection.execute(
+                    "SELECT delivery_id FROM channel_deliveries WHERE task_delivery_id=?",
+                    (str(target.request_id),),
+                )
+            ).fetchone()
+            if existing is not None:
+                old = await self._get_delivery_plan_tx(connection, UUID(existing["delivery_id"]))
+                if (
+                    old is None
+                    or old.task_target != target
+                    or old.parts[0].payload != parts[0].payload
+                ):
+                    raise ValueError("task delivery identity conflict")
+                return DeliveryTransitionResult(old, None, False, ())
+            task = await (
+                await connection.execute(
+                    "SELECT payload_json FROM agent_tasks WHERE task_id=?", (str(target.task_id),)
+                )
+            ).fetchone()
+            if task is None:
+                raise ValueError("task delivery requires a persisted goal")
+            from chatwaifu_protocol.agent import AgentTask
+
+            goal = AgentTask.model_validate_json(task["payload_json"])
+            if goal.channel_binding != target.binding or goal.session_id != target.session_id:
+                raise PermissionError("task delivery target outside original grant")
+            if target.purpose == "result":
+                text = (
+                    goal.result_text
+                    or "任务执行结果: " + str(goal.blocked_reason or goal.state.value)
+                )[:2000]
+                if (
+                    goal.state.value
+                    not in {"succeeded", "failed", "waiting_input", "waiting_authorization"}
+                    or not isinstance(parts[0].payload, ChannelTextDeliveryPartPayload)
+                    or parts[0].payload.text != text
+                ):
+                    raise PermissionError("result delivery differs from the actual task checkpoint")
+            not_before = created_at
+            if target.binding.policy_revision is not None:
+                from chatwaifu_protocol.agent import GroupAutonomyPolicy
+
+                row = await (
+                    await connection.execute(
+                        "SELECT policy_json FROM agent_group_policies WHERE route_id=?",
+                        (str(target.binding.route_id),),
+                    )
+                ).fetchone()
+                policy = (
+                    GroupAutonomyPolicy.model_validate_json(row["policy_json"]) if row else None
+                )
+                if (
+                    policy is None
+                    or policy.mode != "member"
+                    or policy.messages_per_hour == 0
+                    or policy.revision != target.binding.policy_revision
+                ):
+                    raise PermissionError("autonomous delivery policy revoked")
+                rows = await (
+                    await connection.execute(
+                        "SELECT occurred_at FROM agent_behavior_reservations "
+                        "WHERE route_id=? AND kind='speech' AND occurred_at>=? "
+                        "ORDER BY occurred_at",
+                        (str(policy.route_id), (created_at - timedelta(hours=1)).isoformat()),
+                    )
+                ).fetchall()
+                times = [datetime.fromisoformat(r["occurred_at"]) for r in rows]
+                if times:
+                    not_before = max(
+                        not_before, times[-1] + timedelta(seconds=policy.message_interval_seconds)
+                    )
+                if len(times) >= policy.messages_per_hour:
+                    not_before = max(
+                        not_before, times[-policy.messages_per_hour] + timedelta(hours=1)
+                    )
+                if not_before >= goal.authorization.expires_at:
+                    raise PermissionError("delivery budget falls outside task authorization")
+                if target.purpose == "file" and (not_before - created_at).total_seconds() > 100:
+                    raise PermissionError(
+                        "delivery budget exhausted; defer the task before retrying"
+                    )
+                await connection.execute(
+                    "INSERT INTO agent_behavior_reservations(route_id,kind,occurred_at) "
+                    "VALUES(?,'speech',?)",
+                    (str(policy.route_id), not_before.isoformat()),
+                )
+            await connection.execute(
+                "INSERT INTO agent_task_deliveries VALUES(?,?,?,?)",
+                (
+                    str(target.request_id),
+                    str(target.task_id),
+                    str(target.binding.connection_id),
+                    target.model_dump_json(),
+                ),
+            )
+            stamp = created_at.isoformat()
+            await connection.execute(
+                "INSERT INTO channel_deliveries(delivery_id,task_delivery_id,connection_id,"
+                "status,attempt,created_at,updated_at) VALUES(?,?,?,'pending',1,?,?)",
+                (
+                    str(delivery_id),
+                    str(target.request_id),
+                    str(target.binding.connection_id),
+                    stamp,
+                    stamp,
+                ),
+            )
+            part = parts[0]
+            await connection.execute(
+                "INSERT INTO channel_delivery_parts(part_id,delivery_id,ordinal,kind,payload_json,"
+                "required,status,delay_after_ms,attempt,provider_client_id,created_at,updated_at,not_before_at)"
+                " VALUES(?,?,0,?,?,1,'pending',0,0,?,?,?,?)",
+                (
+                    str(uuid4()),
+                    str(delivery_id),
+                    part.kind.value,
+                    part.payload.model_dump_json(),
+                    "chatwaifu-" + delivery_id.hex + "-000",
+                    stamp,
+                    stamp,
+                    not_before.isoformat(),
+                ),
+            )
+            if self._event_store is None:
+                raise RuntimeError("task delivery requires a durable event store")
+            event = await self._event_store.append_in_transaction(
+                connection,
+                GenericCoreEvent(
+                    event_id=uuid4(),
+                    event_type="channel.delivery_plan_created",
+                    session_id=target.session_id,
+                    occurred_at=created_at,
+                    source="runtime.agent.tasks",
+                    privacy=PrivacyLevel.PRIVATE,
+                    payload={
+                        "delivery_id": str(delivery_id),
+                        "task_id": str(target.task_id),
+                        "task_delivery_id": str(target.request_id),
+                        "part_count": 1,
+                        "connection_id": str(target.binding.connection_id),
+                    },
+                ),
+            )
+            plan = await self._get_delivery_plan_tx(connection, delivery_id)
+            assert plan is not None
+            return DeliveryTransitionResult(plan, None, True, (event,))
+
     async def get_delivery_plan_by_turn(
         self, channel_turn_id: UUID
     ) -> ChannelDeliveryPlanRecord | None:
@@ -1218,6 +1392,36 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
     async def _get_turn_context_tx(
         self, connection: aiosqlite.Connection, delivery_id: UUID
     ) -> _TurnDeliveryContext | None:
+        supports_tasks = await (
+            await connection.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='agent_task_deliveries'"
+            )
+        ).fetchone()
+        task_row = (
+            await (
+                await connection.execute(
+                    "SELECT a.target_json FROM channel_deliveries d JOIN agent_task_deliveries a "
+                    "ON a.request_id=d.task_delivery_id WHERE d.delivery_id=?",
+                    (str(delivery_id),),
+                )
+            ).fetchone()
+            if supports_tasks
+            else None
+        )
+        if task_row is not None:
+            target = TaskDeliveryTarget.model_validate_json(task_row["target_json"])
+            return _TurnDeliveryContext(
+                target.session_id,
+                target.turn_id,
+                target.generation_id,
+                target.binding.connection_id,
+                None,
+                None,
+                ChannelChatType.GROUP if target.binding.route_id else ChannelChatType.DIRECT,
+                target.binding.conversation_key,
+                target.binding.sender_key,
+                target.request_id,
+            )
         cursor = await connection.execute(
             """
             SELECT COALESCE(t.session_id, i.session_id) AS session_id,
@@ -1293,7 +1497,20 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
             if target_json is not None
             else None
         )
-        return ChannelDeliveryPlanRecord(delivery=delivery, parts=parts, group_target=target)
+        task_target = None
+        if delivery.task_delivery_id is not None:
+            source = await (
+                await connection.execute(
+                    "SELECT target_json FROM agent_task_deliveries WHERE request_id=?",
+                    (str(delivery.task_delivery_id),),
+                )
+            ).fetchone()
+            if source is None:
+                raise ValueError("task delivery authority missing")
+            task_target = TaskDeliveryTarget.model_validate_json(source["target_json"])
+        return ChannelDeliveryPlanRecord(
+            delivery=delivery, parts=parts, group_target=target, task_target=task_target
+        )
 
     async def _derive_delivery_plan_state_tx(
         self,
@@ -2032,6 +2249,23 @@ class SQLiteExternalChannelRepository(ExternalChannelRepository):
                 applied=True,
                 persisted_events=tuple(persisted_events),
             )
+
+    async def cancel_autonomous_task_deliveries(
+        self,
+        route_id: UUID,
+        cancel_request: ChannelDeliveryPartsCancelRequest,
+    ) -> list[DeliveryTransitionResult]:
+        rows = await self._database.fetchall(
+            "SELECT d.delivery_id FROM channel_deliveries d JOIN agent_task_deliveries a "
+            "ON a.request_id=d.task_delivery_id WHERE d.status IN ('pending','sending') "
+            "AND json_extract(a.target_json,'$.binding.route_id')=? "
+            "AND json_extract(a.target_json,'$.binding.policy_revision') IS NOT NULL",
+            (str(route_id),),
+        )
+        return [
+            await self.cancel_remaining_delivery_parts(UUID(row["delivery_id"]), cancel_request)
+            for row in rows
+        ]
 
     async def cancel_remaining_delivery_parts(
         self,
@@ -3136,6 +3370,9 @@ def _delivery_record(
         channel_turn_id=UUID(str(item["channel_turn_id"])) if item["channel_turn_id"] else None,
         outbound_intent_id=UUID(str(item["outbound_intent_id"]))
         if item["outbound_intent_id"]
+        else None,
+        task_delivery_id=UUID(str(item["task_delivery_id"]))
+        if "task_delivery_id" in item.keys() and item["task_delivery_id"]
         else None,
         connection_id=UUID(str(item["connection_id"])),  # type: ignore[index]
         status=ChannelDeliveryStatus(str(item["status"])),  # type: ignore[index]

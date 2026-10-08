@@ -1,0 +1,54 @@
+.agent-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(41 36 45 / 38%);
+}
+.agent-preview-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(1040px, 100%);
+  height: min(900px, calc(100dvh - 32px));
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #f6f2f5;
+  color: #29242d;
+  box-shadow: 0 20px 80px rgb(41 36 45 / 24%);
+}
+.agent-preview-dialog > header,
+.agent-preview-dialog > nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 12px 20px;
+}
+.agent-preview-dialog > header {
+  justify-content: space-between;
+}
+.agent-preview-dialog h2 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 18px;
+}
+.agent-preview-pages {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
+  background: #d9d4dc;
+}
+.agent-preview-pages canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
+  background: white;
+}

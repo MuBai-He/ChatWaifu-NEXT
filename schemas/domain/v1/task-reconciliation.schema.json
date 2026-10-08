@@ -1,0 +1,46 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/task-reconciliation.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "evidence_ref": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Evidence Ref",
+      "type": "string"
+    },
+    "expected_revision": {
+      "minimum": 0,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "outcome": {
+      "enum": [
+        "accepted",
+        "rejected"
+      ],
+      "title": "Outcome",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "step_key": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Step Key",
+      "type": "string"
+    }
+  },
+  "required": [
+    "expected_revision",
+    "step_key",
+    "outcome",
+    "evidence_ref"
+  ],
+  "title": "TaskReconciliation",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

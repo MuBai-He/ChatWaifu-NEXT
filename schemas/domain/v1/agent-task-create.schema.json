@@ -1,0 +1,121 @@
+{
+  "$defs": {
+    "TaskAuthorization": {
+      "properties": {
+        "allow_writes": {
+          "default": false,
+          "title": "Allow Writes",
+          "type": "boolean"
+        },
+        "allowed_skill_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 64,
+          "title": "Allowed Skill Ids",
+          "type": "array"
+        },
+        "calendar_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Calendar Ids",
+          "type": "array"
+        },
+        "capability_fingerprints": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Capability Fingerprints",
+          "type": "object"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "resource_roots": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Resource Roots",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source_ref": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Source Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_ref",
+        "expires_at"
+      ],
+      "title": "TaskAuthorization",
+      "type": "object"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/agent-task-create.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "authorization": {
+      "$ref": "#/$defs/TaskAuthorization"
+    },
+    "completion_criteria": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 16,
+      "title": "Completion Criteria",
+      "type": "array"
+    },
+    "goal": {
+      "maxLength": 8000,
+      "minLength": 1,
+      "title": "Goal",
+      "type": "string"
+    },
+    "max_active_seconds": {
+      "default": 1800,
+      "maximum": 1800,
+      "minimum": 1,
+      "title": "Max Active Seconds",
+      "type": "integer"
+    },
+    "max_tool_calls": {
+      "default": 100,
+      "maximum": 100,
+      "minimum": 1,
+      "title": "Max Tool Calls",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "session_id": {
+      "format": "uuid",
+      "title": "Session Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "session_id",
+    "goal",
+    "authorization"
+  ],
+  "title": "AgentTaskCreate",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

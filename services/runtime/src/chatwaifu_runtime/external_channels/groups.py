@@ -13,6 +13,7 @@ from datetime import UTC, datetime, timedelta
 from typing import cast
 from uuid import UUID, uuid4
 
+from chatwaifu_protocol.agent import TaskChannelBinding
 from chatwaifu_protocol.channel_groups import (
     ChannelGroupAudienceRequest,
     ChannelGroupAudienceSnapshot,
@@ -33,6 +34,7 @@ from chatwaifu_protocol.channel_groups import (
 from chatwaifu_protocol.channels import (
     ChannelAudioDeliveryPartPayload,
     ChannelConnectionStatus,
+    ChannelDeliveryPartsCancelRequest,
     ChannelDeliveryPartStatus,
     ChannelGroupDeliveryTarget,
     ChannelPresentationPolicy,
@@ -50,6 +52,7 @@ from chatwaifu_runtime.conversation.models import ConversationSourceContext, Con
 from chatwaifu_runtime.conversation.repository import ConversationRepository
 from chatwaifu_runtime.conversation.service import ConversationService
 from chatwaifu_runtime.eventing.publisher import EventPublisher
+from chatwaifu_runtime.external_channels.autonomy import GroupObservation
 from chatwaifu_runtime.external_channels.group_discussion import GroupDiscussionCache
 from chatwaifu_runtime.external_channels.group_models import (
     ChannelGroupAdmission,
@@ -126,6 +129,7 @@ class _Input:
     learning_revision: int | None = None
     discussion: GroupDiscussionContext | None = None
     voice_requested: bool = False
+    autonomous: bool = False
     revoked: bool = False
     task: asyncio.Task[None] | None = None
 
@@ -188,6 +192,12 @@ class ChannelGroupService:
         self._discussion = GroupDiscussionCache(discussion_policy or GroupDiscussionConfig())
         self._started = False
         self._stopping = False
+        self.observation_handler: Callable[[GroupObservation], None] | None = None
+        self.autonomous_admission: Callable[[UUID, UUID, int], Awaitable[bool]] | None = None
+        self.autonomous_authorization: Callable[[UUID], Awaitable[bool]] | None = None
+        self.scene_skill_policy: (
+            Callable[[ChannelGroupRouteRecord], Awaitable[frozenset[str]]] | None
+        ) = None
 
     @property
     def active_count(self) -> int:
@@ -631,9 +641,13 @@ class ChannelGroupService:
         *,
         access_token: str,
         image_input: ChannelInboundImageInput | None = None,
+        autonomy_revision: int | None = None,
     ) -> ChannelTurnReceipt:
         receipt = await self._process_group(
-            descriptor, access_token=access_token, image_input=image_input
+            descriptor,
+            access_token=access_token,
+            image_input=image_input,
+            autonomy_revision=autonomy_revision,
         )
         assert receipt is not None
         return receipt
@@ -670,6 +684,7 @@ class ChannelGroupService:
         image_input: ChannelInboundImageInput | None,
         observe_only: bool = False,
         observe_text: bool = False,
+        autonomy_revision: int | None = None,
     ) -> ChannelTurnReceipt | None:
         if descriptor.image_fingerprint != (
             image_input.source_fingerprint if image_input is not None else None
@@ -788,6 +803,64 @@ class ChannelGroupService:
                             descriptor, fresh, connection.revision, self._clock()
                         )
                         logger.debug("group.discussion_collected status=%s", result)
+                        if result == "collected" and member.can_speak and self.observation_handler:
+                            discussion = self._discussion.snapshot(
+                                fresh, connection.revision, "", self._clock()
+                            )
+                            if discussion is not None:
+
+                                async def authorize_observation() -> None:
+                                    self._check_admission(item)
+                                    current = await self._repository.get_route(fresh.route_id)
+                                    self._check_admission(item)
+                                    if current is None or current != fresh:
+                                        raise ChannelPolicyError("observed group route changed")
+                                    if self._clock() >= descriptor.received_at + timedelta(
+                                        seconds=120
+                                    ):
+                                        raise ChannelPolicyError("group observation expired")
+                                    if fresh.scene_id in self._blocked_scenes:
+                                        raise ChannelPolicyError("group scene reset")
+                                    current_link = await self._repository.get_link(member.link_id)
+                                    self._check_admission(item)
+                                    if current_link is None or current_link != link:
+                                        raise ChannelPolicyError(
+                                            "group observation speaker changed"
+                                        )
+                                    live_context = self._discussion.snapshot(
+                                        fresh, connection.revision, "", self._clock()
+                                    )
+                                    if live_context is None or not any(
+                                        m.message_id == descriptor.external_message_id
+                                        for m in live_context.messages
+                                    ):
+                                        raise ChannelPolicyError("group observation invalidated")
+                                    if any(
+                                        actor.admission.lineage.route_id == fresh.route_id
+                                        for actor in (
+                                            *self._workflows.values(),
+                                            *self._pending.values(),
+                                        )
+                                    ):
+                                        raise ChannelPolicyError("group request takes priority")
+
+                                async def respond_observation(policy_revision: int) -> object:
+                                    await authorize_observation()
+                                    return await self.ingest_group(
+                                        descriptor,
+                                        access_token=access_token,
+                                        autonomy_revision=policy_revision,
+                                    )
+
+                                self.observation_handler(
+                                    GroupObservation(
+                                        descriptor,
+                                        fresh,
+                                        discussion,
+                                        authorize_observation,
+                                        respond_observation,
+                                    )
+                                )
                         return None
                     if image_input is None or learning_revision is None:
                         raise ChannelPolicyError("Group image reference unavailable")
@@ -843,6 +916,13 @@ class ChannelGroupService:
                 self._check_admission(item)
                 if admitted.duplicate:
                     return _receipt(admitted.turn, duplicate=True)
+                if autonomy_revision is not None and (
+                    self.autonomous_admission is None
+                    or not await self.autonomous_admission(
+                        admitted.turn.channel_turn_id, route.route_id, autonomy_revision
+                    )
+                ):
+                    raise ChannelPolicyError("group autonomy grant changed")
                 pending = _Input(
                     admitted,
                     descriptor,
@@ -858,6 +938,7 @@ class ChannelGroupService:
                         self._clock(),
                         mention_only=descriptor.mention_only,
                     ),
+                    autonomous=autonomy_revision is not None,
                 )
                 if image_input is None and not descriptor.mention_only:
                     self._discussion.observe(descriptor, fresh, connection.revision, self._clock())
@@ -1094,6 +1175,11 @@ class ChannelGroupService:
         if not self._live(item) or item.admission.lineage.scene_id in self._blocked_scenes:
             return False
         authorized = await self._repository.authorize_group_turn(item.admission.lineage)
+        if item.autonomous and (
+            self.autonomous_authorization is None
+            or not await self.autonomous_authorization(item.admission.turn.channel_turn_id)
+        ):
+            return False
         return (
             authorized.allowed
             and self._live(item)
@@ -1134,6 +1220,13 @@ class ChannelGroupService:
             voice_skills: frozenset[str] = (
                 frozenset({"channel.voice"}) if item.voice_requested else frozenset()
             )
+            shared_skills: frozenset[str] = (
+                await self.scene_skill_policy(route)
+                if route is not None and self.scene_skill_policy is not None
+                else frozenset[str]()
+            )
+            if not await self._guard(item):
+                return
             await self._conversation.submit_text(
                 turn.session_id,
                 item.message.text,
@@ -1143,9 +1236,10 @@ class ChannelGroupService:
                     origin="external_channel",
                     presentation_profile=item.presentation_policy.profile.value,
                     output_modes=frozenset({"text"}),
-                    allow_tools=item.voice_requested,
-                    allowed_skill_ids=voice_skills,
-                    contextual_skill_ids=voice_skills,
+                    allow_tools=bool(voice_skills | shared_skills),
+                    allowed_skill_ids=voice_skills | shared_skills,
+                    contextual_skill_ids=voice_skills | shared_skills,
+                    allowed_shared_skill_ids=shared_skills,
                     allow_shared_voice=item.voice_requested,
                     trusted_identity=identity,
                     before_generation=lambda: self._guard(item),
@@ -1440,6 +1534,10 @@ class ChannelGroupService:
         ):
             return False
         connection_id = target.connection_id
+        if self.autonomous_authorization is not None and not await self.autonomous_authorization(
+            target.channel_turn_id
+        ):
+            return False
         epoch = self._connection_epochs.get(connection_id, 0)
         group_epoch = self._group_epochs.get((connection_id, target.group_id), 0)
 
@@ -1483,6 +1581,33 @@ class ChannelGroupService:
         authorization = await self._repository.authorize_group_turn(lineage)
         return authorization.allowed and live()
 
+    async def revoke_autonomous(self, route_id: UUID) -> None:
+        transitions = await self._channels.cancel_autonomous_task_deliveries(
+            route_id,
+            ChannelDeliveryPartsCancelRequest(
+                reason="autonomy_policy_changed",
+                requested_at=self._clock(),
+            ),
+        )
+        for transition in transitions:
+            for event in transition.persisted_events:
+                await self._publisher.publish_persisted(event)
+        for item in (*self._workflows.values(), *self._pending.values()):
+            if item.autonomous and item.admission.lineage.route_id == route_id:
+                self._revoke(item, "autonomy_policy_changed")
+                record = await self._repository.get_group_turn(item.admission.turn.channel_turn_id)
+                if record is not None and record.turn.status in {
+                    ChannelTurnStatus.ACCEPTED,
+                    ChannelTurnStatus.PROCESSING,
+                }:
+                    transition = await self._repository.cancel_group_turn(
+                        record.turn.channel_turn_id,
+                        expected_revision=record.turn.revision,
+                        reason="autonomy_policy_changed",
+                        updated_at=self._clock(),
+                    )
+                    await self._apply_transition(transition, "autonomy_policy_changed")
+
     async def authorize_reply_voice(self, turn: ChannelTurnRecord) -> bool:
         """Only the owned, current explicitly requested group reply gets a voice grant."""
         item = self._workflows.get(turn.channel_turn_id)
@@ -1502,6 +1627,90 @@ class ChannelGroupService:
             return False
         route = await self._repository.get_route(item.admission.lineage.route_id)
         return route is not None and route.allow_requested_voice and self._live(item)
+
+    async def authorize_current_request(self, turn: ChannelTurnRecord) -> bool:
+        item = self._workflows.get(turn.channel_turn_id)
+        return (
+            item is not None
+            and (
+                item.admission.turn.session_id,
+                item.admission.turn.turn_id,
+                item.admission.turn.generation_id,
+            )
+            == (turn.session_id, turn.turn_id, turn.generation_id)
+            and await self._guard(item)
+        )
+
+    async def task_binding(
+        self, route_id: UUID, sender_key: str, source_ref: str
+    ) -> TaskChannelBinding:
+        route = await self._repository.get_route(route_id)
+        if route is None:
+            raise PermissionError("task group route unavailable")
+        member = next((m for m in route.members if m.sender_key == sender_key), None)
+        link = await self._repository.get_link(member.link_id) if member else None
+        if member is None or not member.can_speak or link is None or not link.enabled:
+            raise PermissionError("task speaker unavailable")
+        return TaskChannelBinding(
+            connection_id=route.connection_id,
+            account_key=route.account_key,
+            conversation_key="group:" + route.group_id,
+            sender_key=sender_key,
+            source_ref=source_ref,
+            route_id=route.route_id,
+            route_revision=route.revision,
+            scene_id=route.scene_id,
+            audience_fingerprint=route.audience_fingerprint,
+            link_id=link.link_id,
+            link_revision=link.revision,
+        )
+
+    async def authorize_task_binding(self, binding: TaskChannelBinding) -> bool:
+        def live() -> bool:
+            return (
+                self._started
+                and not self._stopping
+                and self._transport_ready(binding.connection_id)
+                and binding.connection_id not in self._blocked_connections
+                and (binding.connection_id, binding.conversation_key.removeprefix("group:"))
+                not in self._blocked_groups
+                and binding.scene_id not in self._blocked_scenes
+            )
+
+        if binding.route_id is None or binding.link_id is None or not live():
+            return False
+        route = await self._repository.get_route(binding.route_id)
+        link = await self._repository.get_link(binding.link_id)
+        connection = await self._channels.get_connection(binding.connection_id)
+        return bool(
+            live()
+            and route
+            and link
+            and connection
+            and route.enabled
+            and route.deleted_at is None
+            and route.pause_reason is None
+            and route.revision == binding.route_revision
+            and route.scene_id == binding.scene_id
+            and route.account_key == binding.account_key
+            and route.connection_id == binding.connection_id
+            and "group:" + route.group_id == binding.conversation_key
+            and route.audience_fingerprint == binding.audience_fingerprint
+            and link.enabled
+            and link.revision == binding.link_revision
+            and link.account_key == binding.account_key
+            and link.sender_key == binding.sender_key
+            and any(
+                m.link_id == link.link_id
+                and m.participant_id == link.participant_id
+                and m.sender_key == binding.sender_key
+                and m.can_speak
+                for m in route.members
+            )
+            and connection.configuration.enabled
+            and connection.configuration.account_key == binding.account_key
+            and connection.status is ChannelConnectionStatus.READY
+        )
 
     async def publish_reply_voice(
         self,

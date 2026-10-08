@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Self, cast
 from uuid import UUID
 
+from chatwaifu_protocol.agent import TaskDeliveryTarget
 from chatwaifu_protocol.channels import (
     ChannelChatType,
     ChannelConnectionConfiguration,
@@ -165,10 +166,17 @@ class ChannelDeliveryRecord:
     cancel_requested_at: datetime | None = None
 
     outbound_intent_id: UUID | None = None
+    task_delivery_id: UUID | None = None
 
     def __post_init__(self) -> None:
-        if (self.channel_turn_id is None) == (self.outbound_intent_id is None):
-            raise ValueError("delivery requires exactly one inbound or outbound source")
+        if (
+            sum(
+                v is not None
+                for v in (self.channel_turn_id, self.outbound_intent_id, self.task_delivery_id)
+            )
+            != 1
+        ):
+            raise ValueError("delivery requires exactly one inbound, proactive or task source")
 
 
 @dataclass(frozen=True, slots=True)
@@ -198,6 +206,7 @@ class ChannelDeliveryPlanRecord:
     delivery: ChannelDeliveryRecord
     parts: tuple[ChannelDeliveryPartRecord, ...]
     group_target: ChannelGroupDeliveryTarget | None = None
+    task_target: TaskDeliveryTarget | None = None
 
     @property
     def delivery_id(self) -> UUID:
@@ -210,6 +219,10 @@ class ChannelDeliveryPlanRecord:
     @property
     def outbound_intent_id(self) -> UUID | None:
         return self.delivery.outbound_intent_id
+
+    @property
+    def task_delivery_id(self) -> UUID | None:
+        return self.delivery.task_delivery_id
 
     @property
     def connection_id(self) -> UUID:

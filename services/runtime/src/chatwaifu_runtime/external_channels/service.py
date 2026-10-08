@@ -1956,7 +1956,7 @@ class ExternalChannelService:
         plan = await self._repository.get_delivery_plan(delivery_id)
         if plan is None or plan.connection_id != connection_id:
             raise ChannelNotFoundError(f"unknown channel delivery plan {delivery_id}")
-        return _delivery_plan_snapshot(plan)
+        return delivery_plan_snapshot(plan)
 
     async def list_delivery_parts(
         self,
@@ -2114,7 +2114,7 @@ class ExternalChannelService:
                         }
                     )
                 )
-        return _delivery_plan_snapshot(result.plan)
+        return delivery_plan_snapshot(result.plan)
 
     async def _emit_delivery_plan_created_event(
         self,
@@ -2847,10 +2847,13 @@ def _delivery_part_snapshot(record: ChannelDeliveryPartRecord) -> ChannelDeliver
     )
 
 
-def _delivery_plan_snapshot(record: ChannelDeliveryPlanRecord) -> ChannelDeliveryPlanSnapshot:
+def delivery_plan_snapshot(record: ChannelDeliveryPlanRecord) -> ChannelDeliveryPlanSnapshot:
     return ChannelDeliveryPlanSnapshot(
-        schema_version="1.1" if record.outbound_intent_id is not None else "1.0",
+        schema_version="1.2"
+        if record.task_delivery_id
+        else ("1.1" if record.outbound_intent_id else "1.0"),
         outbound_intent_id=record.outbound_intent_id,
+        task_delivery_id=record.task_delivery_id,
         delivery_id=record.delivery_id,
         channel_turn_id=record.channel_turn_id,
         connection_id=record.connection_id,
@@ -2870,8 +2873,11 @@ def _delivery_plan_snapshot(record: ChannelDeliveryPlanRecord) -> ChannelDeliver
 
 def _delivery_snapshot(record: ChannelDeliveryRecord) -> ChannelDeliverySnapshot:
     return ChannelDeliverySnapshot(
-        schema_version="1.1" if record.outbound_intent_id is not None else "1.0",
+        schema_version="1.2"
+        if record.task_delivery_id
+        else ("1.1" if record.outbound_intent_id else "1.0"),
         outbound_intent_id=record.outbound_intent_id,
+        task_delivery_id=record.task_delivery_id,
         delivery_id=record.delivery_id,
         channel_turn_id=record.channel_turn_id,
         connection_id=record.connection_id,

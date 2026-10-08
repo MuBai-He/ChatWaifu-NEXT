@@ -1,0 +1,60 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/agent-task-action.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "action": {
+      "enum": [
+        "pause",
+        "resume",
+        "cancel",
+        "defer"
+      ],
+      "title": "Action",
+      "type": "string"
+    },
+    "expected_revision": {
+      "minimum": 0,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "input_text": {
+      "anyOf": [
+        {
+          "maxLength": 8000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Input Text"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "wake_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Wake At"
+    }
+  },
+  "required": [
+    "expected_revision",
+    "action"
+  ],
+  "title": "AgentTaskAction",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

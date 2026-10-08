@@ -10,6 +10,7 @@ from datetime import UTC, datetime, time, timedelta
 from typing import Literal
 from uuid import UUID, uuid4
 
+from chatwaifu_protocol.agent import DecisionRecord
 from chatwaifu_protocol.base import PrivacyLevel
 from chatwaifu_protocol.events import GenericCoreEvent
 
@@ -103,6 +104,8 @@ class AmbientCompanionService:
         self._session_allowed = session_allowed
         self._changed = asyncio.Event()
         self._task: asyncio.Task[None] | None = None
+        self.model_decider: Callable[[UUID, str], Awaitable[DecisionRecord]] | None = None
+        self._observed: dict[UUID, float] = {}
 
     async def start(self) -> None:
         if self._task is None:
@@ -120,6 +123,7 @@ class AmbientCompanionService:
                 pass
 
     def settings_changed(self) -> None:
+        self._observed.clear()
         self._changed.set()
 
     async def status(self, *, now: datetime | None = None) -> CompanionStatus:
@@ -155,6 +159,33 @@ class AmbientCompanionService:
             if decision.action == "defer":
                 await self._defer_once(session.session_id, decision.reason, current)
                 continue
+            if settings.proactive_decision_mode != "legacy":
+                revision = self._activity.revision(session.session_id)
+                if self._observed.get(session.session_id) == revision or self.model_decider is None:
+                    continue
+                # An idle situation gets one judgment; new input, a due task or
+                # policy change supplies the next event. Waiting never polls the model.
+                if session.session_id not in self._observed and len(self._observed) >= 128:
+                    self._observed.pop(next(iter(self._observed)))
+                self._observed[session.session_id] = revision
+                source = "activity:" + str(session.session_id) + ":" + str(revision)
+                try:
+                    judged = await self.model_decider(session.session_id, source)
+                except asyncio.CancelledError:
+                    raise
+                except Exception as error:
+                    logger.warning("ambient.model_decision_failed type=%s", type(error).__name__)
+                    continue
+                await self._record(session.session_id, "deferred", judged.reason, current)
+                if (
+                    settings != self._settings.get()
+                    or revision != self._activity.revision(session.session_id)
+                    or settings.proactive_decision_mode == "shadow"
+                    or judged.action not in {"respond", "clarify"}
+                    or self._conversation.active_generation_id(session.session_id) is not None
+                ):
+                    continue
+                decision = ProactiveDecision("trigger", judged.reason)
             await self._trigger(session.session_id, decision.reason, current)
             triggered += 1
             break

@@ -38,6 +38,7 @@ export const groupDiscussionPolicySchema = z
 export const channelRuntimePolicySchema = z
   .object({
     qq_owner_public_web_enabled: z.boolean().default(false),
+    qq_owner_agent_enabled: z.boolean().default(false),
     qq_owner_voice_reply_enabled: z.boolean().default(true),
     qq_owner_voice_input_enabled: z.boolean().default(true),
     qq_native_favorites_enabled: z.boolean().default(true),

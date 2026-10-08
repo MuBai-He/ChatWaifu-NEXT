@@ -1,4 +1,16 @@
 import {
+  capabilityPageSchema,
+  capabilityDetailSchema,
+  agentTaskSchema,
+  agentTaskPageSchema,
+  artifactRefSchema,
+  groupAutonomyPolicySchema,
+  developmentPolicySchema,
+  candidateFeatureSchema,
+  decisionRecordSchema,
+  agentEventSchema,
+} from "../../parsers/agent";
+import {
   channelRuntimePolicySchema,
   channelRuntimeSettingsResponseSchema,
   channelRuntimeSettingsUpdateSchema,
@@ -192,6 +204,17 @@ export {
  * Registry of all root model schemas that back public parsers.
  */
 export const protocolModelSchemas = {
+  CapabilityPage: capabilityPageSchema,
+  CapabilityDetail: capabilityDetailSchema,
+  AgentTask: agentTaskSchema,
+  AgentTaskPage: agentTaskPageSchema,
+  ArtifactRef: artifactRefSchema,
+  GroupAutonomyPolicy: groupAutonomyPolicySchema,
+  AgentDevelopmentPolicy: developmentPolicySchema,
+  CandidateFeature: candidateFeatureSchema,
+  DecisionRecord: decisionRecordSchema,
+  AgentEvent: agentEventSchema,
+
   ChannelRuntimePolicy: channelRuntimePolicySchema,
   ChannelRuntimeSettingsResponse: channelRuntimeSettingsResponseSchema,
   ChannelRuntimeSettingsUpdate: channelRuntimeSettingsUpdateSchema,
@@ -298,6 +321,16 @@ export const parserRootRegistry: Record<
   string,
   keyof typeof protocolModelSchemas
 > = {
+  parseCapabilityPage: "CapabilityPage",
+  parseCapabilityDetail: "CapabilityDetail",
+  parseAgentTask: "AgentTask",
+  parseAgentTaskPage: "AgentTaskPage",
+  parseArtifactRef: "ArtifactRef",
+  parseGroupAutonomyPolicy: "GroupAutonomyPolicy",
+  parseDevelopmentPolicy: "AgentDevelopmentPolicy",
+  parseCandidateFeature: "CandidateFeature",
+  parseDecisionRecord: "DecisionRecord",
+  parseAgentEvent: "AgentEvent",
   parseChannelGroupAudienceRequest: "ChannelGroupAudienceRequest",
   parseChannelGroupAudienceSnapshot: "ChannelGroupAudienceSnapshot",
   parseChannelGroupDeliveryTarget: "ChannelGroupDeliveryTarget",
