@@ -26,6 +26,7 @@ from chatwaifu_runtime.photo_memory.ports import (
 )
 from chatwaifu_runtime.providers.context_budget import resolve_context_budget
 from chatwaifu_runtime.providers.contracts import (
+    BehaviorDecisionProvider,
     LlmProvider,
     LlmRequest,
     LlmStreamEvent,
@@ -37,17 +38,23 @@ from chatwaifu_runtime.providers.openai_compatible import (
     OpenAiCompatibleLlmProvider,
     openai_compatible_endpoint,
 )
+from chatwaifu_runtime.providers.typesafe import TypeSafeBehaviorProvider
 
 
 class UnsupportedEmbeddingModalityError(ValueError):
     """Raised when an embedding input requests an unsupported modality."""
 
 
-type ModelRole = Literal["chat", "memory_extraction", "memory_summary", "embedding"]
-type ModelProviderKind = Literal["demo", "openai_compatible", "local_hash", "disabled"]
+type ModelRole = Literal[
+    "chat", "behavior_decision", "memory_extraction", "memory_summary", "embedding"
+]
+type ModelProviderKind = Literal[
+    "demo", "openai_compatible", "local_hash", "disabled", "inherit_chat", "typesafe"
+]
 
 MODEL_ROLES: tuple[ModelRole, ...] = (
     "chat",
+    "behavior_decision",
     "memory_extraction",
     "memory_summary",
     "embedding",
@@ -70,18 +77,33 @@ class ModelRoleConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_role_provider(self) -> ModelRoleConfig:
+        if self.provider == "inherit_chat" and self.role != "behavior_decision":
+            raise ValueError("inherit_chat is only valid for behavior_decision")
+        if self.provider == "typesafe" and self.role != "behavior_decision":
+            raise ValueError("typesafe is only valid for behavior_decision")
+        if self.role == "behavior_decision":
+            if not self.enabled or self.provider not in {
+                "inherit_chat",
+                "openai_compatible",
+                "typesafe",
+            }:
+                raise ValueError(
+                    "behavior_decision requires inherit_chat, openai_compatible or typesafe"
+                )
+            if self.timeout_seconds > 30:
+                raise ValueError("behavior_decision timeout cannot exceed 30 seconds")
         if self.role != "embedding":
             resolve_context_budget(self.context_window, self.budget)
         if self.role == "embedding" and self.provider == "demo":
             raise ValueError("embedding role uses local_hash instead of demo")
         if self.role != "embedding" and self.provider == "local_hash":
             raise ValueError("local_hash is only valid for the embedding role")
-        if self.provider == "openai_compatible" and not self.base_url:
-            raise ValueError("openai_compatible provider requires base_url")
-        if self.provider == "openai_compatible" and not self.base_url.startswith(
+        if self.provider in {"openai_compatible", "typesafe"} and not self.base_url:
+            raise ValueError("remote provider requires base_url")
+        if self.provider in {"openai_compatible", "typesafe"} and not self.base_url.startswith(
             ("http://", "https://")
         ):
-            raise ValueError("openai_compatible base_url must use http or https")
+            raise ValueError("remote base_url must use http or https")
         return self
 
 
@@ -438,6 +460,8 @@ class ModelConfigurationService:
         return self.describe().opaque_fingerprint
 
     async def probe(self, role: ModelRole) -> dict[str, object]:
+        if role == "behavior_decision":
+            raise ValueError("behavior decisions must be probed through BehaviorDecisionService")
         if role == "embedding":
             vectors = await self.embed(["ChatWaifu model configuration probe"])
             if not vectors:
@@ -467,6 +491,10 @@ class ModelConfigurationService:
         return {"status": "ok", "characters": sum(len(item) for item in chunks)}
 
     def create_chat_provider(self, config: ModelRoleConfig) -> LlmProvider:
+        if config.provider == "typesafe":
+            raise ValueError("typesafe judgments require the native decision adapter")
+        if config.provider == "inherit_chat":
+            return self.chat_provider()
         if not config.enabled or config.provider in {"disabled", "local_hash"}:
             return DemoLlmProvider(self._settings.llm.demo_chunk_delay_ms)
         if config.provider == "demo":
@@ -474,12 +502,30 @@ class ModelConfigurationService:
         return OpenAiCompatibleLlmProvider(
             base_url=config.base_url,
             model=config.model,
-            api_key=lambda: self._secrets.get("chat"),
+            api_key=lambda: self._secrets.get(config.role),
             timeout_seconds=config.timeout_seconds,
         )
 
     def chat_provider(self) -> LlmProvider:
         return self.create_chat_provider(self.get("chat"))
+
+    def behavior_provider(self) -> LlmProvider:
+        """Resolve each decision independently; only explicit inheritance uses chat."""
+        config = self.get("behavior_decision")
+        if config.provider == "inherit_chat":
+            return self.chat_provider()
+        return self.create_chat_provider(config)
+
+    def native_behavior_provider(self) -> BehaviorDecisionProvider | None:
+        config = self.get("behavior_decision")
+        if config.provider != "typesafe":
+            return None
+        return TypeSafeBehaviorProvider(
+            base_url=config.base_url,
+            model=config.model,
+            api_key=lambda: self._secrets.get("behavior_decision"),
+            timeout_seconds=config.timeout_seconds,
+        )
 
     def _defaults(self, now: datetime) -> dict[ModelRole, ModelRoleConfig]:
         llm = self._settings.llm
@@ -497,6 +543,13 @@ class ModelConfigurationService:
                 api_key_configured=self._secrets.get("chat") is not None,
                 timeout_seconds=llm.timeout_seconds,
                 context_window=8192,
+                updated_at=now,
+            ),
+            "behavior_decision": ModelRoleConfig(
+                role="behavior_decision",
+                provider="inherit_chat",
+                model="inherit-chat",
+                timeout_seconds=30,
                 updated_at=now,
             ),
             "memory_extraction": ModelRoleConfig(

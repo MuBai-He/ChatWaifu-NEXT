@@ -652,9 +652,13 @@ async def cancel_remaining_channel_delivery_parts(
 
 
 @router.get("/model-configurations")
-async def read_model_configurations(request: Request) -> dict[str, object]:
+async def read_model_configurations(
+    request: Request, include_behavior_decision: bool = False
+) -> dict[str, object]:
     items = [
-        item.model_dump(mode="json") for item in _container(request).model_configurations.list()
+        item.model_dump(mode="json")
+        for item in _container(request).model_configurations.list()
+        if include_behavior_decision or item.role != "behavior_decision"
     ]
     return {"schema_version": "1.0", "items": items, "count": len(items)}
 
@@ -683,7 +687,11 @@ async def update_model_configuration(
             provider=body.provider,
             model=body.model,
             base_url=body.base_url,
-            timeout_seconds=body.timeout_seconds,
+            timeout_seconds=(
+                30
+                if role == "behavior_decision" and "timeout_seconds" not in body.model_fields_set
+                else body.timeout_seconds
+            ),
             context_window=body.context_window,
             budget=budget,
             enabled=body.enabled,
@@ -726,7 +734,20 @@ async def get_index_rebuild_status(request: Request) -> dict[str, object]:
 @router.post("/model-configurations/{role}/test")
 async def test_model_configuration(request: Request, role: ModelRole) -> dict[str, object]:
     try:
-        result = await _container(request).model_configurations.probe(role)
+        container = _container(request)
+        if role == "behavior_decision":
+            decision = await container.behavior_decisions.decide(
+                "You are Ningning, a considerate conversation participant.",
+                {
+                    "event": "model_probe",
+                    "source_ref": "model-probe",
+                    "text": "I am testing your decision model. Decide whether to respond or wait.",
+                },
+                frozenset({"model-probe"}),
+            )
+            result: dict[str, object] = {"status": "ok", "action": decision.action}
+        else:
+            result = await container.model_configurations.probe(role)
     except Exception as error:
         raise HTTPException(status_code=502, detail=f"model probe failed: {error}") from error
     return {"role": role, **result}

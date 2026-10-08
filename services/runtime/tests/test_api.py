@@ -253,10 +253,14 @@ def test_model_roles_are_independent_and_api_keys_never_echo(
     client: TestClient, runtime_settings: Settings
 ) -> None:
     http = cast(RuntimeHttpClient, client)
-    listed = cast(dict[str, object], http.get("/v1/model-configurations").json())
+    listed = cast(
+        dict[str, object],
+        http.get("/v1/model-configurations?include_behavior_decision=true").json(),
+    )
     items = cast(list[dict[str, object]], listed["items"])
     assert {str(item["role"]) for item in items} == {
         "chat",
+        "behavior_decision",
         "memory_extraction",
         "memory_summary",
         "embedding",

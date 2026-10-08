@@ -998,6 +998,13 @@ Worker Supervisor 负责：
 
 ## 16. Model Router
 
+当前 Runtime 的模型角色配置包含聊天、行为决策、记忆提取、记忆总结和 Embedding。
+行为决策默认显式跟随聊天模型，也可独立设置 OpenAI 兼容或 TypeSafe Jev 原生适配器、模型 ID 与私密密钥。
+`BehaviorDecisionService` 在每次决策前解析该角色；正式回复和任务执行仍使用聊天模型。
+独立决策模型失败保持静默并记录错误，不隐式切换聊天模型。Jev 的 typed judgment 直接映射为现有
+DecisionRecord，不充当生成式 LLM。决策测试验证所选适配器的实际结构化结果，数据库迁移与回退规则见
+[ADR 0081](../adr/0081-independent-behavior-decision-model.md)。
+
 Model Router 输入：
 
 ```text

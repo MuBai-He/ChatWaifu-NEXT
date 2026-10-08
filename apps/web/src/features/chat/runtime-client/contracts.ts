@@ -240,6 +240,7 @@ export type TtsConfigurationCredential = z.infer<
 
 export const modelRoleSchema = z.enum([
   "chat",
+  "behavior_decision",
   "memory_extraction",
   "memory_summary",
   "embedding",
@@ -249,6 +250,8 @@ export const modelProviderKindSchema = z.enum([
   "openai_compatible",
   "local_hash",
   "disabled",
+  "inherit_chat",
+  "typesafe",
 ]);
 
 export const modelContextBudgetSchema = z.object({

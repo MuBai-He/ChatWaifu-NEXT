@@ -2172,4 +2172,27 @@ CREATE TABLE agent_candidates (
 );
 """
 
-MIGRATIONS = (*_CHANNEL_MIGRATIONS, (45, _AGENT_TASK_MIGRATION), (46, AGENT_DELIVERY_MIGRATION_SQL))
+_BEHAVIOR_MODEL_MIGRATION = """
+CREATE TABLE model_role_configs_next (
+ role TEXT PRIMARY KEY CHECK(role IN (
+  'chat', 'behavior_decision', 'memory_extraction', 'memory_summary', 'embedding'
+ )),
+ provider TEXT NOT NULL, model TEXT NOT NULL, base_url TEXT NOT NULL,
+ timeout_seconds REAL NOT NULL CHECK(timeout_seconds > 0),
+ context_window INTEGER NOT NULL CHECK(context_window >= 1024),
+ enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0, 1)),
+ updated_at TEXT NOT NULL,
+ budget_json TEXT NOT NULL DEFAULT '{}'
+);
+INSERT INTO model_role_configs_next SELECT role,provider,model,base_url,
+ timeout_seconds,context_window,enabled,updated_at,budget_json FROM model_role_configs;
+DROP TABLE model_role_configs;
+ALTER TABLE model_role_configs_next RENAME TO model_role_configs;
+"""
+
+MIGRATIONS = (
+    *_CHANNEL_MIGRATIONS,
+    (45, _AGENT_TASK_MIGRATION),
+    (46, AGENT_DELIVERY_MIGRATION_SQL),
+    (47, _BEHAVIOR_MODEL_MIGRATION),
+)

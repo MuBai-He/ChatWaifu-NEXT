@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -22,6 +23,10 @@ vi.mock("./runtimeClient", () => ({
 
 const configurations: ModelRoleConfiguration[] = [
   model("chat", "demo", "demo-chat"),
+  {
+    ...model("behavior_decision", "inherit_chat", "inherit-chat"),
+    timeout_seconds: 30,
+  },
   model("memory_extraction", "openai_compatible", "extract-v1", true),
   model("memory_summary", "demo", "summary-v1"),
   model("embedding", "local_hash", "local-hash-64-v1"),
@@ -114,6 +119,103 @@ describe("ModelSettingsPanel", () => {
       status: "ok",
       characters: 12,
     });
+  });
+
+  it("selects the native Jev adapter with its endpoint and separate key", async () => {
+    render(<ModelSettingsPanel sessionId={null} />);
+    const select = await screen.findByLabelText("行为决策模型 Provider");
+    const card = select.closest("section");
+    if (!card) throw new Error("missing decision card");
+    fireEvent.change(select, { target: { value: "typesafe" } });
+    expect(screen.getByDisplayValue("jev-latest")).toBeTruthy();
+    expect(screen.getByDisplayValue("https://api.typesafe.ai/v1")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("行为决策模型 API Key"), {
+      target: { value: "private-jev-key" },
+    });
+    fireEvent.click(within(card).getByText("保存", { selector: "button" }));
+    await waitFor(() =>
+      expect(runtimeClient.updateModelConfiguration).toHaveBeenCalledWith(
+        "behavior_decision",
+        expect.objectContaining({
+          provider: "typesafe",
+          model: "jev-latest",
+          base_url: "https://api.typesafe.ai/v1",
+          api_key: "private-jev-key",
+          timeout_seconds: 10,
+        }),
+      ),
+    );
+    expect(screen.getByDisplayValue("demo-chat")).toBeTruthy();
+  });
+
+  it("saves an independent decision endpoint without changing chat and tests native decisions", async () => {
+    vi.mocked(runtimeClient.testModelConfiguration).mockResolvedValue({
+      status: "ok",
+      action: "respond",
+    });
+    render(<ModelSettingsPanel sessionId={null} />);
+    const select = await screen.findByLabelText("行为决策模型 Provider");
+    const card = select.closest("section");
+    if (!card) throw new Error("missing decision card");
+    expect(within(card).getByText("跟随聊天模型")).toBeTruthy();
+    expect(within(card).queryByLabelText("行为决策模型 API Key")).toBeNull();
+    fireEvent.change(select, { target: { value: "openai_compatible" } });
+    fireEvent.change(screen.getByLabelText("行为决策模型 模型 ID"), {
+      target: { value: "decision-small" },
+    });
+    fireEvent.change(screen.getByLabelText("行为决策模型 Base URL"), {
+      target: { value: "https://decision.example/v1" },
+    });
+    fireEvent.change(screen.getByLabelText("行为决策模型 API Key"), {
+      target: { value: "private-decision-key" },
+    });
+    fireEvent.click(within(card).getByText("保存", { selector: "button" }));
+    await waitFor(() =>
+      expect(runtimeClient.updateModelConfiguration).toHaveBeenCalledWith(
+        "behavior_decision",
+        expect.objectContaining({
+          provider: "openai_compatible",
+          model: "decision-small",
+          base_url: "https://decision.example/v1",
+          api_key: "private-decision-key",
+          timeout_seconds: 30,
+        }),
+      ),
+    );
+    expect(screen.getByDisplayValue("demo-chat")).toBeTruthy();
+    await waitFor(() =>
+      expect(
+        screen.getByLabelText<HTMLInputElement>("行为决策模型 API Key").value,
+      ).toBe(""),
+    );
+    fireEvent.click(within(card).getByText("测试", { selector: "button" }));
+    await waitFor(() =>
+      expect(runtimeClient.testModelConfiguration).toHaveBeenCalledWith(
+        "behavior_decision",
+      ),
+    );
+    await screen.findByText(/结构化决策已验证/);
+  });
+
+  it("saves inheritance without sending a pending independent credential", async () => {
+    render(<ModelSettingsPanel sessionId={null} />);
+    const select = await screen.findByLabelText("行为决策模型 Provider");
+    const card = select.closest("section");
+    if (!card) throw new Error("missing decision card");
+    fireEvent.change(select, { target: { value: "openai_compatible" } });
+    fireEvent.change(screen.getByLabelText("行为决策模型 API Key"), {
+      target: { value: "unused-key" },
+    });
+    fireEvent.change(select, { target: { value: "inherit_chat" } });
+    fireEvent.click(within(card).getByText("保存", { selector: "button" }));
+    await waitFor(() =>
+      expect(runtimeClient.updateModelConfiguration).toHaveBeenCalled(),
+    );
+    const [role, body] = vi.mocked(runtimeClient.updateModelConfiguration).mock
+      .calls[0];
+    expect(role).toBe("behavior_decision");
+    expect(body.provider).toBe("inherit_chat");
+    expect(body.api_key).toBeUndefined();
   });
 
   it("saves the selected model budget and shows the reference input allowance", async () => {
