@@ -4,7 +4,7 @@ test("desktop settings is an app-like control surface without chat ownership", a
   page,
 }, testInfo) => {
   await page.route(
-    "http://127.0.0.1:8765/v1/model-configurations",
+    `${process.env.VITE_RUNTIME_URL || "http://127.0.0.1:8765"}/v1/model-configurations*`,
     async (route) => {
       if (route.request().method() === "OPTIONS") {
         await route.fulfill({
@@ -146,40 +146,35 @@ test("desktop settings is an app-like control surface without chat ownership", a
   expect(metrics.pageHeight).toBeLessThanOrEqual(metrics.viewportHeight + 1);
   expect(metrics.overflowY).toBe("auto");
 
-  const memoryDialogLayout = await page.evaluate<{
-    overlayPosition: string;
-    overlayTop: string;
-    overlayDisplay: string;
-    dialogDisplay: string;
-    dialogMaxHeight: string;
-  }>(`
-    (() => {
-      const overlay = document.createElement("div");
-      overlay.className = "memory-center-overlay";
-      const dialog = document.createElement("section");
-      dialog.className = "memory-center";
-      overlay.append(dialog);
-      document.body.append(overlay);
-      try {
-        const overlayStyle = getComputedStyle(overlay);
-        const dialogStyle = getComputedStyle(dialog);
-        return {
-          overlayPosition: overlayStyle.position,
-          overlayTop: overlayStyle.top,
-          overlayDisplay: overlayStyle.display,
-          dialogDisplay: dialogStyle.display,
-          dialogMaxHeight: dialogStyle.maxHeight,
-        };
-      } finally {
-        overlay.remove();
-      }
-    })()
-  `);
-  expect(memoryDialogLayout.overlayPosition).toBe("fixed");
-  expect(memoryDialogLayout.overlayTop).toBe("0px");
-  expect(memoryDialogLayout.overlayDisplay).toBe("grid");
-  expect(memoryDialogLayout.dialogDisplay).toBe("grid");
-  expect(memoryDialogLayout.dialogMaxHeight).not.toBe("none");
+  await page
+    .getByRole("navigation", { name: "设置分类" })
+    .getByRole("button", { name: /^记忆与资料/ })
+    .click();
+  const memoryOpener = page.getByRole("button", {
+    name: "记忆中心",
+    exact: true,
+  });
+  await expect(memoryOpener).toBeEnabled();
+  await memoryOpener.click();
+  const memoryDialog = page.getByRole("dialog", {
+    name: "结构化记忆中心",
+    exact: true,
+  });
+  await expect(memoryDialog).toBeVisible();
+  const memoryOverlay = memoryDialog.locator("..");
+  await expect(memoryOverlay).toHaveCSS("position", "fixed");
+  await expect(memoryOverlay).toHaveCSS("top", "0px");
+  await expect(memoryOverlay).toHaveCSS("display", "grid");
+  const dialogBounds = await memoryDialog.boundingBox();
+  expect(dialogBounds).not.toBeNull();
+  expect(dialogBounds!.x).toBeGreaterThanOrEqual(0);
+  expect(dialogBounds!.y).toBeGreaterThanOrEqual(0);
+  expect(dialogBounds!.x + dialogBounds!.width).toBeLessThanOrEqual(960);
+  expect(dialogBounds!.y + dialogBounds!.height).toBeLessThanOrEqual(700);
+  await expect(memoryDialog).not.toHaveCSS("max-height", "none");
+  await page.keyboard.press("Escape");
+  await expect(memoryDialog).toHaveCount(0);
+  await expect(memoryOpener).toBeFocused();
 
   const screenshot = await page.screenshot({
     animations: "disabled",
