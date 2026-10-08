@@ -1,5 +1,6 @@
 """Real worker output, persistent artifacts and workspace escape prevention."""
 
+import shutil
 from pathlib import Path
 from uuid import uuid4
 
@@ -55,6 +56,10 @@ async def test_workspace_versions_artifacts_and_escape(
 
 
 @pytest.mark.parametrize("kind", ["word", "powerpoint"])
+@pytest.mark.skipif(
+    shutil.which("soffice") is None or shutil.which("node") is None,
+    reason="requires LibreOffice and Node.js; Linux CI installs the real document dependencies",
+)
 async def test_real_document_worker_and_artifact_inspection(
     runtime_settings: Settings,
     kind: str,

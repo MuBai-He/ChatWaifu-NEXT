@@ -557,7 +557,7 @@ async def run_scene(scene: dict[str, Any], provider: LlmProvider) -> dict[str, A
 
 async def main(args: argparse.Namespace) -> None:
     provider, model = configured_provider(args.source_root)
-    scenes = json.loads(args.fixtures.read_text())["scenarios"]
+    scenes = json.loads(args.fixtures.read_text(encoding="utf-8"))["scenarios"]
     if args.kind:
         scenes = [s for s in scenes if s["kind"] == args.kind]
     if args.limit:
@@ -618,7 +618,7 @@ async def main(args: argparse.Namespace) -> None:
         },
     }
     args.output.with_suffix(".summary.json").write_text(
-        json.dumps(summary, ensure_ascii=False, indent=2) + "\n"
+        json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     behavior = [r for r in results if r["kind"] == "behavior"]
     expected: dict[str, list[str]] = {s["id"]: s.get("expected", []) for s in scenes}
@@ -634,7 +634,7 @@ async def main(args: argparse.Namespace) -> None:
         if metric["total"]
     ) and (not response or summary["response_recall"]["passed"] / len(response) >= 0.95)
     args.output.with_suffix(".summary.json").write_text(
-        json.dumps(summary, ensure_ascii=False, indent=2) + "\n"
+        json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     print(json.dumps(summary, ensure_ascii=False), flush=True)
     if not summary["quality_gate_passed"]:

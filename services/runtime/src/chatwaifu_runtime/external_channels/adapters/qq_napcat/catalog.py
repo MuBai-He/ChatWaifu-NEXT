@@ -9,7 +9,7 @@ def catalog_versions(skills_root: Path) -> frozenset[str]:
     path = skills_root / "builtin" / "qq-scene" / "api-catalog.json"
     if not path.is_file() or path.stat().st_size > 2_000_000:
         return frozenset()
-    catalog = json.loads(path.read_text())
+    catalog = json.loads(path.read_text(encoding="utf-8"))
     version = catalog["version"]
     reviewed = sorted(action["action"] for action in catalog["actions"] if action["reviewed"])
     versions = {version}

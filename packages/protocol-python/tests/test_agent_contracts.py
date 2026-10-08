@@ -19,7 +19,9 @@ from pydantic import ValidationError
 
 def test_agent_fixtures_roundtrip_without_losing_authority_or_evidence() -> None:
     root = Path(__file__).resolve().parents[3]
-    fixture = json.loads((root / "tests/fixtures/protocol/v1/agent-contracts.json").read_text())
+    fixture = json.loads(
+        (root / "tests/fixtures/protocol/v1/agent-contracts.json").read_text(encoding="utf-8")
+    )
     for key, model in {
         "task": AgentTask,
         "artifact": ArtifactRef,

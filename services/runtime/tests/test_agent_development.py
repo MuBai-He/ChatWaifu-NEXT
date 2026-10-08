@@ -1,6 +1,8 @@
 """Actual sandbox execution, disabled-by-default development and explicit activation."""
 
 import asyncio
+import shutil
+import sys
 from collections.abc import AsyncIterator
 
 import pytest
@@ -16,6 +18,7 @@ from chatwaifu_runtime.providers.contracts import (
     LlmToolCall,
     LlmToolCallRequested,
 )
+from chatwaifu_runtime.runtime_skills.transports import NoopSandboxLauncher
 
 
 class CandidateModel:
@@ -65,6 +68,13 @@ class MalformedFirstCandidate(CandidateModel):
                 yield event
 
 
+@pytest.mark.skipif(
+    not (
+        (sys.platform == "darwin" and shutil.which("sandbox-exec"))
+        or (sys.platform.startswith("linux") and shutil.which("bwrap"))
+    ),
+    reason="requires POSIX sandbox; Windows AppContainer needs its launcher fixture",
+)
 async def test_candidate_sandbox_review_hash_and_activation(runtime_settings: Settings) -> None:
     container = RuntimeContainer(runtime_settings)
     await container.start()
@@ -125,5 +135,39 @@ async def test_candidate_sandbox_review_hash_and_activation(runtime_settings: Se
         assert not next(
             s for s in container.runtime_skills.list() if s.skill_id == approved.plugin_id
         ).enabled
+    finally:
+        await container.stop()
+
+
+async def test_candidate_without_enforcing_sandbox_blocks_before_model_or_install(
+    runtime_settings: Settings,
+) -> None:
+    container = RuntimeContainer(runtime_settings)
+    await container.start()
+    try:
+        session = await container.sessions.create_session("default")
+        service = container.agent_development
+        model = MalformedFirstCandidate()
+        service.model_factory = lambda: model
+        service.launcher = NoopSandboxLauncher()
+        await service.configure(AgentDevelopmentPolicy(enabled=True))
+        candidate = await service.create(
+            CandidateCreate(
+                session_id=session.session_id, goal="synthetic", source_ref="owner-test"
+            )
+        )
+        async with asyncio.timeout(10):
+            while True:
+                current = await service.repository.get(candidate.candidate_id)
+                assert current is not None
+                if current.state not in {"queued", "developing"}:
+                    break
+                await asyncio.sleep(0.01)
+        assert current.state == "blocked"
+        assert model.requests == 0
+        assert current.artifact is None and current.plugin_id is None
+        assert not any(
+            skill.skill_id.startswith("candidate.") for skill in container.runtime_skills.list()
+        )
     finally:
         await container.stop()

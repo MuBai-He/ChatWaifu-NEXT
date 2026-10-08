@@ -34,10 +34,10 @@ def test_compatibility_evidence_does_not_cover_additional_actions(tmp_path: Path
             }
         ],
     }
-    path.write_text(json.dumps(data))
+    path.write_text(json.dumps(data), encoding="utf-8")
     assert catalog_versions(tmp_path) == {"4.18.33", "4.18.28"}
     data["actions"].append({"action": "get_group_info", "reviewed": True})
-    path.write_text(json.dumps(data))
+    path.write_text(json.dumps(data), encoding="utf-8")
     assert catalog_versions(tmp_path) == {"4.18.33"}
 
 

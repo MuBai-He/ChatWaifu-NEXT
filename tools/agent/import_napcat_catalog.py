@@ -49,7 +49,7 @@ def import_catalog(
                 "reviewed_actions": sorted(REVIEWED),
             }
         )
-    old = yaml.safe_load(destination.read_text())
+    old = yaml.safe_load(destination.read_text(encoding="utf-8"))
     declarations = {c["name"]: c for c in old["definition"]["capabilities"]}
     capabilities: list[dict[str, Any]] = []
     metadata: list[dict[str, Any]] = []
@@ -108,7 +108,7 @@ def import_catalog(
         )
     capabilities.extend(c for name, c in declarations.items() if name == "read_file")
     old["definition"]["capabilities"] = capabilities
-    destination.write_text(json.dumps(old, ensure_ascii=False, indent=2) + "\n")
+    destination.write_text(json.dumps(old, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     destination.with_name("api-catalog.json").write_text(
         json.dumps(
             {
@@ -123,7 +123,8 @@ def import_catalog(
             ensure_ascii=False,
             indent=2,
         )
-        + "\n"
+        + "\n",
+        encoding="utf-8",
     )
 
 

@@ -99,6 +99,22 @@ jobs:
           enable-cache: true
       - run: uv sync --all-packages --all-groups --locked
       # Report the exact test and first failure before a later teardown can hang.
+      - if: runner.os == 'Linux'
+        uses: pnpm/setup@v1
+        with:
+          version: 11.19.0
+          runtime: node@22
+          cache: true
+          install: false
+      - if: runner.os == 'Linux'
+        run: pnpm install --frozen-lockfile
+      - if: runner.os == 'Linux'
+        name: Install real document renderer and candidate sandbox
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libreoffice-writer libreoffice-impress fonts-noto-cjk bubblewrap
+          # Hosted Ubuntu's AppArmor restriction otherwise denies bubblewrap namespaces.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       # The watchdog dumps thread stacks without cancelling or skipping tests.
       - name: Run every collected test in its shard
         run: uv run pytest -p tools.ci.pytest_shard --ci-shard-index=${{ matrix.shard }} --ci-shard-count=${{ matrix.count }} --ci-shard-manifest=pytest-shard.json -q -x --tb=short --durations=25 --junitxml=pytest-results.xml -o faulthandler_timeout=120

@@ -192,7 +192,7 @@ class CandidateDevelopmentService:
             candidate = await self._save(candidate, state="developing")
             directory = self.root / candidate.candidate_id.hex
             directory.mkdir(parents=True, exist_ok=False)
-            (directory / "test_runner.py").write_text(_RUNNER)
+            (directory / "test_runner.py").write_text(_RUNNER, encoding="utf-8")
             # Preflight the actual enforcing sandbox before asking the model to write code.
             command = self.launcher.prepare(
                 PreparedStdioCommand(
@@ -244,7 +244,9 @@ class CandidateDevelopmentService:
                             raise ValueError(
                                 "candidate schemas cannot reference external resources"
                             )
-                    (directory / "implementation.py").write_text(implementation.code)
+                    (directory / "implementation.py").write_text(
+                        implementation.code, encoding="utf-8"
+                    )
                     digest = _package_hash(directory)
                     result = await _sandbox_results(
                         command, [t.arguments for t in implementation.tests]
@@ -363,13 +365,18 @@ def _write_package(
         },
         "adapter": {"kind": "mcp", "tool": "execute"},
     }
-    (directory / "plugin.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2))
-    (directory / "chatwaifu.yaml").write_text(json.dumps(skill, ensure_ascii=False, indent=2))
-    (directory / "server.py").write_text(_SERVER)
+    (directory / "plugin.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    (directory / "chatwaifu.yaml").write_text(
+        json.dumps(skill, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    (directory / "server.py").write_text(_SERVER, encoding="utf-8")
     (directory / "SKILL.md").write_text(
         f"---\nname: Candidate capability\ndescription: Owner reviewed candidate\n"
         f"id: {plugin_id}\nversion: 1.0.0\n---\n\n"
-        "Stateless standalone transform only. Runtime permissions and sandbox always apply.\n"
+        "Stateless standalone transform only. Runtime permissions and sandbox always apply.\n",
+        encoding="utf-8",
     )
 
 
