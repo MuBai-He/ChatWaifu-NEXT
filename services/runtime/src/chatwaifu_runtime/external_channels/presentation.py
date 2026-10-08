@@ -8,6 +8,7 @@ history, memory, and desktop presentation.
 
 from __future__ import annotations
 
+import random
 import re
 import unicodedata
 from collections.abc import Sequence
@@ -437,21 +438,17 @@ class BubbleSplitter:
 
 
 class CadenceCalculator:
-    """Deterministic, testable inter-bubble typing cadence calculator.
+    """Plan a bounded random pause plus typing time for the *next* bubble.
 
-    Computes delay_after_ms for each delivery part based on:
-    - Base delay (policy.min_delay_ms)
-    - Grapheme cluster count (simulating reading and typing duration)
-    - Punctuation emotional weighting (natural pause after ? ! ~ …)
-    - Min/max clamping
-    - Hard cumulative delay ceiling (policy.total_cadence_delay_ceiling_ms)
-    - The terminal part always has delay_after_ms = 0.
+    Randomness is sampled only when creating the plan. Persisted delay_after_ms
+    and receipt-relative not_before_at survive retry/restart without resampling.
+    The first bubble remains immediately eligible; the terminal delay is zero.
     """
 
     _GRAPHEME_PATTERN = regex.compile(r"\X")
 
-    def __init__(self, ms_per_grapheme: int = 35) -> None:
-        self._ms_per_grapheme = ms_per_grapheme
+    def __init__(self, random_source: random.Random | None = None) -> None:
+        self._random = random_source if random_source is not None else random.SystemRandom()
 
     def calculate_delays(
         self, parts: tuple[str, ...], policy: ChannelPresentationPolicy
@@ -467,31 +464,19 @@ class CadenceCalculator:
         delays: list[int] = []
         total_delay_so_far = 0
 
-        for i, part in enumerate(parts):
+        for i in range(count):
             # Terminal part has 0 delay after
             if i == count - 1:
                 delays.append(0)
                 continue
 
-            # Count grapheme clusters
-            graphemes = len(self._GRAPHEME_PATTERN.findall(part))
-            char_delay = graphemes * self._ms_per_grapheme
-
-            # Punctuation weight
-            punct_weight = 0
-            trimmed = part.rstrip()
-            if trimmed:
-                last_char = trimmed[-1]
-                if last_char in "！？!?":
-                    punct_weight = 250
-                elif last_char in "…～~":  # noqa: RUF001
-                    punct_weight = 300
-                elif last_char in "。.":
-                    punct_weight = 150
-                elif last_char in "，,；;":  # noqa: RUF001
-                    punct_weight = 100
-
-            raw_delay = policy.min_delay_ms + char_delay + punct_weight
+            # Paragraph separators take no typing time; emoji clusters count once.
+            graphemes = sum(
+                not cluster.isspace() for cluster in self._GRAPHEME_PATTERN.findall(parts[i + 1])
+            )
+            typing_ms = round(graphemes * 1000 / policy.typing_chars_per_second)
+            pause_ms = self._random.randint(0, policy.pause_jitter_ms)
+            raw_delay = policy.min_delay_ms + pause_ms + typing_ms
 
             # Clamp between min_delay_ms and max_delay_ms
             clamped_delay = max(
@@ -634,7 +619,9 @@ class InstantMessageDeliveryPlanFactory:
         drafts: list[ChannelDeliveryPartDraft] = []
         if image_payload is not None:
             delays = self._cadence_calculator.calculate_delays(
-                (*split_result.parts, "[sticker]"), active_policy
+                # An optional sticker gets a pause but has no text to type.
+                (*split_result.parts, ""),
+                active_policy,
             )
             for ordinal, (part_text, delay_ms) in enumerate(
                 zip(split_result.parts, delays[: len(split_result.parts)], strict=True)

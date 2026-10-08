@@ -763,6 +763,8 @@ const channelPresentationPolicySchema = z
     preferred_chars_per_part: z.number().int().min(10).max(500).default(60),
     soft_max_chars_per_part: z.number().int().min(20).max(1000).default(120),
     cadence_enabled: z.boolean().default(true),
+    typing_chars_per_second: z.number().int().min(1).max(50).default(8),
+    pause_jitter_ms: z.number().int().min(0).max(5000).default(600),
     min_delay_ms: z.number().int().min(0).max(10_000).default(800),
     max_delay_ms: z.number().int().min(0).max(30_000).default(3000),
     total_cadence_delay_ceiling_ms: z

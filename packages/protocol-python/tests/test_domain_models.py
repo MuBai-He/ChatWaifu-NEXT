@@ -13,6 +13,7 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryAcknowledgement,
     ChannelDeliveryStatus,
     ChannelInboundTextMessage,
+    ChannelPresentationPolicy,
     ChannelProviderCapabilities,
 )
 from chatwaifu_protocol.character import (
@@ -37,6 +38,23 @@ from chatwaifu_protocol.memory import (
 )
 from chatwaifu_protocol.skills import McpConnectionConfiguration, PluginTransport
 from pydantic import ValidationError
+
+
+def test_channel_typing_cadence_accepts_old_policies_and_rejects_invalid_speed() -> None:
+    old = ChannelPresentationPolicy.model_validate({"profile": "instant_message"})
+    assert old.typing_chars_per_second == 8 and old.pause_jitter_ms == 600
+    configured = old.model_copy(update={"typing_chars_per_second": 6, "pause_jitter_ms": 900})
+    assert ChannelPresentationPolicy.model_validate_json(configured.model_dump_json()) == configured
+    for invalid in (
+        {"typing_chars_per_second": 0},
+        {"typing_chars_per_second": 51},
+        {"typing_chars_per_second": 1.5},
+        {"pause_jitter_ms": -1},
+        {"pause_jitter_ms": 5001},
+    ):
+        with pytest.raises(ValidationError):
+            ChannelPresentationPolicy.model_validate(invalid)
+
 
 NOW = datetime(2026, 8, 23, 8, 0, tzinfo=UTC)
 

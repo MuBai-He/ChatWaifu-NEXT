@@ -409,6 +409,10 @@ export type MaxParts = number
  */
 export type MinDelayMs = number
 /**
+ * Maximum random pause added to the base inter-bubble delay, sampled once
+ */
+export type PauseJitterMs = number
+/**
  * Preferred character count per bubble when segmenting sentences
  */
 export type PreferredCharsPerPart = number
@@ -429,6 +433,10 @@ export type StickersEnabled = boolean
  * Maximum cumulative delay across all parts of a single delivery plan
  */
 export type TotalCadenceDelayCeilingMs = number
+/**
+ * Estimated visible grapheme clusters typed per second for the next bubble
+ */
+export type TypingCharsPerSecond = number
 /**
  * Whether supported adapters emit best-effort typing indicators during active replies
  */
@@ -2498,12 +2506,14 @@ export interface ChannelPresentationPolicy {
   max_delay_ms?: MaxDelayMs
   max_parts?: MaxParts
   min_delay_ms?: MinDelayMs
+  pause_jitter_ms?: PauseJitterMs
   preferred_chars_per_part?: PreferredCharsPerPart
   profile?: ChannelPresentationProfile
   schema_version?: SchemaVersion16
   soft_max_chars_per_part?: SoftMaxCharsPerPart
   stickers_enabled?: StickersEnabled
   total_cadence_delay_ceiling_ms?: TotalCadenceDelayCeilingMs
+  typing_chars_per_second?: TypingCharsPerSecond
   typing_enabled?: TypingEnabled
   version?: Version1
   [k: string]: unknown

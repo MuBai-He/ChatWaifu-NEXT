@@ -560,6 +560,8 @@ describe("cross-language protocol fixtures", () => {
     expect(defaultPolicy.preferred_chars_per_part).toBe(60);
     expect(defaultPolicy.soft_max_chars_per_part).toBe(120);
     expect(defaultPolicy.cadence_enabled).toBe(true);
+    expect(defaultPolicy.typing_chars_per_second).toBe(8);
+    expect(defaultPolicy.pause_jitter_ms).toBe(600);
     expect(defaultPolicy.min_delay_ms).toBe(800);
     expect(defaultPolicy.max_delay_ms).toBe(3000);
     expect(defaultPolicy.total_cadence_delay_ceiling_ms).toBe(6000);
@@ -586,6 +588,15 @@ describe("cross-language protocol fixtures", () => {
     });
     expect(imPolicy.profile).toBe("instant_message");
     expect(imPolicy.max_parts).toBe(2);
+    for (const invalid of [
+      { typing_chars_per_second: 0 },
+      { typing_chars_per_second: 51 },
+      { typing_chars_per_second: 1.5 },
+      { pause_jitter_ms: -1 },
+      { pause_jitter_ms: 5001 },
+    ]) {
+      expect(() => parseChannelPresentationPolicy(invalid)).toThrow();
+    }
 
     // 4. Embedded within ChannelConnectionConfiguration
     const baseConfig = {

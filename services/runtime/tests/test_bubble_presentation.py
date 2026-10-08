@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import random
 import unicodedata
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
@@ -328,8 +329,9 @@ def test_single_text_profile_bypasses_splitting() -> None:
 
 
 def test_cadence_calculator_inter_bubble_delays_and_terminal_zero() -> None:
-    calculator = CadenceCalculator(ms_per_grapheme=20)
+    calculator = CadenceCalculator(random_source=random.Random(1))
     policy = ChannelPresentationPolicy(
+        typing_chars_per_second=50,
         min_delay_ms=500,
         max_delay_ms=2000,
         total_cadence_delay_ceiling_ms=5000,
@@ -353,6 +355,39 @@ def test_cadence_calculator_disabled_cadence() -> None:
     parts = ("气泡一", "气泡二", "气泡三")
     delays = calculator.calculate_delays(parts, policy)
     assert delays == (0, 0, 0)
+
+
+def test_cadence_types_next_bubble_and_respects_configured_speed() -> None:
+    calculator = CadenceCalculator()
+    policy = ChannelPresentationPolicy(
+        pause_jitter_ms=0, max_delay_ms=8000, total_cadence_delay_ceiling_ms=16000
+    )
+    assert calculator.calculate_delays(("上一句", "字" * 8), policy) == (1800, 0)
+    assert calculator.calculate_delays(("字" * 40, "字" * 8), policy) == (1800, 0)
+    assert calculator.calculate_delays(("上一句", "字" * 40), policy) == (5800, 0)
+    slower = policy.model_copy(update={"typing_chars_per_second": 4})
+    assert calculator.calculate_delays(("上一句", "字" * 8), slower) == (2800, 0)
+
+
+def test_cadence_random_pause_varies_within_bounds_and_counts_visible_graphemes() -> None:
+    calculator = CadenceCalculator(random_source=random.Random(7))
+    policy = ChannelPresentationPolicy(max_delay_ms=8000)
+    samples = [calculator.calculate_delays(("上一句", "字" * 8), policy)[0] for _ in range(20)]
+    assert all(1800 <= delay <= 2400 for delay in samples)
+    assert len(set(samples)) > 1
+    no_jitter = policy.model_copy(update={"pause_jitter_ms": 0})
+    assert calculator.calculate_delays(("上一句", "\n 👨‍👩‍👧‍👦\t e\u0301 \n"), no_jitter) == (
+        1050,
+        0,
+    )
+
+
+def test_cadence_random_pause_and_typing_obey_per_gap_and_total_limits() -> None:
+    calculator = CadenceCalculator(random_source=random.Random(7))
+    policy = ChannelPresentationPolicy(max_delay_ms=2000, total_cadence_delay_ceiling_ms=2500)
+    assert calculator.calculate_delays(("开头", "字" * 40, "字" * 40), policy) == (2000, 500, 0)
+    assert calculator.calculate_delays((), policy) == ()
+    assert calculator.calculate_delays(("单句",), policy) == (0,)
 
 
 # =========================================================================
@@ -923,7 +958,8 @@ async def test_durable_cadence_real_database_reopen_recovery(tmp_path: Path) -> 
         max_parts=3,
         preferred_chars_per_part=10,
         min_delay_ms=1500,
-        max_delay_ms=1500,
+        max_delay_ms=8000,
+        total_cadence_delay_ceiling_ms=16000,
     )
     conn_id, _, _, turn_id = await _seed_channel_and_turn(db1, repo1, presentation_policy=policy)
 
@@ -931,8 +967,8 @@ async def test_durable_cadence_real_database_reopen_recovery(tmp_path: Path) -> 
     text = "第一段重要说明务必仔细阅读！第二段补充信息同样非常重要！第三段最后收尾祝你生活愉快！"
     drafts = factory.create_parts(text, policy=policy)
     assert len(drafts) == 3
-    assert drafts[0].delay_after_ms == 1500
-    assert drafts[1].delay_after_ms == 1500
+    assert 1500 < drafts[0].delay_after_ms <= 8000
+    assert 1500 < drafts[1].delay_after_ms <= 8000
     assert drafts[2].delay_after_ms == 0
 
     now = datetime.now(UTC)
@@ -970,7 +1006,7 @@ async def test_durable_cadence_real_database_reopen_recovery(tmp_path: Path) -> 
     # Verify Part 1 has not_before_at set in db1
     p1 = await repo1.get_delivery_plan(deliv_id)
     assert p1 is not None
-    assert p1.parts[1].not_before_at == ack_time + timedelta(milliseconds=1500)
+    assert p1.parts[1].not_before_at == ack_time + timedelta(milliseconds=drafts[0].delay_after_ms)
 
     # 2. Crash process: truly close database connection
     await db1.close()
@@ -981,6 +1017,12 @@ async def test_durable_cadence_real_database_reopen_recovery(tmp_path: Path) -> 
     try:
         event_store2 = EventStore(db2)
         repo2 = SQLiteExternalChannelRepository(db2, event_store2)
+        resumed = await repo2.get_delivery_plan(deliv_id)
+        assert resumed is not None
+        assert tuple(p.delay_after_ms for p in resumed.parts) == tuple(
+            p.delay_after_ms for p in drafts
+        )
+        assert resumed.parts[1].not_before_at == p1.parts[1].not_before_at
         executor = _RecordingExecutor()
         scheduler = ChannelDeliveryScheduler(
             repository=repo2,
@@ -995,7 +1037,7 @@ async def test_durable_cadence_real_database_reopen_recovery(tmp_path: Path) -> 
         assert len(executor.executed_parts) == 0
 
         # Step at or after cadence expiry: Part 1 claimed and executed
-        on_time = ack_time + timedelta(milliseconds=1600)
+        on_time = ack_time + timedelta(milliseconds=drafts[0].delay_after_ms)
         assert await scheduler.step(now=on_time) is True
         assert len(executor.executed_parts) == 1
         assert executor.executed_parts[0][1] == 1  # ordinal 1
@@ -1006,7 +1048,7 @@ async def test_durable_cadence_real_database_reopen_recovery(tmp_path: Path) -> 
         assert len(executor.executed_parts) == 1
 
         # Step after Part 2 cadence expiry: Part 2 claimed and executed
-        on_time_2 = on_time + timedelta(milliseconds=1600)
+        on_time_2 = on_time + timedelta(milliseconds=drafts[1].delay_after_ms)
         assert await scheduler.step(now=on_time_2) is True
         assert len(executor.executed_parts) == 2
         assert executor.executed_parts[1][1] == 2  # ordinal 2

@@ -34,6 +34,8 @@ Presentation policy is defined in versioned protocol contracts independently of 
 - `preferred_chars_per_part`: Ideal bubble length (default 60 chars)
 - `soft_max_chars_per_part`: Soft upper bound for casual chat segments (default 120 chars)
 - `cadence_enabled`: Toggle for inter-bubble pacing (default true)
+- `typing_chars_per_second`: Estimated visible grapheme clusters typed per second (default 8, bounds 1–50)
+- `pause_jitter_ms`: Maximum additional random pause (default 600 ms, bounds 0–5000 ms)
 - `min_delay_ms`: Minimum inter-bubble delay (default 800 ms)
 - `max_delay_ms`: Maximum inter-bubble delay (default 3000 ms)
 - `total_cadence_delay_ceiling_ms`: Hard ceiling on cumulative delay across all parts of a plan (default 6000 ms)
@@ -68,6 +70,16 @@ Cadence between bubbles is scheduled durably using the existing `ChannelDelivery
   $$\\text{not\\_before\\_at}_{k+1} = \\text{acknowledged\\_at} + \\text{delay\\_after\\_ms}_k$$
 - If the process crashes between Part 0 and Part 1, the restarted runtime finds Part 0 terminal, finds Part 1 with a durable `not_before_at`, and waits for the remaining time before claiming and sending Part 1. Part 0 is never resent.
 - The adapter long-poll loop never sleeps.
+
+Natural typing cadence (2026-10-07) estimates the **next** text bubble's typing time:
+`delay_after_ms = min_delay_ms + uniform_integer(0, pause_jitter_ms) + round(1000 * next_visible_graphemes / typing_chars_per_second)`.
+Existing per-gap and cumulative ceilings then clamp this value. Whitespace and paragraph
+separators do not take typing time; emoji clusters count once. Optional stickers get
+the random pause without a synthetic text length. Sample each pause only during plan
+creation and persist it, so delivery retries and process restarts do not resample it.
+The first bubble has no artificial wait. Existing cancellation and receipt-only
+scheduling apply to private and group deliveries. Old policy JSON loads the new
+defaults without a migration; existing explicit delay bounds remain effective.
 
 ### 5. Tail Cancellation
 

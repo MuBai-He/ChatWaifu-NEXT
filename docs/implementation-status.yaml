@@ -858,7 +858,8 @@ phases:
     evidence:
       - Provider-neutral ChannelPresentationPolicy contract and configuration
       - Lossless BubbleSplitter with atomic element protection and long-form bypass
-      - Deterministic cadence calculation with durable SQLite next-part not_before_at scheduling
+      - Bounded cadence calculation with durable SQLite next-part not_before_at scheduling
+      - "2026-10-07: inter-bubble pacing adds a once-sampled random pause and next-bubble visible-grapheme typing duration; shared settings expose typing speed and jitter. Existing receipt scheduling, retry/restart persistence and new-input tail cancellation remain intact. No DB migration; QQ server deployment and phone acceptance are recorded separately in docs/operations/qq-bubble-typing-server-2026-10-07.md."
       - New user turn tail cancellation without modifying canonical assistant turns
       - PR 16 merged as 4efe1dd and PR 17 merged as a4d63c5; owner confirmed improved casual WeChat style
       - Provider recovery slice adds bounded pre-output retries, durable character-compatible failure notices, exactly one short-term assistant history row without long-term memory extraction, and native processing-turn supersession

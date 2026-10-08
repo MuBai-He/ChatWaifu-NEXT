@@ -79,6 +79,15 @@ describe("channel presentation settings", () => {
       name: "显示正在输入",
     });
     await waitFor(() => expect(typing.disabled).toBe(false));
+    expect(
+      screen.getByLabelText<HTMLInputElement>("打字速度（字/秒）").value,
+    ).toBe("8");
+    fireEvent.change(screen.getByLabelText("打字速度（字/秒）"), {
+      target: { value: "6" },
+    });
+    fireEvent.change(screen.getByLabelText("随机停顿上限（毫秒）"), {
+      target: { value: "900" },
+    });
     fireEvent.click(typing);
     fireEvent.change(screen.getByLabelText("连接名称"), {
       target: { value: "新微信" },
@@ -97,6 +106,8 @@ describe("channel presentation settings", () => {
           preferred_chars_per_part: 30,
           soft_max_chars_per_part: 60,
           typing_enabled: true,
+          typing_chars_per_second: 6,
+          pause_jitter_ms: 900,
         }) as unknown,
       }),
       3,

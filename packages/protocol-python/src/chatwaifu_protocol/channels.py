@@ -123,6 +123,18 @@ class ChannelPresentationPolicy(ChannelVersionedModel):
         default=True,
         description="Whether inter-part delivery delay is computed and scheduled",
     )
+    typing_chars_per_second: int = Field(
+        default=8,
+        ge=1,
+        le=50,
+        description="Estimated visible grapheme clusters typed per second for the next bubble",
+    )
+    pause_jitter_ms: int = Field(
+        default=600,
+        ge=0,
+        le=5000,
+        description="Maximum random pause added to the base inter-bubble delay, sampled once",
+    )
     min_delay_ms: int = Field(
         default=800,
         ge=0,
