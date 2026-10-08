@@ -53,8 +53,9 @@ import importlib.util,json,sys
 spec=importlib.util.spec_from_file_location("candidate","implementation.py")
 module=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
-arguments=json.loads(sys.stdin.read())
-print(json.dumps([module.run(item) for item in arguments],ensure_ascii=False))
+arguments=json.loads(sys.stdin.buffer.read())
+result=json.dumps([module.run(item) for item in arguments],ensure_ascii=False)
+sys.stdout.buffer.write(result.encode("utf-8"))
 """
 _SERVER = """
 from typing import Any

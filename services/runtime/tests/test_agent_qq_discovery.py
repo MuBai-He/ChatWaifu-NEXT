@@ -142,11 +142,14 @@ async def test_qq_opaque_references_expire_and_revocation_prevents_download(
     assert resolved
 
 
-async def test_real_material_worker_extracts_docx_and_rejects_unsupported_type() -> None:
+async def test_real_material_worker_extracts_docx_and_rejects_unsupported_type(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     import io
 
     from docx import Document
 
+    monkeypatch.setenv("PYTHONIOENCODING", "cp1252")
     document = Document()
     document.add_paragraph("材料来源完整，数字 42 和中文内容均保留。")
     buffer = io.BytesIO()

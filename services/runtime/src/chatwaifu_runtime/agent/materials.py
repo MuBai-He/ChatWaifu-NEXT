@@ -77,4 +77,6 @@ def extract(path: Path) -> str:
 
 
 if __name__ == "__main__":
-    print(json.dumps(extract(Path(sys.argv[1])), ensure_ascii=False))
+    sys.stdout.buffer.write(
+        (json.dumps(extract(Path(sys.argv[1])), ensure_ascii=False) + "\n").encode("utf-8")
+    )
