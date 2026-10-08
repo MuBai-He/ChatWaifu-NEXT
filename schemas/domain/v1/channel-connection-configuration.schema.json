@@ -39,6 +39,14 @@
           "title": "Min Delay Ms",
           "type": "integer"
         },
+        "pause_jitter_ms": {
+          "default": 600,
+          "description": "Maximum random pause added to the base inter-bubble delay, sampled once",
+          "maximum": 5000,
+          "minimum": 0,
+          "title": "Pause Jitter Ms",
+          "type": "integer"
+        },
         "preferred_chars_per_part": {
           "default": 60,
           "description": "Preferred character count per bubble when segmenting sentences",
@@ -77,6 +85,14 @@
           "maximum": 60000,
           "minimum": 0,
           "title": "Total Cadence Delay Ceiling Ms",
+          "type": "integer"
+        },
+        "typing_chars_per_second": {
+          "default": 8,
+          "description": "Estimated visible grapheme clusters typed per second for the next bubble",
+          "maximum": 50,
+          "minimum": 1,
+          "title": "Typing Chars Per Second",
           "type": "integer"
         },
         "typing_enabled": {

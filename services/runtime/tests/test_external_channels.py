@@ -666,7 +666,13 @@ async def test_update_channel_connection_retains_cadence_and_profile_with_false_
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://testserver"
         ) as client:
-            updated_policy = initial_policy.model_copy(update={"stickers_enabled": True})
+            updated_policy = initial_policy.model_copy(
+                update={
+                    "stickers_enabled": True,
+                    "typing_chars_per_second": 6,
+                    "pause_jitter_ms": 900,
+                }
+            )
             update_payload = configuration.model_copy(
                 update={"presentation_policy": updated_policy}
             ).model_dump(mode="json")
@@ -685,6 +691,8 @@ async def test_update_channel_connection_retains_cadence_and_profile_with_false_
             assert persisted_policy["min_delay_ms"] == 800
             assert persisted_policy["max_delay_ms"] == 3000
             assert persisted_policy["total_cadence_delay_ceiling_ms"] == 6000
+            assert persisted_policy["typing_chars_per_second"] == 6
+            assert persisted_policy["pause_jitter_ms"] == 900
 
             get_res = await client.get(
                 f"/v1/channel-connections/{connection_id}",
@@ -698,5 +706,7 @@ async def test_update_channel_connection_retains_cadence_and_profile_with_false_
             assert get_policy["min_delay_ms"] == 800
             assert get_policy["max_delay_ms"] == 3000
             assert get_policy["total_cadence_delay_ceiling_ms"] == 6000
+            assert get_policy["typing_chars_per_second"] == 6
+            assert get_policy["pause_jitter_ms"] == 900
     finally:
         await container.stop()

@@ -891,93 +891,109 @@ async def test_native_adapter_cross_batch_preserves_pending_contexts(
     transport = _FakeWeixin()
     management = _replace_management(container, store, transport)
     await container.start()
-    connection_id = uuid4()
-    access_token = "g" * 43
-    created = await container.external_channels.create_connection(
-        _configuration(connection_id), access_token=access_token
-    )
-    await store.set(f"weixin_ilink:{connection_id}", _credentials(access_token).to_json())
-
-    batch1_cursor_advanced = asyncio.Event()
-    batch2_cursor_advanced = asyncio.Event()
-    original_set_cursor = container.external_channel_repository.set_adapter_cursor
-
-    async def observed_set_cursor(
-        target_connection_id: UUID,
-        *,
-        cursor: str,
-        updated_at: datetime,
-    ) -> None:
-        await original_set_cursor(
-            target_connection_id,
-            cursor=cursor,
-            updated_at=updated_at,
+    try:
+        connection_id = uuid4()
+        access_token = "g" * 43
+        # This verifies two independent turn receipts, not multi-bubble pacing.
+        configuration = _configuration(connection_id).model_copy(
+            update={
+                "presentation_policy": ChannelPresentationPolicy(
+                    profile=ChannelPresentationProfile.SINGLE_TEXT
+                )
+            }
         )
-        if cursor == "cursor-batch-1":
-            batch1_cursor_advanced.set()
-        elif cursor == "cursor-batch-2":
-            batch2_cursor_advanced.set()
+        created = await container.external_channels.create_connection(
+            configuration, access_token=access_token
+        )
+        await store.set(f"weixin_ilink:{connection_id}", _credentials(access_token).to_json())
 
-    monkeypatch.setattr(
-        container.external_channel_repository,
-        "set_adapter_cursor",
-        observed_set_cursor,
-    )
-    await management.connection_configuration_changed(created.snapshot)
+        batch1_cursor_advanced = asyncio.Event()
+        batch2_cursor_advanced = asyncio.Event()
+        original_set_cursor = container.external_channel_repository.set_adapter_cursor
 
-    # Batch 1
-    await transport.updates.put(
-        WeixinUpdates(
-            cursor="cursor-batch-1",
-            messages=(
-                WeixinInboundText(
-                    external_message_id="msg-batch-1",
-                    sender_user_id="owner-1",
-                    recipient_bot_id="bot-1",
-                    text="消息 1",
-                    context_token="context-token-1",
-                    received_at=datetime.now(UTC),
+        async def observed_set_cursor(
+            target_connection_id: UUID,
+            *,
+            cursor: str,
+            updated_at: datetime,
+        ) -> None:
+            await original_set_cursor(
+                target_connection_id,
+                cursor=cursor,
+                updated_at=updated_at,
+            )
+            if cursor == "cursor-batch-1":
+                batch1_cursor_advanced.set()
+            elif cursor == "cursor-batch-2":
+                batch2_cursor_advanced.set()
+
+        monkeypatch.setattr(
+            container.external_channel_repository,
+            "set_adapter_cursor",
+            observed_set_cursor,
+        )
+        await management.connection_configuration_changed(created.snapshot)
+
+        # Batch 1
+        await transport.updates.put(
+            WeixinUpdates(
+                cursor="cursor-batch-1",
+                messages=(
+                    WeixinInboundText(
+                        external_message_id="msg-batch-1",
+                        sender_user_id="owner-1",
+                        recipient_bot_id="bot-1",
+                        text="消息 1",
+                        context_token="context-token-1",
+                        received_at=datetime.now(UTC),
+                    ),
                 ),
-            ),
+            )
         )
-    )
-    await asyncio.wait_for(batch1_cursor_advanced.wait(), timeout=5)
+        await asyncio.wait_for(batch1_cursor_advanced.wait(), timeout=5)
 
-    # Batch 2
-    await transport.updates.put(
-        WeixinUpdates(
-            cursor="cursor-batch-2",
-            messages=(
-                WeixinInboundText(
-                    external_message_id="msg-batch-2",
-                    sender_user_id="owner-1",
-                    recipient_bot_id="bot-1",
-                    text="消息 2",
-                    context_token="context-token-2",
-                    received_at=datetime.now(UTC),
+        # Batch 2
+        await transport.updates.put(
+            WeixinUpdates(
+                cursor="cursor-batch-2",
+                messages=(
+                    WeixinInboundText(
+                        external_message_id="msg-batch-2",
+                        sender_user_id="owner-1",
+                        recipient_bot_id="bot-1",
+                        text="消息 2",
+                        context_token="context-token-2",
+                        received_at=datetime.now(UTC),
+                    ),
                 ),
-            ),
+            )
         )
-    )
-    await asyncio.wait_for(batch2_cursor_advanced.wait(), timeout=5)
+        await asyncio.wait_for(batch2_cursor_advanced.wait(), timeout=5)
 
-    # Wait for both sent messages
-    for _ in range(50):
-        if len(transport.sent_messages) >= 2:
-            break
-        await asyncio.sleep(0.1)
-    assert len(transport.sent_messages) == 2
+        # Wait for both sent messages
+        for _ in range(50):
+            if len(transport.sent_messages) >= 2:
+                break
+            await asyncio.sleep(0.1)
+        assert len(transport.sent_messages) == 2
+        assert {item["context_token"] for item in transport.sent_messages} == {
+            "context-token-1",
+            "context-token-2",
+        }
+        assert len({item["client_id"] for item in transport.sent_messages}) == 2
 
-    # After both deliveries complete and terminal handlers run, pending_contexts becomes empty
-    for _ in range(50):
+        # After both deliveries complete and terminal handlers run, pending_contexts becomes empty
+        for _ in range(50):
+            raw = await store.get(f"weixin_ilink:{connection_id}")
+            if raw is not None and WeixinCredentials.from_json(raw).pending_contexts == {}:
+                break
+            await asyncio.sleep(0.1)
         raw = await store.get(f"weixin_ilink:{connection_id}")
-        if raw is not None and WeixinCredentials.from_json(raw).pending_contexts == {}:
-            break
-        await asyncio.sleep(0.1)
-    raw = await store.get(f"weixin_ilink:{connection_id}")
-    assert raw is not None
-    assert WeixinCredentials.from_json(raw).pending_contexts == {}
-    await container.stop()
+        assert raw is not None
+        assert WeixinCredentials.from_json(raw).pending_contexts == {}
+
+    finally:
+        await container.stop()
 
 
 @pytest.mark.asyncio

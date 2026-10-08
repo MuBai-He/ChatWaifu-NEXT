@@ -24,6 +24,13 @@ const fields = [
     max: 500,
   },
   { key: "soft_max_chars_per_part", label: "每段柔性上限", min: 20, max: 1000 },
+  {
+    key: "typing_chars_per_second",
+    label: "打字速度（字/秒）",
+    min: 1,
+    max: 50,
+  },
+  { key: "pause_jitter_ms", label: "随机停顿上限（毫秒）", min: 0, max: 5000 },
   { key: "min_delay_ms", label: "最短段间间隔（毫秒）", min: 0, max: 10000 },
   { key: "max_delay_ms", label: "最长段间间隔（毫秒）", min: 0, max: 30000 },
   {
@@ -209,7 +216,7 @@ function PresentationEditor({
       </fieldset>
       <SettingsToggle
         label="分段之间保留自然间隔"
-        description="只在分段发送时生效，关闭后连续发送。"
+        description="间隔由最短停顿、随机停顿和下一段的打字时间相加，受最长间隔与累计上限约束。关闭后连续发送。"
         checked={draft.cadence_enabled ?? true}
         disabled={disabled || !instant}
         onChange={(value) => setDraft({ ...draft, cadence_enabled: value })}
