@@ -919,6 +919,7 @@ export type RetentionSeconds = number
 export type SummaryInputTokens = number
 export type SummaryOutputTokens = number
 export type SummaryTimeoutSeconds = number
+export type QqAccountEnabled = boolean
 export type QqNativeFavoritesEnabled = boolean
 export type QqOwnerAgentEnabled = boolean
 export type QqOwnerPublicWebEnabled = boolean
@@ -3023,6 +3024,7 @@ export interface ChannelProviderRegistration {
 }
 export interface ChannelRuntimePolicy {
   group_discussion?: GroupDiscussionPolicy
+  qq_account_enabled?: QqAccountEnabled
   qq_native_favorites_enabled?: QqNativeFavoritesEnabled
   qq_owner_agent_enabled?: QqOwnerAgentEnabled
   qq_owner_public_web_enabled?: QqOwnerPublicWebEnabled

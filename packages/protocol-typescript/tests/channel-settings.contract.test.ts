@@ -35,6 +35,7 @@ describe("channel settings cross-language contract", () => {
     "never coerces permission %j",
     (value) => {
       for (const field of [
+        "qq_account_enabled",
         "qq_owner_public_web_enabled",
         "qq_owner_voice_reply_enabled",
         "qq_owner_voice_input_enabled",

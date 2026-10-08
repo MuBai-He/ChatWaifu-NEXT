@@ -1003,12 +1003,12 @@ class ConversationService:
                 output_modes=frozenset({"text"}),
                 allow_tools=bool(
                     shared_voice_skills
-                    | (options.allowed_shared_skill_ids & frozenset({"qq.scene"}))
+                    | (options.allowed_shared_skill_ids & frozenset({"qq.scene", "qq.account"}))
                 ),
                 allowed_skill_ids=shared_voice_skills
-                | (options.allowed_shared_skill_ids & frozenset({"qq.scene"})),
+                | (options.allowed_shared_skill_ids & frozenset({"qq.scene", "qq.account"})),
                 contextual_skill_ids=shared_voice_skills
-                | (options.allowed_shared_skill_ids & frozenset({"qq.scene"})),
+                | (options.allowed_shared_skill_ids & frozenset({"qq.scene", "qq.account"})),
             )
             # Invalid identity never cancels another valid generation. Cancellation
             # joins owned work before replacing its active-generation entry.

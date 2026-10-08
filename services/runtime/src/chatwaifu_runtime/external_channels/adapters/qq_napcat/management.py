@@ -173,6 +173,32 @@ class NapCatManagement:
         params: JsonObject,
         guard: Callable[[], Awaitable[bool]],
     ) -> JsonObject:
+        return await self._checked_agent_call(
+            connection_id, account_key, action, params, guard, self._catalog_versions
+        )
+
+    async def account_agent_call(
+        self,
+        connection_id: UUID,
+        account_key: str,
+        action: str,
+        params: JsonObject,
+        guard: Callable[[], Awaitable[bool]],
+        version: str,
+    ) -> JsonObject:
+        return await self._checked_agent_call(
+            connection_id, account_key, action, params, guard, frozenset({version})
+        )
+
+    async def _checked_agent_call(
+        self,
+        connection_id: UUID,
+        account_key: str,
+        action: str,
+        params: JsonObject,
+        guard: Callable[[], Awaitable[bool]],
+        versions: frozenset[str],
+    ) -> JsonObject:
         client = self._clients.get(connection_id)
         if client is None or not await guard():
             raise NapCatError("QQ request unavailable")
@@ -182,7 +208,7 @@ class NapCatManagement:
         if "group_id" in params and not self._group_transport_ready(connection_id):
             raise NapCatError("QQ group transport unavailable")
         version = await client.call("get_version_info", {})
-        if str(version.get("app_version", "")).removeprefix("v") not in self._catalog_versions:
+        if str(version.get("app_version", "")).removeprefix("v") not in versions:
             raise NapCatError(
                 "QQ OpenAPI version differs from reviewed catalog; adapt catalog first"
             )
