@@ -98,6 +98,9 @@ export default defineConfig(({ mode }) => {
     );
   }
   return {
+    // Web and desktop development servers have different module graphs.
+    // Separate caches avoid invalidating the other server's optimized imports.
+    cacheDir: path.resolve(import.meta.dirname, "node_modules/.vite", product),
     plugins: [
       react(),
       productEntryPlugin(product),

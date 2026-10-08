@@ -58,10 +58,15 @@ const ROLE_LABELS: Record<ModelRole, { title: string; description: string }> = {
 
 interface Props {
   sessionId: string | null;
+  compact?: boolean;
 }
 
-export function ModelSettingsPanel({ sessionId }: Props) {
+export function ModelSettingsPanel({ sessionId, compact = false }: Props) {
+  const [selectedRole, setSelectedRole] = useState<ModelRole>("chat");
   const [configurations, setConfigurations] = useState<
+    ModelRoleConfiguration[]
+  >([]);
+  const [savedConfigurations, setSavedConfigurations] = useState<
     ModelRoleConfiguration[]
   >([]);
   const [characterState, setCharacterState] =
@@ -97,6 +102,7 @@ export function ModelSettingsPanel({ sessionId }: Props) {
       .then(([models, state, currentRebuildStatus]) => {
         if (!active) return;
         setConfigurations(models);
+        setSavedConfigurations(models);
         setCharacterState(state);
         const emb = models.find((m) => m.role === "embedding");
         if (emb) {
@@ -292,6 +298,11 @@ export function ModelSettingsPanel({ sessionId }: Props) {
         candidate.role === role ? updated : candidate,
       ),
     );
+    setSavedConfigurations((current) =>
+      current.map((candidate) =>
+        candidate.role === role ? updated : candidate,
+      ),
+    );
     setApiKeys((current) => ({ ...current, [role]: "" }));
   };
 
@@ -313,17 +324,45 @@ export function ModelSettingsPanel({ sessionId }: Props) {
 
   return (
     <div className="model-settings">
-      <CharacterStateCard snapshot={characterState} />
-      <div className="model-settings-heading">
-        <div>
-          <small>MODEL ROUTING</small>
-          <strong>模型路由</strong>
+      {compact ? (
+        <details className="settings-advanced">
+          <summary>角色状态与上下文版本</summary>
+          <CharacterStateCard snapshot={characterState} />
+        </details>
+      ) : (
+        <CharacterStateCard snapshot={characterState} />
+      )}
+      {!compact && (
+        <div className="model-settings-heading">
+          <div>
+            <small>MODEL ROUTING</small>
+            <strong>模型路由</strong>
+          </div>
+          <span>五条模型链路</span>
         </div>
-        <span>五条模型链路</span>
-      </div>
+      )}
+      {compact && (
+        <nav className="model-role-navigation" aria-label="模型用途">
+          {ROLE_ORDER.map((role) => (
+            <button
+              key={role}
+              type="button"
+              aria-current={selectedRole === role ? "page" : undefined}
+              onClick={() => setSelectedRole(role)}
+            >
+              {ROLE_LABELS[role].title}
+            </button>
+          ))}
+        </nav>
+      )}
       {ROLE_ORDER.map((role) => {
         const item = byRole.get(role);
         if (!item) return null;
+        const dirty =
+          JSON.stringify(item) !==
+            JSON.stringify(
+              savedConfigurations.find((candidate) => candidate.role === role),
+            ) || Boolean(apiKeys[role]?.trim());
         const isOpenAi = item.provider === "openai_compatible";
         const isTypeSafe = item.provider === "typesafe";
         const isDecision = role === "behavior_decision";
@@ -348,7 +387,11 @@ export function ModelSettingsPanel({ sessionId }: Props) {
             (1 + budget.estimate_margin_ratio),
         );
         return (
-          <section className="model-role-card" key={role}>
+          <section
+            className="model-role-card"
+            key={role}
+            hidden={compact && selectedRole !== role}
+          >
             <header>
               <div>
                 <strong>{ROLE_LABELS[role].title}</strong>
@@ -484,8 +527,8 @@ export function ModelSettingsPanel({ sessionId }: Props) {
               </p>
             ) : null}
             {role !== "embedding" && !isDecision ? (
-              <details>
-                <summary>模型输入与输出预算</summary>
+              <details className="settings-advanced">
+                <summary>高级：模型输入与输出预算</summary>
                 <p>
                   预计可发送输入 {Math.max(0, availableInput)} 参考
                   token。参考估算与供应商用量可能不同；请按当前端点验证能力填写，留空表示未知。
@@ -595,7 +638,7 @@ export function ModelSettingsPanel({ sessionId }: Props) {
             <footer>
               <button
                 type="button"
-                disabled={busy === role}
+                disabled={busy === role || (compact && !dirty)}
                 ref={role === "embedding" ? embeddingSaveRef : undefined}
                 onClick={() => void save(role)}
               >
@@ -632,6 +675,15 @@ export function ModelSettingsPanel({ sessionId }: Props) {
                   移除密钥
                 </button>
               ) : null}
+              {compact && (
+                <span className="settings-draft-status" role="status">
+                  {busy === role
+                    ? "处理中…"
+                    : dirty
+                      ? "有未保存的修改"
+                      : "已保存"}
+                </span>
+              )}
             </footer>
             {role === "embedding" &&
             rebuildStatus &&

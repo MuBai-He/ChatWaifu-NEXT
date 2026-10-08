@@ -82,7 +82,7 @@ test("channel settings persist through real Runtime API and reload in both produ
       path: info.outputPath("qq-settings.png"),
       fullPage: true,
     });
-    await page.getByRole("button", { name: "权限与预算", exact: true }).click();
+    await page.getByRole("button", { name: "交流与权限", exact: true }).click();
     const web = page.getByRole("switch", {
       name: "允许 QQ 主人私聊联网查资料",
     });
@@ -95,7 +95,7 @@ test("channel settings persist through real Runtime API and reload in both produ
     const nextBudget =
       original.policy.group_discussion?.input_tokens === 2048 ? 3072 : 2048;
     await budget.fill(String(nextBudget));
-    await page.getByRole("button", { name: "保存渠道权限与预算" }).click();
+    await page.getByRole("button", { name: "保存渠道交流与权限" }).click();
     await expect(page.getByText(/渠道设置已保存到当前 Runtime/)).toBeVisible();
     const saved = await read();
     expect(saved.revision).toBe(original.revision + 1);
@@ -117,7 +117,7 @@ test("channel settings persist through real Runtime API and reload in both produ
         .getByRole("navigation", { name: "设置分类" })
         .getByRole("button", { name: /渠道/ })
         .click();
-    await page.getByRole("button", { name: "权限与预算", exact: true }).click();
+    await page.getByRole("button", { name: "交流与权限", exact: true }).click();
     await expect(web).toBeChecked({
       checked: !original.policy.qq_owner_public_web_enabled,
     });
@@ -213,7 +213,7 @@ test("settings controls share sizes, keyboard focus and narrow-screen layout", a
   await expect(selector).toHaveCSS("padding-right", "36px");
   await expect(selector).toHaveCSS("border-radius", "10px");
   expect((await selector.boundingBox())!.height).toBeGreaterThanOrEqual(40);
-  await page.getByText("回复样式与连接选项", { exact: true }).click();
+  await page.getByText("回复样式与发送节奏", { exact: true }).click();
   const name = page.getByLabel("连接名称", { exact: true });
   const presentation = page.getByRole("combobox", {
     name: "回复形式",
@@ -247,7 +247,7 @@ test("settings controls share sizes, keyboard focus and narrow-screen layout", a
     path: info.outputPath("qq-controls.png"),
     fullPage: true,
   });
-  await page.getByRole("button", { name: "权限与预算", exact: true }).click();
+  await page.getByRole("button", { name: "交流与权限", exact: true }).click();
   await page.getByText("群聊旁听与按需压缩", { exact: true }).click();
   await expect(page.getByLabel("单条字符上限", { exact: true })).toHaveCSS(
     "border-radius",

@@ -42,7 +42,7 @@ test("desktop settings is an app-like control surface without chat ownership", a
   await expect(
     page
       .getByRole("navigation", { name: "设置分类" })
-      .getByRole("button", { name: /连接/ }),
+      .getByRole("button", { name: /^连接与诊断/ }),
   ).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Message" })).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Conversation" })).toHaveCount(
@@ -88,7 +88,9 @@ test("desktop settings is an app-like control surface without chat ownership", a
   ).toBeVisible();
   await expect(page.getByText(/设置页不会建立第二条媒体链路/)).toBeVisible();
 
-  await page.getByRole("button", { name: /模型.*AI 与记忆路由/ }).click();
+  await page
+    .getByRole("button", { name: /模型.*聊天、行为决策与记忆路由/ })
+    .click();
   await expect(
     page.getByRole("heading", { level: 1, name: "模型" }),
   ).toBeVisible();
@@ -104,7 +106,7 @@ test("desktop settings is an app-like control surface without chat ownership", a
   }>(`
     (() => {
       const panel = document.querySelector(".model-settings");
-      const heading = document.querySelector(".model-settings-heading");
+      const heading = document.querySelector(".model-role-navigation");
       const card = document.querySelector(".model-role-card");
       const input = card?.querySelector("input:not([type=checkbox])");
       if (!panel || !heading || !card || !input) {

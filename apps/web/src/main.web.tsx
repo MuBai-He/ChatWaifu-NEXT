@@ -16,7 +16,7 @@ mountProduct({
     surface === "avatar-lab" ? (
       <WebProductApp surface={surface} />
     ) : (
-      <RuntimeConnectionGate showSwitch={surface !== "channels-settings"}>
+      <RuntimeConnectionGate showSwitch={surface === "application"}>
         <WebProductApp surface={surface} />
       </RuntimeConnectionGate>
     ),

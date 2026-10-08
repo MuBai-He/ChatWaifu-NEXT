@@ -89,27 +89,35 @@ function AgentSettingsState({
   async function refresh(expected = epoch.current) {
     if (!sessionId) return;
     const reading = ++refreshRevision.current;
-    const all: CapabilityDescriptor[] = [];
-    let cursor: string | undefined;
-    do {
-      const page = await getAgentCapabilities(sessionId, query, cursor);
-      all.push(...(page.items ?? []));
-      if (expected === epoch.current && reading === refreshRevision.current)
-        setCapabilities([...all]);
-      cursor = page.next_cursor ?? undefined;
-    } while (cursor && all.length < 512 && expected === epoch.current);
-    const [taskPage, files] = await Promise.all([
-      getAgentTasks(sessionId),
-      getAgentArtifacts(sessionId),
+    await Promise.all([
+      (async () => {
+        const all: CapabilityDescriptor[] = [];
+        let cursor: string | undefined;
+        do {
+          const page = await getAgentCapabilities(sessionId, query, cursor);
+          all.push(...(page.items ?? []));
+          if (expected === epoch.current && reading === refreshRevision.current)
+            setCapabilities([...all]);
+          cursor = page.next_cursor ?? undefined;
+        } while (cursor && all.length < 512 && expected === epoch.current);
+        if (expected !== epoch.current) return;
+        if (!query.trim())
+          setSkillOptions([...new Set(all.map((c) => c.skill_id))]);
+        if (reading !== refreshRevision.current) return;
+        setCapabilities(all);
+        setVisibleCapabilities(32);
+      })(),
+      (async () => {
+        const [taskPage, files] = await Promise.all([
+          getAgentTasks(sessionId),
+          getAgentArtifacts(sessionId),
+        ]);
+        if (expected !== epoch.current || reading !== refreshRevision.current)
+          return;
+        setTasks(taskPage.items ?? []);
+        setArtifacts(files);
+      })(),
     ]);
-    if (expected !== epoch.current) return;
-    if (!query.trim())
-      setSkillOptions([...new Set(all.map((c) => c.skill_id))]);
-    if (reading !== refreshRevision.current) return;
-    setCapabilities(all);
-    setVisibleCapabilities(32);
-    setTasks(taskPage.items ?? []);
-    setArtifacts(files);
   }
   useEffect(() => {
     const expected = ++epoch.current;

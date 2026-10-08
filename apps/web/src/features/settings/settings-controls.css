@@ -1,5 +1,6 @@
 /* Shared form controls for settings pages and opt-in portalled dialogs. */
 :is(
+  .settings-shell,
   .desktop-settings-page,
   .channels-settings-section,
   .conversation-scope-dialog
@@ -13,6 +14,7 @@
 }
 
 :is(
+    .settings-shell,
     .desktop-settings-page,
     .channels-settings-section,
     .conversation-scope-dialog
@@ -48,6 +50,7 @@
 }
 
 :is(
+    .settings-shell,
     .desktop-settings-page,
     .channels-settings-section,
     .conversation-scope-dialog
@@ -65,6 +68,7 @@
 }
 
 :is(
+    .settings-shell,
     .desktop-settings-page,
     .channels-settings-section,
     .conversation-scope-dialog
@@ -75,6 +79,7 @@
 }
 
 :is(
+    .settings-shell,
     .desktop-settings-page,
     .channels-settings-section,
     .conversation-scope-dialog
@@ -84,6 +89,7 @@
 }
 
 :is(
+    .settings-shell,
     .desktop-settings-page,
     .channels-settings-section,
     .conversation-scope-dialog
@@ -94,6 +100,7 @@
 }
 
 :is(
+    .settings-shell,
     .desktop-settings-page,
     .channels-settings-section,
     .conversation-scope-dialog
@@ -103,6 +110,7 @@
 }
 
 :is(
+    .settings-shell,
     .desktop-settings-page,
     .channels-settings-section,
     .conversation-scope-dialog
@@ -115,6 +123,7 @@
 }
 
 :is(
+    .settings-shell,
     .desktop-settings-page,
     .channels-settings-section,
     .conversation-scope-dialog
@@ -135,6 +144,7 @@
 
 @media (prefers-contrast: more) {
   :is(
+    .settings-shell,
     .desktop-settings-page,
     .channels-settings-section,
     .conversation-scope-dialog

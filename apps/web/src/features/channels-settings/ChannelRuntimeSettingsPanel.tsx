@@ -256,10 +256,10 @@ function ChannelRuntimeSettingsContent({
   return (
     <section
       className="channels-settings-card channel-runtime-settings"
-      aria-label="渠道权限与高级设置"
+      aria-label="交流与权限"
     >
       <header className="channel-settings-section-heading">
-        <h2>渠道权限与高级设置</h2>
+        <h2>交流与权限</h2>
         <p>
           作用于当前连接的 Runtime。下面的 QQ 私聊开关适用于该 Runtime
           已配对的主人，群权限单独管理。
@@ -269,16 +269,16 @@ function ChannelRuntimeSettingsContent({
         {draft ? (
           <>
             <ChannelSettingsDisclosure
-              title="QQ 私聊能力与表情收藏"
-              description="联网、语音输入、语音回复与账号收藏"
+              title="QQ 自由交流与账号权限"
+              description="接收消息、判断是否回应，以及允许她使用的账号能力"
               open
             >
               <SettingsToggle
-                label="允许 QQ 主人私聊联网查资料"
-                description={`只允许公网搜索和读取；群聊及微信不获得工具权限。当前服务：${snapshot?.search_provider} / ${snapshot?.reader_provider}。`}
-                checked={draft.qq_owner_public_web_enabled ?? false}
+                label="QQ 自由交流"
+                description="宁宁自行决定是否回应主人私聊。常驻群友模式下，群文字、语音和戳一戳也进入自主判断；聊天接收范围仍由原接入配置决定。"
+                checked={draft.qq_free_chat_enabled ?? false}
                 disabled={disabled}
-                onChange={(v) => toggle("qq_owner_public_web_enabled", v)}
+                onChange={(v) => toggle("qq_free_chat_enabled", v)}
               />
               <SettingsToggle
                 label="将 QQ 作为角色自己的账号"
@@ -288,18 +288,11 @@ function ChannelRuntimeSettingsContent({
                 onChange={(v) => toggle("qq_account_enabled", v)}
               />
               <SettingsToggle
-                label="QQ 自由交流"
-                description="宁宁自行决定是否回应主人私聊。常驻群友模式下，群文字、语音和戳一戳也进入自主判断；聊天接收范围仍由原接入配置决定。"
-                checked={draft.qq_free_chat_enabled ?? false}
+                label="识别 QQ 私聊语音消息"
+                description={`仅配对主人可使用。语音识别服务：${snapshot?.stt_provider === "disabled" ? "未配置，请先在后端配置语音识别服务" : snapshot?.stt_provider}；自由交流的常驻群友模式也可识别群语音。`}
+                checked={draft.qq_owner_voice_input_enabled ?? true}
                 disabled={disabled}
-                onChange={(v) => toggle("qq_free_chat_enabled", v)}
-              />
-              <SettingsToggle
-                label="允许 QQ 主人私聊发现 Agent 能力"
-                description="显示当前已安装的文件、文档、日历、任务与插件能力。写入和外部操作继续经过权限检查。"
-                checked={draft.qq_owner_agent_enabled ?? false}
-                disabled={disabled}
-                onChange={(v) => toggle("qq_owner_agent_enabled", v)}
+                onChange={(v) => toggle("qq_owner_voice_input_enabled", v)}
               />
               <SettingsToggle
                 label="允许 QQ 私聊语音回复"
@@ -309,11 +302,18 @@ function ChannelRuntimeSettingsContent({
                 onChange={(v) => toggle("qq_owner_voice_reply_enabled", v)}
               />
               <SettingsToggle
-                label="识别 QQ 私聊语音消息"
-                description={`仅配对主人可使用。语音识别服务：${snapshot?.stt_provider === "disabled" ? "未配置，请先在后端配置语音识别服务" : snapshot?.stt_provider}；自由交流的常驻群友模式也可识别群语音。`}
-                checked={draft.qq_owner_voice_input_enabled ?? true}
+                label="允许 QQ 主人私聊联网查资料"
+                description={`只允许公网搜索和读取；群聊及微信不获得工具权限。当前服务：${snapshot?.search_provider} / ${snapshot?.reader_provider}。`}
+                checked={draft.qq_owner_public_web_enabled ?? false}
                 disabled={disabled}
-                onChange={(v) => toggle("qq_owner_voice_input_enabled", v)}
+                onChange={(v) => toggle("qq_owner_public_web_enabled", v)}
+              />
+              <SettingsToggle
+                label="允许 QQ 主人私聊发现 Agent 能力"
+                description="显示当前已安装的文件、文档、日历、任务与插件能力。写入和外部操作继续经过权限检查。"
+                checked={draft.qq_owner_agent_enabled ?? false}
+                disabled={disabled}
+                onChange={(v) => toggle("qq_owner_agent_enabled", v)}
               />
               <SettingsToggle
                 label="将学到的 QQ 表情同步到原生收藏"
@@ -390,14 +390,14 @@ function ChannelRuntimeSettingsContent({
               : "Runtime 离线，连接后可读取设置。"}
           </p>
         )}
-        <div className="qq-channel-actions">
+        <div className="qq-channel-actions settings-save-bar">
           <button
             type="button"
             className="channels-settings-primary-action"
             disabled={disabled || !policy || !dirty}
             onClick={() => void save()}
           >
-            {busy ? "正在保存…" : "保存渠道权限与预算"}
+            {busy ? "正在保存…" : "保存交流与权限"}
           </button>
           <button
             type="button"
@@ -412,6 +412,19 @@ function ChannelRuntimeSettingsContent({
             刷新渠道权限
           </button>
         </div>
+        {draft && (
+          <span className="settings-draft-status" role="status">
+            {busy
+              ? "正在保存…"
+              : !policy
+                ? "请修正输入后保存"
+                : dirty
+                  ? "有未保存的修改"
+                  : fresh
+                    ? "已保存"
+                    : "正在核对版本…"}
+          </span>
+        )}
         {notice ? <p role="status">{notice}</p> : null}
       </div>
     </section>

@@ -1,10 +1,16 @@
+import type { DesktopSettingsContext } from "./DesktopSettingsContext";
+import { InteractionDiagnosticsPanel } from "../diagnostics/InteractionDiagnosticsPanel";
 import {
   useConnectionControls,
   useScopeControls,
 } from "../connection/clientControls";
 import { SettingsGroup, SettingsSectionIntro } from "./SettingsPrimitives";
 
-export function ConnectionSettingsSection() {
+export function ConnectionSettingsSection({
+  context,
+}: {
+  context: DesktopSettingsContext;
+}) {
   const connection = useConnectionControls();
   const scope = useScopeControls();
   return (
@@ -50,6 +56,10 @@ export function ConnectionSettingsSection() {
           </button>
         </div>
       </SettingsGroup>
+      <InteractionDiagnosticsPanel
+        sessionId={context.sessionId}
+        runtimeOnline={context.runtime.connection === "connected"}
+      />
     </>
   );
 }

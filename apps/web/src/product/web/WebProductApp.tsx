@@ -1,8 +1,13 @@
 import { ConversationScopeGate } from "../../features/chat/ConversationScopeGate";
 import { AvatarLabPage } from "../../features/avatar-lab/AvatarLabPage";
 import { ChatDemoPage } from "../../features/chat/ChatDemoPage";
-import { ChannelsSettingsPage } from "../../features/channels-settings/ChannelsSettingsPage";
-import { AgentSettingsPage } from "../../features/agent-settings/AgentSettingsPage";
+import { lazy, Suspense } from "react";
+
+const WebSettingsPage = lazy(() =>
+  import("../../features/settings/WebSettingsPage").then((module) => ({
+    default: module.WebSettingsPage,
+  })),
+);
 import { resolveWebSurface, type WebSurface } from "./webSurface";
 
 interface WebProductAppProps {
@@ -16,10 +21,22 @@ export function WebProductApp({
     <AvatarLabPage />
   ) : (
     <ConversationScopeGate showSwitch={surface === "application"}>
-      {surface === "channels-settings" ? (
-        <ChannelsSettingsPage />
-      ) : surface === "agent-settings" ? (
-        <AgentSettingsPage />
+      {surface === "channels-settings" ||
+      surface === "agent-settings" ||
+      surface === "settings" ? (
+        <Suspense
+          fallback={
+            <main className="settings-loading" role="status">
+              正在打开设置中心…
+            </main>
+          }
+        >
+          <WebSettingsPage
+            initialSection={
+              window.location.pathname.split("/")[2] || "channels"
+            }
+          />
+        </Suspense>
       ) : (
         <ChatDemoPage />
       )}
