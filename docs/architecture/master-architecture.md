@@ -19,6 +19,7 @@
 
 - `docs/implementation-plan.md`：分阶段实现顺序、任务清单、验收门槛。
 - `docs/implementation-status.yaml`：阶段完成状态与验收记录。
+- `docs/settings-center.md`：Web/桌面设置导航、共用表单和产品边界。
 
 ---
 

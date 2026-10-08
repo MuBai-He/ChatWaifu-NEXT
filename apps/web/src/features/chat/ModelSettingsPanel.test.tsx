@@ -121,6 +121,38 @@ describe("ModelSettingsPanel", () => {
     });
   });
 
+  it("retains drafts between model purposes and marks a saved compact card", async () => {
+    render(<ModelSettingsPanel sessionId={null} compact />);
+    const input = await screen.findByLabelText("聊天模型 模型 ID");
+    expect(
+      screen.getByRole<HTMLButtonElement>("button", { name: "保存" }).disabled,
+    ).toBe(true);
+    fireEvent.change(input, { target: { value: "chat-draft" } });
+    expect(screen.getByText("有未保存的修改")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "行为决策模型" }));
+    expect(
+      screen.getByRole("combobox", { name: "行为决策模型 Provider" }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "聊天模型" }));
+    expect(
+      screen.getByRole<HTMLInputElement>("textbox", {
+        name: "聊天模型 模型 ID",
+      }).value,
+    ).toBe("chat-draft");
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole<HTMLButtonElement>("button", { name: "保存" })
+          .disabled,
+      ).toBe(true),
+    );
+    expect(runtimeClient.updateModelConfiguration).toHaveBeenCalledTimes(1);
+    expect(runtimeClient.updateModelConfiguration).toHaveBeenCalledWith(
+      "chat",
+      expect.objectContaining({ model: "chat-draft" }),
+    );
+  });
+
   it("selects the native Jev adapter with its endpoint and separate key", async () => {
     render(<ModelSettingsPanel sessionId={null} />);
     const select = await screen.findByLabelText("行为决策模型 Provider");

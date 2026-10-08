@@ -61,7 +61,7 @@ describe("Runtime channel settings", () => {
     fireEvent.change(screen.getByLabelText("旁听输入预算（参考 token）"), {
       target: { value: "4096" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "保存渠道权限与预算" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存交流与权限" }));
     await screen.findByText(/渠道设置已保存到当前 Runtime/u);
     expect(client.updateChannelRuntimeSettings).toHaveBeenCalledWith(
       {
@@ -84,7 +84,7 @@ describe("Runtime channel settings", () => {
     ).toBeTruthy();
     expect(
       screen.getByRole<HTMLButtonElement>("button", {
-        name: "保存渠道权限与预算",
+        name: "保存交流与权限",
       }).disabled,
     ).toBe(true);
   });
@@ -98,7 +98,7 @@ describe("Runtime channel settings", () => {
     fireEvent.click(
       await screen.findByRole("switch", { name: "将 QQ 作为角色自己的账号" }),
     );
-    fireEvent.click(screen.getByRole("button", { name: "保存渠道权限与预算" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存交流与权限" }));
     await screen.findByText(/渠道设置已保存到当前 Runtime/u);
     expect(client.updateChannelRuntimeSettings).toHaveBeenCalledWith(
       { ...snapshot().policy, qq_account_enabled: true },
@@ -117,7 +117,7 @@ describe("Runtime channel settings", () => {
       });
       expect(
         screen.getByRole<HTMLButtonElement>("button", {
-          name: "保存渠道权限与预算",
+          name: "保存交流与权限",
         }).disabled,
       ).toBe(true);
       expect(screen.getByRole("alert")).toBeTruthy();
@@ -132,7 +132,7 @@ describe("Runtime channel settings", () => {
     );
     render(<ChannelRuntimeSettingsPanel runtimeOnline />);
     fireEvent.click(await screen.findByRole("switch", { name: "QQ 自由交流" }));
-    fireEvent.click(screen.getByRole("button", { name: "保存渠道权限与预算" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存交流与权限" }));
     await screen.findByText(/渠道设置已保存到当前 Runtime/u);
     expect(client.updateChannelRuntimeSettings).toHaveBeenCalledWith(
       { ...snapshot().policy, qq_free_chat_enabled: true },
@@ -152,7 +152,7 @@ describe("Runtime channel settings", () => {
     });
     expect(
       screen.getByRole<HTMLButtonElement>("button", {
-        name: "保存渠道权限与预算",
+        name: "保存交流与权限",
       }).disabled,
     ).toBe(true);
   });
@@ -166,7 +166,7 @@ describe("Runtime channel settings", () => {
     vi.mocked(client.getChannelRuntimeSettings).mockResolvedValue(
       snapshot(4, 4096),
     );
-    fireEvent.click(screen.getByRole("button", { name: "保存渠道权限与预算" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存交流与权限" }));
     await screen.findByText(/不会自动重试修改/u);
     await waitFor(() =>
       expect(
@@ -188,7 +188,7 @@ describe("Runtime channel settings", () => {
     expect(screen.queryByRole("switch")).toBeNull();
     expect(
       screen.getByRole<HTMLButtonElement>("button", {
-        name: "保存渠道权限与预算",
+        name: "保存交流与权限",
       }).disabled,
     ).toBe(true);
     expect(client.updateChannelRuntimeSettings).not.toHaveBeenCalled();
@@ -225,7 +225,7 @@ describe("Runtime channel settings", () => {
     );
     render(<ChannelRuntimeSettingsPanel runtimeOnline />);
     fireEvent.click(await ready());
-    fireEvent.click(screen.getByRole("button", { name: "保存渠道权限与预算" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存交流与权限" }));
     await waitFor(() =>
       expect(client.updateChannelRuntimeSettings).toHaveBeenCalledTimes(1),
     );

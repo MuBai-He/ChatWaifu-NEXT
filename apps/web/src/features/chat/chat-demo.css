@@ -2337,3 +2337,10 @@
     display: none;
   }
 }
+
+.vn-settings-hint {
+  margin: 0 20px 14px;
+  color: rgb(255 246 252 / 55%);
+  font-size: 12px;
+  line-height: 1.6;
+}

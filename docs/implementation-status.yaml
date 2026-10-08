@@ -1,3 +1,12 @@
+settings_center:
+  status: web_deployed_desktop_ui_built_and_isolated_browser_verified
+  evidence:
+    - Shared searchable settings shell groups chat, models/voice, capabilities/tasks, memory, schedule and connection/device controls. Web gains a dedicated settings center and retains channel/agent deep links; native-only flows stay in the desktop product.
+    - Purpose-based model navigation preserves drafts; QQ conversation permissions and bubble pacing are easier to find. Explicit save/CAS semantics remain intact. Cross-category drafts and scroll positions are preserved within one Runtime identity; identity changes remount the control surface without a second media owner.
+    - See docs/settings-center.md for routes, product boundaries, lifecycle details and disposable browser acceptance commands.
+    - Final Web unit suite passed 465 tests; Web lint, both UI builds, artifact isolation and architecture boundaries passed. Seven disposable browser cases cover both products at 1280px/390px, draft retention, no extra media ownership, task lifecycle/download/preview/reload, and the native control surface. Persisted tasks/files load independently of capability pagination with stale-response fencing.
+    - Published frontend 694c9d8e as settings-center-20261007 through the existing HTTP 18780 Web server. Thirteen new files plus five immutable compatibility assets and nine settings routes verified. Runtime PID 2399468/source, models/private credential hashes, two member groups, channel policies, services and containers preserved. Installed desktop binaries are not rebuilt; source remains in the isolated branch, not main/pushed. See docs/operations/settings-center-web-2026-10-07.md.
+
 behavior_decision_model:
   status: deployed_native_jev_and_runtime_probe_verified_phone_acceptance_pending
   adr: "0081"
@@ -33,7 +42,7 @@ qq_account_operations:
     - Broad related Python regression passed 798 cases before final shared-conversation and discovery refinements; final QQ/settings chain passed 23, shared/group/cancellation/catalog suite passed 121 with two routing failures subsequently repaired and all 35 routing/account/catalog cases passed. Web 457 and protocol 127 passed; changed-code Ruff/strict types, architecture and Web lint/build passed. Global protocol lint retains one existing no-control-regex finding in an unchanged parser.
 
 schema_version: "1.0"
-updated_at: "2026-10-06"
+updated_at: "2026-10-07"
 current_phase: "13.6"
 external_channel_settings:
   status: source_server_deployment_and_mac_remote_ui_verified_phone_acceptance_pending

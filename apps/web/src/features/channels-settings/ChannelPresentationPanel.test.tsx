@@ -37,7 +37,7 @@ function connection() {
   });
 }
 function open() {
-  fireEvent.click(screen.getByText("回复样式与连接选项"));
+  fireEvent.click(screen.getByText("回复样式与发送节奏"));
 }
 
 describe("channel presentation settings", () => {

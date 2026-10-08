@@ -31,6 +31,25 @@ afterEach(() => {
   capabilities.mockReset().mockResolvedValue({ items: [] });
 });
 
+it("loads persisted tasks without waiting for capability discovery", async () => {
+  let finish: (value: { items: [] }) => void = () => undefined;
+  capabilities.mockImplementation(
+    () =>
+      new Promise<{ items: [] }>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const task = parseAgentTask({ ...fixtures.task, state: "cancelled" });
+  reads.mockResolvedValue({ items: [task] });
+  render(<AgentSettingsSection context={{ sessionId: task.session_id }} />);
+  const taskRow = (await screen.findByText(task.goal)).closest("li");
+  expect(taskRow?.textContent).toContain("已取消");
+  await act(async () => {
+    finish({ items: [] });
+    await Promise.resolve();
+  });
+});
+
 it("keeps a newer search when the initial catalog finishes later and retains grant options", async () => {
   const all = fixtures.capabilities;
   const filtered = {

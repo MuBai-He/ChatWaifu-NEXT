@@ -1,0 +1,846 @@
+.settings-shell.settings-controls {
+  --settings-text: #302d38;
+  --settings-muted: #716b7c;
+  --settings-line: #e8e4ed;
+  --settings-card: #fff;
+  --settings-control-height: 42px;
+  --settings-control-radius: 10px;
+  --settings-control-font: 0.875rem;
+  --settings-control-border: #dcd6e5;
+  --settings-control-background: #fff;
+  --settings-control-focus: #89668f;
+  display: grid;
+  grid-template-columns: 256px minmax(0, 1fr);
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  color: var(--settings-text);
+  background: #f8f7fa;
+  font-family: var(--sans, system-ui), sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.settings-shell *,
+.settings-shell *::before,
+.settings-shell *::after {
+  box-sizing: border-box;
+}
+.settings-shell [hidden] {
+  display: none !important;
+}
+.settings-sidebar {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  min-height: 0;
+  padding: 26px 16px 18px;
+  border-right: 1px solid var(--settings-line);
+  background: #f1edf5;
+}
+.settings-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 6px 22px;
+}
+.settings-brand > div {
+  display: grid;
+  gap: 2px;
+}
+.settings-brand strong {
+  font-size: 14px;
+  letter-spacing: -0.3px;
+}
+.settings-brand small {
+  font-size: 12px;
+  color: var(--settings-muted);
+}
+.settings-shell .desktop-settings-app-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border: 1px solid #fff;
+  border-radius: 12px;
+  background: #88658e;
+  color: white;
+  box-shadow: 0 3px 10px #80638418;
+}
+.settings-shell .desktop-settings-app-icon img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+.settings-search {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+.settings-search > span {
+  font-size: 12px;
+  color: var(--settings-muted);
+  padding-left: 4px;
+}
+.settings-shell .settings-search input {
+  width: 100%;
+  font-size: 12px;
+  background: #ffffffb0;
+}
+.settings-navigation {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding: 0 3px 6px;
+}
+.settings-nav-group {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+.settings-nav-caption {
+  color: #8a8096;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.6px;
+  padding: 0 9px 3px;
+}
+.settings-navigation button {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  color: #655d70;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.settings-navigation button > svg {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+}
+.settings-navigation button > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.settings-navigation strong {
+  font-size: 13px;
+  font-weight: 650;
+}
+.settings-navigation small {
+  font-size: 10px;
+  color: #8b8295;
+}
+.settings-navigation button:hover {
+  background: #ffffff7a;
+}
+.settings-navigation button[aria-current="page"] {
+  color: #715176;
+  border-color: #e1d9e8;
+  background: white;
+  box-shadow: 0 3px 12px #4b365c06;
+}
+.settings-navigation button[aria-current="page"] small {
+  color: #8a7392;
+}
+.settings-sidebar > footer {
+  padding: 12px 6px 0;
+  border-top: 1px solid #e3ddea;
+}
+.settings-return {
+  display: block;
+  padding: 10px;
+  color: #77627f;
+  font-size: 13px;
+  text-decoration: none;
+}
+.settings-return:hover {
+  color: #4c3655;
+}
+.settings-guide {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #77627f;
+  font: inherit;
+  cursor: pointer;
+}
+.settings-guide > svg {
+  width: 19px;
+}
+.settings-guide > span {
+  display: grid;
+  text-align: left;
+}
+.settings-guide small {
+  font-size: 11px;
+  color: var(--settings-muted);
+}
+.settings-workspace {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+.settings-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 30px 40px 24px;
+  border-bottom: 1px solid var(--settings-line);
+  background: #ffffffb0;
+}
+.settings-heading small {
+  font-size: 11px;
+  font-weight: 600;
+  color: #9986a3;
+  letter-spacing: 1px;
+}
+.settings-heading h1 {
+  margin: 3px 0 4px;
+  font-size: 26px;
+  line-height: 1.4;
+  font-weight: 650;
+  letter-spacing: -0.7px;
+}
+.settings-heading p {
+  margin: 0;
+  color: var(--settings-muted);
+  font-size: 13px;
+}
+.settings-connection {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border: 1px solid var(--settings-line);
+  border-radius: 999px;
+  color: var(--settings-muted);
+  background: #fff;
+  font-size: 11px;
+}
+.settings-connection i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #b4a1bd;
+}
+.settings-connection.connected i {
+  background: #76a18a;
+}
+.settings-connection.offline i {
+  background: #c68c8c;
+}
+.settings-shell .settings-scroll {
+  overflow-y: auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 28px 40px 60px;
+  scrollbar-width: thin;
+}
+.settings-scroll > div {
+  max-width: 1040px;
+  margin: 0 auto;
+}
+.settings-scroll
+  > div
+  > :is(
+    section,
+    .desktop-settings-group,
+    .desktop-settings-section-intro,
+    .tts-configuration-panel,
+    .realtime-configuration-panel
+  ) {
+  margin-bottom: 20px;
+}
+.settings-shell :is(h2, h3) {
+  margin: 0 0 6px;
+  color: var(--settings-text);
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+.settings-shell p {
+  overflow-wrap: anywhere;
+}
+.settings-shell small {
+  line-height: 1.6;
+}
+.settings-shell
+  :is(.desktop-settings-info, .desktop-settings-empty, .settings-search-empty) {
+  color: var(--settings-muted);
+  font-size: 13px;
+}
+.settings-shell button {
+  font-family: inherit;
+}
+.settings-shell :is(button, a, summary, input, select, textarea):focus-visible {
+  outline: 2px solid #9973a5;
+  outline-offset: 3px;
+}
+.settings-shell button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.settings-shell .desktop-settings-section-intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  margin-bottom: 20px;
+}
+.settings-shell .desktop-settings-section-intro > span {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  border: 1px solid #e7dfed;
+  border-radius: 10px;
+  color: #8b6b95;
+  background: #f4eff8;
+}
+.settings-shell .desktop-settings-section-intro svg {
+  width: 19px;
+  height: 19px;
+}
+.settings-shell .desktop-settings-section-intro p {
+  margin: 0;
+  color: var(--settings-muted);
+  font-size: 13px;
+}
+.settings-shell.settings-controls
+  :is(
+    .desktop-settings-group,
+    .desktop-settings-voice-card,
+    .tts-configuration-panel,
+    .realtime-configuration-panel,
+    .model-role-card,
+    .character-kernel-card
+  ) {
+  padding: 22px;
+  border: 1px solid var(--settings-line);
+  border-radius: 16px;
+  background: var(--settings-card);
+  color: var(--settings-text);
+  box-shadow: 0 2px 8px #4b365c03;
+}
+.settings-shell .desktop-settings-group > header {
+  margin-bottom: 18px;
+  padding: 0;
+}
+.settings-shell .desktop-settings-group > header p {
+  margin: 3px 0 0;
+  color: var(--settings-muted);
+  font-size: 13px;
+}
+.settings-shell .desktop-settings-group > div {
+  display: grid;
+  gap: 16px;
+  padding: 0;
+}
+.settings-shell
+  :is(
+    .settings-action-row,
+    .desktop-settings-select-row,
+    .desktop-settings-toggle-row,
+    .desktop-settings-provider
+  ) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--settings-line);
+}
+.settings-shell
+  :is(
+    .settings-action-row,
+    .desktop-settings-select-row,
+    .desktop-settings-toggle-row,
+    .desktop-settings-provider
+  )
+  > :is(div, span):first-child {
+  display: grid;
+  gap: 5px;
+}
+.settings-shell
+  :is(
+    .settings-action-row,
+    .desktop-settings-select-row,
+    .desktop-settings-toggle-row,
+    .desktop-settings-provider
+  )
+  strong {
+  font-size: 14px;
+  color: var(--settings-text);
+}
+.settings-shell
+  :is(
+    .settings-action-row,
+    .desktop-settings-select-row,
+    .desktop-settings-toggle-row,
+    .desktop-settings-provider
+  )
+  small {
+  font-size: 12px;
+  color: var(--settings-muted);
+}
+.settings-shell .desktop-settings-select-row select {
+  min-width: 180px;
+  max-width: 45%;
+}
+.settings-shell .desktop-settings-toggle-row input[role="switch"] {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 22px;
+  accent-color: #89668f;
+}
+.settings-shell .desktop-settings-provider > i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #9f80ac;
+  flex: 0 0 auto;
+}
+.settings-shell .desktop-settings-provider > div {
+  flex: 1;
+}
+.settings-shell .desktop-settings-provider > span {
+  font-size: 12px;
+  color: var(--settings-muted);
+}
+.settings-shell
+  :is(.settings-action-row, .desktop-settings-group, .settings-section)
+  button {
+  min-height: 40px;
+  padding: 9px 14px;
+  border: 1px solid #ddd5e5;
+  border-radius: 9px;
+  background: #faf8fc;
+  color: #775780;
+  font-size: 13px;
+  cursor: pointer;
+}
+.settings-shell.settings-controls .model-settings {
+  display: grid;
+  max-width: none;
+  padding: 0;
+  gap: 18px;
+}
+.settings-shell.settings-controls .desktop-settings-models {
+  max-width: none;
+}
+.settings-shell.settings-controls .model-role-card {
+  display: grid;
+  gap: 18px;
+}
+.settings-shell.settings-controls .model-role-card header strong {
+  font-family: inherit;
+  font-weight: 650;
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--settings-text);
+}
+.settings-shell.settings-controls
+  :is(
+    .model-role-card header small,
+    .model-role-card label > span,
+    .model-enabled,
+    .model-secret-note,
+    .character-kernel-card p,
+    .character-kernel-card header > span,
+    .kernel-metrics > div,
+    .model-settings-heading > span
+  ) {
+  color: var(--settings-muted);
+  font-size: 12px;
+}
+.settings-shell.settings-controls .model-role-card label:not(.model-enabled) {
+  gap: 8px;
+}
+.settings-shell.settings-controls .model-role-card input:not([type="checkbox"]),
+.settings-shell.settings-controls .model-role-card select {
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid #dcd6e5;
+  border-radius: 10px;
+  color: var(--settings-text);
+  background: white;
+  font-size: 14px;
+}
+.settings-shell.settings-controls .model-role-card p {
+  margin: 0;
+  color: var(--settings-muted);
+  font-size: 13px;
+}
+.settings-shell.settings-controls .model-role-card footer {
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--settings-line);
+  flex-wrap: wrap;
+}
+.settings-shell.settings-controls .model-role-card footer button {
+  min-height: 40px;
+  padding: 9px 18px;
+  color: #75517e;
+  border: 1px solid #e1d6e8;
+  border-radius: 10px;
+  background: #faf7fc;
+  font-size: 13px;
+}
+.settings-shell.settings-controls .model-role-card footer button:first-child {
+  color: white;
+  border-color: #88658e;
+  background: #88658e;
+}
+.settings-shell.settings-controls .model-role-card footer button.danger {
+  color: #ad6470;
+  background: white;
+}
+.settings-shell.settings-controls .model-settings-heading {
+  display: flex;
+  margin: 0;
+  padding: 0;
+}
+.settings-shell.settings-controls .model-settings-heading strong {
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 650;
+}
+.settings-shell.settings-controls .model-settings-heading small {
+  color: #96769e;
+  font-size: 10px;
+}
+.settings-shell.settings-controls .model-settings-notice {
+  border-color: #e3d6e9;
+  color: #765280;
+  background: #f6effa;
+  font-size: 13px;
+}
+.settings-shell .model-role-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.settings-shell .model-role-navigation button {
+  padding: 10px 15px;
+  border: 1px solid #e5dfe9;
+  border-radius: 10px;
+  background: white;
+  color: #807087;
+  font-size: 13px;
+  cursor: pointer;
+}
+.settings-shell .model-role-navigation button[aria-current="page"] {
+  color: #75517e;
+  background: #f0e8f6;
+  border-color: #cdb8d8;
+}
+.settings-shell .settings-advanced {
+  padding: 14px 16px;
+  border: 1px solid var(--settings-line);
+  border-radius: 11px;
+  background: #fbfafc;
+}
+.settings-shell .settings-advanced > summary {
+  cursor: pointer;
+  color: #7c6287;
+  font-size: 13px;
+}
+.settings-shell .settings-advanced[open] > summary {
+  margin-bottom: 14px;
+}
+.settings-shell .settings-section {
+  display: grid;
+  gap: 18px;
+}
+.settings-shell .settings-section > h2 {
+  margin: 0;
+}
+.settings-shell .settings-section > p {
+  margin: 0;
+  color: var(--settings-muted);
+}
+.settings-shell .settings-section > details {
+  border: 1px solid var(--settings-line);
+  border-radius: 14px;
+  padding: 18px;
+  background: white;
+}
+.settings-shell .settings-section summary {
+  cursor: pointer;
+  font-size: 14px;
+  color: #66526f;
+}
+.settings-shell .settings-section details[open] > summary {
+  margin-bottom: 16px;
+}
+.settings-shell .settings-section ul {
+  display: grid;
+  gap: 12px;
+  padding-left: 20px;
+}
+.settings-shell .settings-section > label {
+  display: grid;
+  gap: 8px;
+}
+.settings-shell .settings-section > label input {
+  width: 100%;
+}
+.settings-shell .settings-section > button {
+  justify-self: start;
+}
+.settings-shell .settings-section li {
+  overflow-wrap: anywhere;
+}
+.settings-shell .settings-error {
+  padding: 16px;
+  border: 1px solid #edd5dd;
+  border-radius: 12px;
+  background: #fff5f7;
+  color: #a8566c;
+}
+.settings-shell .settings-error button {
+  margin-left: 12px;
+}
+.settings-shell .tts-configuration-panel {
+  display: grid;
+  gap: 20px;
+}
+.settings-shell .tts-configuration-panel > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.settings-shell .tts-configuration-panel > header p {
+  font-size: 13px;
+  color: var(--settings-muted);
+  margin: 0;
+}
+.settings-shell .tts-configuration-selector,
+.settings-shell .tts-configuration-field {
+  display: grid;
+  gap: 8px;
+  color: var(--settings-muted);
+  font-size: 13px;
+}
+.settings-shell .tts-configuration-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.settings-shell.settings-controls
+  .realtime-configuration-panel
+  :is(p, label, .realtime-field > span) {
+  color: var(--settings-muted);
+  font-size: 13px;
+}
+.settings-shell.settings-controls .realtime-field :is(input, select) {
+  font-size: 14px;
+  color: var(--settings-text);
+  background: white;
+}
+.settings-shell.settings-controls
+  :is(.realtime-notice-banner, .realtime-complete-info) {
+  color: #735583;
+  background: #f3edf8;
+}
+.settings-shell.settings-controls
+  :is(
+    .realtime-fake-backend-note,
+    .realtime-incomplete-info,
+    .realtime-badge-fake
+  ) {
+  color: #967132;
+  background: #fff5e4;
+}
+.settings-shell.settings-controls
+  :is(.realtime-badge-configured, .realtime-cascade-info) {
+  color: #53836c;
+}
+.settings-shell .channel-settings-tabs {
+  margin-bottom: 20px;
+}
+.settings-shell.settings-controls .channels-settings-card {
+  border: 1px solid var(--settings-line);
+  border-radius: 16px;
+  box-shadow: 0 2px 8px #4b365c03;
+}
+.settings-shell.settings-controls .channel-settings-location {
+  background: #f3eff7;
+  border-color: #e8e0ee;
+}
+.settings-shell.settings-controls .channel-settings-tabs button {
+  border-color: #e5dfe9;
+  background: white;
+}
+.settings-shell.settings-controls
+  .channel-settings-tabs
+  button[aria-current="page"] {
+  color: #75517e;
+  background: #f0e8f6;
+  border-color: #cdb8d8;
+}
+.settings-shell .settings-draft-status {
+  align-self: center;
+  margin-left: auto;
+  font-size: 12px;
+  color: #937248;
+}
+@media (max-width: 1100px) {
+  .settings-shell.settings-controls {
+    grid-template-columns: 224px minmax(0, 1fr);
+  }
+  .settings-heading {
+    padding: 26px;
+  }
+  .settings-shell .settings-scroll {
+    padding: 24px 26px 50px;
+  }
+}
+@media (max-width: 700px) {
+  .settings-shell.settings-controls {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .settings-sidebar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    padding: 12px 14px 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--settings-line);
+  }
+  .settings-brand {
+    padding: 0 0 10px;
+  }
+  .settings-shell .desktop-settings-app-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+  }
+  .settings-shell .desktop-settings-app-icon img {
+    width: 26px;
+    height: 26px;
+  }
+  .settings-search {
+    margin-bottom: 8px;
+  }
+  .settings-search > span {
+    display: none;
+  }
+  .settings-shell .settings-search input {
+    min-height: 36px;
+    padding: 6px 10px;
+  }
+  .settings-navigation {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 0 10px;
+  }
+  .settings-nav-group {
+    display: contents;
+    margin: 0;
+  }
+  .settings-nav-caption,
+  .settings-navigation small {
+    display: none;
+  }
+  .settings-navigation button {
+    width: auto;
+    min-height: 40px;
+    gap: 7px;
+    padding: 8px 12px;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    border-color: #e3ddea;
+    background: #ffffff60;
+  }
+  .settings-navigation button > svg {
+    width: 16px;
+    height: 16px;
+  }
+  .settings-navigation strong {
+    font-size: 12px;
+  }
+  .settings-sidebar > footer {
+    position: absolute;
+    right: 14px;
+    top: 13px;
+    border: 0;
+    padding: 0;
+  }
+  .settings-guide small {
+    display: none;
+  }
+  .settings-return {
+    font-size: 12px;
+    padding: 5px;
+  }
+  .settings-heading {
+    padding: 16px 18px;
+    gap: 12px;
+  }
+  .settings-heading h1 {
+    font-size: 21px;
+  }
+  .settings-heading p {
+    font-size: 12px;
+  }
+  .settings-heading small {
+    display: none;
+  }
+  .settings-connection {
+    font-size: 10px;
+    padding: 5px 8px;
+  }
+  .settings-shell .settings-scroll {
+    padding: 20px 14px 40px;
+  }
+  .settings-shell.settings-controls
+    :is(
+      .desktop-settings-group,
+      .desktop-settings-voice-card,
+      .tts-configuration-panel,
+      .realtime-configuration-panel,
+      .model-role-card
+    ) {
+    padding: 18px;
+  }
+  .settings-shell .tts-configuration-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .settings-shell .desktop-settings-select-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .settings-shell .desktop-settings-select-row select {
+    max-width: none;
+    width: 100%;
+  }
+  .settings-shell .model-role-navigation {
+    gap: 6px;
+  }
+  .settings-shell .model-role-navigation button {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  .settings-shell .model-role-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

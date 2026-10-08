@@ -1,8 +1,6 @@
 import { isRemoteRuntime } from "../chat/runtimeEndpoint";
 import { useState } from "react";
 import { ProductIcon } from "../../components/ProductIcon";
-import { MemoryControlCenter } from "../chat/MemoryControlCenter";
-import { SkillsControlCenter } from "../chat/SkillsControlCenter";
 import {
   verifyWorkerPackIntegrity,
   type WorkerPackIntegrityResponse,
@@ -10,13 +8,10 @@ import {
 import { useSettingsOperation } from "../settings/useSettingsOperation";
 import type { DesktopSettingsContext } from "./DesktopSettingsContext";
 import { DataClearConfirmationDialog } from "./DataClearConfirmationDialog";
-import { InteractionDiagnosticsPanel } from "../diagnostics/InteractionDiagnosticsPanel";
 import {
   installWorkerPackArchive,
   selectWorkerPackArchive,
 } from "./desktopWorkerPacks";
-import { McpConnectionsPanel } from "./McpConnectionsPanel";
-import { SettingsIcon } from "./SettingsIcon";
 import { SettingsGroup, SettingsStatus } from "./SettingsPrimitives";
 
 export function DataSettingsSection({
@@ -26,7 +21,6 @@ export function DataSettingsSection({
 }) {
   const { data } = context;
   const [confirmingClear, setConfirmingClear] = useState(false);
-  const [dataRevision, setDataRevision] = useState(0);
   const [integrity, setIntegrity] =
     useState<WorkerPackIntegrityResponse | null>(null);
   const { busy, notice, run, setNotice } = useSettingsOperation<
@@ -85,48 +79,10 @@ export function DataSettingsSection({
   };
   const resetAndClearCachedViews = async () => {
     const completed = await context.resetConversationAndMemory();
-    if (completed) setDataRevision((revision) => revision + 1);
     return completed;
   };
   return (
     <>
-      <div className="desktop-settings-tool-grid">
-        <article className="desktop-settings-tool-card">
-          <span>
-            <SettingsIcon name="memory" />
-          </span>
-          <h2>结构化记忆</h2>
-          <p>查看建议、修正事实、确认敏感内容并管理遗忘。</p>
-          <MemoryControlCenter
-            key={`${data.sessionId ?? "no-session"}:${dataRevision}`}
-            sessionId={data.sessionId}
-            onChanged={data.refreshMemories}
-          />
-        </article>
-        <article className="desktop-settings-tool-card">
-          <span>
-            <SettingsIcon name="skills" />
-          </span>
-          <h2>Skills 与插件</h2>
-          <p>管理能力权限、插件隔离、确认请求和最近运行。</p>
-          <SkillsControlCenter sessionId={data.sessionId} />
-        </article>
-        <article className="desktop-settings-tool-card">
-          <span>
-            <SettingsIcon name="plugin" />
-          </span>
-          <h2>MCP 连接</h2>
-          <p>连接本地或远程 MCP 服务，检查工具、资源和 Prompt 能力。</p>
-          <McpConnectionsPanel sessionId={data.sessionId} />
-        </article>
-      </div>
-
-      <InteractionDiagnosticsPanel
-        key={`${data.sessionId ?? "no-session"}:${dataRevision}`}
-        sessionId={data.sessionId}
-        runtimeOnline={context.runtime.connection === "connected"}
-      />
-
       <SettingsGroup
         title="Worker Pack 管理"
         description={
@@ -202,7 +158,10 @@ export function DataSettingsSection({
         <SettingsStatus notice={notice} className="desktop-settings-info" />
       </SettingsGroup>
 
-      <SettingsGroup title="本地数据" description="数据只保存在这台设备">
+      <SettingsGroup
+        title="当前对话数据"
+        description="数据保存在当前连接的 Runtime，清理前请核对范围"
+      >
         <div className="desktop-settings-danger-row">
           <div>
             <strong>重置对话与记忆</strong>

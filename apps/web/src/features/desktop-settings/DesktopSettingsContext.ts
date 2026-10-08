@@ -1,33 +1,8 @@
 import type { useDesktopPreferences } from "../desktop-pet/useDesktopPreferences";
-import type { useSettingsRuntime } from "./useSettingsRuntime";
+import type { CommonSettingsContext } from "../settings/SettingsRuntimeContext";
 
-type SettingsRuntimeState = ReturnType<typeof useSettingsRuntime>;
-
-export interface SettingsRuntimeContext {
-  canvasRef: SettingsRuntimeState["canvasRef"];
-  appearance: Pick<
-    SettingsRuntimeState,
-    "avatarManifest" | "snapshot" | "rendererKind" | "character"
-  >;
-  voice: Pick<
-    SettingsRuntimeState,
-    | "sessionId"
-    | "ttsProviders"
-    | "ttsProviderId"
-    | "ttsSwitching"
-    | "changeTtsProvider"
-    | "refreshTtsProviders"
-  >;
-  data: Pick<
-    SettingsRuntimeState,
-    "sessionId" | "resetting" | "refreshMemories"
-  >;
-  runtime: Pick<SettingsRuntimeState, "connection" | "health" | "error">;
-  sessionId: SettingsRuntimeState["sessionId"];
+export interface SettingsRuntimeContext extends CommonSettingsContext {
   desktop: ReturnType<typeof useDesktopPreferences>;
-  resetConversationAndMemory: () => Promise<boolean>;
 }
 
-// Compatibility name for existing section components. The context itself is
-// now intentionally sourced from useSettingsRuntime, never useChatSession.
 export type DesktopSettingsContext = SettingsRuntimeContext;

@@ -88,7 +88,7 @@ function ChannelsSettingsContent({
         {[
           { id: "weixin", label: "微信" },
           { id: "qq", label: "QQ" },
-          { id: "advanced", label: "权限与预算" },
+          { id: "advanced", label: "交流与权限" },
         ].map((item) => (
           <button
             key={item.id}
@@ -100,6 +100,19 @@ function ChannelsSettingsContent({
           </button>
         ))}
       </nav>
+      {tab === "qq" && (
+        <div className="settings-action-row">
+          <div>
+            <strong>由宁宁决定什么时候回应</strong>
+            <small>
+              自由交流、语音和账号操作权限集中管理；群参与方式在具体群里设置。
+            </small>
+          </div>
+          <button type="button" onClick={() => setTab("advanced")}>
+            交流与权限 →
+          </button>
+        </div>
+      )}
       {tab === "weixin" ? (
         <>
           <WeixinChannelPanel

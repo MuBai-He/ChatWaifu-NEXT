@@ -1,181 +1,99 @@
-import { isRemoteRuntime } from "../chat/runtimeEndpoint";
-import { useState } from "react";
-
+import { useState, useSyncExternalStore } from "react";
 import { ProductIcon } from "../../components/ProductIcon";
+import {
+  getRuntimeContextRevision,
+  isRemoteRuntime,
+  subscribeRuntimeContext,
+} from "../chat/runtimeEndpoint";
 import { useDesktopPreferences } from "../desktop-pet/useDesktopPreferences";
+import { SettingsShell } from "../settings/SettingsShell";
+import { settingsContext } from "../settings/SettingsRuntimeContext";
 import type { SettingsRuntimeContext } from "./DesktopSettingsContext";
 import { DesktopOnboardingDialog } from "./DesktopOnboardingDialog";
 import {
   completeDesktopOnboarding,
   isDesktopOnboardingCompleted,
 } from "./desktopOnboarding";
-import { connectionDetail, connectionLabel } from "./desktopRuntimeStatus";
 import {
   desktopSettingsRegistry,
   type DesktopSettingsSectionId,
 } from "./desktopSettingsRegistry";
-import { SettingsIcon } from "./SettingsIcon";
-import {
-  settingsSectionAvailability,
-  visibleSettingsSections,
-} from "./settingsRegistry";
+import { visibleSettingsSections } from "./settingsRegistry";
 import { useSettingsRuntime } from "./useSettingsRuntime";
 
 export function DesktopSettingsPage() {
+  const epoch = useSyncExternalStore(
+    subscribeRuntimeContext,
+    getRuntimeContextRevision,
+    getRuntimeContextRevision,
+  );
+  return <DesktopSettingsContent key={epoch} />;
+}
+
+function DesktopSettingsContent() {
   const runtime = useSettingsRuntime();
   const desktop = useDesktopPreferences();
   const [sectionId, setSectionId] =
     useState<DesktopSettingsSectionId>("appearance");
+  const [visited, setVisited] = useState(() => new Set<string>(["appearance"]));
   const [onboardingOpen, setOnboardingOpen] = useState(
     () => desktop.desktopHost && !isDesktopOnboardingCompleted(),
   );
-
-  const resetConversationAndMemory = async () => {
-    return runtime.resetAll();
-  };
   const context: SettingsRuntimeContext = {
-    canvasRef: runtime.canvasRef,
-    appearance: {
-      avatarManifest: runtime.avatarManifest,
-      snapshot: runtime.snapshot,
-      rendererKind: runtime.rendererKind,
-      character: runtime.character,
-    },
-    voice: {
-      sessionId: runtime.sessionId,
-      ttsProviders: runtime.ttsProviders,
-      ttsProviderId: runtime.ttsProviderId,
-      ttsSwitching: runtime.ttsSwitching,
-      changeTtsProvider: runtime.changeTtsProvider,
-      refreshTtsProviders: runtime.refreshTtsProviders,
-    },
-    data: {
-      sessionId: runtime.sessionId,
-      resetting: runtime.resetting,
-      refreshMemories: runtime.refreshMemories,
-    },
-    runtime: {
-      connection: runtime.connection,
-      health: runtime.health,
-      error: runtime.error,
-    },
-    sessionId: runtime.sessionId,
+    ...settingsContext(runtime),
     desktop,
-    resetConversationAndMemory,
   };
-  const surface = desktop.desktopHost ? "desktop" : "browser";
   const sections = visibleSettingsSections(
     desktopSettingsRegistry,
     context,
-    surface,
+    desktop.desktopHost ? "desktop" : "browser",
   );
-  const selected =
-    sections.find((section) => section.id === sectionId) ?? sections[0];
-  if (!selected) return null;
-  const SelectedSection = selected.component;
-
+  const select = (id: string) => {
+    setSectionId(id as DesktopSettingsSectionId);
+    setVisited((current) => new Set([...current, id]));
+  };
   return (
-    <main className="desktop-settings-page settings-controls">
-      <aside className="desktop-settings-sidebar">
-        <header>
-          <span className="desktop-settings-app-icon">
-            <SettingsIcon name="brand" />
-          </span>
-          <div>
-            <strong>ChatWaifu NEXT</strong>
-            <small>桌宠设置</small>
-          </div>
-        </header>
-
-        <nav aria-label="设置分类">
-          {sections.map((section) => {
-            const availability = settingsSectionAvailability(section, context);
-            return (
-              <button
-                className={selected.id === section.id ? "active" : ""}
-                type="button"
-                key={section.id}
-                disabled={!availability.enabled}
-                title={availability.reason}
-                onClick={() =>
-                  setSectionId(section.id as DesktopSettingsSectionId)
-                }
-                aria-current={selected.id === section.id ? "page" : undefined}
-              >
-                <span>
-                  <SettingsIcon name={section.icon} />
-                </span>
-                <div>
-                  <strong>{section.label}</strong>
-                  <small>{availability.reason ?? section.description}</small>
-                </div>
-              </button>
-            );
-          })}
-        </nav>
-
-        <footer>
+    <>
+      <SettingsShell
+        className="desktop-settings-page"
+        sections={sections}
+        selectedId={sectionId}
+        onSelect={select}
+        context={context}
+        connection={runtime.connection}
+        subtitle="桌面设置中心"
+        footer={
           <button
-            className="desktop-settings-guide-button"
+            className="settings-guide"
             type="button"
             onClick={() => setOnboardingOpen(true)}
           >
             <ProductIcon name="story" />
             <span>
-              <strong>新手引导</strong>
-              <small>API、声音与麦克风</small>
+              新手引导<small>API、声音与麦克风</small>
             </span>
           </button>
-          <div className="desktop-settings-runtime-summary">
-            <i className={context.runtime.connection} />
-            <div>
-              <strong>
-                {connectionLabel(context.runtime.connection, isRemoteRuntime())}
-              </strong>
-              <small>
-                {connectionDetail(
-                  context.runtime.connection,
-                  context.runtime.health?.version,
-                  isRemoteRuntime(),
-                )}
-              </small>
-            </div>
-          </div>
-        </footer>
-      </aside>
-
-      <section className="desktop-settings-content">
-        <header className="desktop-settings-heading">
-          <div>
-            <small>{selected.description}</small>
-            <h1>{selected.label}</h1>
-          </div>
-          <span
-            className={`desktop-settings-runtime ${context.runtime.connection}`}
-          >
-            <i />
-            {context.runtime.connection === "connected"
-              ? "运行正常"
-              : connectionLabel(context.runtime.connection, isRemoteRuntime())}
-          </span>
-        </header>
-
-        <div className="desktop-settings-scroll">
-          <SelectedSection context={context} />
-
-          {context.runtime.error || desktop.error ? (
-            <p className="desktop-settings-error" role="alert">
-              {desktop.error ?? context.runtime.error}
-              {runtime.connection === "offline" && (
-                <button type="button" onClick={runtime.reconnect}>
-                  立即重连
-                </button>
-              )}
-            </p>
-          ) : null}
-        </div>
-      </section>
-
+        }
+      >
+        {sections
+          .filter((section) => visited.has(section.id))
+          .map((section) => {
+            const Component = section.component;
+            return (
+              <div key={section.id} hidden={section.id !== sectionId}>
+                <Component context={context} />
+              </div>
+            );
+          })}
+        {(context.runtime.error || desktop.error) && (
+          <p className="settings-error" role="alert">
+            {desktop.error ?? context.runtime.error}
+            {runtime.connection === "offline" && (
+              <button onClick={runtime.reconnect}>立即重连</button>
+            )}
+          </p>
+        )}
+      </SettingsShell>
       <DesktopOnboardingDialog
         open={onboardingOpen && !isRemoteRuntime()}
         onDefer={() => setOnboardingOpen(false)}
@@ -184,10 +102,10 @@ export function DesktopSettingsPage() {
           setOnboardingOpen(false);
         }}
         onNavigate={(section) => {
-          setSectionId(section);
+          select(section);
           setOnboardingOpen(false);
         }}
       />
-    </main>
+    </>
   );
 }

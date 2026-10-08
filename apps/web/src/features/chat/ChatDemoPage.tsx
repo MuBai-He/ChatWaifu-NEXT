@@ -2,10 +2,7 @@ import { isRemoteRuntime } from "./runtimeEndpoint";
 import { useEffect, useRef, useState } from "react";
 import { BrandMark } from "../../components/BrandMark";
 import { ProductIcon } from "../../components/ProductIcon";
-import { InteractionDiagnosticsPanel } from "../diagnostics/InteractionDiagnosticsPanel";
 import { MemoryControlCenter } from "./MemoryControlCenter";
-import { ModelSettingsPanel } from "./ModelSettingsPanel";
-import { RealtimeConfigurationPanel } from "./RealtimeConfigurationPanel";
 import { SkillConfirmationPrompt } from "./SkillConfirmationPrompt";
 import { SkillsControlCenter } from "./SkillsControlCenter";
 import {
@@ -63,7 +60,6 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
   const [draft, setDraft] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [dataRevision, setDataRevision] = useState(0);
   const [avatarFraming, setAvatarFraming] = useState<"bust" | "full">("bust");
   const ttsProviderPreferences = readTtsProviderPreferences(ttsProviders);
   const ttsProviderChoices = buildTtsProviderChoices(
@@ -116,7 +112,6 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
     if (await resetAll()) {
       setDraft("");
       setHistoryOpen(false);
-      setDataRevision((revision) => revision + 1);
     }
   };
 
@@ -273,12 +268,12 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
                 <ProductIcon name="close" />
               </button>
             </header>
-            <a className="vn-settings-link" href="/settings/agent">
-              能力与任务
+            <a className="vn-settings-link" href="/settings">
+              打开设置中心 →
             </a>
-            <a className="vn-settings-link" href="/settings/channels">
-              消息渠道与权限设置
-            </a>
+            <p className="vn-settings-hint">
+              聊天行为、决策模型、记忆和任务统一在设置中心管理。
+            </p>
             <label>
               <span>角色构图</span>
               <select
@@ -371,13 +366,6 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
                   : "桌宠窗口负责麦克风和语音播放，避免双窗口重叠播放"}
               </small>
             </div>
-            <ModelSettingsPanel sessionId={sessionId} />
-            <RealtimeConfigurationPanel />
-            <InteractionDiagnosticsPanel
-              key={`${sessionId ?? "no-session"}:${dataRevision}`}
-              sessionId={sessionId}
-              runtimeOnline={connection === "connected"}
-            />
           </aside>
         ) : null}
 

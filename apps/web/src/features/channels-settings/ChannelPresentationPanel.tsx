@@ -184,8 +184,8 @@ function PresentationEditor({
   const instant = draft.profile === "instant_message";
   return (
     <ChannelSettingsDisclosure
-      title="回复样式与连接选项"
-      description="分段、间隔、正在输入与连接名称"
+      title="回复样式与发送节奏"
+      description="分句发送、随机停顿与模拟打字速度"
     >
       <fieldset className="channel-settings-fields" disabled={disabled}>
         <legend>基本选项</legend>
@@ -264,21 +264,24 @@ function PresentationEditor({
           </label>
         ))}
       </fieldset>
-      <fieldset className="channel-settings-fields" disabled={disabled}>
-        <legend>连接活动状态</legend>
-        <label>
-          活动判定窗口（秒）
-          <input
-            type="number"
-            min={0.1}
-            max={600}
-            step={0.1}
-            value={timeout}
-            onChange={(e) => setTimeout(e.currentTarget.value)}
-          />
-          <small>用于显示最近活动，不是模型超时。</small>
-        </label>
-      </fieldset>
+      <details className="settings-advanced">
+        <summary>高级：连接活动状态</summary>
+        <fieldset className="channel-settings-fields" disabled={disabled}>
+          <legend>连接活动状态</legend>
+          <label>
+            活动判定窗口（秒）
+            <input
+              type="number"
+              min={0.1}
+              max={600}
+              step={0.1}
+              value={timeout}
+              onChange={(e) => setTimeout(e.currentTarget.value)}
+            />
+            <small>用于显示最近活动，不是模型超时。</small>
+          </label>
+        </fieldset>
+      </details>
       <p>
         这些设置只影响外部消息展示。保存 QQ
         连接选项后，群路由会依照现有规则暂停，需要重新核对成员后启用。
@@ -296,6 +299,15 @@ function PresentationEditor({
       >
         {busy ? "正在保存…" : "保存回复样式"}
       </button>
+      <span className="settings-draft-status" role="status">
+        {busy
+          ? "正在保存…"
+          : !valid
+            ? "请修正输入后保存"
+            : dirty
+              ? "有未保存的修改"
+              : "已保存"}
+      </span>
       {notice ? <p role="status">{notice}</p> : null}
     </ChannelSettingsDisclosure>
   );
