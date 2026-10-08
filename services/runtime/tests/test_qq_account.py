@@ -174,3 +174,18 @@ async def test_runtime_records_actual_account_execution_without_desktop_confirma
         ]
     finally:
         await container.stop()
+
+
+def test_public_catalog_loads_under_legacy_default_encoding(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original = Path.read_text
+
+    def legacy_read(path: Path, encoding: str | None = None, errors: str | None = None) -> str:
+        return original(path, encoding=encoding or "cp1252", errors=errors)
+
+    monkeypatch.setattr(Path, "read_text", legacy_read)
+    handler, _, calls = _account()
+    assert handler.version == "4.18.28"
+    assert "send_poke" in handler.schemas
+    assert calls == []

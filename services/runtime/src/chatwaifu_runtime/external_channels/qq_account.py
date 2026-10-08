@@ -57,7 +57,7 @@ class QQAccountCapabilities:
         self.scene = scene
         self.enabled = enabled
         self.call = call
-        api = json.loads(schema_path.read_text())
+        api = json.loads(schema_path.read_text(encoding="utf-8"))
         self.version: str = api["info"]["version"]
         self.schemas: dict[str, Any] = {
             path.removeprefix("/"): {
