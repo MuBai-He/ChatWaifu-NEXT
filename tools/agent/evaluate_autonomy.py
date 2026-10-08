@@ -584,7 +584,7 @@ async def main(args: argparse.Namespace) -> None:
             result.update(repeat=repeat, model=model)
             async with lock:
                 results.append(result)
-                with args.output.open("a") as stream:
+                with args.output.open("a", encoding="utf-8") as stream:
                     stream.write(json.dumps(result, ensure_ascii=False) + "\n")
                 print(
                     json.dumps(
@@ -643,7 +643,7 @@ async def main(args: argparse.Namespace) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--source-root", type=Path, default=Path("/Users/mubai/Desktop/CW2"))
+    parser.add_argument("--source-root", type=Path, default=ROOT)
     parser.add_argument(
         "--fixtures", type=Path, default=ROOT / "tests/fixtures/agent/autonomous_scenarios.json"
     )
