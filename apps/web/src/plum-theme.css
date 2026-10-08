@@ -1,0 +1,24 @@
+/* Shared with the connection screen: subdued plum, never neon violet. */
+:root {
+  --plum-background: #151119;
+  --plum-background-start: #231b29;
+  --plum-text: #eee5ef;
+  --plum-muted: #bbaec2;
+  --plum-accent: #ddbad3;
+  --plum-primary: #78496f;
+  --plum-primary-hover: #89567e;
+  --plum-primary-text: #fff8fd;
+  --plum-primary-fill: linear-gradient(105deg, #824f76, #613d60);
+  --plum-surface: #261e2c;
+  --plum-raised: #352839;
+  --plum-control: #1b1521;
+  --plum-line: #544158;
+  --plum-control-line: #806985;
+  --plum-focus: #d4a8c7;
+  --plum-danger: #ffb3c6;
+  --plum-danger-soft: #3d222f;
+  --plum-success: #a6d6b6;
+  --plum-success-soft: #21342c;
+  --plum-warning: #e9c490;
+  --plum-warning-soft: #392f23;
+}

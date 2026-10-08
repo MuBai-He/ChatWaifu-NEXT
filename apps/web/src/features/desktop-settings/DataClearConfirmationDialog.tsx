@@ -1,7 +1,10 @@
+import "../settings/settings-glass.css";
+import "../settings/settings-controls.css";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { ProductIcon } from "../../components/ProductIcon";
 import { ModalPortal } from "../chat/ModalPortal";
+import { useDialogNavigation } from "../connection/useDialogNavigation";
 
 const CONFIRMATION_PHRASE = "清除当前数据";
 
@@ -27,6 +30,12 @@ export function DataClearConfirmationDialog({
     setPhrase("");
     onCancel();
   }, [onCancel]);
+  const { ref: dialogRef, onKeyDown } = useDialogNavigation<HTMLElement>(
+    open,
+    () => {
+      if (!busy) cancel();
+    },
+  );
 
   useEffect(() => {
     if (step === "phrase") phraseInputRef.current?.focus();
@@ -58,7 +67,9 @@ export function DataClearConfirmationDialog({
       }}
     >
       <section
-        className="data-clear-dialog"
+        ref={dialogRef}
+        onKeyDown={onKeyDown}
+        className="data-clear-dialog settings-material settings-surface settings-controls"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

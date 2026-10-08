@@ -1,0 +1,456 @@
+.extensions-settings {
+  display: grid;
+  min-width: 0;
+  gap: 22px;
+}
+.extensions-overview h2 {
+  margin: 0 0 5px;
+  font-size: 19px;
+  letter-spacing: -0.4px;
+}
+.extensions-overview p {
+  margin: 0;
+  color: var(--settings-muted);
+  font-size: 14px;
+}
+.extensions-tabs {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 4px;
+  padding: 5px;
+  gap: 3px;
+  border: 1px solid var(--settings-glass-border);
+  border-radius: 999px;
+  background: var(--settings-glass);
+  box-shadow: var(--settings-glass-shadow);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+}
+.extensions-tabs button {
+  min-width: 92px;
+  min-height: var(--settings-control-height, 40px);
+  padding: 8px 20px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--settings-muted);
+  background: transparent;
+  font-size: 14px;
+  cursor: pointer;
+  transition:
+    background 200ms,
+    color 200ms,
+    box-shadow 200ms;
+}
+.extensions-tabs button[aria-selected="true"] {
+  color: var(--settings-accent);
+  border-color: var(--settings-control-border);
+  background: var(--settings-accent-soft);
+  box-shadow: 0 3px 10px rgb(5 3 8 / 22%);
+}
+.settings-dialog .extensions-tabs {
+  background: var(--settings-accent-soft);
+  border-color: var(--settings-line);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.extensions-panel {
+  display: grid;
+  min-width: 0;
+  gap: 20px;
+}
+.extensions-toolbar,
+.extensions-runs > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.extensions-toolbar h2,
+.extensions-runs h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.extensions-toolbar p,
+.extensions-runs > header > span {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--settings-muted);
+}
+.settings-material
+  :is(.extensions-panel, .extensions-mcp)
+  button:not(.skill-list-item) {
+  display: inline-flex;
+  min-height: var(--settings-control-height, 40px);
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border: 1px solid var(--settings-control-border);
+  border-radius: 12px;
+  background: var(--settings-control-background);
+  color: var(--settings-accent);
+  font-size: 13px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.settings-material :is(.extensions-panel, .extensions-mcp) button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.settings-material
+  :is(.extensions-panel, .extensions-mcp)
+  button:hover:not(:disabled) {
+  background: var(--settings-accent-soft);
+}
+.settings-material
+  :is(.extensions-panel, .extensions-mcp)
+  button.extension-primary {
+  border-color: var(--settings-accent);
+  color: var(--settings-primary-text);
+  background: var(--settings-primary);
+}
+.settings-material
+  :is(.extensions-panel, .extensions-mcp)
+  button.extension-primary:hover:not(:disabled) {
+  border-color: var(--settings-primary-hover);
+  background: var(--settings-primary-hover);
+}
+.settings-material :is(.extensions-panel, .extensions-mcp) button.danger {
+  color: var(--settings-danger);
+}
+.skills-workspace {
+  display: grid;
+  min-width: 0;
+  gap: 20px;
+  grid-template-columns: 300px minmax(0, 1fr);
+  align-items: start;
+}
+.skills-browser {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--settings-line);
+  border-radius: 20px;
+  background: var(--settings-card);
+}
+.extensions-search {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+  color: var(--settings-muted);
+  font-size: 12px;
+}
+.extensions-search input {
+  width: 100%;
+}
+.skills-list {
+  display: grid;
+  max-height: min(540px, 65dvh);
+  overflow-y: auto;
+  gap: 5px;
+  scrollbar-width: thin;
+  overscroll-behavior: contain;
+}
+.skill-list-item {
+  display: flex;
+  width: 100%;
+  min-height: 64px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  gap: 10px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  color: var(--settings-text);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.skill-list-item > span:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+.skill-list-item strong {
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.skill-list-item small {
+  color: var(--settings-muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.skill-list-item[aria-pressed="true"] {
+  border-color: var(--settings-control-border);
+  color: var(--settings-accent);
+  background: var(--settings-accent-soft);
+}
+.skill-detail,
+.extension-card > header > div {
+  min-width: 0;
+}
+.extension-card {
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid var(--settings-line);
+  border-radius: 20px;
+  background: var(--settings-card);
+}
+.extension-card > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+}
+.extension-card :is(h3, h4) {
+  margin: 0 0 6px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.extension-card :is(p, code, pre, strong) {
+  overflow-wrap: anywhere;
+}
+.extension-card p {
+  margin: 14px 0;
+  color: var(--settings-muted);
+  font-size: 14px;
+}
+.extension-card code {
+  color: var(--settings-muted);
+  font-size: 12px;
+}
+.extension-badge {
+  flex: 0 0 auto;
+  padding: 3px 8px;
+  border: 1px solid var(--settings-line);
+  border-radius: 999px;
+  color: var(--settings-muted);
+  background: var(--settings-raised);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.settings-material .capability-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0;
+}
+.settings-material .capability-list button small {
+  color: var(--settings-muted);
+  font-size: 11px;
+}
+.settings-material .capability-list button[aria-pressed="true"] {
+  border-color: var(--settings-accent);
+  background: var(--settings-accent-soft);
+}
+.skill-invoke-form {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--settings-line);
+}
+.skill-invoke-form p {
+  margin: 0;
+}
+.skill-invoke-form label,
+.plugin-install label {
+  display: grid;
+  gap: 8px;
+  color: var(--settings-muted);
+  font-size: 13px;
+}
+.skill-invoke-form textarea {
+  width: 100%;
+  font-family: ui-monospace, monospace;
+}
+.skill-invoke-form > button {
+  justify-self: start;
+}
+.extension-instructions {
+  max-height: 320px;
+  padding: 16px;
+  overflow: auto;
+  background: var(--settings-control-background);
+  border-radius: 12px;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+.extensions-runs {
+  display: grid;
+  gap: 14px;
+}
+.extensions-empty {
+  padding: 28px 22px;
+  border: 1px dashed var(--settings-control-border);
+  border-radius: 18px;
+  color: var(--settings-muted);
+  background: var(--settings-card);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.extensions-empty strong {
+  color: var(--settings-text);
+  font-size: 14px;
+}
+.extensions-empty p {
+  margin: 7px 0 0;
+  font-size: 13px;
+}
+.extensions-notice {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  border: 1px solid var(--settings-danger);
+  border-radius: 14px;
+  color: var(--settings-danger);
+  background: var(--settings-danger-soft);
+  overflow-wrap: anywhere;
+}
+.extensions-notice button {
+  flex: 0 0 auto;
+}
+.extensions-loading {
+  color: var(--settings-muted);
+}
+.plugin-install {
+  display: grid;
+  gap: 16px;
+}
+.settings-material .local-plugin-install {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin: 0;
+}
+.local-plugin-install input {
+  width: 100%;
+}
+.plugin-install > button,
+.extension-card > footer {
+  justify-self: start;
+}
+.extension-card > footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.extensions-mcp {
+  --mcp-text: var(--settings-text);
+  --mcp-muted: var(--settings-muted);
+  --mcp-faint: var(--settings-muted);
+  --mcp-line: var(--settings-line);
+  --mcp-accent: var(--settings-accent);
+  min-width: 0;
+  font-size: 14px;
+}
+.extensions-mcp .mcp-connections-layout {
+  padding: 0;
+  gap: 20px;
+  overflow: visible;
+  grid-template-columns: 260px minmax(0, 1fr);
+  align-items: start;
+}
+.extensions-mcp :is(.mcp-connection-list, .mcp-connection-workspace) {
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  min-width: 0;
+}
+.extensions-mcp .mcp-connection-list {
+  padding: 16px;
+  background: var(--settings-card);
+  border: 1px solid var(--settings-line);
+  border-radius: 20px;
+}
+.extensions-mcp .mcp-connection-list > div:first-child {
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.extensions-mcp :is(.mcp-connection-editor, .mcp-capabilities) {
+  padding: 24px;
+  border: 1px solid var(--settings-line);
+  border-radius: 20px;
+  background: var(--settings-card);
+  box-shadow: none;
+}
+.extensions-mcp
+  :is(.mcp-connection-list, .mcp-connection-editor, .mcp-capabilities)
+  :is(strong, label > span) {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.extensions-mcp
+  :is(
+    p,
+    small,
+    label,
+    .mcp-connection-badges,
+    .mcp-capability-metrics,
+    .mcp-connections-notice
+  ) {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.extensions-mcp .mcp-connection-list article > button :is(strong, small) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.settings-material .extensions-mcp .mcp-connection-list article > button {
+  display: grid;
+  justify-content: stretch;
+  justify-items: start;
+  padding: 10px;
+  text-align: left;
+}
+.extensions-mcp :is(input, select, textarea) {
+  width: 100%;
+}
+.extensions-mcp .mcp-connection-editor footer {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+@media (max-width: 1100px) {
+  .skills-workspace {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+  .extensions-mcp .mcp-connections-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 700px) {
+  .skills-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .skills-list {
+    max-height: 240px;
+  }
+  .extension-card,
+  .extensions-mcp :is(.mcp-connection-editor, .mcp-capabilities) {
+    padding: 18px;
+  }
+  .extensions-tabs {
+    width: 100%;
+  }
+  .extensions-tabs button {
+    min-width: 0;
+    flex: 1;
+    padding: 8px 12px;
+  }
+  .settings-material .local-plugin-install,
+  .extensions-mcp .mcp-connection-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .extensions-tabs button {
+    transition: none;
+  }
+}

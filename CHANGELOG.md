@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- Give the shared settings center an Apple Liquid Glass presentation with aligned
+  content frames, readable controls and responsive navigation. Manage Skills,
+  plugins and MCP in the page; reuse accessible dialogs for chat shortcuts.
+  Preserve ordinary drafts, pause hidden panel polling and discard sensitive MCP
+  input/results on departure. Publish the verified Web build to the existing
+  server with immutable compatibility assets, configuration/process preservation
+  and read-only Chromium/WebKit verification. Installed native clients remain
+  separate from this Web publication. Share TTS provider form styles across both
+  products, keep the header within the viewport with more breathing room, and
+  match the connection screen's dark plum palette throughout the glass surfaces.
+  Align fixed sidebar icon/text columns, theme legacy cards and portal controls,
+  separate voice metadata and empty-state actions, and bound short-window dialogs.
+  Audit populated subpages, expanded forms and text contrast in both engines.
+
 - Add opt-in QQ free conversation: paired owner messages use model-selected
   respond/clarify/wait, and member groups consider mentions, ordinary text, scoped
   voice transcripts and bot-targeted poke events. Wait stays silent; permission

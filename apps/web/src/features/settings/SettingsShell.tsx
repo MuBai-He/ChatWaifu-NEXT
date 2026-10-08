@@ -3,6 +3,7 @@ import { SettingsIcon } from "./SettingsIcon";
 import type { SettingsSectionDefinition } from "./settingsRegistry";
 import { settingsSectionAvailability } from "./settingsRegistry";
 import "./settings-shell.css";
+import "./settings-glass.css";
 
 const groups = [
   "聊天",
@@ -56,7 +57,9 @@ export function SettingsShell<Context>({
       .includes(normalized),
   );
   return (
-    <main className={`settings-shell settings-controls ${className}`}>
+    <main
+      className={`settings-shell settings-material settings-controls ${className}`}
+    >
       <aside className="settings-sidebar">
         <header className="settings-brand">
           <span className="desktop-settings-app-icon">
@@ -132,22 +135,24 @@ export function SettingsShell<Context>({
       </aside>
       <section className="settings-workspace">
         <header className="settings-heading">
-          <div>
-            <small>{selected?.group ?? "设置"}</small>
-            <h1>{selected?.label}</h1>
-            <p>{selected?.description}</p>
+          <div className="settings-heading-inner settings-content-frame">
+            <div>
+              <small>{selected?.group ?? "设置"}</small>
+              <h1>{selected?.label}</h1>
+              <p>{selected?.description}</p>
+            </div>
+            <span className={`settings-connection ${connection}`} role="status">
+              <i />
+              {connection === "connected"
+                ? "已连接"
+                : connection === "offline"
+                  ? "连接已断开"
+                  : "正在连接"}
+            </span>
           </div>
-          <span className={`settings-connection ${connection}`} role="status">
-            <i />
-            {connection === "connected"
-              ? "已连接"
-              : connection === "offline"
-                ? "连接已断开"
-                : "正在连接"}
-          </span>
         </header>
         <div ref={scroll} className="settings-scroll desktop-settings-scroll">
-          {children}
+          <div className="settings-content-frame">{children}</div>
         </div>
       </section>
     </main>

@@ -170,7 +170,10 @@ export function DataSettingsSection({
           <button
             type="button"
             disabled={!data.sessionId || data.resetting}
-            onClick={() => setConfirmingClear(true)}
+            onClick={(event) => {
+              event.currentTarget.focus();
+              setConfirmingClear(true);
+            }}
           >
             <ProductIcon name="trash" />
             {data.resetting ? "正在清除…" : "清除当前数据"}

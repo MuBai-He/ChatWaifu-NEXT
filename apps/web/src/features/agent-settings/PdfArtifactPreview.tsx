@@ -1,3 +1,5 @@
+import "../settings/settings-glass.css";
+import "../settings/settings-controls.css";
 import { useEffect, useId, useRef, useState } from "react";
 import {
   getDocument,
@@ -111,7 +113,7 @@ export default function PdfArtifactPreview({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="agent-preview-dialog settings-controls"
+        className="agent-preview-dialog settings-material settings-surface settings-controls"
         onKeyDown={onKeyDown}
       >
         <header>

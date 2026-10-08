@@ -4,10 +4,10 @@
   flex-direction: column;
   gap: 14px;
   padding: 16px;
-  border: 1px solid rgb(255 255 255 / 12%);
+  border: 1px solid var(--settings-line, rgb(255 255 255 / 12%));
   border-radius: 14px;
-  background: rgb(255 255 255 / 5%);
-  color: #fff;
+  background: var(--settings-card, rgb(255 255 255 / 5%));
+  color: var(--settings-text, #fff);
   box-sizing: border-box;
   min-width: 0;
   max-width: 100%;
@@ -17,7 +17,7 @@
   max-width: 820px;
   margin-top: 24px;
   padding: 18px;
-  border: 1px solid rgb(255 255 255 / 76%);
+  border: 1px solid var(--settings-line, rgb(255 255 255 / 76%));
   border-radius: 16px;
   background: var(--settings-card, #fff);
   color: var(--settings-text, #29242d);
@@ -41,7 +41,7 @@
 .realtime-configuration-panel > header p {
   margin: 4px 0 0;
   font-size: 0.65rem;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--settings-text, rgba(255, 255, 255, 0.65));
   line-height: 1.4;
 }
 
@@ -53,17 +53,17 @@
   font-size: 0.62rem;
   padding: 3px 8px;
   border-radius: 6px;
-  background: rgba(245, 158, 11, 0.18);
-  color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: var(--settings-warning-soft, rgba(245, 158, 11, 0.18));
+  color: var(--settings-warning, #fbbf24);
+  border: 1px solid var(--settings-line, rgba(245, 158, 11, 0.35));
   font-weight: 500;
   white-space: nowrap;
 }
 
 .desktop-settings-page .realtime-badge-fake {
-  background: rgb(245 158 11 / 12%);
-  color: #b45309;
-  border-color: rgb(245 158 11 / 28%);
+  background: var(--settings-warning-soft, rgb(245 158 11 / 12%));
+  color: var(--settings-warning, #b45309);
+  border-color: var(--settings-line, rgb(245 158 11 / 28%));
 }
 
 .realtime-notice-banner {
@@ -71,34 +71,34 @@
   line-height: 1.45;
   padding: 8px 12px;
   border-radius: 8px;
-  background: rgba(168, 85, 247, 0.12);
-  border: 1px solid rgba(168, 85, 247, 0.28);
-  color: #e9d5ff;
+  background: var(--settings-card, rgba(168, 85, 247, 0.12));
+  border: 1px solid var(--settings-line, rgba(168, 85, 247, 0.28));
+  color: var(--settings-accent, #e9d5ff);
   box-sizing: border-box;
   min-width: 0;
 }
 
 .desktop-settings-page .realtime-notice-banner {
-  background: rgb(139 92 246 / 8%);
-  border-color: rgb(139 92 246 / 20%);
-  color: #6d28d9;
+  background: var(--settings-card, rgb(139 92 246 / 8%));
+  border-color: var(--settings-line, rgb(139 92 246 / 20%));
+  color: var(--settings-accent, #6d28d9);
 }
 
 .realtime-fake-backend-note {
   font-size: 0.65rem;
   padding: 8px 12px;
   border-radius: 8px;
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  color: #fde68a;
+  background: var(--settings-warning-soft, rgba(245, 158, 11, 0.12));
+  border: 1px solid var(--settings-line, rgba(245, 158, 11, 0.25));
+  color: var(--settings-warning, #fde68a);
   box-sizing: border-box;
   min-width: 0;
 }
 
 .desktop-settings-page .realtime-fake-backend-note {
-  background: rgb(245 158 11 / 8%);
-  border-color: rgb(245 158 11 / 20%);
-  color: #92400e;
+  background: var(--settings-warning-soft, rgb(245 158 11 / 8%));
+  border-color: var(--settings-line, rgb(245 158 11 / 20%));
+  color: var(--settings-warning, #92400e);
 }
 
 .realtime-mode-selector-group {
@@ -135,7 +135,7 @@
   min-width: 0;
   gap: 6px;
   font-size: 0.65rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--settings-text, rgba(255, 255, 255, 0.85));
 }
 
 .desktop-settings-page .realtime-field {
@@ -156,35 +156,35 @@
   width: 100%;
   min-width: 0;
   padding: 8px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--settings-control-border, rgba(255, 255, 255, 0.15));
   border-radius: 8px;
   outline: none;
   color: inherit;
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--settings-raised, rgba(0, 0, 0, 0.25));
   font-size: 0.68rem;
 }
 
 .desktop-settings-page .realtime-field input,
 .desktop-settings-page .realtime-field select {
-  border: 1px solid rgb(86 67 91 / 14%);
-  background: rgb(255 255 255 / 82%);
+  border: 1px solid var(--settings-control-border, rgb(86 67 91 / 14%));
+  background: var(--settings-control-background, rgb(255 255 255 / 82%));
   color: var(--settings-text, #29242d);
 }
 
 .realtime-field input:focus,
 .realtime-field select:focus {
-  border-color: rgba(168, 85, 247, 0.6);
+  border-color: var(--settings-control-focus, rgba(168, 85, 247, 0.6));
   box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.2);
 }
 
 .realtime-field small {
   font-size: 0.58rem;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--settings-text, rgba(255, 255, 255, 0.55));
   line-height: 1.4;
 }
 
 .desktop-settings-page .realtime-field small {
-  color: #8c7f8a;
+  color: var(--settings-muted, #8c7f8a);
 }
 
 .realtime-field-wide {
@@ -192,23 +192,23 @@
 }
 
 .realtime-badge-configured {
-  color: #4ade80;
+  color: var(--settings-success, #4ade80);
   font-size: 0.6rem;
   font-weight: 500;
 }
 
 .desktop-settings-page .realtime-badge-configured {
-  color: #16a34a;
+  color: var(--settings-success, #16a34a);
 }
 
 .realtime-badge-missing {
-  color: #f87171;
+  color: var(--settings-danger, #f87171);
   font-size: 0.6rem;
   font-weight: 500;
 }
 
 .desktop-settings-page .realtime-badge-missing {
-  color: #dc2626;
+  color: var(--settings-danger, #dc2626);
 }
 
 .realtime-checkbox-row {
@@ -240,25 +240,25 @@
 
 .realtime-checkbox-row small {
   font-size: 0.58rem;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--settings-text, rgba(255, 255, 255, 0.55));
   line-height: 1.4;
 }
 
 .desktop-settings-page .realtime-checkbox-row small {
-  color: #8c7f8a;
+  color: var(--settings-muted, #8c7f8a);
 }
 
 .realtime-consent-row {
   padding: 8px 10px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--settings-card, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--settings-line, rgba(255, 255, 255, 0.08));
   box-sizing: border-box;
 }
 
 .desktop-settings-page .realtime-consent-row {
-  background: rgb(245 242 245 / 60%);
-  border-color: rgb(86 67 91 / 10%);
+  background: var(--settings-card, rgb(245 242 245 / 60%));
+  border-color: var(--settings-line, rgb(86 67 91 / 10%));
 }
 
 .realtime-clear-key-row {
@@ -269,53 +269,53 @@
   font-size: 0.64rem;
   padding: 8px 10px;
   border-radius: 8px;
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  color: #fde68a;
+  background: var(--settings-warning-soft, rgba(245, 158, 11, 0.12));
+  border: 1px solid var(--settings-line, rgba(245, 158, 11, 0.25));
+  color: var(--settings-warning, #fde68a);
   line-height: 1.4;
   box-sizing: border-box;
   min-width: 0;
 }
 
 .desktop-settings-page .realtime-incomplete-info {
-  background: rgb(245 158 11 / 8%);
-  border-color: rgb(245 158 11 / 20%);
-  color: #92400e;
+  background: var(--settings-warning-soft, rgb(245 158 11 / 8%));
+  border-color: var(--settings-line, rgb(245 158 11 / 20%));
+  color: var(--settings-warning, #92400e);
 }
 
 .realtime-complete-info {
   font-size: 0.64rem;
   padding: 8px 10px;
   border-radius: 8px;
-  background: rgba(34, 197, 94, 0.12);
-  border: 1px solid rgba(34, 197, 94, 0.25);
-  color: #86efac;
+  background: var(--settings-success-soft, rgba(34, 197, 94, 0.12));
+  border: 1px solid var(--settings-line, rgba(34, 197, 94, 0.25));
+  color: var(--settings-success, #86efac);
   line-height: 1.4;
   box-sizing: border-box;
   min-width: 0;
 }
 
 .desktop-settings-page .realtime-complete-info {
-  background: rgb(34 197 94 / 8%);
-  border-color: rgb(34 197 94 / 20%);
-  color: #166534;
+  background: var(--settings-success-soft, rgb(34 197 94 / 8%));
+  border-color: var(--settings-line, rgb(34 197 94 / 20%));
+  color: var(--settings-success, #166534);
 }
 
 .realtime-cascade-info {
   font-size: 0.64rem;
   padding: 10px 12px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.8);
+  background: var(--settings-card, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--settings-line, rgba(255, 255, 255, 0.1));
+  color: var(--settings-text, rgba(255, 255, 255, 0.8));
   line-height: 1.5;
   box-sizing: border-box;
   min-width: 0;
 }
 
 .desktop-settings-page .realtime-cascade-info {
-  background: rgb(245 242 245 / 60%);
-  border-color: rgb(86 67 91 / 10%);
+  background: var(--settings-card, rgb(245 242 245 / 60%));
+  border-color: var(--settings-line, rgb(86 67 91 / 10%));
   color: var(--settings-muted, #77707d);
 }
 
@@ -323,29 +323,29 @@
   font-size: 0.64rem;
   padding: 8px 10px;
   border-radius: 8px;
-  background: rgba(59, 130, 246, 0.12);
-  border: 1px solid rgba(59, 130, 246, 0.25);
-  color: #93c5fd;
+  background: var(--settings-card, rgba(59, 130, 246, 0.12));
+  border: 1px solid var(--settings-line, rgba(59, 130, 246, 0.25));
+  color: var(--settings-accent, #93c5fd);
   box-sizing: border-box;
   min-width: 0;
 }
 
 .desktop-settings-page .realtime-active-connections-notice {
-  background: rgb(59 130 246 / 8%);
-  border-color: rgb(59 130 246 / 20%);
-  color: #1e40af;
+  background: var(--settings-card, rgb(59 130 246 / 8%));
+  border-color: var(--settings-line, rgb(59 130 246 / 20%));
+  color: var(--settings-accent, #1e40af);
 }
 
 .realtime-connection-lifecycle-note {
   margin: 0;
   font-size: 0.6rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--settings-text, rgba(255, 255, 255, 0.5));
   line-height: 1.4;
   min-width: 0;
 }
 
 .desktop-settings-page .realtime-connection-lifecycle-note {
-  color: #8c7f8a;
+  color: var(--settings-muted, #8c7f8a);
 }
 
 .realtime-notice {
@@ -358,39 +358,39 @@
 }
 
 .realtime-notice-error {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #fca5a5;
+  background: var(--settings-danger-soft, rgba(239, 68, 68, 0.15));
+  border: 1px solid var(--settings-line, rgba(239, 68, 68, 0.3));
+  color: var(--settings-danger, #fca5a5);
 }
 
 .desktop-settings-page .realtime-notice-error {
-  background: rgb(239 68 68 / 8%);
-  border-color: rgb(239 68 68 / 20%);
-  color: #b91c1c;
+  background: var(--settings-danger-soft, rgb(239 68 68 / 8%));
+  border-color: var(--settings-line, rgb(239 68 68 / 20%));
+  color: var(--settings-danger, #b91c1c);
 }
 
 .realtime-notice-success {
-  background: rgba(34, 197, 94, 0.15);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  color: #86efac;
+  background: var(--settings-success-soft, rgba(34, 197, 94, 0.15));
+  border: 1px solid var(--settings-line, rgba(34, 197, 94, 0.3));
+  color: var(--settings-success, #86efac);
 }
 
 .desktop-settings-page .realtime-notice-success {
-  background: rgb(34 197 94 / 8%);
-  border-color: rgb(34 197 94 / 20%);
-  color: #166534;
+  background: var(--settings-success-soft, rgb(34 197 94 / 8%));
+  border-color: var(--settings-line, rgb(34 197 94 / 20%));
+  color: var(--settings-success, #166534);
 }
 
 .realtime-notice-info {
-  background: rgba(59, 130, 246, 0.15);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  color: #93c5fd;
+  background: var(--settings-card, rgba(59, 130, 246, 0.15));
+  border: 1px solid var(--settings-line, rgba(59, 130, 246, 0.3));
+  color: var(--settings-accent, #93c5fd);
 }
 
 .desktop-settings-page .realtime-notice-info {
-  background: rgb(59 130 246 / 8%);
-  border-color: rgb(59 130 246 / 20%);
-  color: #1d4ed8;
+  background: var(--settings-card, rgb(59 130 246 / 8%));
+  border-color: var(--settings-line, rgb(59 130 246 / 20%));
+  color: var(--settings-accent, #1d4ed8);
 }
 
 .realtime-conflict-box {
@@ -400,17 +400,17 @@
   gap: 12px;
   padding: 10px 12px;
   border-radius: 8px;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #fca5a5;
+  background: var(--settings-danger-soft, rgba(239, 68, 68, 0.15));
+  border: 1px solid var(--settings-line, rgba(239, 68, 68, 0.3));
+  color: var(--settings-danger, #fca5a5);
   box-sizing: border-box;
   min-width: 0;
 }
 
 .desktop-settings-page .realtime-conflict-box {
-  background: rgb(239 68 68 / 8%);
-  border-color: rgb(239 68 68 / 20%);
-  color: #b91c1c;
+  background: var(--settings-danger-soft, rgb(239 68 68 / 8%));
+  border-color: var(--settings-line, rgb(239 68 68 / 20%));
+  color: var(--settings-danger, #b91c1c);
 }
 
 .realtime-conflict-box span {
@@ -419,9 +419,9 @@
 
 .realtime-reload-button {
   padding: 6px 12px;
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  border: 1px solid var(--settings-control-border, rgba(239, 68, 68, 0.4));
   border-radius: 7px;
-  background: rgba(239, 68, 68, 0.2);
+  background: var(--settings-danger-soft, rgba(239, 68, 68, 0.2));
   color: inherit;
   font-size: 0.65rem;
   font-weight: 500;
@@ -430,7 +430,7 @@
 }
 
 .realtime-reload-button:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.3);
+  background: var(--settings-danger-soft, rgba(239, 68, 68, 0.3));
 }
 
 .realtime-configuration-panel > footer {
@@ -444,10 +444,13 @@
 
 .realtime-save-button {
   padding: 8px 18px;
-  border: 1px solid rgba(168, 85, 247, 0.4);
+  border: 1px solid var(--settings-control-border, rgba(168, 85, 247, 0.4));
   border-radius: 9px;
-  background: linear-gradient(135deg, #a855f7, #7c3aed);
-  color: #fff;
+  background: var(
+    --settings-primary-fill,
+    linear-gradient(135deg, #a855f7, #7c3aed)
+  );
+  color: var(--settings-text, #fff);
   font-size: 0.7rem;
   font-weight: 600;
   cursor: pointer;
@@ -458,7 +461,10 @@
 
 .desktop-settings-page .realtime-save-button {
   border: 0;
-  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  background: var(
+    --settings-primary-fill,
+    linear-gradient(135deg, #a855f7, #7c3aed)
+  );
   box-shadow: 0 4px 12px rgba(168, 85, 247, 0.25);
 }
 
@@ -482,7 +488,7 @@
   padding: 24px;
   text-align: center;
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--settings-text, rgba(255, 255, 255, 0.65));
 }
 
 .desktop-settings-page .realtime-loading-state,

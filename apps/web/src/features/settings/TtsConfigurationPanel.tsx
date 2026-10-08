@@ -14,6 +14,7 @@ import type {
 } from "../chat/types";
 import { useSettingsOperation } from "../settings/useSettingsOperation";
 import { SettingsSecretField } from "./SettingsPrimitives";
+import "./tts-configuration.css";
 
 const INTERNAL_FIELDS = new Set(["provider_id", "updated_at"]);
 

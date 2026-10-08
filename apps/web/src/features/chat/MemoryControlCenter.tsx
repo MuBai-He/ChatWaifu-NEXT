@@ -5,7 +5,7 @@ import type {
 } from "@chatwaifu/protocol";
 import { useRef, useState } from "react";
 import { ProductIcon } from "../../components/ProductIcon";
-import { ModalPortal } from "./ModalPortal";
+import { SettingsDialog } from "../settings/SettingsDialog";
 import "./memory-control-center.css";
 import {
   correctMemory,
@@ -33,6 +33,7 @@ export function MemoryControlCenter({
   onChanged,
 }: MemoryControlCenterProps) {
   const [open, setOpen] = useState(false);
+  const [opener, setOpener] = useState<HTMLElement | null>(null);
   const [records, setRecords] = useState<MemoryItem[]>([]);
   const [proposals, setProposals] = useState<MemoryProposal[]>([]);
   const [sources, setSources] = useState<Record<string, MemorySource[]>>({});
@@ -145,7 +146,14 @@ export function MemoryControlCenter({
 
   return (
     <>
-      <button type="button" onClick={openCenter} disabled={!sessionId}>
+      <button
+        type="button"
+        onClick={(event) => {
+          setOpener(event.currentTarget);
+          openCenter();
+        }}
+        disabled={!sessionId}
+      >
         <ProductIcon name="memory" />
         记忆中心
         {proposals.length ? (
@@ -153,254 +161,234 @@ export function MemoryControlCenter({
         ) : null}
       </button>
       {open ? (
-        <ModalPortal
-          className="memory-center-overlay"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setOpen(false);
-          }}
+        <SettingsDialog
+          className="memory-dialog"
+          title="结构化记忆"
+          description="普通对话先建议；明确记住立即提交；敏感内容逐条确认。"
+          label="结构化记忆中心"
+          closeLabel="关闭记忆中心"
+          returnFocusTo={opener}
+          onClose={() => setOpen(false)}
         >
-          <section
-            className="memory-center"
-            role="dialog"
-            aria-modal="true"
-            aria-label="结构化记忆中心"
-          >
-            <header>
-              <div>
-                <p>MEMORY SCHEME A</p>
-                <h2>结构化记忆</h2>
-                <span>普通对话先建议；明确记住立即提交；敏感内容逐条确认</span>
+          {notice ? (
+            <div className="memory-notice" role="alert">
+              {notice}
+            </div>
+          ) : null}
+
+          <div className="memory-center-grid">
+            <div className="memory-column">
+              <div className="memory-section-title">
+                <strong>待审核建议</strong>
+                <small>{proposals.length}</small>
               </div>
-              <button
-                type="button"
-                aria-label="关闭记忆中心"
-                onClick={() => setOpen(false)}
-              >
-                <ProductIcon name="close" />
-              </button>
-            </header>
-
-            {notice ? (
-              <div className="memory-notice" role="alert">
-                {notice}
-              </div>
-            ) : null}
-
-            <div className="memory-center-grid">
-              <div className="memory-column">
-                <div className="memory-section-title">
-                  <strong>待审核建议</strong>
-                  <small>{proposals.length}</small>
-                </div>
-                {proposals.length ? (
-                  proposals.map((proposal) => (
-                    <article
-                      className="memory-proposal-card"
-                      key={proposal.proposal_id}
-                    >
-                      <div>
-                        <span>{proposal.operation}</span>
-                        <code>{proposal.candidate?.kind ?? "unknown"}</code>
-                      </div>
-                      <p>{proposal.candidate?.text ?? "无候选内容"}</p>
-                      <small>
-                        {proposal.rationale} ·{" "}
-                        {Math.round(proposal.confidence * 100)}%
-                      </small>
-                      {proposal.candidate?.sensitivity === "sensitive" ? (
-                        <strong className="sensitive-label">敏感信息</strong>
-                      ) : null}
-                      <div className="memory-card-actions">
-                        <button
-                          type="button"
-                          disabled={busy === `proposal:${proposal.proposal_id}`}
-                          onClick={() => void decide(proposal, "accept")}
-                        >
-                          接受
-                        </button>
-                        <button
-                          type="button"
-                          className="danger"
-                          disabled={busy === `proposal:${proposal.proposal_id}`}
-                          onClick={() => void decide(proposal, "reject")}
-                        >
-                          拒绝
-                        </button>
-                      </div>
-                    </article>
-                  ))
-                ) : (
-                  <p className="memory-empty">没有待审核建议。</p>
-                )}
-              </div>
-
-              <div className="memory-column">
-                <div className="memory-filters">
-                  <label>
-                    类型
-                    <select
-                      value={kind}
-                      onChange={(event) => {
-                        const nextKind = event.target.value;
-                        setKind(nextKind);
-                        void refresh({ kind: nextKind }).catch(
-                          (error: unknown) => setNotice(errorMessage(error)),
-                        );
-                      }}
-                    >
-                      <option value="">全部</option>
-                      <option value="semantic.fact">事实</option>
-                      <option value="semantic.preference">偏好</option>
-                      <option value="procedural.preference">交互方式</option>
-                      <option value="prospective.commitment">承诺</option>
-                    </select>
-                  </label>
-                  <label>
-                    隐私
-                    <select
-                      value={sensitivity}
-                      onChange={(event) => {
-                        const nextSensitivity = event.target.value;
-                        setSensitivity(nextSensitivity);
-                        void refresh({ sensitivity: nextSensitivity }).catch(
-                          (error: unknown) => setNotice(errorMessage(error)),
-                        );
-                      }}
-                    >
-                      <option value="">全部</option>
-                      <option value="private">私有</option>
-                      <option value="sensitive">敏感</option>
-                    </select>
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={showHistory}
-                      onChange={(event) => {
-                        const next = event.target.checked;
-                        setShowHistory(next);
-                        void refresh({ includeTombstoned: next }).catch(
-                          (error: unknown) => setNotice(errorMessage(error)),
-                        );
-                      }}
-                    />
-                    显示修订与遗忘历史
-                  </label>
-                  <small>{records.length} 条记忆</small>
-                </div>
-
-                {records.map((record) => (
+              {proposals.length ? (
+                proposals.map((proposal) => (
                   <article
-                    className="memory-record-card"
-                    key={record.memory_id}
-                    id={`memory-${record.memory_id}`}
+                    className="memory-proposal-card"
+                    key={proposal.proposal_id}
                   >
-                    <div className="memory-record-heading">
-                      <div>
-                        <span>{record.pinned ? "核心" : record.kind}</span>
-                        <code>{record.sensitivity}</code>
-                        {record.state !== "active" ? (
-                          <code>{record.state}</code>
-                        ) : null}
-                      </div>
-                      <small>{Math.round(record.importance * 100)}%</small>
+                    <div>
+                      <span>{proposal.operation}</span>
+                      <code>{proposal.candidate?.kind ?? "unknown"}</code>
                     </div>
-                    {editing?.memoryId === record.memory_id ? (
-                      <div className="memory-edit">
-                        <textarea
-                          rows={3}
-                          value={editing.text}
-                          aria-label="修正记忆内容"
-                          onChange={(event) =>
-                            setEditing({
-                              memoryId: record.memory_id,
-                              text: event.target.value,
-                            })
-                          }
-                        />
-                        <button
-                          type="button"
-                          onClick={() => void saveCorrection()}
-                        >
-                          保存修正
-                        </button>
-                        <button type="button" onClick={() => setEditing(null)}>
-                          取消
-                        </button>
-                      </div>
-                    ) : record.state === "tombstoned" ? (
-                      <p>已忘记的记忆不显示正文</p>
-                    ) : (
-                      <p>{record.text}</p>
-                    )}
-                    {record.supersedes ? (
-                      <small>
-                        修订自：
-                        {records.some(
-                          (item) => item.memory_id === record.supersedes,
-                        ) ? (
-                          <a href={`#memory-${record.supersedes}`}>
-                            {record.supersedes.slice(0, 8)}
-                          </a>
-                        ) : (
-                          record.supersedes.slice(0, 8)
-                        )}
-                      </small>
+                    <p>{proposal.candidate?.text ?? "无候选内容"}</p>
+                    <small>
+                      {proposal.rationale} ·{" "}
+                      {Math.round(proposal.confidence * 100)}%
+                    </small>
+                    {proposal.candidate?.sensitivity === "sensitive" ? (
+                      <strong className="sensitive-label">敏感信息</strong>
                     ) : null}
                     <div className="memory-card-actions">
                       <button
                         type="button"
-                        disabled={record.state !== "active"}
-                        onClick={() =>
-                          setEditing({
-                            memoryId: record.memory_id,
-                            text: record.text,
-                          })
-                        }
+                        disabled={busy === `proposal:${proposal.proposal_id}`}
+                        onClick={() => void decide(proposal, "accept")}
                       >
-                        修正
+                        接受
                       </button>
                       <button
                         type="button"
-                        disabled={record.state !== "active"}
-                        onClick={() => void togglePinned(record)}
-                      >
-                        {record.pinned ? "取消核心" : "设为核心"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void loadSources(record.memory_id)}
-                      >
-                        {sources[record.memory_id] ? "收起来源" : "查看来源"}
-                      </button>
-                      <button
                         className="danger"
-                        type="button"
-                        disabled={record.state !== "active"}
-                        onClick={() => void remove(record)}
+                        disabled={busy === `proposal:${proposal.proposal_id}`}
+                        onClick={() => void decide(proposal, "reject")}
                       >
-                        忘记
+                        拒绝
                       </button>
                     </div>
-                    {sources[record.memory_id] ? (
-                      <ul className="memory-sources">
-                        {sources[record.memory_id]?.map((source) => (
-                          <li key={source.source_id}>
-                            {formatMemorySource(source)}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
                   </article>
-                ))}
-                {!records.length ? (
-                  <p className="memory-empty">当前筛选下没有记忆。</p>
-                ) : null}
-              </div>
+                ))
+              ) : (
+                <p className="memory-empty">没有待审核建议。</p>
+              )}
             </div>
-          </section>
-        </ModalPortal>
+
+            <div className="memory-column">
+              <div className="memory-filters">
+                <label>
+                  类型
+                  <select
+                    value={kind}
+                    onChange={(event) => {
+                      const nextKind = event.target.value;
+                      setKind(nextKind);
+                      void refresh({ kind: nextKind }).catch((error: unknown) =>
+                        setNotice(errorMessage(error)),
+                      );
+                    }}
+                  >
+                    <option value="">全部</option>
+                    <option value="semantic.fact">事实</option>
+                    <option value="semantic.preference">偏好</option>
+                    <option value="procedural.preference">交互方式</option>
+                    <option value="prospective.commitment">承诺</option>
+                  </select>
+                </label>
+                <label>
+                  隐私
+                  <select
+                    value={sensitivity}
+                    onChange={(event) => {
+                      const nextSensitivity = event.target.value;
+                      setSensitivity(nextSensitivity);
+                      void refresh({ sensitivity: nextSensitivity }).catch(
+                        (error: unknown) => setNotice(errorMessage(error)),
+                      );
+                    }}
+                  >
+                    <option value="">全部</option>
+                    <option value="private">私有</option>
+                    <option value="sensitive">敏感</option>
+                  </select>
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={showHistory}
+                    onChange={(event) => {
+                      const next = event.target.checked;
+                      setShowHistory(next);
+                      void refresh({ includeTombstoned: next }).catch(
+                        (error: unknown) => setNotice(errorMessage(error)),
+                      );
+                    }}
+                  />
+                  显示修订与遗忘历史
+                </label>
+                <small>{records.length} 条记忆</small>
+              </div>
+
+              {records.map((record) => (
+                <article
+                  className="memory-record-card"
+                  key={record.memory_id}
+                  id={`memory-${record.memory_id}`}
+                >
+                  <div className="memory-record-heading">
+                    <div>
+                      <span>{record.pinned ? "核心" : record.kind}</span>
+                      <code>{record.sensitivity}</code>
+                      {record.state !== "active" ? (
+                        <code>{record.state}</code>
+                      ) : null}
+                    </div>
+                    <small>{Math.round(record.importance * 100)}%</small>
+                  </div>
+                  {editing?.memoryId === record.memory_id ? (
+                    <div className="memory-edit">
+                      <textarea
+                        rows={3}
+                        value={editing.text}
+                        aria-label="修正记忆内容"
+                        onChange={(event) =>
+                          setEditing({
+                            memoryId: record.memory_id,
+                            text: event.target.value,
+                          })
+                        }
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void saveCorrection()}
+                      >
+                        保存修正
+                      </button>
+                      <button type="button" onClick={() => setEditing(null)}>
+                        取消
+                      </button>
+                    </div>
+                  ) : record.state === "tombstoned" ? (
+                    <p>已忘记的记忆不显示正文</p>
+                  ) : (
+                    <p>{record.text}</p>
+                  )}
+                  {record.supersedes ? (
+                    <small>
+                      修订自：
+                      {records.some(
+                        (item) => item.memory_id === record.supersedes,
+                      ) ? (
+                        <a href={`#memory-${record.supersedes}`}>
+                          {record.supersedes.slice(0, 8)}
+                        </a>
+                      ) : (
+                        record.supersedes.slice(0, 8)
+                      )}
+                    </small>
+                  ) : null}
+                  <div className="memory-card-actions">
+                    <button
+                      type="button"
+                      disabled={record.state !== "active"}
+                      onClick={() =>
+                        setEditing({
+                          memoryId: record.memory_id,
+                          text: record.text,
+                        })
+                      }
+                    >
+                      修正
+                    </button>
+                    <button
+                      type="button"
+                      disabled={record.state !== "active"}
+                      onClick={() => void togglePinned(record)}
+                    >
+                      {record.pinned ? "取消核心" : "设为核心"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void loadSources(record.memory_id)}
+                    >
+                      {sources[record.memory_id] ? "收起来源" : "查看来源"}
+                    </button>
+                    <button
+                      className="danger"
+                      type="button"
+                      disabled={record.state !== "active"}
+                      onClick={() => void remove(record)}
+                    >
+                      忘记
+                    </button>
+                  </div>
+                  {sources[record.memory_id] ? (
+                    <ul className="memory-sources">
+                      {sources[record.memory_id]?.map((source) => (
+                        <li key={source.source_id}>
+                          {formatMemorySource(source)}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </article>
+              ))}
+              {!records.length ? (
+                <p className="memory-empty">当前筛选下没有记忆。</p>
+              ) : null}
+            </div>
+          </div>
+        </SettingsDialog>
       ) : null}
     </>
   );

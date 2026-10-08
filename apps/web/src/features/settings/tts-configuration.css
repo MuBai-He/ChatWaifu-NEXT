@@ -1,0 +1,118 @@
+/* Provider forms are shared by Web and desktop, including their presentation. */
+.tts-configuration-panel {
+  display: grid;
+  min-width: 0;
+  gap: 20px;
+}
+.tts-configuration-panel > header,
+.tts-configuration-panel > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.tts-configuration-selector {
+  display: grid;
+  min-width: 190px;
+  gap: 8px;
+}
+.tts-configuration-fields {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.tts-configuration-fields label {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 8px;
+  color: var(--settings-text);
+}
+.tts-configuration-fields label > small {
+  color: var(--settings-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.tts-configuration-selector select,
+.tts-configuration-fields :is(input:not([type="checkbox"]), select, textarea) {
+  width: 100%;
+  min-width: 0;
+}
+.tts-configuration-fields textarea {
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+}
+.tts-configuration-wide-field {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+details.tts-configuration-wide-field {
+  padding: 16px;
+  border: 1px solid var(--settings-line);
+  border-radius: 14px;
+  background: var(--settings-raised);
+}
+.tts-configuration-wide-field > summary {
+  color: var(--settings-accent);
+  cursor: pointer;
+}
+.tts-configuration-wide-field[open] > summary {
+  margin-bottom: 18px;
+}
+.tts-configuration-clear-key {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--settings-danger);
+}
+.tts-configuration-panel > footer {
+  padding-top: 18px;
+  border-top: 1px solid var(--settings-line);
+  color: var(--settings-muted);
+}
+.tts-configuration-panel > footer > span:empty {
+  display: none;
+}
+.tts-configuration-panel > footer > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-left: auto;
+}
+.tts-configuration-panel > footer button {
+  min-height: var(--settings-control-height, 40px);
+  padding: 9px 16px;
+  border: 1px solid var(--settings-control-border);
+  border-radius: var(--settings-control-radius, 12px);
+  color: var(--settings-accent);
+  background: var(--settings-control-background);
+  font-size: 14px;
+  cursor: pointer;
+}
+.tts-configuration-panel > footer button:last-child {
+  border-color: var(--settings-accent);
+  color: var(--settings-primary-text);
+  background: var(--settings-primary);
+}
+.tts-configuration-panel > footer button:last-child:hover:not(:disabled) {
+  border-color: var(--settings-primary-hover);
+  background: var(--settings-primary-hover);
+}
+.tts-configuration-panel > footer button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+@media (max-width: 700px) {
+  .tts-configuration-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tts-configuration-selector {
+    width: 100%;
+  }
+  .tts-configuration-panel > footer > div {
+    margin-left: 0;
+  }
+}

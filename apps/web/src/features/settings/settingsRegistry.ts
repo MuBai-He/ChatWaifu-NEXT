@@ -19,7 +19,7 @@ export interface SettingsSectionDefinition<
   icon: SettingsIconName;
   group?: string;
   keywords?: readonly string[];
-  component: ComponentType<{ context: Context }>;
+  component: ComponentType<{ context: Context; active?: boolean }>;
   surfaces?: readonly SettingsSurface[];
   visible?: (context: Context) => boolean;
   availability?: (context: Context) => SettingsSectionAvailability;

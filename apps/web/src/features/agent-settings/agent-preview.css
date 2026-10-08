@@ -5,7 +5,7 @@
   display: grid;
   place-items: center;
   padding: 16px;
-  background: rgb(41 36 45 / 38%);
+  background: var(--settings-raised, rgb(41 36 45 / 38%));
 }
 .agent-preview-dialog {
   display: flex;
@@ -15,8 +15,8 @@
   min-height: 0;
   overflow: hidden;
   border-radius: 16px;
-  background: #f6f2f5;
-  color: #29242d;
+  background: var(--settings-card, #f6f2f5);
+  color: var(--settings-text, #29242d);
   box-shadow: 0 20px 80px rgb(41 36 45 / 24%);
 }
 .agent-preview-dialog > header,
@@ -43,7 +43,7 @@
   overflow: auto;
   overscroll-behavior: contain;
   padding: 16px;
-  background: #d9d4dc;
+  background: var(--settings-card, #d9d4dc);
 }
 .agent-preview-pages canvas {
   display: block;

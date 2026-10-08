@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { MemoryControlCenter } from "../chat/MemoryControlCenter";
 import { SkillsControlCenter } from "../chat/SkillsControlCenter";
+import { SkillConfirmationPrompt } from "../chat/SkillConfirmationPrompt";
 import { InteractionDiagnosticsPanel } from "../diagnostics/InteractionDiagnosticsPanel";
 import { AgendaOverview } from "../personal-assistant/AgendaOverview";
 import { OrganizerPanel } from "../personal-assistant/OrganizerPanel";
@@ -10,10 +11,11 @@ import {
   useScopeControls,
 } from "../connection/clientControls";
 import { McpConnectionsPanel } from "./McpConnectionsPanel";
+import { SettingsTabs } from "./SettingsTabs";
 import { SettingsGroup, SettingsSectionIntro } from "./SettingsPrimitives";
 import type { CommonSettingsContext } from "./SettingsRuntimeContext";
 
-type Props = { context: CommonSettingsContext };
+type Props = { context: CommonSettingsContext; active?: boolean };
 
 export function MemorySettingsSection({ context }: Props) {
   return (
@@ -36,31 +38,66 @@ export function MemorySettingsSection({ context }: Props) {
   );
 }
 
-export function ExtensionsSettingsSection({ context }: Props) {
+export function ExtensionsSettingsSection({ context, active = true }: Props) {
+  const [tab, setTab] = useState<"skills" | "plugins" | "mcp">("skills");
+  const [mcpVisited, setMcpVisited] = useState(false);
   return (
-    <>
-      <SettingsSectionIntro
-        icon="plugin"
-        title="扩展与连接"
-        description="管理已安装能力、插件和 MCP 服务。工具的使用授权在“能力与任务”中查看。"
+    <section className="extensions-settings">
+      <SkillConfirmationPrompt sessionId={active ? context.sessionId : null} />
+      <div className="extensions-overview">
+        <div>
+          <h2>让角色拥有更多能力</h2>
+          <p>
+            查看 Skills、安装插件或连接 MCP 服务。工具授权在“能力与任务”中管理。
+          </p>
+        </div>
+      </div>
+      <SettingsTabs
+        label="扩展分类"
+        prefix="extensions"
+        tabs={[
+          { id: "skills", label: "Skills" },
+          { id: "plugins", label: "插件" },
+          { id: "mcp", label: "MCP" },
+        ]}
+        selected={tab}
+        onSelect={(id) => {
+          setTab(id);
+          if (id === "mcp") setMcpVisited(true);
+        }}
       />
-      <SettingsGroup
-        title="Skills 与插件"
-        description="查看运行记录、插件状态和确认请求。"
+      <div
+        role="tabpanel"
+        id={`extensions-content-${tab === "mcp" ? "skills" : tab}`}
+        aria-labelledby={`extensions-tab-${tab === "mcp" ? "skills" : tab}`}
+        hidden={tab === "mcp"}
       >
-        <SkillsControlCenter sessionId={context.sessionId} />
-      </SettingsGroup>
-      <SettingsGroup
-        title="MCP 服务"
-        description="连接服务并检查它提供的工具、资源和提示词。"
-      >
-        <McpConnectionsPanel sessionId={context.sessionId} />
-      </SettingsGroup>
-    </>
+        <SkillsControlCenter
+          sessionId={context.sessionId}
+          presentation="embedded"
+          view={tab === "mcp" ? "skills" : tab}
+          active={active && tab !== "mcp"}
+        />
+      </div>
+      {mcpVisited ? (
+        <div
+          role="tabpanel"
+          id="extensions-content-mcp"
+          aria-labelledby="extensions-tab-mcp"
+          hidden={tab !== "mcp"}
+        >
+          <McpConnectionsPanel
+            sessionId={context.sessionId}
+            presentation="embedded"
+            active={active && tab === "mcp"}
+          />
+        </div>
+      ) : null}
+    </section>
   );
 }
 
-export function ScheduleSettingsSection({ context }: Props) {
+export function ScheduleSettingsSection({ context, active = true }: Props) {
   const [notice, setNotice] = useState("");
   return (
     <div className="personal-assistant-settings">
@@ -71,8 +108,8 @@ export function ScheduleSettingsSection({ context }: Props) {
       />
       {context.sessionId ? (
         <>
-          <AgendaOverview sessionId={context.sessionId} />
-          <OrganizerPanel sessionId={context.sessionId} />
+          <AgendaOverview sessionId={context.sessionId} active={active} />
+          <OrganizerPanel sessionId={context.sessionId} active={active} />
           <SettingsGroup
             title="Google 日历与任务"
             description="管理当前 Runtime 已连接的账号；首次授权和权限升级请从桌面设置完成。"

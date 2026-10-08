@@ -1,3 +1,5 @@
+import "../settings/settings-glass.css";
+import "../settings/settings-controls.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { createPortal } from "react-dom";
@@ -59,9 +61,14 @@ const ROLE_LABELS: Record<ModelRole, { title: string; description: string }> = {
 interface Props {
   sessionId: string | null;
   compact?: boolean;
+  active?: boolean;
 }
 
-export function ModelSettingsPanel({ sessionId, compact = false }: Props) {
+export function ModelSettingsPanel({
+  sessionId,
+  compact = false,
+  active = true,
+}: Props) {
   const [selectedRole, setSelectedRole] = useState<ModelRole>("chat");
   const [configurations, setConfigurations] = useState<
     ModelRoleConfiguration[]
@@ -170,7 +177,7 @@ export function ModelSettingsPanel({ sessionId, compact = false }: Props) {
   }, [showWarningModal]);
 
   useEffect(() => {
-    if (rebuildStatus?.state !== "running") return;
+    if (!active || rebuildStatus?.state !== "running") return;
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
     const poll = async () => {
@@ -193,7 +200,7 @@ export function ModelSettingsPanel({ sessionId, compact = false }: Props) {
       controller.abort();
       clearTimeout(timer);
     };
-  }, [rebuildStatus?.state, setNotice]);
+  }, [active, rebuildStatus?.state, setNotice]);
 
   const handleTriggerRebuild = async () => {
     if (rebuildInFlight.current || rebuildStatus?.state === "running") return;
@@ -752,7 +759,7 @@ export function ModelSettingsPanel({ sessionId, compact = false }: Props) {
             >
               <div
                 ref={modalRef}
-                className="reindex-warning-modal"
+                className="reindex-warning-modal settings-material settings-surface settings-controls"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="reindex-modal-title"

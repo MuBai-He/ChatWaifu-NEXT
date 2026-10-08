@@ -9,7 +9,7 @@
   display: grid;
   padding: 24px;
   overflow: hidden;
-  background: rgb(38 25 43 / 36%);
+  background: var(--settings-raised, rgb(38 25 43 / 36%));
   inset: 0;
   place-items: center;
   backdrop-filter: blur(14px);
@@ -22,10 +22,10 @@
   max-height: min(880px, calc(100dvh - 48px));
   padding: 24px;
   overflow: hidden;
-  border: 1px solid rgb(255 255 255 / 84%);
+  border: 1px solid var(--settings-line, rgb(255 255 255 / 84%));
   border-radius: 22px;
   color: var(--mcp-text);
-  background: rgb(250 247 250 / 98%);
+  background: var(--settings-card, rgb(250 247 250 / 98%));
   box-shadow: 0 30px 100px rgb(38 19 55 / 30%);
   grid-template-rows: auto auto minmax(0, 1fr);
 }
@@ -67,7 +67,7 @@
   border-radius: 11px;
   place-items: center;
   color: var(--mcp-muted);
-  background: white;
+  background: var(--settings-control-background, white);
   cursor: pointer;
   font-size: 1.25rem;
 }
@@ -80,23 +80,23 @@
 .mcp-connections-notice {
   margin: 12px 0 0;
   padding: 9px 11px;
-  border: 1px solid rgb(152 82 126 / 18%);
+  border: 1px solid var(--settings-line, rgb(152 82 126 / 18%));
   border-radius: 9px;
-  color: #6e3659;
-  background: rgb(247 235 243 / 94%);
+  color: var(--settings-accent, #6e3659);
+  background: var(--settings-card, rgb(247 235 243 / 94%));
   font-size: 0.68rem;
 }
 
 .mcp-connections-notice[data-tone="error"] {
-  border-color: rgb(184 71 87 / 20%);
-  color: #9b4050;
-  background: rgb(255 239 242 / 96%);
+  border-color: var(--settings-line, rgb(184 71 87 / 20%));
+  color: var(--settings-danger, #9b4050);
+  background: var(--settings-danger-soft, rgb(255 239 242 / 96%));
 }
 
 .mcp-connections-notice[data-tone="success"] {
-  border-color: rgb(68 139 91 / 18%);
-  color: #337549;
-  background: rgb(237 249 240 / 96%);
+  border-color: var(--settings-line, rgb(68 139 91 / 18%));
+  color: var(--settings-success, #337549);
+  background: var(--settings-success-soft, rgb(237 249 240 / 96%));
 }
 
 .mcp-connections-layout {
@@ -140,8 +140,8 @@
   padding: 6px 8px;
   border: 1px solid var(--mcp-line);
   border-radius: 7px;
-  color: #68465f;
-  background: rgb(255 255 255 / 82%);
+  color: var(--settings-muted, #68465f);
+  background: var(--settings-control-background, rgb(255 255 255 / 82%));
   cursor: pointer;
   font-size: 0.59rem;
 }
@@ -160,12 +160,12 @@
   padding: 8px;
   border: 1px solid transparent;
   border-radius: 11px;
-  background: rgb(255 255 255 / 44%);
+  background: var(--settings-card, rgb(255 255 255 / 44%));
 }
 
 .mcp-connection-list article.selected {
-  border-color: rgb(152 82 126 / 20%);
-  background: rgb(255 255 255 / 88%);
+  border-color: var(--settings-control-border, rgb(152 82 126 / 20%));
+  background: var(--settings-control-background, rgb(255 255 255 / 88%));
   box-shadow: 0 6px 18px rgb(72 45 70 / 6%);
 }
 
@@ -193,11 +193,11 @@
   height: 7px;
   flex: 0 0 auto;
   border-radius: 50%;
-  background: #b8afb8;
+  background: var(--settings-muted, #b8afb8);
 }
 
 .mcp-connection-list article > button i.enabled {
-  background: #68a679;
+  background: var(--settings-success, #68a679);
   box-shadow: 0 0 0 3px rgb(104 166 121 / 10%);
 }
 
@@ -223,7 +223,7 @@
 }
 
 .mcp-connection-list article > div button.danger {
-  color: #a74252;
+  color: var(--settings-danger, #a74252);
 }
 
 .mcp-connection-workspace {
@@ -233,9 +233,9 @@
 .mcp-connection-editor,
 .mcp-capabilities {
   padding: 16px;
-  border: 1px solid rgb(255 255 255 / 90%);
+  border: 1px solid var(--settings-line, rgb(255 255 255 / 90%));
   border-radius: 15px;
-  background: rgb(255 255 255 / 68%);
+  background: var(--settings-card, rgb(255 255 255 / 68%));
   box-shadow: 0 8px 26px rgb(60 42 62 / 5%);
 }
 
@@ -274,8 +274,8 @@
 .mcp-connection-badges > span {
   padding: 4px 7px;
   border-radius: 999px;
-  color: #3f7750;
-  background: rgb(91 156 110 / 10%);
+  color: var(--settings-success, #3f7750);
+  background: var(--settings-success-soft, rgb(91 156 110 / 10%));
   font-size: 0.54rem;
 }
 
@@ -302,7 +302,7 @@
   border: 1px solid var(--mcp-line);
   border-radius: 7px;
   color: var(--mcp-faint);
-  background: rgb(245 241 245 / 86%);
+  background: var(--settings-card, rgb(245 241 245 / 86%));
   font-size: 0.6rem;
   font-weight: 500;
 }
@@ -319,7 +319,7 @@
   border-radius: 7px;
   outline: none;
   color: var(--mcp-text);
-  background: rgb(255 255 255 / 88%);
+  background: var(--settings-control-background, rgb(255 255 255 / 88%));
   font-size: 0.65rem;
 }
 
@@ -334,7 +334,7 @@
 .mcp-connection-editor select:focus,
 .mcp-connection-editor textarea:focus,
 .mcp-capabilities textarea:focus {
-  border-color: rgb(152 82 126 / 42%);
+  border-color: var(--settings-control-focus, rgb(152 82 126 / 42%));
   box-shadow: 0 0 0 3px rgb(152 82 126 / 7%);
 }
 
@@ -377,7 +377,7 @@
   appearance: none;
   border: 1px solid var(--mcp-line);
   border-radius: 999px;
-  background: #d5cfd6;
+  background: var(--settings-control-background, #d5cfd6);
   cursor: pointer;
 }
 
@@ -408,7 +408,7 @@
 }
 
 .mcp-connection-check-row input[role="switch"]:checked {
-  background: #a65f8c;
+  background: var(--settings-primary, #a65f8c);
 }
 
 .mcp-connection-check-row input[role="switch"]:checked::after {
@@ -419,15 +419,15 @@
   margin: 9px 0 0;
   padding: 9px 10px;
   border-radius: 8px;
-  color: #765b3e;
-  background: rgb(244 229 200 / 44%);
+  color: var(--settings-warning, #765b3e);
+  background: var(--settings-card, rgb(244 229 200 / 44%));
   font-size: 0.56rem;
   line-height: 1.55;
 }
 
 .mcp-risk-note.danger {
-  color: #974451;
-  background: rgb(250 224 229 / 58%);
+  color: var(--settings-danger, #974451);
+  background: var(--settings-danger-soft, rgb(250 224 229 / 58%));
 }
 
 .mcp-connection-editor footer {
@@ -437,16 +437,19 @@
 }
 
 .mcp-connection-editor footer button:first-child {
-  border-color: rgb(152 82 126 / 23%);
-  color: white;
-  background: linear-gradient(145deg, #ab638e, #78466f);
+  border-color: var(--settings-control-border, rgb(152 82 126 / 23%));
+  color: var(--settings-text, white);
+  background: var(
+    --settings-primary-fill,
+    linear-gradient(145deg, #ab638e, #78466f)
+  );
 }
 
 .mcp-clear-secret {
   margin-top: 7px;
   padding: 0;
   border: 0;
-  color: #a14352;
+  color: var(--settings-danger, #a14352);
   background: transparent;
   cursor: pointer;
   font-size: 0.56rem;
@@ -489,7 +492,7 @@
   padding: 9px;
   border: 1px solid var(--mcp-line);
   border-radius: 9px;
-  background: rgb(255 255 255 / 72%);
+  background: var(--settings-card, rgb(255 255 255 / 72%));
 }
 
 .mcp-capabilities article > strong {
@@ -528,8 +531,8 @@
   padding: 9px;
   overflow: auto;
   border-radius: 7px;
-  color: #51465b;
-  background: #f5eff5;
+  color: var(--settings-text, #51465b);
+  background: var(--settings-card, #f5eff5);
   font: 0.54rem/1.5 var(--mono);
   white-space: pre-wrap;
   overflow-wrap: anywhere;

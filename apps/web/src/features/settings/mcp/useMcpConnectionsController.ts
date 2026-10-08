@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createMcpConnection,
@@ -34,6 +34,7 @@ export function useMcpConnectionsController(
     useState<McpCapabilitiesSnapshot | null>(null);
   const [capabilityResult, setCapabilityResult] = useState<string | null>(null);
   const [promptArguments, setPromptArguments] = useState("{}");
+  const [loading, setLoading] = useState(true);
   const { busy, notice, setNotice, run } = useSettingsOperation<string>();
   const selectedConnection = useMemo(
     () =>
@@ -43,13 +44,19 @@ export function useMcpConnectionsController(
     [connections, selectedId],
   );
 
+  const initialized = useRef(false);
+  const epoch = useRef({ value: 0 });
   useEffect(() => {
+    const revision = epoch.current;
+    revision.value++;
     if (!open) return;
     let active = true;
     void getMcpConnections()
       .then((items) => {
         if (!active) return;
         setConnections(items);
+        if (initialized.current) return;
+        initialized.current = true;
         const first = items[0];
         setSelectedId(first?.connection_id ?? null);
         setDraft(first ? draftFromConnection(first) : emptyConnectionDraft());
@@ -61,13 +68,22 @@ export function useMcpConnectionsController(
       .catch((error: unknown) => {
         if (!active) return;
         setNotice({ tone: "error", text: message(error, "读取 MCP 连接失败") });
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
     return () => {
       active = false;
+      revision.value++;
+      setDraft((current) => ({ ...current, bearerToken: "" }));
+      setCapabilityResult(null);
+      setPromptArguments("{}");
     };
   }, [open, setNotice]);
 
   const select = (connection: McpConnectionSnapshot, clearNotice = true) => {
+    initialized.current = true;
+    epoch.current.value++;
     setSelectedId(connection.connection_id);
     setDraft(draftFromConnection(connection));
     setCapabilities(connection.capabilities ?? null);
@@ -77,6 +93,8 @@ export function useMcpConnectionsController(
   };
 
   const createNew = (clearNotice = true) => {
+    initialized.current = true;
+    epoch.current.value++;
     setSelectedId(null);
     setDraft(emptyConnectionDraft());
     setCapabilities(null);
@@ -88,9 +106,14 @@ export function useMcpConnectionsController(
   const change = <Key extends keyof ConnectionDraft>(
     key: Key,
     value: ConnectionDraft[Key],
-  ) => setDraft((current) => ({ ...current, [key]: value }));
+  ) => {
+    initialized.current = true;
+    setDraft((current) => ({ ...current, [key]: value }));
+  };
 
   const clearSensitiveState = () => {
+    epoch.current.value++;
+    setDraft((current) => ({ ...current, bearerToken: "" }));
     setCapabilityResult(null);
     setPromptArguments("{}");
   };
@@ -227,6 +250,7 @@ export function useMcpConnectionsController(
       });
       return;
     }
+    const requestEpoch = epoch.current.value;
     const result = await run(
       `resource:${uri}`,
       () => readMcpResource(sessionId, selectedConnection.connection_id, uri),
@@ -235,7 +259,8 @@ export function useMcpConnectionsController(
         error: "读取 MCP 资源失败",
       },
     );
-    if (result !== undefined) setCapabilityResult(formatMcpResult(result));
+    if (result !== undefined && requestEpoch === epoch.current.value)
+      setCapabilityResult(formatMcpResult(result));
   };
 
   const fetchPrompt = async (name: string) => {
@@ -252,6 +277,7 @@ export function useMcpConnectionsController(
       setNotice({ tone: "error", text: args });
       return;
     }
+    const requestEpoch = epoch.current.value;
     const result = await run(
       `prompt:${name}`,
       () =>
@@ -261,7 +287,8 @@ export function useMcpConnectionsController(
         error: "获取 MCP Prompt 失败",
       },
     );
-    if (result !== undefined) setCapabilityResult(formatMcpResult(result));
+    if (result !== undefined && requestEpoch === epoch.current.value)
+      setCapabilityResult(formatMcpResult(result));
   };
 
   return {
@@ -272,6 +299,7 @@ export function useMcpConnectionsController(
     capabilities,
     capabilityResult,
     promptArguments,
+    loading,
     busy,
     notice,
     change,

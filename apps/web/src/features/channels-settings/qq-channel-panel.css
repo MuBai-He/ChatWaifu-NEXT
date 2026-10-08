@@ -46,7 +46,7 @@
   border: 1px solid var(--settings-line);
   border-radius: 9px;
   color: var(--settings-text);
-  background: rgb(255 255 255 / 65%);
+  background: var(--settings-card, rgb(255 255 255 / 65%));
   cursor: pointer;
   font-size: 0.64rem;
 }
@@ -63,7 +63,7 @@
   border: 1px solid var(--settings-line);
   border-radius: 10px;
   color: var(--settings-text);
-  background: rgb(173 91 141 / 7%);
+  background: var(--settings-raised, rgb(173 91 141 / 7%));
   font-size: 1rem;
   overflow-wrap: anywhere;
   user-select: all;

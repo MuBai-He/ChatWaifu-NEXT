@@ -47,8 +47,10 @@ async function cancelFlow(flow: Flow) {
 
 export function PersonalAssistantSettingsSection({
   context,
+  active: panelActive = true,
 }: {
   context: DesktopSettingsContext;
+  active?: boolean;
 }) {
   const [status, setStatus] = useState<Status | null>(null);
   const [message, setMessage] = useState("");
@@ -269,7 +271,11 @@ export function PersonalAssistantSettingsSection({
       />
       <SettingsGroup title="账户、日程与提醒" description={description}>
         {sessionId && (
-          <AgendaOverview key={`agenda:${sessionId}`} sessionId={sessionId} />
+          <AgendaOverview
+            key={`agenda:${sessionId}`}
+            sessionId={sessionId}
+            active={panelActive}
+          />
         )}
         {statusError && (
           <button
@@ -323,7 +329,11 @@ export function PersonalAssistantSettingsSection({
         <details className="assistant-settings-details">
           <summary>Apple 设备与桌宠闹钟</summary>
           {sessionId ? (
-            <OrganizerPanel key={sessionId} sessionId={sessionId} />
+            <OrganizerPanel
+              key={sessionId}
+              sessionId={sessionId}
+              active={panelActive}
+            />
           ) : (
             <p>请先连接服务器。</p>
           )}

@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -22,6 +23,37 @@ vi.mock("./organizer", () => ({
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.useRealTimers();
+});
+
+it("stops hidden organizer polling without discarding an unsaved reminder", async () => {
+  vi.useFakeTimers();
+  vi.mocked(organizerRequest).mockImplementation((path) =>
+    Promise.resolve(
+      path.startsWith("/destinations")
+        ? { items: [] }
+        : { devices: [], tasks: [], operations: [], scheduler_error: null },
+    ),
+  );
+  let view!: ReturnType<typeof render>;
+  await act(async () => {
+    view = render(<OrganizerPanel sessionId="owner" />);
+    await Promise.resolve();
+  });
+  const input = screen.getByLabelText("提醒内容");
+  fireEvent.change(input, { target: { value: "本地草稿" } });
+  view.rerender(<OrganizerPanel sessionId="owner" active={false} />);
+  const before = vi.mocked(organizerRequest).mock.calls.length;
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(16_000);
+  });
+  expect(organizerRequest).toHaveBeenCalledTimes(before);
+  expect((input as HTMLInputElement).value).toBe("本地草稿");
+  await act(async () => {
+    view.rerender(<OrganizerPanel sessionId="owner" />);
+    await Promise.resolve();
+  });
+  expect(vi.mocked(organizerRequest).mock.calls.length).toBeGreaterThan(before);
 });
 
 it.each(["task", "apple"])(

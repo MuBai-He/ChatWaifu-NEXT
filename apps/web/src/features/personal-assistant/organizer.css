@@ -1,10 +1,10 @@
 .assistant-organizer {
-  --organizer-accent: #895781;
-  --organizer-border: #e6dce6;
+  --organizer-accent: var(--settings-accent, #895781);
+  --organizer-border: var(--settings-line, #e6dce6);
   padding: 24px;
   display: grid;
   gap: 20px;
-  color: #352f38;
+  color: var(--settings-text, #352f38);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -13,9 +13,12 @@
   gap: 18px;
   min-width: 0;
   padding: 20px;
-  color: #352f38;
-  background: linear-gradient(145deg, #fff 0%, #faf7fb 100%);
-  border: 1px solid #e9e0ea;
+  color: var(--settings-text, #352f38);
+  background: var(
+    --settings-card,
+    linear-gradient(145deg, #fff 0%, #faf7fb 100%)
+  );
+  border: 1px solid var(--settings-line, #e9e0ea);
   border-radius: 18px;
   container-type: inline-size;
 }
@@ -32,14 +35,14 @@
 }
 .agenda-overview p {
   margin: 2px 0 0;
-  color: #817686;
+  color: var(--settings-muted, #817686);
   font-size: 12px;
 }
 .agenda-overview button {
-  border: 1px solid #e0d2e1;
+  border: 1px solid var(--settings-control-border, #e0d2e1);
   border-radius: 10px;
-  background: #fff;
-  color: #895781;
+  background: var(--settings-control-background, #fff);
+  color: var(--settings-accent, #895781);
   padding: 8px 13px;
   font: inherit;
   font-size: 12px;
@@ -61,9 +64,9 @@
   flex-wrap: wrap;
 }
 .agenda-overview-filters button[aria-pressed="true"] {
-  background: #895781;
-  color: white;
-  border-color: #895781;
+  background: var(--settings-primary, #895781);
+  color: var(--settings-text, white);
+  border-color: var(--settings-control-border, #895781);
 }
 .agenda-overview-list {
   display: grid;
@@ -75,12 +78,12 @@
   align-items: center;
   gap: 12px;
   padding: 11px 13px;
-  background: #fff;
-  border: 1px solid #eee5ef;
+  background: var(--settings-card, #fff);
+  border: 1px solid var(--settings-line, #eee5ef);
   border-radius: 12px;
 }
 .agenda-overview-list time {
-  color: #895781;
+  color: var(--settings-accent, #895781);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
@@ -90,12 +93,12 @@
   overflow-wrap: anywhere;
 }
 .agenda-overview-list small {
-  color: #817686;
+  color: var(--settings-muted, #817686);
   font-size: 11px;
   overflow-wrap: anywhere;
 }
 .agenda-overview-list article > span {
-  color: #7e6a80;
+  color: var(--settings-muted, #7e6a80);
   font-size: 11px;
 }
 .agenda-overview-list .agenda-completed {
@@ -106,7 +109,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   padding-top: 17px;
-  border-top: 1px solid #eee5ef;
+  border-top: 1px solid var(--settings-line, #eee5ef);
 }
 .agenda-overview-create > strong,
 .agenda-overview-create-footer {
@@ -119,7 +122,7 @@
   display: grid;
   min-width: 0;
   gap: 5px;
-  color: #615767;
+  color: var(--settings-muted, #615767);
   font-size: 12px;
 }
 @container (max-width: 680px) {
@@ -136,33 +139,33 @@
   width: 100%;
   min-width: 0;
   min-height: 39px;
-  border: 1px solid #e3d8e4;
+  border: 1px solid var(--settings-control-border, #e3d8e4);
   border-radius: 9px;
-  background: #fff;
+  background: var(--settings-control-background, #fff);
   padding: 8px 10px;
   font: inherit;
 }
 .agenda-overview-create-footer small {
-  color: #817686;
+  color: var(--settings-muted, #817686);
   font-size: 11px;
 }
 .agenda-overview-create-footer button {
-  background: #895781;
-  color: white;
-  border-color: #895781;
+  background: var(--settings-primary, #895781);
+  color: var(--settings-text, white);
+  border-color: var(--settings-control-border, #895781);
 }
 .agenda-overview-notice {
   padding: 9px 11px;
   border-radius: 9px;
-  background: #f5edf5;
+  background: var(--settings-card, #f5edf5);
 }
 .agenda-inbox {
   display: grid;
   gap: 8px;
   padding: 14px;
-  border: 1px solid #ebd8e9;
+  border: 1px solid var(--settings-line, #ebd8e9);
   border-radius: 14px;
-  background: #fffafd;
+  background: var(--settings-card, #fffafd);
 }
 .agenda-inbox-heading,
 .agenda-inbox article {
@@ -174,12 +177,12 @@
 .agenda-inbox-heading small,
 .agenda-inbox article small {
   display: block;
-  color: #817686;
+  color: var(--settings-muted, #817686);
   font-size: 11px;
 }
 .agenda-inbox article {
   padding: 10px 0;
-  border-top: 1px solid #f1e8f0;
+  border-top: 1px solid var(--settings-line, #f1e8f0);
 }
 .agenda-inbox article strong {
   overflow-wrap: anywhere;
@@ -207,7 +210,7 @@
 .assistant-organizer p,
 .assistant-organizer small {
   margin: 0;
-  color: #817686;
+  color: var(--settings-muted, #817686);
   font-size: 12px;
   line-height: 1.7;
 }
@@ -234,7 +237,7 @@
   min-height: 38px;
   width: auto;
   color: var(--organizer-accent, #895781);
-  background: #fff;
+  background: var(--settings-control-background, #fff);
   cursor: pointer;
   font: inherit;
   font-size: 12px;
@@ -244,8 +247,8 @@
     border-color 0.15s;
 }
 .assistant-organizer button:hover:not(:disabled) {
-  background: #f5eef6;
-  border-color: #c8acc7;
+  background: var(--settings-control-background, #f5eef6);
+  border-color: var(--settings-control-border, #c8acc7);
 }
 .assistant-organizer button:disabled {
   opacity: 0.45;
@@ -258,31 +261,31 @@
   outline-offset: 3px;
 }
 .assistant-organizer .assistant-primary {
-  color: #fff;
+  color: var(--settings-text, #fff);
   border-color: var(--organizer-accent);
-  background: var(--organizer-accent);
+  background: var(--settings-primary, var(--organizer-accent));
 }
 .assistant-organizer .assistant-primary:hover:not(:disabled) {
-  background: #75476f;
+  background: var(--settings-primary-hover, #75476f);
 }
 .assistant-organizer-nav {
   display: flex;
   gap: 4px;
   padding: 4px;
   border-radius: 12px;
-  background: #f1ecf2;
+  background: var(--settings-card, #f1ecf2);
 }
 .assistant-organizer-nav button {
   flex: 1;
   border-color: transparent;
   background: transparent;
-  color: #817686;
+  color: var(--settings-muted, #817686);
   white-space: nowrap;
   padding: 8px;
 }
 .assistant-organizer-nav button[aria-pressed="true"] {
-  background: #fff;
-  color: #70466c;
+  background: var(--settings-accent-soft, #fff);
+  color: var(--settings-accent, #70466c);
   box-shadow: 0 2px 6px #4634480c;
 }
 .assistant-panel {
@@ -298,7 +301,7 @@
   display: grid;
   gap: 7px;
   font-size: 12px;
-  color: #615767;
+  color: var(--settings-muted, #615767);
   min-width: 0;
 }
 .assistant-organizer input:not([type="checkbox"]),
@@ -317,8 +320,8 @@
   font: inherit;
   font-size: 13px;
   line-height: 20px;
-  background-color: #fff;
-  color: #352f38;
+  background-color: var(--settings-control-background, #fff);
+  color: var(--settings-text, #352f38);
   box-shadow: none;
 }
 .assistant-organizer select {
@@ -328,7 +331,7 @@
   background-position: right 13px center;
 }
 .assistant-organizer input::placeholder {
-  color: #a89bac;
+  color: var(--settings-muted, #a89bac);
 }
 .assistant-organizer .assistant-source {
   display: flex;
@@ -336,7 +339,7 @@
   gap: 10px;
   padding: 10px 12px;
   border-radius: 9px;
-  background: #f6f2f7;
+  background: var(--settings-card, #f6f2f7);
   overflow-wrap: anywhere;
 }
 .assistant-source input {
@@ -385,28 +388,28 @@
   padding: 16px;
   display: grid;
   gap: 8px;
-  background: #f8f5f9;
-  border: 1px solid #eee6ef;
+  background: var(--settings-card, #f8f5f9);
+  border: 1px solid var(--settings-line, #eee6ef);
   border-radius: 12px;
   overflow-wrap: anywhere;
 }
 .assistant-organizer .assistant-feedback {
   padding: 12px 14px;
   border-radius: 10px;
-  background: #f1edf6;
-  color: #694e76;
+  background: var(--settings-card, #f1edf6);
+  color: var(--settings-accent, #694e76);
   overflow-wrap: anywhere;
 }
 .assistant-organizer .assistant-feedback-error {
-  background: #fbefef;
-  color: #994b51;
+  background: var(--settings-danger-soft, #fbefef);
+  color: var(--settings-danger, #994b51);
 }
 .assistant-empty {
   display: grid;
   justify-items: start;
   gap: 8px;
   padding: 16px;
-  border: 1px dashed #d8c8db;
+  border: 1px dashed var(--settings-line, #d8c8db);
   border-radius: 12px;
 }
 @media (max-width: 600px) {
@@ -429,10 +432,10 @@
   width: min(360px, calc(100% - 24px));
   box-sizing: border-box;
   margin-inline: auto;
-  border: 1px solid rgb(164 129 158 / 30%);
+  border: 1px solid var(--settings-line, rgb(164 129 158 / 30%));
   border-radius: 18px;
-  background: #fbf8fc;
-  color: #392e3d;
+  background: var(--settings-card, #fbf8fc);
+  color: var(--settings-text, #392e3d);
   box-shadow:
     0 10px 30px rgb(51 28 53 / 17%),
     0 2px 7px rgb(51 28 53 / 7%);
@@ -448,7 +451,7 @@
   gap: 15px;
 }
 .assistant-alert-card + .assistant-alert-card {
-  border-top: 1px solid #e9dfeb;
+  border-top: 1px solid var(--settings-line, #e9dfeb);
 }
 .assistant-alert-heading {
   display: flex;
@@ -462,8 +465,8 @@
   height: 38px;
   flex-shrink: 0;
   border-radius: 12px;
-  background: #efe4f0;
-  color: #8a5883;
+  background: var(--settings-card, #efe4f0);
+  color: var(--settings-accent, #8a5883);
 }
 .assistant-alert-heading > div {
   display: grid;
@@ -472,7 +475,7 @@
 }
 .assistant-alert-kind {
   font-size: 10px;
-  color: #8b7a90;
+  color: var(--settings-muted, #8b7a90);
   letter-spacing: 0.08em;
 }
 .assistant-alert-heading strong {
@@ -482,7 +485,7 @@
   overflow-wrap: anywhere;
 }
 .assistant-alert-time {
-  color: #817686;
+  color: var(--settings-muted, #817686);
   font-size: 11px;
 }
 .assistant-alert-actions {
@@ -498,10 +501,10 @@
   margin: 0;
   min-height: 34px;
   padding: 7px 12px;
-  border: 1px solid #e2d4e4;
+  border: 1px solid var(--settings-control-border, #e2d4e4);
   border-radius: 9px;
   background: transparent;
-  color: #785172;
+  color: var(--settings-accent, #785172);
   font: inherit;
   font-size: 11px;
   line-height: 1.5;
@@ -509,9 +512,9 @@
 }
 .assistant-alert button.assistant-alert-stop {
   min-width: 64px;
-  background: #895781;
-  border-color: #895781;
-  color: #fff;
+  background: var(--settings-primary, #895781);
+  border-color: var(--settings-control-border, #895781);
+  color: var(--settings-text, #fff);
 }
 .assistant-alert button:hover {
   filter: brightness(0.96);
@@ -523,7 +526,7 @@
 .assistant-alert-error {
   display: block;
   margin: 0 17px 15px;
-  color: #98565f;
+  color: var(--settings-danger, #98565f);
   font-size: 11px;
   line-height: 1.6;
 }

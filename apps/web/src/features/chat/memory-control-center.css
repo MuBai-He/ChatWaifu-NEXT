@@ -1,94 +1,26 @@
-.memory-center-overlay {
-  position: fixed;
-  z-index: 1000;
-  display: grid;
-  padding: 24px;
-  overflow: hidden;
-  background: rgb(34 22 45 / 32%);
-  inset: 0;
-  place-items: center;
-  backdrop-filter: blur(12px);
-  overscroll-behavior: contain;
-}
-
-.memory-center {
-  display: grid;
-  width: min(1080px, 100%);
-  max-height: min(820px, calc(100dvh - 48px));
-  padding: 24px;
-  overflow: hidden;
-  border: 1px solid rgb(255 255 255 / 82%);
-  border-radius: 24px;
-  background: rgb(252 249 255 / 97%);
-  box-shadow: 0 30px 100px rgb(38 19 55 / 28%);
-  grid-template-rows: auto auto minmax(0, 1fr);
-}
-
-.memory-center > header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 0 2px 18px;
-  border-bottom: 1px solid var(--line);
-}
-
-.memory-center > header p {
-  margin: 0 0 5px;
-  color: var(--accent);
-  font: 700 0.64rem var(--mono);
-  letter-spacing: 0.14em;
-}
-
-.memory-center > header h2 {
-  margin: 0;
-  font-size: 1.65rem;
-  letter-spacing: -0.04em;
-}
-
-.memory-center > header span {
-  display: block;
-  margin-top: 5px;
-  color: var(--muted);
-  font-size: 0.74rem;
-}
-
-.memory-center > header button {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  color: var(--muted);
-  background: white;
-  cursor: pointer;
-  place-items: center;
-}
-
-.memory-center > header button svg {
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: currentcolor;
-  stroke-linecap: round;
-  stroke-width: 2;
+.memory-dialog {
+  --ink: var(--settings-text);
+  --muted: var(--settings-muted);
+  --faint: var(--settings-muted);
+  --accent: var(--settings-accent);
+  --line: var(--settings-line);
+  --line-strong: var(--settings-line);
+  overflow-wrap: anywhere;
 }
 
 .memory-notice {
   margin-top: 12px;
   padding: 10px 12px;
-  border: 1px solid rgb(244 114 182 / 25%);
+  border: 1px solid var(--settings-line, rgb(244 114 182 / 25%));
   border-radius: 10px;
-  color: #9d174d;
-  background: rgb(253 242 248 / 92%);
-  font-size: 0.76rem;
+  color: var(--settings-danger, #9d174d);
+  background: var(--settings-card, rgb(253 242 248 / 92%));
+  font-size: 0.875rem;
 }
 
 .memory-center-grid {
   display: grid;
   min-height: 0;
-  padding-top: 18px;
-  overflow-y: auto;
   gap: 22px;
   grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
   overscroll-behavior: contain;
@@ -114,13 +46,13 @@
 
 .memory-section-title {
   margin-bottom: 10px;
-  font-size: 0.78rem;
+  font-size: 1rem;
 }
 
 .memory-section-title small,
 .memory-filters > small {
   color: var(--faint);
-  font: 0.6rem var(--mono);
+  font: 0.75rem var(--mono);
 }
 
 .memory-proposal-card,
@@ -129,20 +61,20 @@
   padding: 13px;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: rgb(255 255 255 / 76%);
+  background: var(--settings-card);
 }
 
 .memory-proposal-card span,
 .memory-record-heading span {
   color: var(--accent);
-  font-size: 0.68rem;
+  font-size: 0.8125rem;
   font-weight: 750;
 }
 
 .memory-proposal-card code,
 .memory-record-heading code {
   color: var(--faint);
-  font: 0.58rem var(--mono);
+  font: 0.75rem var(--mono);
 }
 
 .memory-proposal-card p,
@@ -150,14 +82,14 @@
 .memory-empty {
   margin: 9px 0;
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.875rem;
   line-height: 1.5;
 }
 
 .memory-proposal-card > small {
   display: block;
   color: var(--faint);
-  font: 0.58rem/1.45 var(--mono);
+  font: 0.75rem/1.6 var(--mono);
 }
 
 .sensitive-label {
@@ -165,9 +97,9 @@
   margin-top: 8px;
   padding: 4px 7px;
   border-radius: 999px;
-  color: #be123c;
-  background: rgb(244 63 94 / 9%);
-  font-size: 0.58rem;
+  color: var(--settings-danger, #be123c);
+  background: var(--settings-danger-soft, rgb(244 63 94 / 9%));
+  font-size: 0.75rem;
 }
 
 .memory-card-actions {
@@ -183,28 +115,25 @@
   border: 1px solid var(--line-strong);
   border-radius: 9px;
   color: var(--ink);
-  background: white;
-  font-size: 0.63rem;
+  background: var(--settings-control-background, white);
+  font-size: 0.875rem;
   cursor: pointer;
 }
 
 .memory-card-actions button.danger {
-  color: #be123c;
+  color: var(--settings-danger, #be123c);
 }
 
 .memory-filters {
-  position: sticky;
-  z-index: 2;
-  top: 0;
   margin-bottom: 10px;
   padding: 3px 0 9px;
-  background: rgb(252 249 255 / 95%);
+  background: transparent;
 }
 
 .memory-filters label {
   display: grid;
   color: var(--faint);
-  font-size: 0.58rem;
+  font-size: 0.75rem;
   gap: 3px;
 }
 
@@ -214,8 +143,8 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--ink);
-  background: white;
-  font-size: 0.64rem;
+  background: var(--settings-control-background, white);
+  font-size: 0.875rem;
 }
 
 .memory-record-heading > div {
@@ -226,7 +155,7 @@
 
 .memory-record-heading > small {
   color: var(--faint);
-  font: 0.58rem var(--mono);
+  font: 0.75rem var(--mono);
 }
 
 .memory-edit textarea {
@@ -237,8 +166,8 @@
   border: 1px solid var(--line-strong);
   border-radius: 9px;
   color: var(--ink);
-  background: white;
-  font: 0.7rem/1.5 var(--sans);
+  background: var(--settings-control-background, white);
+  font: 0.875rem/1.6 var(--sans);
   resize: vertical;
 }
 
@@ -251,8 +180,8 @@
   padding: 9px 9px 9px 24px;
   border-radius: 9px;
   color: var(--faint);
-  background: #f7f2fa;
-  font: 0.56rem/1.55 var(--mono);
+  background: var(--settings-card, #f7f2fa);
+  font: 0.75rem/1.6 var(--mono);
 }
 
 .memory-proposal-badge {
@@ -262,27 +191,18 @@
   margin-left: 5px;
   place-items: center;
   border-radius: 999px;
-  color: white;
-  background: #be185d;
+  color: var(--settings-text, white);
+  background: var(--settings-danger-soft, #be185d);
   font: 0.56rem var(--mono);
 }
 
+.memory-filters,
+.memory-record-heading > div {
+  flex-wrap: wrap;
+}
+
 @media (width <= 760px) {
-  .memory-center-overlay {
-    padding: 10px;
-  }
-
-  .memory-center {
-    max-height: calc(100dvh - 20px);
-    padding: 18px;
-  }
-
   .memory-center-grid {
-    overflow: auto;
-    grid-template-columns: 1fr;
-  }
-
-  .memory-column {
-    overflow: visible;
+    grid-template-columns: minmax(0, 1fr);
   }
 }

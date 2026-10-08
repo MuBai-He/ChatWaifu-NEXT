@@ -1,3 +1,5 @@
+import "../settings/settings-glass.css";
+import "../settings/settings-controls.css";
 import type { DomainEvent } from "@chatwaifu/protocol";
 import {
   type KeyboardEvent,
@@ -184,7 +186,7 @@ function SessionSkillConfirmationPrompt({ sessionId }: { sessionId: string }) {
     <ModalPortal className="skill-confirmation-overlay" role="presentation">
       <section
         ref={promptRef}
-        className={`skill-confirmation-prompt${dangerous ? " dangerous" : ""}`}
+        className={`skill-confirmation-prompt settings-material settings-surface settings-controls${dangerous ? " dangerous" : ""}`}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="skill-confirmation-title"

@@ -1,3 +1,5 @@
+import "../settings/settings-glass.css";
+import "../settings/settings-controls.css";
 import { useEffect, useState } from "react";
 
 import {
@@ -5,6 +7,7 @@ import {
   type ProductIconName,
 } from "../../components/ProductIcon";
 import type { DesktopSettingsSectionId } from "./desktopSettingsRegistry";
+import { useDialogNavigation } from "../connection/useDialogNavigation";
 
 interface OnboardingStep {
   eyebrow: string;
@@ -96,6 +99,10 @@ export function DesktopOnboardingDialog({
     setIndex(0);
     onDefer();
   };
+  const { ref: dialogRef, onKeyDown } = useDialogNavigation<HTMLElement>(
+    open,
+    defer,
+  );
   const complete = () => {
     setIndex(0);
     onComplete();
@@ -125,7 +132,9 @@ export function DesktopOnboardingDialog({
   return (
     <div className="desktop-onboarding-backdrop" role="presentation">
       <section
-        className="desktop-onboarding-dialog"
+        ref={dialogRef}
+        onKeyDown={onKeyDown}
+        className="desktop-onboarding-dialog settings-material settings-surface settings-controls"
         role="dialog"
         aria-modal="true"
         aria-labelledby="desktop-onboarding-title"

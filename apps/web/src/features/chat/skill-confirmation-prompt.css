@@ -3,7 +3,7 @@
   z-index: 1200;
   display: grid;
   padding: 24px;
-  background: rgb(25 13 31 / 48%);
+  background: var(--settings-raised, rgb(25 13 31 / 48%));
   inset: 0;
   place-items: center;
   backdrop-filter: blur(6px);
@@ -11,11 +11,14 @@
 
 .skill-confirmation-prompt {
   width: min(520px, 100%);
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 24px;
-  border: 1px solid rgb(145 98 164 / 32%);
+  border: 1px solid var(--settings-line, rgb(145 98 164 / 32%));
   border-radius: 22px;
-  color: #2d2233;
-  background: rgb(255 252 255 / 96%);
+  color: var(--settings-text, #2d2233);
+  background: var(--settings-card, rgb(255 252 255 / 96%));
   box-shadow: 0 24px 80px rgb(32 14 36 / 28%);
 }
 
@@ -29,7 +32,7 @@
 }
 
 .skill-confirmation-prompt > header small {
-  color: #8b4db4;
+  color: var(--settings-accent, #8b4db4);
   font: 0.66rem var(--mono);
   font-weight: 700;
   letter-spacing: 0.18em;
@@ -41,7 +44,7 @@
 }
 
 .skill-confirmation-prompt > header > span {
-  color: #7c7082;
+  color: var(--settings-muted, #7c7082);
   font-size: 0.76rem;
 }
 
@@ -49,7 +52,7 @@
   margin-top: 20px;
   padding: 12px 14px;
   border-radius: 12px;
-  background: #f5eef8;
+  background: var(--settings-card, #f5eef8);
 }
 
 .skill-confirmation-capability strong {
@@ -62,29 +65,29 @@
 
 .skill-confirmation-capability span {
   flex: none;
-  color: #7d438c;
+  color: var(--settings-accent, #7d438c);
   font-size: 0.72rem;
 }
 
 .skill-confirmation-prompt > p {
   margin: 14px 2px 0;
-  color: #5f5365;
+  color: var(--settings-muted, #5f5365);
   font-size: 0.88rem;
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
 
 .skill-confirmation-prompt .skill-confirmation-permissions {
-  color: #7d7183;
+  color: var(--settings-muted, #7d7183);
   font: 0.72rem var(--mono);
 }
 
 .skill-confirmation-arguments {
   margin-top: 14px;
   overflow: hidden;
-  border: 1px solid #e5d9e9;
+  border: 1px solid var(--settings-line, #e5d9e9);
   border-radius: 11px;
-  background: rgb(247 242 249 / 82%);
+  background: var(--settings-card, rgb(247 242 249 / 82%));
 }
 
 .skill-confirmation-arguments > header {
@@ -94,7 +97,7 @@
   justify-content: space-between;
   gap: 10px;
   padding: 7px 11px;
-  border-bottom: 1px solid #eadfed;
+  border-bottom: 1px solid var(--settings-line, #eadfed);
 }
 
 .skill-confirmation-arguments > header strong {
@@ -111,8 +114,8 @@
 .skill-confirmation-arguments > header small {
   padding: 3px 6px;
   border-radius: 999px;
-  color: #8f4767;
-  background: #fce7f0;
+  color: var(--settings-accent, #8f4767);
+  background: var(--settings-card, #fce7f0);
   font-size: 0.62rem;
 }
 
@@ -121,7 +124,7 @@
   margin: 0;
   padding: 11px;
   overflow: auto;
-  color: #55475d;
+  color: var(--settings-text, #55475d);
   font: 0.7rem/1.55 var(--mono);
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -131,8 +134,8 @@
 .skill-confirmation-prompt .skill-confirmation-error {
   padding: 9px 11px;
   border-radius: 9px;
-  color: #9b2f50;
-  background: #fff0f4;
+  color: var(--settings-danger, #9b2f50);
+  background: var(--settings-danger-soft, #fff0f4);
 }
 
 .skill-confirmation-prompt > footer {
@@ -144,15 +147,15 @@
 .skill-confirmation-prompt > footer button {
   min-height: 38px;
   padding: 0 14px;
-  border: 1px solid #d9cadf;
+  border: 1px solid var(--settings-control-border, #d9cadf);
   border-radius: 10px;
-  color: #514158;
-  background: #fff;
+  color: var(--settings-text, #514158);
+  background: var(--settings-control-background, #fff);
   cursor: pointer;
 }
 
 .skill-confirmation-prompt > footer button:hover:not(:disabled) {
-  border-color: #9d61b1;
+  border-color: var(--settings-control-border, #9d61b1);
 }
 
 .skill-confirmation-prompt > footer button:focus-visible {
@@ -161,14 +164,17 @@
 }
 
 .skill-confirmation-prompt > footer button.primary {
-  border-color: #8e4ead;
-  color: #fff;
-  background: linear-gradient(135deg, #a75b91, #704191);
+  border-color: var(--settings-control-border, #8e4ead);
+  color: var(--settings-text, #fff);
+  background: var(
+    --settings-primary-fill,
+    linear-gradient(135deg, #a75b91, #704191)
+  );
 }
 
 .skill-confirmation-prompt > footer button.deny {
   margin-right: auto;
-  color: #a23b58;
+  color: var(--settings-danger, #a23b58);
 }
 
 .skill-confirmation-prompt > footer button:disabled {
@@ -179,58 +185,64 @@
 body[data-surface="desktop-pet"] .skill-confirmation-overlay {
   align-items: end;
   padding: 12px;
-  background: rgb(25 13 31 / 22%);
+  background: var(--settings-raised, rgb(25 13 31 / 22%));
 }
 
 body[data-surface="desktop-pet"] .skill-confirmation-prompt {
   max-height: calc(100% - 24px);
   padding: 16px;
   overflow-y: auto;
-  border-color: rgb(255 225 242 / 44%);
+  border-color: var(--settings-line, rgb(255 225 242 / 44%));
   border-radius: 4px 18px 4px 18px;
-  color: #fff9fc;
-  background: linear-gradient(120deg, rgb(85 41 81 / 96%), rgb(24 16 31 / 97%));
+  color: var(--settings-text, #fff9fc);
+  background: var(
+    --settings-card,
+    linear-gradient(120deg, rgb(85 41 81 / 96%), rgb(24 16 31 / 97%))
+  );
   box-shadow: 0 16px 48px rgb(24 9 22 / 38%);
 }
 
 body[data-surface="desktop-pet"] .skill-confirmation-prompt > header small,
 body[data-surface="desktop-pet"] .skill-confirmation-capability span {
-  color: #efb4da;
+  color: var(--settings-accent, #efb4da);
 }
 
 body[data-surface="desktop-pet"] .skill-confirmation-prompt > header > span,
 body[data-surface="desktop-pet"] .skill-confirmation-prompt > p {
-  color: rgb(255 244 251 / 78%);
+  color: var(--settings-text, rgb(255 244 251 / 78%));
 }
 
 body[data-surface="desktop-pet"] .skill-confirmation-capability {
-  background: rgb(255 241 250 / 10%);
+  background: var(--settings-card, rgb(255 241 250 / 10%));
 }
 
 body[data-surface="desktop-pet"] .skill-confirmation-arguments {
-  border-color: rgb(255 225 242 / 22%);
-  background: rgb(255 241 250 / 7%);
+  border-color: var(--settings-line, rgb(255 225 242 / 22%));
+  background: var(--settings-card, rgb(255 241 250 / 7%));
 }
 
 body[data-surface="desktop-pet"] .skill-confirmation-arguments > header {
-  border-color: rgb(255 225 242 / 18%);
+  border-color: var(--settings-line, rgb(255 225 242 / 18%));
 }
 
 body[data-surface="desktop-pet"] .skill-confirmation-arguments pre {
-  color: rgb(255 247 252 / 86%);
+  color: var(--settings-text, rgb(255 247 252 / 86%));
 }
 
 body[data-surface="desktop-pet"] .skill-confirmation-prompt > footer button {
-  border-color: rgb(255 225 242 / 32%);
-  color: #fff7fb;
-  background: rgb(255 245 251 / 10%);
+  border-color: var(--settings-control-border, rgb(255 225 242 / 32%));
+  color: var(--settings-text, #fff7fb);
+  background: var(--settings-control-background, rgb(255 245 251 / 10%));
 }
 
 body[data-surface="desktop-pet"]
   .skill-confirmation-prompt
   > footer
   button.primary {
-  background: linear-gradient(135deg, #b25f93, #744197);
+  background: var(
+    --settings-primary-fill,
+    linear-gradient(135deg, #b25f93, #744197)
+  );
 }
 
 @media (max-width: 560px) {
