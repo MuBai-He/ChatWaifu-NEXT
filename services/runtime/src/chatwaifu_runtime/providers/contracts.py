@@ -10,9 +10,18 @@ from pathlib import Path
 from typing import Literal, Protocol
 from uuid import UUID
 
+from chatwaifu_protocol.agent import DecisionRecord
 from chatwaifu_protocol.base import JsonObject, JsonValue
 
 MAX_LLM_IMAGE_BYTES = 5 * 1024 * 1024
+
+
+class BehaviorDecisionProvider(Protocol):
+    """Native typed judgment adapter; it does not generate a chat reply or execute tools."""
+
+    async def decide(
+        self, persona: str, situation: JsonObject, source_refs: frozenset[str]
+    ) -> DecisionRecord: ...
 
 
 class LlmToolCallingUnavailableError(RuntimeError):

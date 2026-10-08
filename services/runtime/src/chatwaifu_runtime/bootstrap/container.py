@@ -478,7 +478,11 @@ class RuntimeContainer:
             discussion_policy=self.channel_settings.get().policy.group_discussion,
         )
         self.channel_groups.set_authenticator(self.external_channels.authenticate_group_transport)
-        self.behavior_decisions = BehaviorDecisionService(self.providers.llm, self._agent_model)
+        self.behavior_decisions = BehaviorDecisionService(
+            self.providers.llm,
+            self.model_configurations.behavior_provider,
+            self.model_configurations.native_behavior_provider,
+        )
         self.external_channels.response_decider = self._qq_response_decision
         self.agent_tasks.wake_decider = self._task_wake_decision
         self.group_autonomy = GroupAutonomyService(

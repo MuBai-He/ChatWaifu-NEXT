@@ -7,6 +7,8 @@ from chatwaifu_protocol.base import JsonObject
 from chatwaifu_protocol.character import ModelContextBudget
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
+from chatwaifu_runtime.providers.model_config import ModelProviderKind
+
 
 class ClientIceServer(BaseModel):
     urls: list[str]
@@ -237,7 +239,7 @@ class MemoryPinnedRequest(BaseModel):
 class ModelRoleConfigurationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    provider: Literal["demo", "openai_compatible", "local_hash", "disabled"]
+    provider: ModelProviderKind
     model: str = Field(min_length=1, max_length=256)
     base_url: str = Field(default="", max_length=2048)
     timeout_seconds: float = Field(default=60, gt=0, le=600)

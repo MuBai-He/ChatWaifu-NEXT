@@ -15,6 +15,9 @@ const modelTestResultSchema = z
     status: z.string(),
     characters: z.number().int().nonnegative().optional(),
     dimensions: z.number().int().positive().optional(),
+    action: z
+      .enum(["wait", "respond", "clarify", "task", "defer", "capability_gap"])
+      .optional(),
   })
   .passthrough();
 
@@ -23,7 +26,7 @@ export async function getModelConfigurations(): Promise<
 > {
   return (
     await requestRuntime(
-      "/v1/model-configurations",
+      "/v1/model-configurations?include_behavior_decision=true",
       configurationsResponseSchema,
     )
   ).items;

@@ -1,3 +1,14 @@
+behavior_decision_model:
+  status: deployed_native_jev_and_runtime_probe_verified_phone_acceptance_pending
+  adr: "0081"
+  evidence:
+    - Separate behavior_decision role defaults to explicit inherit_chat, with independent OpenAI-compatible or native TypeSafe Jev endpoint/model/timeout/private key selection in the shared Web and desktop model settings. Formal replies and task execution remain on chat. Native typed judgments reuse the same common source/cancellation/permission fences.
+    - Migration 47 preserves all old model columns and immutable checksums; native adapter tests cover inheritance, independent model/key routing, live saves, prose-only rejection, restart and secret isolation. Decision tests execute native decide_behavior without QQ effects.
+    - Final relevant Python 188 tests passed with one Windows-only skip; full Web 461, Web lint/type checks, strict Python types and both UI builds passed. Native Jev tests cover response/source/distribution validation, deadlines, cancellation, bounded retries and normalized nonsecret failures.
+    - Deployed decision-model-20261007 from reviewed f81cdcca overlay. The supplied private credential now configures only behavior_decision as typesafe/jev-latest with a 10-second deadline. Five real Chinese native cases and isolated Linux Runtime invitation/silence checks passed; the production decision-test endpoint also completed through Jev. No probe executed QQ effects.
+    - Schema 47 preserves all old model rows, budgets and prior ledger checksums. Fifteen source hashes and ten served Web files verified; 1420 unrelated source files, original model routes/credentials, channel settings revision 2, two revalidated member groups, 13 containers and seven unrelated services preserved. Fresh Jev handset acceptance remains distinct; see docs/operations/behavior-decision-jev-server-2026-10-07.md.
+    - Final compatibility overlay 5fbfdb45 is deployed as decision-model-compat-20261007. New Web/desktop builds explicitly opt into the decision role; older clients retain their original four-role list. API 36 and full Web 461 passed again with types/lint, both builds and isolation. Jev route, credential files and schema 47 are preserved; updated source/Web hashes and native decision test are verified. Installed desktop binaries are not rebuilt by this server release.
+
 qq_free_conversation:
   status: deployed_model_and_live_group_text_verified_additional_media_acceptance_pending
   adr: "0080"

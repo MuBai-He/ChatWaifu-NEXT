@@ -30,6 +30,7 @@ import {
 
 const ROLE_ORDER: ModelRole[] = [
   "chat",
+  "behavior_decision",
   "memory_extraction",
   "memory_summary",
   "embedding",
@@ -37,6 +38,10 @@ const ROLE_ORDER: ModelRole[] = [
 
 const ROLE_LABELS: Record<ModelRole, { title: string; description: string }> = {
   chat: { title: "聊天模型", description: "生成宁宁的最终回复" },
+  behavior_decision: {
+    title: "行为决策模型",
+    description: "判断群聊、私聊与自主事件是否回应；正式回复仍由聊天模型生成",
+  },
   memory_extraction: {
     title: "记忆提取模型",
     description: "从用户回合提出结构化记忆候选",
@@ -221,6 +226,15 @@ export function ModelSettingsPanel({ sessionId }: Props) {
           ? {
               ...item,
               [field]: value,
+              ...(role === "behavior_decision" &&
+              field === "provider" &&
+              value === "typesafe"
+                ? {
+                    model: "jev-latest",
+                    base_url: "https://api.typesafe.ai/v1",
+                    timeout_seconds: 10,
+                  }
+                : {}),
               ...(["provider", "model", "base_url"].includes(field) &&
               item[field] !== value
                 ? { budget: undefined }
@@ -246,7 +260,10 @@ export function ModelSettingsPanel({ sessionId }: Props) {
           context_window: item.context_window,
           budget: item.budget,
           enabled: item.enabled,
-          ...(apiKey ? { api_key: apiKey } : {}),
+          ...(apiKey &&
+          ["openai_compatible", "typesafe"].includes(item.provider)
+            ? { api_key: apiKey }
+            : {}),
           ...(clearApiKey ? { clear_api_key: true } : {}),
         }),
       {
@@ -283,9 +300,11 @@ export function ModelSettingsPanel({ sessionId }: Props) {
       success: (result) => {
         const detail = result.dimensions
           ? `，${result.dimensions} 维`
-          : result.characters
-            ? `，返回 ${result.characters} 字符`
-            : "";
+          : result.action
+            ? "，结构化决策已验证"
+            : result.characters
+              ? `，返回 ${result.characters} 字符`
+              : "";
         return `${ROLE_LABELS[role].title}连接 ${result.status}${detail}`;
       },
       error: "连接测试失败",
@@ -300,12 +319,15 @@ export function ModelSettingsPanel({ sessionId }: Props) {
           <small>MODEL ROUTING</small>
           <strong>模型路由</strong>
         </div>
-        <span>四条链路独立生效</span>
+        <span>五条模型链路</span>
       </div>
       {ROLE_ORDER.map((role) => {
         const item = byRole.get(role);
         if (!item) return null;
         const isOpenAi = item.provider === "openai_compatible";
+        const isTypeSafe = item.provider === "typesafe";
+        const isDecision = role === "behavior_decision";
+        const followsChat = item.provider === "inherit_chat";
         const budget = item.budget ?? modelContextBudgetSchema.parse({});
         const changeBudget = <K extends keyof ModelContextBudget>(
           field: K,
@@ -332,16 +354,18 @@ export function ModelSettingsPanel({ sessionId }: Props) {
                 <strong>{ROLE_LABELS[role].title}</strong>
                 <small>{ROLE_LABELS[role].description}</small>
               </div>
-              <label className="model-enabled">
-                <input
-                  type="checkbox"
-                  checked={item.enabled}
-                  onChange={(event) =>
-                    change(role, "enabled", event.target.checked)
-                  }
-                />
-                启用
-              </label>
+              {!isDecision ? (
+                <label className="model-enabled">
+                  <input
+                    type="checkbox"
+                    checked={item.enabled}
+                    onChange={(event) =>
+                      change(role, "enabled", event.target.checked)
+                    }
+                  />
+                  启用
+                </label>
+              ) : null}
             </header>
             <label>
               <span>Provider</span>
@@ -352,7 +376,15 @@ export function ModelSettingsPanel({ sessionId }: Props) {
                   change(role, "provider", event.target.value)
                 }
               >
-                {role === "embedding" ? (
+                {isDecision ? (
+                  <>
+                    <option value="inherit_chat">跟随聊天模型</option>
+                    <option value="typesafe">TypeSafe Jev（原生决策）</option>
+                    <option value="openai_compatible">
+                      独立模型（OpenAI 兼容）
+                    </option>
+                  </>
+                ) : role === "embedding" ? (
                   <>
                     <option value="local_hash">本地 Hash（零配置回退）</option>
                     <option value="openai_compatible">OpenAI 兼容</option>
@@ -367,15 +399,21 @@ export function ModelSettingsPanel({ sessionId }: Props) {
                 )}
               </select>
             </label>
-            <label>
-              <span>模型 ID</span>
-              <input
-                aria-label={`${ROLE_LABELS[role].title} 模型 ID`}
-                value={item.model}
-                onChange={(event) => change(role, "model", event.target.value)}
-              />
-            </label>
-            {isOpenAi ? (
+            {followsChat ? (
+              <p>使用当前聊天模型及其连接配置，保存后下一次决策生效。</p>
+            ) : (
+              <label>
+                <span>模型 ID</span>
+                <input
+                  aria-label={`${ROLE_LABELS[role].title} 模型 ID`}
+                  value={item.model}
+                  onChange={(event) =>
+                    change(role, "model", event.target.value)
+                  }
+                />
+              </label>
+            )}
+            {isOpenAi || isTypeSafe ? (
               <>
                 <label>
                   <span>Base URL</span>
@@ -399,31 +437,53 @@ export function ModelSettingsPanel({ sessionId }: Props) {
                 />
               </>
             ) : null}
-            <div className="model-role-grid">
-              <label>
-                <span>运行上下文窗口</span>
-                <input
-                  type="number"
-                  min={1024}
-                  value={item.context_window}
-                  onChange={(event) =>
-                    change(role, "context_window", Number(event.target.value))
-                  }
-                />
-              </label>
-              <label>
-                <span>超时（秒）</span>
-                <input
-                  type="number"
-                  min={1}
-                  value={item.timeout_seconds}
-                  onChange={(event) =>
-                    change(role, "timeout_seconds", Number(event.target.value))
-                  }
-                />
-              </label>
-            </div>
-            {role !== "embedding" ? (
+            {!followsChat ? (
+              <div className="model-role-grid">
+                {!isDecision ? (
+                  <label>
+                    <span>运行上下文窗口</span>
+                    <input
+                      type="number"
+                      min={1024}
+                      value={item.context_window}
+                      onChange={(event) =>
+                        change(
+                          role,
+                          "context_window",
+                          Number(event.target.value),
+                        )
+                      }
+                    />
+                  </label>
+                ) : null}
+                <label>
+                  <span>超时（秒）</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={isDecision ? 30 : 600}
+                    value={item.timeout_seconds}
+                    onChange={(event) =>
+                      change(
+                        role,
+                        "timeout_seconds",
+                        Number(event.target.value),
+                      )
+                    }
+                  />
+                </label>
+              </div>
+            ) : null}
+            {isDecision ? (
+              <p>
+                {isTypeSafe
+                  ? "Jev 通过 TypeSafe 原生接口选择动作，正式回复仍用聊天模型。"
+                  : "独立 OpenAI 兼容模型需支持原生工具调用。"}
+                请先保存再测试；测试不会发送 QQ
+                消息。决策失败会记录错误并保持静默。
+              </p>
+            ) : null}
+            {role !== "embedding" && !isDecision ? (
               <details>
                 <summary>模型输入与输出预算</summary>
                 <p>
@@ -562,7 +622,7 @@ export function ModelSettingsPanel({ sessionId }: Props) {
                   {rebuildStatus?.state === "running" ? "重建中…" : "重建索引"}
                 </button>
               ) : null}
-              {isOpenAi && item.api_key_configured ? (
+              {(isOpenAi || isTypeSafe) && item.api_key_configured ? (
                 <button
                   className="danger"
                   type="button"
