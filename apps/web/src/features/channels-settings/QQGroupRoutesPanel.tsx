@@ -293,9 +293,37 @@ function QQGroupRoutesContent({
         );
       } else {
         setCreationObservation(result);
-        setCreationSpeakers([]);
+        const linked = new Set(
+          links.filter((link) => link.enabled).map((link) => link.sender_key),
+        );
+        setCreationSpeakers(result.member_ids.filter((id) => linked.has(id)));
       }
     });
+  };
+  const updateCreationReplyDefaults = (
+    updatedLinks: ChannelParticipantLinkSnapshot[],
+  ) => {
+    if (!creationObservation) return;
+    const alreadyLinked = new Set(
+      links.filter((link) => link.enabled).map((link) => link.sender_key),
+    );
+    const members = new Set(creationObservation.member_ids);
+    const newlyLinked = updatedLinks
+      .filter(
+        (link) =>
+          link.enabled &&
+          members.has(link.sender_key) &&
+          !alreadyLinked.has(link.sender_key),
+      )
+      .map((link) => link.sender_key);
+    const revoked = new Set(
+      updatedLinks
+        .filter((link) => !link.enabled)
+        .map((link) => link.sender_key),
+    );
+    setCreationSpeakers((old) => [
+      ...new Set([...old.filter((id) => !revoked.has(id)), ...newlyLinked]),
+    ]);
   };
   const registerMembers = (
     observation: ChannelGroupAudienceSnapshot,
@@ -358,11 +386,15 @@ function QQGroupRoutesContent({
       setCreationConfirmed(false);
       setRouteConfirmed(false);
       if (route) setRouteObservation(result);
-      else setCreationObservation(result);
+      else {
+        updateCreationReplyDefaults(observedLinks);
+        setCreationObservation(result);
+      }
     });
   };
   const rememberLink = (result: ChannelParticipantLinkSnapshot) => {
     checkLinks([result], config.account_key);
+    updateCreationReplyDefaults([result]);
     setLinks((old) => [
       ...old.filter((item) => item.link_id !== result.link_id),
       result,
@@ -704,7 +736,7 @@ function QQGroupRoutesContent({
         </label>
         <SettingsToggle
           label="新群允许按需语音"
-          description="默认关闭；开启后仍只在当前授权发言者明确要求时允许语音。创建不会启用群回复。"
+          description="默认关闭；开启后仍只在允许 AI 回复的成员明确要求时允许语音。创建不会启用群回复。"
           checked={creationVoice}
           onChange={setCreationVoice}
         />
@@ -715,6 +747,13 @@ function QQGroupRoutesContent({
         >
           读取该群当前成员
         </button>
+        {creationObservation ? (
+          <p>
+            新群成员完成关联后默认允许 AI
+            回复，可逐个取消。核对共享范围并启用群路由后生效；不影响 QQ
+            群禁言权限。
+          </p>
+        ) : null}
         {creationObservation ? (
           <AudienceMapper
             observation={creationObservation}
@@ -827,7 +866,7 @@ function QQGroupRoutesContent({
           <p>场景由服务器创建。成员变更时需新场景；不能沿用旧受众的上下文。</p>
           <p>
             {selected.allow_requested_voice
-              ? "本群已开启按需语音：平时文字，仅当前发言者明确要求时可发送语音。"
+              ? "本群已开启按需语音：平时文字，仅允许 AI 回复的成员明确要求时可发送语音。"
               : "本群按需语音关闭，只回复文字。"}
           </p>
           {config.character_id === "default" ? (
@@ -860,7 +899,7 @@ function QQGroupRoutesContent({
             disabled={!mutable || busy || !currentRoute}
             className="qq-group-fields"
           >
-            <legend>发言权限与启用</legend>
+            <legend>成员回复权限与启用</legend>
             <SettingsToggle
               label="允许本群按当前请求发语音"
               description="平时回复文字。保存启用前仍需读取成员并确认；历史、引用和旁听内容不能授权语音。"
@@ -894,7 +933,7 @@ function QQGroupRoutesContent({
               <div>
                 <p>
                   已登记 {selected.members.length}{" "}
-                  名成员；重新读取后可搜索成员并批量选择发言权限。
+                  名成员；重新读取后可搜索成员并批量选择 AI 回复权限。
                 </p>
                 {selected.members.slice(0, 50).map((member) => (
                   <label className="qq-group-check" key={member.sender_key}>
@@ -911,8 +950,7 @@ function QQGroupRoutesContent({
                         )
                       }
                     />
-                    允许 {participantLabel(participants, member.participant_id)}
-                    （QQ {member.sender_key}）发言
+                    允许 AI 回复该成员（QQ {member.sender_key}）
                   </label>
                 ))}
               </div>
@@ -1073,7 +1111,7 @@ function AudienceMapper({
       ) : null}
       <p>
         共 {observation.member_ids.length} 名成员 · 已选择 {speakers.length}{" "}
-        名发言者
+        名允许 AI 回复的成员
       </p>
       <label>
         搜索群成员
@@ -1092,14 +1130,14 @@ function AudienceMapper({
           disabled={!fresh || !enabled.length}
           onClick={() => setSpeakers(enabled)}
         >
-          允许全部已关联成员发言
+          允许 AI 回复全部已关联成员
         </button>
         <button
           type="button"
           disabled={!fresh || !speakers.length}
           onClick={() => setSpeakers([])}
         >
-          取消全部发言选择
+          取消全部 AI 回复选择
         </button>
       </div>
       <ul className="qq-group-list">
@@ -1185,7 +1223,7 @@ function AudienceMapper({
                     )
                   }
                 />
-                允许 QQ {sender} 发言
+                允许 AI 回复该成员（QQ {sender}）
               </label>
             </li>
           );
