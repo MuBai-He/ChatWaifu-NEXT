@@ -1,0 +1,482 @@
+{
+  "version": "1.1",
+  "scenarios": [
+    {
+      "id": "b01",
+      "kind": "behavior",
+      "text": "没艾特你。群友问：这段 Python 循环为什么一直停不下来？谁能看一下？",
+      "expected": ["respond", "task", "clarify"]
+    },
+    {
+      "id": "b02",
+      "kind": "behavior",
+      "text": "大家都在说今天吃饭很香，话题已经结束。",
+      "expected": ["wait"]
+    },
+    {
+      "id": "b03",
+      "kind": "behavior",
+      "text": "先别说话，让我们把这段争论讲完。",
+      "expected": ["wait"]
+    },
+    {
+      "id": "b04",
+      "kind": "behavior",
+      "text": "宁宁刚刚回答了，同样的问题已经解决，没新情况。",
+      "expected": ["wait"]
+    },
+    {
+      "id": "b05",
+      "kind": "behavior",
+      "text": "群里讨论明天汇报，大家不知道怎样合并现有材料，你可以帮助整理。",
+      "expected": ["respond", "task", "clarify"]
+    },
+    {
+      "id": "b06",
+      "kind": "behavior",
+      "text": "有人说“我要睡了”，其他人都说晚安，已经过了安静时段。",
+      "expected": ["wait"]
+    },
+    {
+      "id": "b07",
+      "kind": "behavior",
+      "text": "有人问刚上传的 PDF 有哪三个重点？虽然没@，大家还在等待。",
+      "expected": ["respond", "task", "clarify"]
+    },
+    {
+      "id": "b08",
+      "kind": "behavior",
+      "text": "只是路过：哈哈哈哈。",
+      "expected": ["wait"]
+    },
+    {
+      "id": "b09",
+      "kind": "behavior",
+      "text": "这个话题结束了，先别接着讨论。",
+      "expected": ["wait"]
+    },
+    {
+      "id": "b10",
+      "kind": "behavior",
+      "text": "当前讨论要选方案，需要你补充一个关键比较维度，尚未有人回答。",
+      "expected": ["respond", "task", "clarify"]
+    },
+    {
+      "id": "b11",
+      "kind": "behavior",
+      "text": "群里重复发送十个表情，没人提问，没有待办。",
+      "expected": ["wait"]
+    },
+    {
+      "id": "b12",
+      "kind": "behavior",
+      "text": "群友想把今天的议题归纳成小结，希望群里有人帮忙。",
+      "expected": ["respond", "task", "clarify"]
+    },
+    {
+      "id": "b13",
+      "kind": "behavior",
+      "text": "“宁宁先安静十分钟。”",
+      "expected": ["wait"]
+    },
+    {
+      "id": "b14",
+      "kind": "behavior",
+      "text": "“这件事不用你帮忙，我自己处理。”",
+      "expected": ["wait"]
+    },
+    {
+      "id": "b15",
+      "kind": "behavior",
+      "text": "两人讨论代码错误，第三位还没回应，没有人能处理日志。你有日志处理能力，大家还在等待有人帮助。",
+      "expected": ["respond", "task", "clarify"]
+    },
+    {
+      "id": "b16",
+      "kind": "behavior",
+      "text": "我困了，我先休息。只是分享感受，不需要提醒。",
+      "expected": ["wait"]
+    },
+    {
+      "id": "b17",
+      "kind": "behavior",
+      "text": "大家在讨论周末安排，明确问是否存在日历冲突，需要查询后才能答。",
+      "expected": ["task", "clarify", "respond"]
+    },
+    {
+      "id": "b18",
+      "kind": "behavior",
+      "text": "群友表达今天非常烦，问有没有愿意听他讲一讲的人。",
+      "expected": ["respond", "clarify"]
+    },
+    {
+      "id": "b19",
+      "kind": "behavior",
+      "text": "群里安静，没有新消息，也没有到期任务。",
+      "expected": ["wait"]
+    },
+    {
+      "id": "b20",
+      "kind": "behavior",
+      "text": "工具任务完成，实际结果已验证，可以把生成材料交给交办人。",
+      "expected": ["task", "respond"]
+    },
+    {
+      "id": "d01",
+      "kind": "discovery",
+      "text": "写一个 Word 文档",
+      "expected_capability": "documents.create/word",
+      "context": {
+        "surface": "Runtime 当前任务与工作区",
+        "purpose": "查明这项请求对应的能力以及参数和状态"
+      }
+    },
+    {
+      "id": "d02",
+      "kind": "discovery",
+      "text": "做几页幻灯片",
+      "expected_capability": "documents.create/powerpoint",
+      "context": {
+        "surface": "Runtime 当前任务与工作区",
+        "purpose": "查明这项请求对应的能力以及参数和状态"
+      }
+    },
+    {
+      "id": "d03",
+      "kind": "discovery",
+      "text": "把内容排成可编辑的 docx",
+      "expected_capability": "documents.create/word",
+      "context": {
+        "surface": "Runtime 当前任务与工作区",
+        "purpose": "查明这项请求对应的能力以及参数和状态"
+      }
+    },
+    {
+      "id": "d04",
+      "kind": "discovery",
+      "text": "我要一个 pptx",
+      "expected_capability": "documents.create/powerpoint",
+      "context": {
+        "surface": "Runtime 当前任务与工作区",
+        "purpose": "查明这项请求对应的能力以及参数和状态"
+      }
+    },
+    {
+      "id": "d05",
+      "kind": "discovery",
+      "text": "看看工作区有什么",
+      "expected_capability": "workspace.files/list",
+      "context": {
+        "surface": "Runtime 当前任务与工作区",
+        "purpose": "查明这项请求对应的能力以及参数和状态"
+      }
+    },
+    {
+      "id": "d06",
+      "kind": "discovery",
+      "text": "读文本文件内容",
+      "expected_capability": "workspace.files/read",
+      "context": {
+        "surface": "Runtime 当前任务与工作区",
+        "purpose": "查明这项请求对应的能力以及参数和状态"
+      }
+    },
+    {
+      "id": "d07",
+      "kind": "discovery",
+      "text": "新建一个文本文件",
+      "expected_capability": "workspace.files/write",
+      "context": {
+        "surface": "Runtime 当前任务与工作区",
+        "purpose": "查明这项请求对应的能力以及参数和状态"
+      }
+    },
+    {
+      "id": "d08",
+      "kind": "discovery",
+      "text": "确认生成文件的校验值",
+      "expected_capability": "workspace.files/inspect_artifact",
+      "context": {
+        "surface": "Runtime 当前任务与工作区",
+        "purpose": "查明这项请求对应的能力以及参数和状态"
+      }
+    },
+    {
+      "id": "d09",
+      "kind": "discovery",
+      "text": "持续执行这件事",
+      "expected_capability": "agent.tasks/create",
+      "context": {
+        "surface": "Runtime 当前任务与工作区",
+        "purpose": "查明这项请求对应的能力以及参数和状态"
+      }
+    },
+    {
+      "id": "d10",
+      "kind": "discovery",
+      "text": "查看后台目标进展",
+      "expected_capability": "agent.tasks/status",
+      "context": {
+        "surface": "Runtime 当前任务与工作区",
+        "purpose": "查明这项请求对应的能力以及参数和状态"
+      }
+    },
+    {
+      "id": "d11",
+      "kind": "discovery",
+      "text": "晚点再检查当前任务",
+      "expected_capability": "agent.tasks/defer",
+      "context": {
+        "surface": "Runtime 当前任务与工作区",
+        "purpose": "查明这项请求对应的能力以及参数和状态"
+      }
+    },
+    {
+      "id": "d12",
+      "kind": "discovery",
+      "text": "看看本群叫什么",
+      "expected_capability": "qq.scene/get_group_info",
+      "context": {
+        "surface": "QQ 当前群",
+        "purpose": "查明这项请求对应的能力以及参数和状态"
+      }
+    },
+    {
+      "id": "d13",
+      "kind": "discovery",
+      "text": "刚刚那条消息是什么",
+      "expected_capability": "qq.scene/get_msg",
+      "context": {
+        "surface": "QQ 当前群",
+        "purpose": "查明这项请求对应的能力以及参数和状态"
+      }
+    },
+    {
+      "id": "d14",
+      "kind": "discovery",
+      "text": "本群有哪些资料",
+      "expected_capability": "qq.scene/get_group_root_files",
+      "context": {
+        "surface": "QQ 当前群",
+        "purpose": "查明这项请求对应的能力以及参数和状态"
+      }
+    },
+    {
+      "id": "d15",
+      "kind": "discovery",
+      "text": "本群最近聊了什么",
+      "expected_capability": "qq.scene/get_group_msg_history",
+      "context": {
+        "surface": "QQ 当前群",
+        "purpose": "查明这项请求对应的能力以及参数和状态"
+      }
+    },
+    {
+      "id": "d16",
+      "kind": "discovery",
+      "text": "读取群中刚传的文档内容",
+      "expected_capability": "qq.scene/read_file",
+      "context": {
+        "surface": "QQ 当前群",
+        "purpose": "查明这项请求对应的能力以及参数和状态"
+      }
+    },
+    {
+      "id": "d17",
+      "kind": "discovery",
+      "text": "把产物发回当前 QQ 场景",
+      "expected_capability": "channel.file/send",
+      "context": {
+        "surface": "QQ 当前群",
+        "purpose": "查明这项请求对应的能力以及参数和状态"
+      }
+    },
+    {
+      "id": "d18",
+      "kind": "discovery",
+      "text": "缺少功能，生成候选插件",
+      "expected_capability": "agent.develop/candidate",
+      "context": {
+        "surface": "Runtime 当前任务与工作区",
+        "purpose": "查明这项请求对应的能力以及参数和状态"
+      }
+    },
+    {
+      "id": "d19",
+      "kind": "discovery",
+      "text": "把群成员踢出去",
+      "expected_capability": "qq.scene/set_group_kick",
+      "context": {
+        "surface": "QQ 当前群",
+        "purpose": "查明这项请求对应的能力以及参数和状态"
+      }
+    },
+    {
+      "id": "d20",
+      "kind": "discovery",
+      "text": "查未配置的私人日程",
+      "expected_capability": "calendar.read/query",
+      "context": {
+        "surface": "Runtime 当前任务与工作区",
+        "purpose": "查明这项请求对应的能力以及参数和状态"
+      }
+    },
+    {
+      "id": "t01",
+      "kind": "task",
+      "task_type": "file",
+      "text": "读取 input.txt，把其中的事项按原顺序写入 result.txt；首行写“检查”。完成后再读 result.txt 核对。",
+      "initial": "准备材料\n检查来源\n整理结论",
+      "expected_marker": "检查"
+    },
+    {
+      "id": "t02",
+      "kind": "task",
+      "task_type": "file",
+      "text": "读取 input.txt，把其中的事项按原顺序写入 result.txt；首行写“发现”。完成后再读 result.txt 核对。",
+      "initial": "准备材料\n检查来源\n整理结论",
+      "expected_marker": "发现"
+    },
+    {
+      "id": "t03",
+      "kind": "task",
+      "task_type": "file",
+      "text": "读取 input.txt，把其中的事项按原顺序写入 result.txt；首行写“任务”。完成后再读 result.txt 核对。",
+      "initial": "准备材料\n检查来源\n整理结论",
+      "expected_marker": "任务"
+    },
+    {
+      "id": "t04",
+      "kind": "task",
+      "task_type": "file",
+      "text": "读取 input.txt，把其中的事项按原顺序写入 result.txt；首行写“执行”。完成后再读 result.txt 核对。",
+      "initial": "准备材料\n检查来源\n整理结论",
+      "expected_marker": "执行"
+    },
+    {
+      "id": "t05",
+      "kind": "task",
+      "task_type": "file",
+      "text": "读取 input.txt，把其中的事项按原顺序写入 result.txt；首行写“修复”。完成后再读 result.txt 核对。",
+      "initial": "准备材料\n检查来源\n整理结论",
+      "expected_marker": "修复"
+    },
+    {
+      "id": "t06",
+      "kind": "task",
+      "task_type": "file",
+      "text": "读取 input.txt，把其中的事项按原顺序写入 result.txt；首行写“宁宁”。完成后再读 result.txt 核对。",
+      "initial": "准备材料\n检查来源\n整理结论",
+      "expected_marker": "宁宁"
+    },
+    {
+      "id": "t07",
+      "kind": "task",
+      "task_type": "file",
+      "text": "读取 input.txt，把其中的事项按原顺序写入 result.txt；首行写“共享”。完成后再读 result.txt 核对。",
+      "initial": "准备材料\n检查来源\n整理结论",
+      "expected_marker": "共享"
+    },
+    {
+      "id": "t08",
+      "kind": "task",
+      "task_type": "file",
+      "text": "读取 input.txt，把其中的事项按原顺序写入 result.txt；首行写“结果”。完成后再读 result.txt 核对。",
+      "initial": "准备材料\n检查来源\n整理结论",
+      "expected_marker": "结果"
+    },
+    {
+      "id": "t09",
+      "kind": "task",
+      "task_type": "file",
+      "text": "读取 input.txt，把其中的事项按原顺序写入 result.txt；首行写“上下文”。完成后再读 result.txt 核对。",
+      "initial": "准备材料\n检查来源\n整理结论",
+      "expected_marker": "上下文"
+    },
+    {
+      "id": "t10",
+      "kind": "task",
+      "task_type": "file",
+      "text": "读取 input.txt，把其中的事项按原顺序写入 result.txt；首行写“验证”。完成后再读 result.txt 核对。",
+      "initial": "准备材料\n检查来源\n整理结论",
+      "expected_marker": "验证"
+    },
+    {
+      "id": "t11",
+      "kind": "task",
+      "task_type": "word",
+      "text": "读取 input.txt，将原始内容整理为Word文件，标题“验收材料0”，保留数字和原话，检查生成与渲染结果。",
+      "initial": "参与人数：10\n结论：保持群聊与私聊隔离\n待办：准备材料",
+      "expected_marker": "验收材料0"
+    },
+    {
+      "id": "t12",
+      "kind": "task",
+      "task_type": "powerpoint",
+      "text": "读取 input.txt，将原始内容整理为PPT文件，标题“验收材料1”，保留数字和原话，检查生成与渲染结果。",
+      "initial": "参与人数：11\n结论：保持群聊与私聊隔离\n待办：准备材料",
+      "expected_marker": "验收材料1"
+    },
+    {
+      "id": "t13",
+      "kind": "task",
+      "task_type": "word",
+      "text": "读取 input.txt，将原始内容整理为Word文件，标题“验收材料2”，保留数字和原话，检查生成与渲染结果。",
+      "initial": "参与人数：12\n结论：保持群聊与私聊隔离\n待办：准备材料",
+      "expected_marker": "验收材料2"
+    },
+    {
+      "id": "t14",
+      "kind": "task",
+      "task_type": "powerpoint",
+      "text": "读取 input.txt，将原始内容整理为PPT文件，标题“验收材料3”，保留数字和原话，检查生成与渲染结果。",
+      "initial": "参与人数：13\n结论：保持群聊与私聊隔离\n待办：准备材料",
+      "expected_marker": "验收材料3"
+    },
+    {
+      "id": "t15",
+      "kind": "task",
+      "task_type": "qq",
+      "text": "查当前群的资料，读取里面的文件，把重点整理为Word，标题“群材料0”，验证文件后发回当前群。",
+      "initial": "实验数据：样本量 42。\n约定：星期五交初稿。\n待办：补齐验证记录。",
+      "expected_marker": "群材料0"
+    },
+    {
+      "id": "t16",
+      "kind": "task",
+      "task_type": "qq",
+      "text": "查当前群的资料，读取里面的文件，把重点整理为PPT，标题“群材料1”，验证文件后发回当前群。",
+      "initial": "实验数据：样本量 42。\n约定：星期五交初稿。\n待办：补齐验证记录。",
+      "expected_marker": "群材料1"
+    },
+    {
+      "id": "t17",
+      "kind": "task",
+      "task_type": "qq",
+      "text": "查当前群的资料，读取里面的文件，把重点整理为Word，标题“群材料2”，验证文件后发回当前群。",
+      "initial": "实验数据：样本量 42。\n约定：星期五交初稿。\n待办：补齐验证记录。",
+      "expected_marker": "群材料2"
+    },
+    {
+      "id": "t18",
+      "kind": "task",
+      "task_type": "calendar",
+      "text": "查 2026-10-08 已有日程，在没有冲突的20点创建“复盘0”，持续30分钟，写入后查询该天，确认真实记录。",
+      "expected_marker": "复盘0"
+    },
+    {
+      "id": "t19",
+      "kind": "task",
+      "task_type": "calendar",
+      "text": "查 2026-10-08 已有日程，在没有冲突的20点创建“复盘1”，持续30分钟，写入后查询该天，确认真实记录。",
+      "expected_marker": "复盘1"
+    },
+    {
+      "id": "t20",
+      "kind": "task",
+      "task_type": "calendar",
+      "text": "查 2026-10-08 已有日程，在没有冲突的20点创建“复盘2”，持续30分钟，写入后查询该天，确认真实记录。",
+      "expected_marker": "复盘2"
+    }
+  ]
+}

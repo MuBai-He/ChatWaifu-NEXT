@@ -1,0 +1,33 @@
+{
+  "model": "gemini-3.7-flash-high",
+  "scenario_version": "1.1",
+  "scenario_count": 60,
+  "repeats": 3,
+  "trials": 180,
+  "assembly": "behavior and discovery retained from model-trials; tasks rerun after final repairs",
+  "metrics": {
+    "behavior": {
+      "passed": 60,
+      "total": 60
+    },
+    "discovery": {
+      "passed": 60,
+      "total": 60
+    },
+    "task": {
+      "passed": 60,
+      "total": 60
+    }
+  },
+  "response_recall": {
+    "passed": 27,
+    "total": 27
+  },
+  "requests": 854,
+  "reported_total_tokens": 3963024,
+  "median_trial_seconds": 8.3,
+  "p95_trial_seconds": 30.29,
+  "native_qq_receipt": "unverified",
+  "native_calendar": "unverified",
+  "quality_gate_passed": true
+}

@@ -1,0 +1,665 @@
+{
+  "baseline": "7f9bab6e",
+  "branch": "mubai/ningning-autonomous-agent",
+  "uncommitted_source": true,
+  "scope": "changed/new source, contracts, manifests, locks, fixtures and evaluation tools; documentation excluded",
+  "tree_sha256": "e60eb37ed2516540f816bc8031506b1c3f3ea7abde49c220e178898010d92b7e",
+  "files": [
+    {
+      "sha256": "9863acc5d363420439a9b3fd1713b9825c9e84240fc27ff4ab60b28ce473227a",
+      "path": "apps/web/e2e/agent-settings.spec.ts"
+    },
+    {
+      "sha256": "b2a53687543a5f68a64492f6cebd2ef61817a04328f41ed5c2a16a4fab21751b",
+      "path": "apps/web/eslint.config.js"
+    },
+    {
+      "sha256": "4ee514cb9ce4bada79f266dbe9430819ae9ee4062c40608431562fd018715496",
+      "path": "apps/web/package.json"
+    },
+    {
+      "sha256": "3623e504b893f9f1927f8e93da09442d810337f7bf01196ea1b4833b2f06b602",
+      "path": "apps/web/playwright.agent.config.ts"
+    },
+    {
+      "sha256": "61ecb7208335fc2e73b978db934222b306dbd196a27932df91867af12b88ad41",
+      "path": "apps/web/src/features/agent-settings/AgentDevelopmentPanel.tsx"
+    },
+    {
+      "sha256": "d51f9b8ab9bc2289d38cd8b70b0758305425996edfda26b1f778a6621d2dd1dd",
+      "path": "apps/web/src/features/agent-settings/AgentSettingsPage.tsx"
+    },
+    {
+      "sha256": "ea72938518e9c16733aa657fad1436c7c6d2bb365c65c7d5f385688451fdc586",
+      "path": "apps/web/src/features/agent-settings/AgentSettingsSection.test.tsx"
+    },
+    {
+      "sha256": "96f99ef2f2e7f44c052d7925983944adc8fb14a245070cdad534a584160ad556",
+      "path": "apps/web/src/features/agent-settings/AgentSettingsSection.tsx"
+    },
+    {
+      "sha256": "3475a7d843a511232f5fb5226c83006cb02d0a87879fc06fc3980f4c62b05713",
+      "path": "apps/web/src/features/agent-settings/PdfArtifactPreview.tsx"
+    },
+    {
+      "sha256": "b1d09b9b5e2b87e14959beb74faba928351a4db89077d5e1f777fec328c32bb4",
+      "path": "apps/web/src/features/agent-settings/agent-preview.css"
+    },
+    {
+      "sha256": "2af83e1aeabae898bb3096149a3e94f67a350246c4906a90a1244bed18118e71",
+      "path": "apps/web/src/features/channels-settings/ChannelRuntimeSettingsPanel.tsx"
+    },
+    {
+      "sha256": "88dc44c321fa98489ea0fbb3d48a34b4a9dabce951e9804c87b2a0810d6fcdc3",
+      "path": "apps/web/src/features/channels-settings/GroupAutonomyPanel.tsx"
+    },
+    {
+      "sha256": "11b7b837bd124a822659dfa3b0005c97b97ad0c315c93ebe283f21abca5f647a",
+      "path": "apps/web/src/features/channels-settings/QQGroupRoutesPanel.tsx"
+    },
+    {
+      "sha256": "a55dc506094b845f03f269cb59b83281e545f0eca1cf47b325407d04809f94a2",
+      "path": "apps/web/src/features/chat/ChatDemoPage.tsx"
+    },
+    {
+      "sha256": "b39976186d1a7a17e5991fddc6daef2c865e874dd0599b6ae435d65b41e90ec3",
+      "path": "apps/web/src/features/chat/runtime-client/agentClient.ts"
+    },
+    {
+      "sha256": "f690d72acc624822ce97c6a2df3b286e012d0347fbc3cc1e12119aff8c843737",
+      "path": "apps/web/src/features/chat/runtime-client/contracts.ts"
+    },
+    {
+      "sha256": "19ed8b9ca9b5326a3b5a4c6cd2b124824507b06336ba50505466d48aa83a3536",
+      "path": "apps/web/src/features/desktop-settings/CompanionSettingsPanel.tsx"
+    },
+    {
+      "sha256": "03615eed9dcdf66a049752af942b92c6b9c950a3f9f30a787162a265954ed121",
+      "path": "apps/web/src/features/desktop-settings/desktopSettingsRegistry.tsx"
+    },
+    {
+      "sha256": "829d2f5555af48076e74f479d3832a9d943bb78e74670dc1b214627247bad5af",
+      "path": "apps/web/src/product/mountProduct.tsx"
+    },
+    {
+      "sha256": "1676fb40d9c4196454539b0064d4d0d4b1a2f4590fb9c99162b48c17de37d916",
+      "path": "apps/web/src/product/web/WebProductApp.tsx"
+    },
+    {
+      "sha256": "ed6b250fc522c41804008596e6a132d5d04ec6bc7c177cdb444b08cc40e479fe",
+      "path": "apps/web/src/product/web/webSurface.ts"
+    },
+    {
+      "sha256": "cc9efce58d9323c28246b2e4438763c69eeb515c7670d40849288b7198fd47cb",
+      "path": "package.json"
+    },
+    {
+      "sha256": "8f62077d65b29f900dbeacc62a942b9ed56db0ad37eaf0452b5cbeab2d6304bb",
+      "path": "packages/protocol-python/src/chatwaifu_protocol/agent.py"
+    },
+    {
+      "sha256": "72f7430940f5ecd3a2ffe34ad45bb82da4b74fdc59f78cf677619c14e41938c9",
+      "path": "packages/protocol-python/src/chatwaifu_protocol/channel_settings.py"
+    },
+    {
+      "sha256": "133894ec427686afdc674f0623f93c071fbfed8e78a133903377594792a6788c",
+      "path": "packages/protocol-python/src/chatwaifu_protocol/channels.py"
+    },
+    {
+      "sha256": "666b600d665b181c6e38cff5c530dd1c40b0d8cafa12cdc6d3812a3e160b467c",
+      "path": "packages/protocol-python/src/chatwaifu_protocol/events.py"
+    },
+    {
+      "sha256": "a153d9df4d0a27090d1d2bd86ba977d8b8f14d7e7f2389209f663c27ec9f4d54",
+      "path": "packages/protocol-python/src/chatwaifu_protocol/schema_export.py"
+    },
+    {
+      "sha256": "cf0612a187f3c4772cd4a41cb8558c5ef4d56002ed14ebbc93a2b1df74a76161",
+      "path": "packages/protocol-python/tests/test_agent_contracts.py"
+    },
+    {
+      "sha256": "c95bf38c58ef2c9f5a4fdec6f854080aa6ce7bea2ba7fa491d3e52d9d8bf7752",
+      "path": "packages/protocol-typescript/src/generated/domain.ts"
+    },
+    {
+      "sha256": "4d4aa1db4e80792d5922bf41097d1955015d02a1fa6cf385100d451fcbd516e2",
+      "path": "packages/protocol-typescript/src/index.ts"
+    },
+    {
+      "sha256": "a41615ddb5d1cdc4ff1b69f360e6bf85b027e1c6f66cd142a26ed682f69323c1",
+      "path": "packages/protocol-typescript/src/internal/testing/enumParityRegistry.ts"
+    },
+    {
+      "sha256": "9cc1538095e7211047d2a42cc38816ca72f2b4b29c39be0824c22d4c04555fae",
+      "path": "packages/protocol-typescript/src/parsers/agent.ts"
+    },
+    {
+      "sha256": "effdc56fa8191dc3abcd3215cae0bb3ea61b0f132c23e94cd8b9c286c72b0cfe",
+      "path": "packages/protocol-typescript/src/parsers/channelSettings.ts"
+    },
+    {
+      "sha256": "b8a8b9302dd0d0c1d5fe9dbb5291a1202806d4ce0e16d276d44e7adb78a00fc3",
+      "path": "packages/protocol-typescript/src/parsers/protocol.ts"
+    },
+    {
+      "sha256": "03696b4e492445861c7057aa2914209ea220988bd14b3c42f812b8454fac5ea3",
+      "path": "packages/protocol-typescript/tests/agent.contract.test.ts"
+    },
+    {
+      "sha256": "fb80e2b52b1d95ee13b429488f4d2965314b009ec03ec2db24c1fbbb0db34fe2",
+      "path": "pnpm-lock.yaml"
+    },
+    {
+      "sha256": "47a927a677e384977e8fdee3d880b82122cc2d247b12da7a668872bbea3ef5db",
+      "path": "schemas/domain/v1/agent-development-policy.schema.json"
+    },
+    {
+      "sha256": "d7476afdcbd694f305e1802c76790921ca7eed61d11d3acfa5809cc0d9b010ff",
+      "path": "schemas/domain/v1/agent-event.schema.json"
+    },
+    {
+      "sha256": "ff7b15c24fa4261ee0c449f93b49be641ab14ef62a8dfd5b29a3f189ca8b912e",
+      "path": "schemas/domain/v1/agent-task-action.schema.json"
+    },
+    {
+      "sha256": "6a3df59bd265f933f263958b2eacc65d4c734eff74a24b2e012e80ed99356e93",
+      "path": "schemas/domain/v1/agent-task-create.schema.json"
+    },
+    {
+      "sha256": "b1209ee532eb3646e070d3e4a351cab8e7dc25c5cc8f2a4184e9941f765c209b",
+      "path": "schemas/domain/v1/agent-task-journal.schema.json"
+    },
+    {
+      "sha256": "69586c84902b0af918c27d4543ac3f31deac3b99b7f5bd4e590bc6b7fa32d7d6",
+      "path": "schemas/domain/v1/agent-task-page.schema.json"
+    },
+    {
+      "sha256": "47d5b7e4ea1d231470c29345f86a0d01142f7173a7d3ed4258a0d4a8e45c60b3",
+      "path": "schemas/domain/v1/agent-task.schema.json"
+    },
+    {
+      "sha256": "e9100e72e16825ae26646625b306a9885b503b52994540f2fb27bacb1ce95ea2",
+      "path": "schemas/domain/v1/artifact-ref.schema.json"
+    },
+    {
+      "sha256": "74a4c7c6194e63854754ec8de9c4f8d9b9e9c2b13082c08b2b8d20b245277ec4",
+      "path": "schemas/domain/v1/candidate-approval.schema.json"
+    },
+    {
+      "sha256": "8a8dfa175fb2b3ad970bb563c640549c1c5da69487b9ba33fe0506839f6bb89e",
+      "path": "schemas/domain/v1/candidate-create.schema.json"
+    },
+    {
+      "sha256": "43d453853acf06786c475afc28f136eb956a960d5f3e6ceb03158781f818a0aa",
+      "path": "schemas/domain/v1/candidate-feature.schema.json"
+    },
+    {
+      "sha256": "90783d3b363c6eef8dc77905013c60273bdb125cebb7e556d8bef21f27ad2bdc",
+      "path": "schemas/domain/v1/capability-descriptor.schema.json"
+    },
+    {
+      "sha256": "27ec4f0457ce35b1c4d20f3278d596afa9f368370cca6434f703f4aeac08247f",
+      "path": "schemas/domain/v1/capability-detail.schema.json"
+    },
+    {
+      "sha256": "5caca5133cd80dd1a29bafdbd248d8d8d4970e400483cbde686325a6f65b3f90",
+      "path": "schemas/domain/v1/capability-page.schema.json"
+    },
+    {
+      "sha256": "6e06ffb4761916fa2034debf991637bdd03b5f2d35ff9bbf3247bf6b40763f38",
+      "path": "schemas/domain/v1/channel-authorization-snapshot.schema.json"
+    },
+    {
+      "sha256": "2e254dd7d9ac0ee5505d32eee50ac17dd82d6c0dc3ef5291f724bdb9471fd545",
+      "path": "schemas/domain/v1/channel-connection-snapshot.schema.json"
+    },
+    {
+      "sha256": "cab9384abd253970c803429099afa7efe4d3d0294d9e02ea14219a2bf1e87f02",
+      "path": "schemas/domain/v1/channel-delivery-part-snapshot.schema.json"
+    },
+    {
+      "sha256": "d9dd7410ab3e95d519dfcc965c3761c0e83fddbab42ed77b118c684f40772044",
+      "path": "schemas/domain/v1/channel-delivery-plan-snapshot.schema.json"
+    },
+    {
+      "sha256": "4bb7a78c61c6a71d3581d34f71c45e8c1df99f49b2676eb67b2ea560c57bc14b",
+      "path": "schemas/domain/v1/channel-delivery-snapshot.schema.json"
+    },
+    {
+      "sha256": "383b62c2425896bf48b62fc5e596bb573984654cba9f7b22fdcb2377f3efe1f7",
+      "path": "schemas/domain/v1/channel-pairing-snapshot.schema.json"
+    },
+    {
+      "sha256": "f04705e42b6f508367eb36c8b755b4c4483b8698f1ad473b0ff076a28ecbeae9",
+      "path": "schemas/domain/v1/channel-provider-registration.schema.json"
+    },
+    {
+      "sha256": "c02f1eff138a288eb6cc55e3cad615e974f5068b6a18dc9d4aca01751666d1dc",
+      "path": "schemas/domain/v1/channel-runtime-policy.schema.json"
+    },
+    {
+      "sha256": "d39557734c65d6c0f5cb28ae9ef832635f60c14b3f46eb54298af20d2257a072",
+      "path": "schemas/domain/v1/channel-runtime-settings-response.schema.json"
+    },
+    {
+      "sha256": "ee05f096c16747e0239c9bc06adecb1fd4fc53bf600a69db11ff1765033a706b",
+      "path": "schemas/domain/v1/channel-runtime-settings-snapshot.schema.json"
+    },
+    {
+      "sha256": "1d25f90198832faca0e563a0c7ce03025aba6fb9f2621b4700035ee32cf020a9",
+      "path": "schemas/domain/v1/channel-runtime-settings-update.schema.json"
+    },
+    {
+      "sha256": "f9148ab0a9dea1264e4b88f31c114386ed716779d74bea47de6665b15ea3130e",
+      "path": "schemas/domain/v1/decision-record.schema.json"
+    },
+    {
+      "sha256": "35d99888c86f95bf4ee80b95793ff24c6a0801ed6f59e595d2afcc1c617c9211",
+      "path": "schemas/domain/v1/event-envelope.schema.json"
+    },
+    {
+      "sha256": "0eec708d9def6b091ebfe662ab08ac5bd15bf09321d369399e9824c20a2b0a54",
+      "path": "schemas/domain/v1/group-autonomy-policy.schema.json"
+    },
+    {
+      "sha256": "fe563efb6009e1f968a46827f8c8c149dc82f44ccb451f35e358f9519ce2c6e4",
+      "path": "schemas/domain/v1/group-autonomy-update.schema.json"
+    },
+    {
+      "sha256": "04b7fa5ec00f2d6d9cfdce85c032302a1fe23fcf11683732e83a3e236d7b84bc",
+      "path": "schemas/domain/v1/protocol-catalog.schema.json"
+    },
+    {
+      "sha256": "f93b8ad7b98268adb1e291da9b2752af7cf5b5bbe1dc730b79914b6b92383cff",
+      "path": "schemas/domain/v1/task-authorization-update.schema.json"
+    },
+    {
+      "sha256": "236b7c0b4c2d6e82a572c672ecfe0f59266502546319ce5a4b9d312e51cf292e",
+      "path": "schemas/domain/v1/task-authorization.schema.json"
+    },
+    {
+      "sha256": "ad14194c3932834ab35c013c16eddbc8a6f418606207b392795a3a5bb7d08773",
+      "path": "schemas/domain/v1/task-channel-binding.schema.json"
+    },
+    {
+      "sha256": "8afc245183e7a1178dcf2de3aed8116f5387fa8899f0844a2719e524bc396824",
+      "path": "schemas/domain/v1/task-delivery-target.schema.json"
+    },
+    {
+      "sha256": "8f78485deedf47933e6475a36725b129c25e8a1e7495254a1c635be046cf4f11",
+      "path": "schemas/domain/v1/task-reconciliation.schema.json"
+    },
+    {
+      "sha256": "9838c8f22d0bf6f4e1e754a64e3337f180d9e9357d0928e8b51b8f0059acd5a7",
+      "path": "services/runtime/pyproject.toml"
+    },
+    {
+      "sha256": "d9d3413de899f19a8d7566b39db08bbc4f434b9c27fc60425d9575ac9c6c338e",
+      "path": "services/runtime/src/chatwaifu_runtime/agent/artifact_ports.py"
+    },
+    {
+      "sha256": "3bc5f2056a447553a09f31e8cee005df8e0998e019c9f472bfda4a57686b131d",
+      "path": "services/runtime/src/chatwaifu_runtime/agent/artifacts.py"
+    },
+    {
+      "sha256": "bdd4342ec9c67c7da6069c383b101b0682539f034f529032e0be8aeafcda4d0b",
+      "path": "services/runtime/src/chatwaifu_runtime/agent/behavior.py"
+    },
+    {
+      "sha256": "942ace6a4344da92f95d27af357e0694816e52f415969e5da328bd0502ac95c3",
+      "path": "services/runtime/src/chatwaifu_runtime/agent/behavior_ports.py"
+    },
+    {
+      "sha256": "88e6cb8c8822c162c22b6e53fc2c5cb0706f9890ff93be6f7b229a4125d68478",
+      "path": "services/runtime/src/chatwaifu_runtime/agent/capabilities.py"
+    },
+    {
+      "sha256": "80af7dc547a9c8da53d6168e117e7fbd9cce294e3c559c800c64c4ccfba6cd3c",
+      "path": "services/runtime/src/chatwaifu_runtime/agent/development.py"
+    },
+    {
+      "sha256": "d213e9ef756e34a01dc8e3ad91a7702e5d816b6b8f66688ec9b6be798c67dd43",
+      "path": "services/runtime/src/chatwaifu_runtime/agent/development_ports.py"
+    },
+    {
+      "sha256": "945cc9f199bed2a479114f9085e3c38f8cd07d020260362e6193cfeb8850b0ab",
+      "path": "services/runtime/src/chatwaifu_runtime/agent/document_worker.py"
+    },
+    {
+      "sha256": "4184e5ee93097f7054e375903dc34ce06bac7d27cd21d592cbc2361eb8a2a825",
+      "path": "services/runtime/src/chatwaifu_runtime/agent/materials.py"
+    },
+    {
+      "sha256": "c0cb4f6d87278b7f6bc414f98b80a1e1aa49fd7d3f0e86e6fb9ca4929ab281a0",
+      "path": "services/runtime/src/chatwaifu_runtime/agent/structured.py"
+    },
+    {
+      "sha256": "d1755fe3b625c5c086f81cd45413eb82f17bc697d47180a6ca33094536aba716",
+      "path": "services/runtime/src/chatwaifu_runtime/agent/task_ports.py"
+    },
+    {
+      "sha256": "3a959483e180b25b77d84ccd24e0e049e8937660bdd1f17d532115d450d94676",
+      "path": "services/runtime/src/chatwaifu_runtime/agent/task_skills.py"
+    },
+    {
+      "sha256": "18e24982953eb5d113b2ed3f7933782420b18884b77f475561700235419a0a3b",
+      "path": "services/runtime/src/chatwaifu_runtime/agent/tasks.py"
+    },
+    {
+      "sha256": "6ad475917e3051866ea2d312b02bafbca5bf569dbfa7afa4f1aff27a42dafba4",
+      "path": "services/runtime/src/chatwaifu_runtime/agent/tool_calling.py"
+    },
+    {
+      "sha256": "891deeac35628f492ced2759be2596ee5396e3f87d168cdfe28d5961eb2bb5c3",
+      "path": "services/runtime/src/chatwaifu_runtime/agent/verification.py"
+    },
+    {
+      "sha256": "27f7e6c7264f7c57df20d1e09f5d3bdd70fd2d76619b16b98ae0419346b2ec56",
+      "path": "services/runtime/src/chatwaifu_runtime/agent/workspace.py"
+    },
+    {
+      "sha256": "03c63dbf6ea02d397abb261dde1b83c107ee09406445659bc7cf43f3be64c0fc",
+      "path": "services/runtime/src/chatwaifu_runtime/api/agent_routes.py"
+    },
+    {
+      "sha256": "cf5a5c54a18fca4fb410b6cbdca9a4f1dce01532c885c511ff9e0946f6015b0e",
+      "path": "services/runtime/src/chatwaifu_runtime/bootstrap/container.py"
+    },
+    {
+      "sha256": "05a579197f93534a8a5d4c3012b676abe460899a6fc8504c400a5e1d9d51cb89",
+      "path": "services/runtime/src/chatwaifu_runtime/companion/activity.py"
+    },
+    {
+      "sha256": "d184d5341de5ee3dc15e619455a7cb135cfd646fb1304cff5546c8d2dbdf9b47",
+      "path": "services/runtime/src/chatwaifu_runtime/companion/ambient.py"
+    },
+    {
+      "sha256": "9bf6235752fcf8d8b014d24f6503722e1d5eac71115a869f2e9a4c5a00e02741",
+      "path": "services/runtime/src/chatwaifu_runtime/companion/models.py"
+    },
+    {
+      "sha256": "788c84d5c95d0332119f3bcbb5d7b6a5f6ee0d4ac64d71ee25a2f2351de91e1b",
+      "path": "services/runtime/src/chatwaifu_runtime/companion/settings.py"
+    },
+    {
+      "sha256": "0019b548acbfb2cc74c7d88072f74b1e8091aab05137fbc316fb657a5ae4dda2",
+      "path": "services/runtime/src/chatwaifu_runtime/conversation/models.py"
+    },
+    {
+      "sha256": "f173fe93c198469bb025cc07639e0045b62e1e88613d5eeabe716230a348d4fe",
+      "path": "services/runtime/src/chatwaifu_runtime/conversation/service.py"
+    },
+    {
+      "sha256": "5284a116f6b157f5ea9ae8662a50d5d3fd413d420596f1ed59860659e88efc15",
+      "path": "services/runtime/src/chatwaifu_runtime/external_channels/adapters/qq_napcat/client.py"
+    },
+    {
+      "sha256": "a329246fd96bc6376f832f38eaf8d079cee051b54c5242470f3e5646ef8f0fd4",
+      "path": "services/runtime/src/chatwaifu_runtime/external_channels/adapters/qq_napcat/delivery.py"
+    },
+    {
+      "sha256": "8191ddf0382e208980c4fb76b77fe5750cc7c8ecaf2ee20b342a6475e15e88fe",
+      "path": "services/runtime/src/chatwaifu_runtime/external_channels/adapters/qq_napcat/management.py"
+    },
+    {
+      "sha256": "c96a306c9005fbc109dfcb60b3b012c58dac72472c34c95c2a81b64cf6dc58ef",
+      "path": "services/runtime/src/chatwaifu_runtime/external_channels/adapters/qq_napcat/registration.py"
+    },
+    {
+      "sha256": "22274e1c34536766dc2077d255c833a9cccdb5b6d94b102ab91fa590a5fd54db",
+      "path": "services/runtime/src/chatwaifu_runtime/external_channels/autonomy.py"
+    },
+    {
+      "sha256": "e82187849bbc9ba524f694c42d9a090a989ca75c86e30bd9561caddb37ac2978",
+      "path": "services/runtime/src/chatwaifu_runtime/external_channels/files.py"
+    },
+    {
+      "sha256": "f9db35c650dc2e5c1c826a203e93c98c53e364b92d42f127408349752f2c9cb1",
+      "path": "services/runtime/src/chatwaifu_runtime/external_channels/group_memory.py"
+    },
+    {
+      "sha256": "102ee62ba94b2c782f901027cde9e22375ef5853b144033401da045678838c2b",
+      "path": "services/runtime/src/chatwaifu_runtime/external_channels/groups.py"
+    },
+    {
+      "sha256": "04a76aabf0079275e02f234f1e63a2bc1e5b69f1802747dd30754d9b77059e42",
+      "path": "services/runtime/src/chatwaifu_runtime/external_channels/models.py"
+    },
+    {
+      "sha256": "24e14e8a894dae5b4540503cc206e1213ebb26a56490bee4927a4c858f831b6d",
+      "path": "services/runtime/src/chatwaifu_runtime/external_channels/ports.py"
+    },
+    {
+      "sha256": "64902cdff35bf8aad3d00d3583a92f62f66c9170097b0574a7a518cce4b2507e",
+      "path": "services/runtime/src/chatwaifu_runtime/external_channels/qq_capabilities.py"
+    },
+    {
+      "sha256": "c816a4179b9244fe6c769d64747a2af806c0a43d871e92a01fdba1177a1b76bb",
+      "path": "services/runtime/src/chatwaifu_runtime/external_channels/scheduler.py"
+    },
+    {
+      "sha256": "b85055fd9582edb3118f1a3d2d97dd4a58a794804c80af07b5b7a0ef54224cca",
+      "path": "services/runtime/src/chatwaifu_runtime/external_channels/service.py"
+    },
+    {
+      "sha256": "7e531bf8fd5280d84d75e60031ecaa5f8b983a92b4feb75c3fe3bb7ad8b6461e",
+      "path": "services/runtime/src/chatwaifu_runtime/main.py"
+    },
+    {
+      "sha256": "9c7427c8e7cb186a87a555d837f98b8702537a507f2b84886daeaa6dd0b554db",
+      "path": "services/runtime/src/chatwaifu_runtime/memory/service.py"
+    },
+    {
+      "sha256": "6a38222b048541a25f875b2d03745db75e8b4bc2ec63890fa3f2151d2228417a",
+      "path": "services/runtime/src/chatwaifu_runtime/persistence/agent_delivery_migration.py"
+    },
+    {
+      "sha256": "6fb4a259c80fc32878a228ecf16227a0250ccefa2091fb65da85ebcfe8d172b2",
+      "path": "services/runtime/src/chatwaifu_runtime/persistence/migrations.py"
+    },
+    {
+      "sha256": "430f3e239e1e49819d12e503dd789e644b7ee18af3366644cf7f4d9abb8e8188",
+      "path": "services/runtime/src/chatwaifu_runtime/persistence/sqlite_agent_artifacts.py"
+    },
+    {
+      "sha256": "8e0ff49990c71bf36a2469bd460b8509c66bfe5797d913b8dd2178e390d5a239",
+      "path": "services/runtime/src/chatwaifu_runtime/persistence/sqlite_agent_behavior.py"
+    },
+    {
+      "sha256": "7cbd4466794fd6259cef39dcc053d790e8b4a6eb2b925b7c14f90e8d184f1e90",
+      "path": "services/runtime/src/chatwaifu_runtime/persistence/sqlite_agent_development.py"
+    },
+    {
+      "sha256": "567d18dc5bf6849dddc5fa6f1dc0837694603449e1101fd392baa0d714cc0cb0",
+      "path": "services/runtime/src/chatwaifu_runtime/persistence/sqlite_agent_tasks.py"
+    },
+    {
+      "sha256": "96bee9b0f6c82794e8a6979be3c9b35e1332c4f90394c2f4f9ee8842dbaa5058",
+      "path": "services/runtime/src/chatwaifu_runtime/persistence/sqlite_external_channels.py"
+    },
+    {
+      "sha256": "9c51e1e48dfc74c50d0fbe51d5280bbbd22a200c1e9f406c2c78bd8a502dbb99",
+      "path": "services/runtime/src/chatwaifu_runtime/persistence/sqlite_memory_repository.py"
+    },
+    {
+      "sha256": "98bef3a2003d8bce6467fa982abf64cab311cbcd17b9b404cf948b31c1ba7715",
+      "path": "services/runtime/src/chatwaifu_runtime/personal_assistant/agenda_skill.py"
+    },
+    {
+      "sha256": "d9ab32c57bcba8595e8270876a434e4b9ced63b997fc4e6918b64ac7417cd759",
+      "path": "services/runtime/src/chatwaifu_runtime/personal_assistant/integration.py"
+    },
+    {
+      "sha256": "a890abdd5208de856a494581a34aa802064d2b7bd20bf213d5134fa68d3b0879",
+      "path": "services/runtime/src/chatwaifu_runtime/personal_assistant/skill.py"
+    },
+    {
+      "sha256": "75aab3daf8963157473f62faaa7c3c08fc27f4804e018ac253382ab03060f078",
+      "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/adapters.py"
+    },
+    {
+      "sha256": "e68bbf12b574d4e6cca93a97021b2e213d82af6f2927dd1c593fe6b1bad22c7c",
+      "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/agent_router.py"
+    },
+    {
+      "sha256": "af86075f90dd45e47cf3c83f211cc065727d8e43a554390e8688a522b7a5977b",
+      "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/audit.py"
+    },
+    {
+      "sha256": "a39cefe04d7b333750f4eb38099d4b119a277e5c72710c0e57a8395bbcb65eef",
+      "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/execution_context.py"
+    },
+    {
+      "sha256": "8bb73d0637e4be3c183d4017627daa4d9f5046fc4937f25cabe9e705f35b6bca",
+      "path": "services/runtime/src/chatwaifu_runtime/runtime_skills/service.py"
+    },
+    {
+      "sha256": "ce94a7062045fa3d7241985aa1a3ff162fcf4ae6e44c418987e00b2c8b311096",
+      "path": "services/runtime/src/chatwaifu_runtime/sessions/service.py"
+    },
+    {
+      "sha256": "42d9c579457fcfd0d5e21ac0c6cfedb95d990ad2ce163d15dbf573fd665d7823",
+      "path": "services/runtime/tests/external_channels/adapters/qq_napcat/test_file_stream.py"
+    },
+    {
+      "sha256": "1b524eea09199b0508302ff08828b263547bb4b11bb7de98e226234b453f2424",
+      "path": "services/runtime/tests/test_agent_api.py"
+    },
+    {
+      "sha256": "a95683ff06a8f8683da9e05694cb417bfc5a05c8bbae269d16f8781a0efaab81",
+      "path": "services/runtime/tests/test_agent_autonomy.py"
+    },
+    {
+      "sha256": "45dce15e7ef09b099af333c802eeaa1d8835e46ae23be8cc611aad63b4d1dea4",
+      "path": "services/runtime/tests/test_agent_capabilities.py"
+    },
+    {
+      "sha256": "e866d9bb091770bea40c7397cd03b6d66368133ed353c449f51199a4aece7e56",
+      "path": "services/runtime/tests/test_agent_controls.py"
+    },
+    {
+      "sha256": "007ec35814f9734385bedb187edcdb360a6a181f22a543500aa1ed4cfce1a86e",
+      "path": "services/runtime/tests/test_agent_development.py"
+    },
+    {
+      "sha256": "8c15a23df40cabaabbaeb75c7259117d6d1c11ce6874f4e3196950ec62f6bb39",
+      "path": "services/runtime/tests/test_agent_qq_discovery.py"
+    },
+    {
+      "sha256": "b83d135dc95d050969f478d356fd8e38a9f724c747b60ebbebb2729df39c983c",
+      "path": "services/runtime/tests/test_agent_tasks.py"
+    },
+    {
+      "sha256": "27e3b2f93d0b1400b4de60360e999b7ef03c2263e4b0b898120aa1075a718e88",
+      "path": "services/runtime/tests/test_agent_workspace.py"
+    },
+    {
+      "sha256": "7ced7886377a699d091124cc67a07211b4c3765b00eca37a4a265734334fa5a5",
+      "path": "services/runtime/tests/test_conversation_local_content.py"
+    },
+    {
+      "sha256": "58e2bea7c4890eed9863e04ba2117ce40ff565c58892b3799ac44fc6997f854c",
+      "path": "services/runtime/tests/test_conversation_source_context.py"
+    },
+    {
+      "sha256": "ae4b9e6822763c4962d74ccc584cb93ec70d95320f866af8c99a519d2b9ece27",
+      "path": "services/runtime/tests/test_qq_channels.py"
+    },
+    {
+      "sha256": "0fa856b876d2bd6d4a0bf56107999d53eb429d2dc7fe89bbb92fa7d437bdf97d",
+      "path": "services/runtime/tests/test_qq_group_runtime.py"
+    },
+    {
+      "sha256": "3fb3639b11fd38ffc6ff6d4e2a989069a7c4332a0ca64e4ed756476b4be71547",
+      "path": "skills/builtin/agent-develop/SKILL.md"
+    },
+    {
+      "sha256": "4713e98f09c9c9a2ed71b895500bcaf92f897a03507fca822fb5327b0391b38f",
+      "path": "skills/builtin/agent-develop/chatwaifu.yaml"
+    },
+    {
+      "sha256": "b6692e76b13c2e8aa59c10d8d5fcaa96c82dd4c2cafb79ab8b012870094f896f",
+      "path": "skills/builtin/agent-tasks/SKILL.md"
+    },
+    {
+      "sha256": "44360a713191c1a84201ea8ee3cf05101cb24a670eecc658bb4b7ad81337837f",
+      "path": "skills/builtin/agent-tasks/chatwaifu.yaml"
+    },
+    {
+      "sha256": "c6491d9199cce0081c146c00d2bf73244f2f5758ca5aa215a539274ddcaa525d",
+      "path": "skills/builtin/channel-file/SKILL.md"
+    },
+    {
+      "sha256": "efe704d5ce34603d4cd0fe769dc0ef9a406a494b7af2b52b570891444d38c560",
+      "path": "skills/builtin/channel-file/chatwaifu.yaml"
+    },
+    {
+      "sha256": "9700fe7ec6ebbe1e1ee993ed5be2fbb216fc3e4a5f08bf4a84eb413871803e99",
+      "path": "skills/builtin/documents/SKILL.md"
+    },
+    {
+      "sha256": "09a494eaba43af2636ae74f1487599eebcc3d98793c405db3b877092e1bf818c",
+      "path": "skills/builtin/documents/chatwaifu.yaml"
+    },
+    {
+      "sha256": "ff272186a6c340f887d8a6b978cc05966f1e65caef2726e4130ef5694d6445d1",
+      "path": "skills/builtin/documents/generate-ppt.mjs"
+    },
+    {
+      "sha256": "5d8b6196e5733bc8c9343895b4994fdd4c03b50f9aa023229fa5a6e4e56ac974",
+      "path": "skills/builtin/qq-scene/SKILL.md"
+    },
+    {
+      "sha256": "62fb4175d2a11293695aed9f6bf0c9f4f50406e1d34f327e14745911749d90a4",
+      "path": "skills/builtin/qq-scene/api-catalog.json"
+    },
+    {
+      "sha256": "23b23e7f9519cd22b8807dced976fb1da5893261acde9b137d5efe7842e873bb",
+      "path": "skills/builtin/qq-scene/chatwaifu.yaml"
+    },
+    {
+      "sha256": "845b06ec5e564a3df79c096188ba0c26cce8b3d44a6543eb4d00846ee2d0e361",
+      "path": "skills/builtin/workspace/SKILL.md"
+    },
+    {
+      "sha256": "f09b843054b2ad3917cc0627d834152183bb9d24133fbe0d08dc9c993c5547cc",
+      "path": "skills/builtin/workspace/chatwaifu.yaml"
+    },
+    {
+      "sha256": "f9d06ce472eeb49087eb499d0a7878dd7e0cc3c65f06d74ef0f3d669001d9b85",
+      "path": "tests/fixtures/agent/autonomous_edge_scenarios.json"
+    },
+    {
+      "sha256": "5d91fc30690db9cb6f8368c367ab177941d5f0b07e45071901dd3352ff54c6a7",
+      "path": "tests/fixtures/agent/autonomous_scenarios.json"
+    },
+    {
+      "sha256": "8152aa01ca2d64be43eb25eb34a432c82d5a1522239991df5c282c472942b6df",
+      "path": "tests/fixtures/protocol/v1/agent-contracts.json"
+    },
+    {
+      "sha256": "41280c13a510628236f9f5f83fb0d1ba867cea8884bd26deba6bfc234b66c402",
+      "path": "tests/fixtures/protocol/v1/channel-runtime-settings.json"
+    },
+    {
+      "sha256": "79c7a1b9c421f9054e1e2e62e26b834ec5666e62169103c70e7f3c4bcedad876",
+      "path": "tests/fixtures/protocol/v1/python-generic-core-event-types.json"
+    },
+    {
+      "sha256": "7fb5df2623fd38e6f927649c05b8658b6bd6f16317cf7e9fa9d507c2504ba0e2",
+      "path": "tools/agent/browser_fixture_runtime.py"
+    },
+    {
+      "sha256": "def456762118b6cd2ccd88e76e3617696e5f55e4d6bfab04f58c37facf98ac2c",
+      "path": "tools/agent/evaluate_autonomy.py"
+    },
+    {
+      "sha256": "1c4821b694961154a23967a3c6a26f85aef60bdc745a340055f72e3b9b256a7c",
+      "path": "tools/agent/import_napcat_catalog.py"
+    },
+    {
+      "sha256": "a3ff07a5509b171e6df06f5d5a73475ce3215c9081ce71cab0db2e5302728531",
+      "path": "uv.lock"
+    }
+  ]
+}

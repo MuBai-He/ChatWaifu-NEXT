@@ -1,0 +1,62 @@
+[WebServer] (node:12817) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] $ vite --mode web --host 127.0.0.1 --port 4186 --strictPort
+[WebServer] (node:12829) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:12851) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] $ vite --mode desktop --host 127.0.0.1 --port 4187 --strictPort
+[WebServer] (node:12863) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:12869) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [agent-web] › e2e/agent-settings.spec.ts:8:1 › real Agent API discovery, task grants, cancellation, immutable download and preview (6.5s)
+(node:12910) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 [agent-desktop] › e2e/agent-settings.spec.ts:8:1 › real Agent API discovery, task grants, cancellation, immutable download and preview (9.3s)
+
+
+  1) [agent-desktop] › e2e/agent-settings.spec.ts:8:1 › real Agent API discovery, task grants, cancellation, immutable download and preview 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  getByTitle('文档预览', { exact: true })
+    Expected: 0
+    Received: 1
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 5000ms
+      - waiting for getByTitle('文档预览', { exact: true })
+        14 × locator resolved to 1 element
+           - unexpected value "1"
+
+
+      74 |   });
+      75 |   await page.getByRole("button", { name: "关闭预览", exact: true }).click();
+    > 76 |   await expect(page.getByTitle("文档预览", { exact: true })).toHaveCount(0);
+         |                                                          ^
+      77 |   await page.reload();
+      78 |   if (desktop) await page.getByRole("button", { name: /能力与任务/ }).click();
+      79 |   await expect(
+        at /Users/mubai/.codex/worktrees/ningning-autonomous-agent/CW2/apps/web/e2e/agent-settings.spec.ts:76:58
+
+    Error Context: test-results/agent-settings-real-Agent--775d5-utable-download-and-preview-agent-desktop/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/agent-settings-real-Agent--775d5-utable-download-and-preview-agent-desktop/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/agent-settings-real-Agent--775d5-utable-download-and-preview-agent-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [agent-desktop] › e2e/agent-settings.spec.ts:8:1 › real Agent API discovery, task grants, cancellation, immutable download and preview 
+  1 passed (18.8s)
+undefined
+/Users/mubai/.codex/worktrees/ningning-autonomous-agent/CW2/apps/web:
+[ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL] Command failed with exit code 1: playwright test --config playwright.agent.config.ts

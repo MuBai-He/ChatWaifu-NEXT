@@ -1,0 +1,27 @@
+$ tsc -b && vite build --mode desktop
+vite v8.2.2 building client environment for desktop...
+transforming...
+✓ 2144 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/desktop/index.html                                  0.66 kB │ gzip:   0.42 kB
+dist/desktop/chatwaifu-product.json                      7.60 kB │ gzip:   1.34 kB
+dist/desktop/assets/pdf.worker.min-CjEcRF4W.mjs      1,264.34 kB
+dist/desktop/assets/PdfArtifactPreview-iAZDpt_6.css      0.86 kB │ gzip:   0.43 kB
+dist/desktop/assets/index-DkGAALlT.css                 113.18 kB │ gzip:  20.71 kB
+dist/desktop/assets/dist-js-DgoFD9i-.js                  0.16 kB │ gzip:   0.15 kB
+dist/desktop/assets/PdfArtifactPreview-DmMPBJK1.js     432.09 kB │ gzip: 130.08 kB
+dist/desktop/assets/index-BP_ZAfel.js                  854.40 kB │ gzip: 249.01 kB
+
+[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0m../../node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/core.js is dynamically imported by src/features/chat/runtimeEndpoint.ts, src/features/connection/RuntimeConnectionGate.tsx, src/features/desktop-pet/DesktopPetPage.tsx, src/features/desktop-pet/useDesktopPointerPresence.ts, src/features/desktop-pet/useDesktopPreferences.ts, ... but also statically imported by src/features/desktop-settings/PersonalAssistantSettingsSection.tsx, src/features/personal-assistant/organizer.ts, ../../node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/dpi.js, ../../node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/event.js, ../../node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/image.js, ..., dynamic import will not move module into another chunk.
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0m../../node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/event.js is dynamically imported by src/features/chat/runtimeEndpoint.ts, src/features/connection/RuntimeConnectionGate.tsx, src/features/desktop-pet/useDesktopPreferences.ts, src/features/desktop-settings/CompanionSettingsPanel.tsx but also statically imported by ../../node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/window.js, dynamic import will not move module into another chunk.
+
+[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0m../../node_modules/.pnpm/@tauri-apps+api@2.11.1/node_modules/@tauri-apps/api/window.js is dynamically imported by src/features/desktop-pet/useDesktopPointerPresence.ts but also statically imported by src/features/desktop-pet/useDesktopAvatarDrag.ts, src/product/desktop/desktopSurface.ts, dynamic import will not move module into another chunk.
+
+✓ built in 205ms

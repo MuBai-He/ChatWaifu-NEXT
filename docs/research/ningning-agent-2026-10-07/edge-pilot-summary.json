@@ -1,0 +1,30 @@
+{
+  "model": "gemini-3.7-flash-high",
+  "repeats": 3,
+  "scenario_count": 11,
+  "native_qq_receipt": "unverified",
+  "native_calendar": "unverified",
+  "metrics": {
+    "candidate": {
+      "passed": 6,
+      "total": 9
+    },
+    "discovery": {
+      "passed": 12,
+      "total": 12
+    },
+    "behavior": {
+      "passed": 0,
+      "total": 0
+    },
+    "task": {
+      "passed": 5,
+      "total": 12
+    }
+  },
+  "response_recall": {
+    "passed": 0,
+    "total": 0
+  },
+  "quality_gate_passed": false
+}

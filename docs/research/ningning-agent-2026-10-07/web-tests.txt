@@ -1,0 +1,17 @@
+$ vitest run
+
+ RUN  v4.1.11 /Users/mubai/.codex/worktrees/ningning-autonomous-agent/CW2/apps/web
+
+(node:15067) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+(node:15107) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15139) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  65 passed (65)
+      Tests  456 passed (456)
+   Start at  09:18:45
+   Duration  9.12s (transform 3.49s, setup 0ms, import 13.83s, tests 15.30s, environment 39.96s)
+
