@@ -1,0 +1,68 @@
+{
+  "cutover": {
+    "deployed": true,
+    "schema": 46,
+    "old_tables_preserved": 83,
+    "old_rows_preserved": 7020,
+    "source": "/home/mubai/chatwaifu-server/releases/ningning-agent-20261007-e60eb37/source",
+    "web": "/home/mubai/chatwaifu-server/releases/ningning-agent-20261007-e60eb37/web",
+    "runtime_pid": "2285761",
+    "health": "ok"
+  },
+  "verification": {
+    "protected_configuration_unchanged": true,
+    "models_unchanged": true,
+    "existing_containers_unchanged": 13,
+    "other_service_pids_unchanged": true,
+    "owner_session_reused": true,
+    "existing_group_routes_revalidated": 0,
+    "channels": [
+      {
+        "provider": "weixin_ilink",
+        "status": "error"
+      },
+      {
+        "provider": "qq_napcat",
+        "status": "ready"
+      },
+      {
+        "provider": "weixin_ilink",
+        "status": "ready"
+      }
+    ],
+    "channel_states_preserved": true,
+    "capability_count": 202,
+    "document_capabilities": [
+      {
+        "id": "documents.create/powerpoint",
+        "status": "authorization_required"
+      },
+      {
+        "id": "documents.create/word",
+        "status": "authorization_required"
+      }
+    ],
+    "tasks_api": 0,
+    "artifacts_api": 0,
+    "development_enabled": false,
+    "companion_mode": "legacy",
+    "group_autonomy_modes": ["off", "off"],
+    "frontend_files_verified": 10,
+    "pdf_worker_mime": "application/javascript",
+    "health": "ok",
+    "https_health": "ok"
+  },
+  "renderer_cancellation": {
+    "cancelled": true,
+    "cleanup_seconds": 0.214,
+    "remaining_containers": 0
+  },
+  "browser": {
+    "agent_page": true,
+    "document_capabilities_visible": true,
+    "channels_page": true,
+    "page_errors": 0,
+    "agent_api_failures": 0
+  },
+  "validation_scope": "server runtime and browser; no real QQ send or Calendar write"
+}

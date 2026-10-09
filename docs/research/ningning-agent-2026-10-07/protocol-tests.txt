@@ -1,0 +1,10 @@
+$ vitest run
+
+ RUN  v4.1.11 /Users/mubai/.codex/worktrees/ningning-autonomous-agent/CW2/packages/protocol-typescript
+
+
+ Test Files  7 passed (7)
+      Tests  127 passed (127)
+   Start at  08:11:43
+   Duration  618ms (transform 215ms, setup 0ms, import 1.98s, tests 255ms, environment 0ms)
+

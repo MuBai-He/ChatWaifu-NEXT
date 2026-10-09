@@ -1,0 +1,96 @@
+........................................................................ [  1%]
+........................................................................ [  3%]
+........................................................................ [  5%]
+........................................................................ [  7%]
+........................................................................ [  9%]
+........................................................................ [ 10%]
+........................................................................ [ 12%]
+........................................................................ [ 14%]
+........................................................................ [ 16%]
+........................................................................ [ 18%]
+........................................................................ [ 20%]
+........................................................................ [ 21%]
+........................................................................ [ 23%]
+........................................................................ [ 25%]
+........................................................................ [ 27%]
+........................................................................ [ 29%]
+........................................................................ [ 31%]
+........................................................................ [ 32%]
+........................................................................ [ 34%]
+........................................................................ [ 36%]
+........................................................................ [ 38%]
+........................................................................ [ 40%]
+........................................................................ [ 42%]
+.s...................................................................... [ 43%]
+........................................................................ [ 45%]
+........................................................................ [ 47%]
+........................................................................ [ 49%]
+........................................................................ [ 51%]
+........................................................................ [ 53%]
+........................................................................ [ 54%]
+........................................................................ [ 56%]
+........................................................................ [ 58%]
+........................................................................ [ 60%]
+........................................................................ [ 62%]
+........................................................................ [ 64%]
+........................................................................ [ 65%]
+........................................................................ [ 67%]
+........................................................................ [ 69%]
+........................................................................ [ 71%]
+........................................................................ [ 73%]
+........................................................................ [ 74%]
+........................................................................ [ 76%]
+........................................................................ [ 78%]
+........................................................................ [ 80%]
+........................................................................ [ 82%]
+........................................................................ [ 84%]
+........................................................................ [ 85%]
+........................................................................ [ 87%]
+........................................................................ [ 89%]
+.......................ssssssssss....................................... [ 91%]
+..................................s......ss............................. [ 93%]
+........................................................................ [ 95%]
+.................ssss.ssssssssssssssssss................................ [ 96%]
+...................................................................sssss [ 98%]
+.........sss.ss..................................                        [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/pipecat/audio/utils.py:14
+  /Users/mubai/.codex/worktrees/ningning-autonomous-agent/CW2/.venv/lib/python3.12/site-packages/pipecat/audio/utils.py:14: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13
+    import audioop
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] services/runtime/tests/test_database.py:479: validates Windows TerminateProcess recovery
+SKIPPED [1] services/runtime/tests/test_windows_appcontainer_acceptance.py:460: Windows AppContainer acceptance requires a real Windows host
+SKIPPED [1] services/runtime/tests/test_windows_appcontainer_acceptance.py:492: Windows AppContainer acceptance requires a real Windows host
+SKIPPED [1] services/runtime/tests/test_windows_appcontainer_acceptance.py:528: Windows AppContainer acceptance requires a real Windows host
+SKIPPED [1] services/runtime/tests/test_windows_appcontainer_acceptance.py:602: Windows AppContainer acceptance requires a real Windows host
+SKIPPED [1] services/runtime/tests/test_windows_appcontainer_acceptance.py:717: Windows AppContainer acceptance requires a real Windows host
+SKIPPED [1] services/runtime/tests/test_windows_appcontainer_acceptance.py:762: Windows AppContainer acceptance requires a real Windows host
+SKIPPED [2] services/runtime/tests/test_windows_appcontainer_acceptance.py:806: Windows AppContainer acceptance requires a real Windows host
+SKIPPED [1] services/runtime/tests/test_windows_appcontainer_acceptance.py:834: Windows AppContainer acceptance requires a real Windows host
+SKIPPED [1] services/runtime/tests/test_windows_appcontainer_acceptance.py:887: Windows AppContainer acceptance requires a real Windows host
+SKIPPED [1] tools/tests/test_ci_release_gates.py:124: requires Windows PowerShell
+SKIPPED [1] tools/tests/test_desktop_tauri_config.py:264: PowerShell is unavailable
+SKIPPED [1] tools/tests/test_desktop_tauri_config.py:498: PowerShell is unavailable
+SKIPPED [1] tools/tests/test_recover_runtime_database.py:280: requires Windows hard-link enumeration
+SKIPPED [1] tools/tests/test_recover_runtime_database.py:321: requires Windows path policy
+SKIPPED [1] tools/tests/test_recover_runtime_database.py:357: requires Win32 file sharing
+SKIPPED [1] tools/tests/test_recover_runtime_database.py:378: requires Windows hard-link enumeration
+SKIPPED [1] tools/tests/test_recover_runtime_database.py:432: requires Win32 file sharing
+SKIPPED [4] tools/tests/test_recover_runtime_database.py:471: requires Windows path policy
+SKIPPED [6] tools/tests/test_recover_runtime_database.py:496: requires Windows junctions
+SKIPPED [1] tools/tests/test_recover_runtime_database.py:546: requires Windows junctions
+SKIPPED [3] tools/tests/test_recover_runtime_database.py:591: requires loopback Windows UNC
+SKIPPED [2] tools/tests/test_recover_runtime_database.py:628: requires Windows 8.3 names
+SKIPPED [1] tools/tests/test_recover_runtime_database.py:665: requires Windows hard-link enumeration
+SKIPPED [1] tools/tests/test_windows_worker_pack_builders.py:147: requires the Windows x64 install helper
+SKIPPED [1] tools/tests/test_windows_worker_pack_builders.py:214: requires Windows path handles
+SKIPPED [1] tools/tests/test_windows_worker_pack_builders.py:280: requires Windows junctions
+SKIPPED [1] tools/tests/test_windows_worker_pack_builders.py:324: requires Windows PowerShell
+SKIPPED [1] tools/tests/test_windows_worker_pack_builders.py:432: requires Windows PowerShell
+SKIPPED [1] tools/tests/test_worker_packs.py:232: requires Win32 extended-length paths
+SKIPPED [1] tools/tests/test_worker_packs.py:264: requires Win32 extended-length paths
+SKIPPED [1] tools/tests/test_worker_packs.py:299: requires Win32 extended-length paths
+SKIPPED [2] tools/tests/test_worker_packs.py:337: requires Windows path namespaces
+3891 passed, 46 skipped, 1 warning in 362.56s (0:06:02)

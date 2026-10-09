@@ -1,0 +1,21 @@
+[WebServer] (node:15296) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] $ vite --mode web --host 127.0.0.1 --port 4186 --strictPort
+[WebServer] (node:15308) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:15329) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] $ vite --mode desktop --host 127.0.0.1 --port 4187 --strictPort
+[WebServer] (node:15347) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:15362) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [agent-web] › e2e/agent-settings.spec.ts:8:1 › real Agent API discovery, task grants, cancellation, immutable download and preview (6.8s)
+(node:15414) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  2 [agent-desktop] › e2e/agent-settings.spec.ts:8:1 › real Agent API discovery, task grants, cancellation, immutable download and preview (6.8s)
+
+  2 passed (16.1s)
