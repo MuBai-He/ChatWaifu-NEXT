@@ -217,7 +217,7 @@ async def test_cancelled_transport_observer_preserves_cleanup_and_pending_rpc(du
             await asyncio.gather(pending, return_exceptions=True)
 
 
-@pytest.mark.parametrize("count", [2, 32])
+@pytest.mark.parametrize("count", [2, 32, 120, 2000])
 async def test_group_member_array_excludes_self_and_has_no_freshness_claim(count: int) -> None:
     actions: list[str] = []
 
@@ -240,6 +240,8 @@ async def test_group_member_array_excludes_self_and_has_no_freshness_claim(count
         assert audience.account_key == ACCOUNT and audience.group_id == GROUP
         assert audience.member_ids == tuple(str(10002 + i) for i in range(count))
         assert ACCOUNT not in audience.member_ids and not hasattr(audience, "fresh")
+        assert all(name == "同名" for name in audience.display_names.values())
+        assert len(audience.display_names) == count
         assert client._pending == {}
     assert actions == ["get_login_info", "get_group_member_list", "get_login_info"]
 
@@ -255,7 +257,7 @@ async def test_group_member_array_excludes_self_and_has_no_freshness_claim(count
         [True],
         [],
         members(1),
-        members(33),
+        members(2001),
         [{"group_id": GROUP, "user_id": "10002"}, {"group_id": GROUP, "user_id": "10003"}],
         [*members(), {"group_id": GROUP, "user_id": "10002"}],
         [*members(), {"group_id": "20002", "user_id": "10004"}],

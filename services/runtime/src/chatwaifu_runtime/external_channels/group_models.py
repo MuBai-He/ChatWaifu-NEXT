@@ -5,12 +5,13 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import cast
 from uuid import UUID
 
 from chatwaifu_protocol.channel_groups import (
+    MAX_GROUP_MEMBERS,
     ChannelGroupDeliveryTarget,
     ChannelGroupPauseReason,
 )
@@ -45,6 +46,13 @@ def strict_bool(value: object) -> bool:
 
 
 GROUP_MENTION_ONLY_TEXT = "[仅 @ 角色]"
+
+
+@dataclass(frozen=True, slots=True)
+class ChannelGroupAudienceDetails:
+    account_key: str
+    member_ids: tuple[str, ...]
+    display_names: dict[str, str] = field(default_factory=dict[str, str])
 
 
 @dataclass(frozen=True, slots=True)
@@ -142,8 +150,8 @@ class ChannelGroupAudienceObservation:
         revision(self.connection_revision)
         qq_id(self.account_key)
         qq_id(self.group_id)
-        if type(self.member_ids) is not tuple or not 2 <= len(self.member_ids) <= 32:
-            raise ValueError("group audience must contain 2..32 members")
+        if type(self.member_ids) is not tuple or not 2 <= len(self.member_ids) <= MAX_GROUP_MEMBERS:
+            raise ValueError("group audience must contain 2..2000 members")
         if len(set(self.member_ids)) != len(self.member_ids) or self.account_key in self.member_ids:
             raise ValueError("audience excludes duplicate and self identities")
         for member in self.member_ids:
@@ -173,8 +181,8 @@ class ChannelGroupRouteMember:
 
 
 def audience_fingerprint(members: tuple[ChannelGroupRouteMember, ...]) -> str:
-    if type(members) is not tuple or not 2 <= len(members) <= 32:
-        raise ValueError("group audience must contain 2..32 members")
+    if type(members) is not tuple or not 2 <= len(members) <= MAX_GROUP_MEMBERS:
+        raise ValueError("group audience must contain 2..2000 members")
     if len({m.sender_key for m in members}) != len(members) or len(
         {m.participant_id for m in members}
     ) != len(members):

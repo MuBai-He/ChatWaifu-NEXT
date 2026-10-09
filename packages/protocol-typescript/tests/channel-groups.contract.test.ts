@@ -336,7 +336,7 @@ describe("QQ group typed contracts", () => {
     expect(() =>
       parseChannelGroupAudienceSnapshot({
         ...audience(),
-        member_ids: Array.from({ length: 33 }, (_, i) => String(i + 1)),
+        member_ids: Array.from({ length: 2001 }, (_, i) => String(i + 1)),
       }),
     ).toThrow();
     expect(() =>

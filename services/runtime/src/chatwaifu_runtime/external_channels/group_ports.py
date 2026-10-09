@@ -6,6 +6,7 @@ from uuid import UUID
 
 from chatwaifu_protocol.channel_groups import ChannelGroupPauseReason
 from chatwaifu_protocol.channels import ChannelAudioDeliveryPartPayload, ChannelDeliveryPartDraft
+from chatwaifu_protocol.session import ParticipantSnapshot
 
 from chatwaifu_runtime.external_channels.group_models import (
     ChannelGroupAdmission,
@@ -24,6 +25,10 @@ from chatwaifu_runtime.external_channels.models import ChannelBindingRecord
 
 class ChannelGroupRepository(Protocol):
     async def create_observation(self, observation: ChannelGroupAudienceObservation) -> None: ...
+
+    async def register_audience(
+        self, observation_id: UUID, display_names: dict[str, str], *, created_at: datetime
+    ) -> tuple[tuple[ChannelParticipantLinkRecord, ...], tuple[ParticipantSnapshot, ...], int]: ...
 
     async def get_observation(
         self, observation_id: UUID

@@ -29,6 +29,7 @@ vi.mock("../chat/runtime-client/channelGroupsClient", () => ({
   getChannelGroupRoutes: vi.fn(),
   getChannelParticipantLinks: vi.fn(),
   observeChannelGroupAudience: vi.fn(),
+  registerChannelGroupAudience: vi.fn(),
   createChannelParticipantLink: vi.fn(),
   updateChannelParticipantLink: vi.fn(),
   createChannelGroupRoute: vi.fn(),
@@ -229,6 +230,95 @@ async function selectExisting() {
 }
 
 describe("QQ group operator management", () => {
+  it("previews without registering and creates identities only after explicit confirmation", async () => {
+    const observed = audience();
+    vi.mocked(client.registerChannelGroupAudience).mockResolvedValue({
+      ...observed,
+      participant_links: [link("100"), link("200")],
+      registered_count: 2,
+      participants: [
+        { participant_id: "alice", display_name: "Alice", created_at: now() },
+        { participant_id: "bob", display_name: "Bob", created_at: now() },
+      ],
+    });
+    render(<QQGroupRoutesPanel {...props} />);
+    await observeCreation();
+    expect(client.registerChannelGroupAudience).not.toHaveBeenCalled();
+    expect(client.createChannelParticipantLink).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByRole("button", { name: "确认自动注册并关联未关联成员" }),
+    );
+    await screen.findByText(/自动注册并关联 2 名新成员/u);
+    expect(client.registerChannelGroupAudience).toHaveBeenCalledWith(
+      id,
+      observed.observation_id,
+      expect.any(Object),
+    );
+    expect(client.createChannelGroupRoute).not.toHaveBeenCalled();
+    expect(client.updateChannelGroupRoute).not.toHaveBeenCalled();
+    expect(
+      screen.getByLabelText<HTMLInputElement>("允许 QQ 100 发言").checked,
+    ).toBe(false);
+    expect(
+      screen.getByLabelText<HTMLInputElement>(
+        "我已核对所有成员身份，并确认全部群上下文可以向该群共享",
+      ).checked,
+    ).toBe(false);
+  });
+  it("searches and pages a large audience and explicitly selects speakers across all pages", async () => {
+    const ids = Array.from({ length: 120 }, (_, index) => String(1000 + index));
+    const observed = parseChannelGroupAudienceSnapshot({
+      ...audience(),
+      member_ids: ids,
+      member_display_names: { "1119": "last person" },
+    });
+    const people = ids.map((sender) => ({
+      participant_id: `person-${sender}`,
+      display_name: `Person ${sender}`,
+      created_at: now(),
+    }));
+    const linked = ids.map((sender, index) => ({
+      ...link(),
+      link_id: `00000000-0000-4000-8000-${String(index + 10).padStart(12, "0")}`,
+      sender_key: sender,
+      participant_id: `person-${sender}`,
+    }));
+    vi.mocked(client.observeChannelGroupAudience).mockResolvedValue(observed);
+    vi.mocked(client.registerChannelGroupAudience).mockResolvedValue(
+      parseChannelGroupAudienceSnapshot({
+        ...observed,
+        participants: people,
+        participant_links: linked,
+        registered_count: 120,
+      }),
+    );
+    render(<QQGroupRoutesPanel {...props} />);
+    await ready();
+    fireEvent.change(screen.getByLabelText("QQ 群号"), {
+      target: { value: "123" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "读取该群当前成员" }));
+    await screen.findByText("QQ 1000");
+    expect(screen.queryByText("QQ 1119")).toBeNull();
+    fireEvent.change(screen.getByLabelText("搜索群成员"), {
+      target: { value: "last person" },
+    });
+    await screen.findByText("QQ 1119");
+    fireEvent.change(screen.getByLabelText("搜索群成员"), {
+      target: { value: "" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "下一页成员" }));
+    await screen.findByText("QQ 1050");
+    fireEvent.click(
+      screen.getByRole("button", { name: "确认自动注册并关联未关联成员" }),
+    );
+    await screen.findByText(/自动注册并关联 120 名新成员/u);
+    fireEvent.click(
+      screen.getByRole("button", { name: "允许全部已关联成员发言" }),
+    );
+    expect(screen.getByText(/已选择 120 名发言者/u)).toBeTruthy();
+    expect(client.createChannelGroupRoute).not.toHaveBeenCalled();
+  });
   it("requires fresh audience confirmation for the selected requested-voice setting", async () => {
     vi.mocked(client.getChannelParticipantLinks).mockResolvedValue({
       schema_version: "1.0",

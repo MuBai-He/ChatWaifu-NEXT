@@ -36,6 +36,7 @@ from chatwaifu_protocol.channel_groups import (
     ChannelGroupAudienceRequest,
     ChannelGroupAudienceSnapshot,
     ChannelGroupDeliveryTarget,
+    ChannelGroupRegistrationRequest,
     ChannelGroupRouteCreate,
     ChannelGroupRouteMemberSnapshot,
     ChannelGroupRoutePage,
@@ -210,6 +211,7 @@ class ProtocolCatalog(ProtocolModel):
     channel_connection_configuration: ChannelConnectionConfiguration
     channel_connection: ChannelConnectionSnapshot
     channel_gateway_status: ChannelGatewayStatusSnapshot
+    channel_group_registration_request: ChannelGroupRegistrationRequest
     channel_group_audience_request: ChannelGroupAudienceRequest
     channel_group_audience_snapshot: ChannelGroupAudienceSnapshot
     channel_group_turn_snapshot: ChannelGroupTurnSnapshot
@@ -309,6 +311,7 @@ SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "group-discussion-policy": GroupDiscussionPolicy,
     "channel-group-turn-snapshot": ChannelGroupTurnSnapshot,
     "channel-group-turn-page": ChannelGroupTurnPage,
+    "channel-group-registration-request": ChannelGroupRegistrationRequest,
     "channel-group-audience-request": ChannelGroupAudienceRequest,
     "channel-group-audience-snapshot": ChannelGroupAudienceSnapshot,
     "channel-group-delivery-target": ChannelGroupDeliveryTarget,

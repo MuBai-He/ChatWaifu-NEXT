@@ -18,6 +18,7 @@ import {
 } from "../../parsers/channelSettings";
 import {
   channelGroupAudienceRequestSchema,
+  channelGroupRegistrationRequestSchema,
   channelGroupAudienceSnapshotSchema,
   channelGroupDeliveryTargetSchema,
   channelParticipantLinkCreateSchema,
@@ -220,6 +221,7 @@ export const protocolModelSchemas = {
   ChannelRuntimeSettingsUpdate: channelRuntimeSettingsUpdateSchema,
   GroupDiscussionPolicy: groupDiscussionPolicySchema,
   ChannelGroupAudienceRequest: channelGroupAudienceRequestSchema,
+  ChannelGroupRegistrationRequest: channelGroupRegistrationRequestSchema,
   ChannelGroupAudienceSnapshot: channelGroupAudienceSnapshotSchema,
   ChannelGroupDeliveryTarget: channelGroupDeliveryTargetSchema,
   ChannelParticipantLinkCreate: channelParticipantLinkCreateSchema,
@@ -332,6 +334,7 @@ export const parserRootRegistry: Record<
   parseDecisionRecord: "DecisionRecord",
   parseAgentEvent: "AgentEvent",
   parseChannelGroupAudienceRequest: "ChannelGroupAudienceRequest",
+  parseChannelGroupRegistrationRequest: "ChannelGroupRegistrationRequest",
   parseChannelGroupAudienceSnapshot: "ChannelGroupAudienceSnapshot",
   parseChannelGroupDeliveryTarget: "ChannelGroupDeliveryTarget",
   parseChannelParticipantLinkCreate: "ChannelParticipantLinkCreate",

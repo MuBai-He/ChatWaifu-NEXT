@@ -16,6 +16,9 @@ from chatwaifu_protocol.channels import (
     ChannelTurnSnapshot,
     ChannelVersionedModel,
 )
+from chatwaifu_protocol.session import ParticipantSnapshot
+
+MAX_GROUP_MEMBERS = 2000
 
 
 class ChannelGroupPauseReason(StrEnum):
@@ -44,6 +47,10 @@ class ChannelGroupInput(ChannelVersionedModel):
 
 class ChannelGroupAudienceRequest(ChannelGroupInput):
     group_id: str = Field(min_length=1, max_length=20, pattern=r"^[1-9][0-9]{0,19}$")
+
+
+class ChannelGroupRegistrationRequest(ChannelGroupInput):
+    observation_id: UUID
 
 
 class ChannelParticipantLinkCreate(ChannelGroupInput):
@@ -75,13 +82,25 @@ class ChannelGroupAudienceSnapshot(ChannelVersionedModel):
     connection_revision: int = Field(ge=1)
     account_key: str
     group_id: str
-    member_ids: list[str] = Field(min_length=2, max_length=32)
+    member_ids: list[str] = Field(min_length=2, max_length=MAX_GROUP_MEMBERS)
     member_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
     observed_at: AwareDatetime
     expires_at: AwareDatetime
+    participant_links: list[ChannelParticipantLinkSnapshot] = Field(
+        default_factory=list[ChannelParticipantLinkSnapshot], max_length=MAX_GROUP_MEMBERS
+    )
+    participants: list[ParticipantSnapshot] = Field(
+        default_factory=list[ParticipantSnapshot], max_length=MAX_GROUP_MEMBERS
+    )
+    registered_count: int = Field(default=0, ge=0, le=MAX_GROUP_MEMBERS)
+    member_display_names: dict[str, str] = Field(default_factory=dict[str, str])
 
     @model_validator(mode="after")
     def bounded_observation(self) -> ChannelGroupAudienceSnapshot:
+        if not set(self.member_display_names).issubset(self.member_ids) or any(
+            not 1 <= len(name) <= 80 for name in self.member_display_names.values()
+        ):
+            raise ValueError("member labels must describe the observed audience")
         if len(set(self.member_ids)) != len(self.member_ids):
             raise ValueError("audience members must be unique")
         if not 0 < (self.expires_at - self.observed_at).total_seconds() <= 60:
@@ -92,7 +111,7 @@ class ChannelGroupAudienceSnapshot(ChannelVersionedModel):
 class ChannelGroupRouteCreate(ChannelGroupInput):
     observation_id: UUID
     display_name: str = Field(min_length=1, max_length=80)
-    speaker_sender_keys: list[str] = Field(default_factory=list[str], max_length=32)
+    speaker_sender_keys: list[str] = Field(default_factory=list[str], max_length=MAX_GROUP_MEMBERS)
     allow_requested_voice: bool = Field(default=False, strict=True)
 
     @field_validator("speaker_sender_keys")
@@ -105,7 +124,7 @@ class ChannelGroupRouteUpdate(ChannelGroupInput):
     enabled: bool = Field(strict=True)
     expected_revision: int = Field(strict=True, ge=1)
     observation_id: UUID | None = None
-    speaker_sender_keys: list[str] = Field(max_length=32)
+    speaker_sender_keys: list[str] = Field(max_length=MAX_GROUP_MEMBERS)
     allow_requested_voice: bool | None = Field(default=None, strict=True)
 
     @field_validator("speaker_sender_keys")
@@ -141,7 +160,9 @@ class ChannelGroupRouteSnapshot(ChannelVersionedModel):
     pause_reason: ChannelGroupPauseReason | None = None
     observation_id: UUID
     audience_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
-    members: list[ChannelGroupRouteMemberSnapshot] = Field(min_length=2, max_length=32)
+    members: list[ChannelGroupRouteMemberSnapshot] = Field(
+        min_length=2, max_length=MAX_GROUP_MEMBERS
+    )
     created_at: AwareDatetime
     updated_at: AwareDatetime
     deleted_at: AwareDatetime | None = None

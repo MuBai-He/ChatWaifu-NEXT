@@ -28,7 +28,7 @@
       "items": {
         "type": "string"
       },
-      "maxItems": 32,
+      "maxItems": 2000,
       "title": "Speaker Sender Keys",
       "type": "array"
     }

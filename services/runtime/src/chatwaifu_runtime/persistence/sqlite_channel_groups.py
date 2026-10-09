@@ -20,6 +20,7 @@ from chatwaifu_protocol.channels import (
     ChannelTextDeliveryPartPayload,
 )
 from chatwaifu_protocol.events import GenericCoreEvent, PrivacyLevel
+from chatwaifu_protocol.session import ParticipantSnapshot
 
 from chatwaifu_runtime.external_channels.group_models import (
     ChannelGroupAdmission,
@@ -325,6 +326,71 @@ class SQLiteChannelGroupRepository(ChannelGroupRepository):
             )
             assert row is not None
             return _link(row)
+
+    async def register_audience(
+        self, observation_id: UUID, display_names: dict[str, str], *, created_at: datetime
+    ) -> tuple[tuple[ChannelParticipantLinkRecord, ...], tuple[ParticipantSnapshot, ...], int]:
+        """Register missing identities atomically; existing links and revocations win."""
+        stamp = _stamp(created_at)
+        async with self._database.transaction() as db:
+            observation = await self._fresh_observation_tx(db, observation_id, stamp)
+            conn = await self._connection_tx(db, observation.connection_id, observation.account_key)
+            owners = _strings(conn["allowed_sender_keys_json"])
+            existing = {
+                row["sender_key"]: row
+                for row in await _rows(
+                    db,
+                    "SELECT * FROM channel_participant_links WHERE provider_id='qq_napcat' "
+                    "AND account_key=?",
+                    (observation.account_key,),
+                )
+            }
+            links: list[ChannelParticipantLinkRecord] = []
+            participants: list[ParticipantSnapshot] = []
+            registered = 0
+            for sender in observation.member_ids:
+                row = existing.get(sender)
+                if row is None:
+                    participant_id = "local" if owners == (sender,) else str(uuid4())
+                    if participant_id != "local":
+                        participant = ParticipantSnapshot(
+                            participant_id=participant_id,
+                            display_name=display_names.get(sender, "").strip()[:80]
+                            or f"QQ {sender}",
+                            created_at=stamp,
+                        )
+                        await db.execute(
+                            "INSERT INTO participants VALUES(?,?,?)",
+                            (participant_id, participant.display_name, stamp.isoformat()),
+                        )
+                    link_id = uuid4()
+                    await db.execute(
+                        "INSERT INTO channel_participant_links VALUES(?,'qq_napcat',?,?,?,1,1,?,?)",
+                        (
+                            str(link_id),
+                            observation.account_key,
+                            sender,
+                            participant_id,
+                            stamp.isoformat(),
+                            stamp.isoformat(),
+                        ),
+                    )
+                    row = await _one(
+                        db,
+                        "SELECT * FROM channel_participant_links WHERE link_id=?",
+                        (str(link_id),),
+                    )
+                    assert row is not None
+                    registered += 1
+                link = _link(row)
+                person = await _one(
+                    db, "SELECT * FROM participants WHERE participant_id=?", (link.participant_id,)
+                )
+                if person is None:
+                    raise ChannelPolicyError("registered participant required")
+                links.append(link)
+                participants.append(ParticipantSnapshot.model_validate(dict(person)))
+            return tuple(links), tuple(participants), registered
 
     async def _route_tx(self, db: aiosqlite.Connection, route_id: UUID) -> ChannelGroupRouteRecord:
         row = await _one(

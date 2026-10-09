@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type {
   ChannelGroupAudienceRequest,
+  ChannelGroupRegistrationRequest,
   ChannelGroupAudienceSnapshot,
   ChannelGroupDeliveryTarget,
   ChannelGroupRouteCreate,
@@ -39,7 +40,7 @@ const name = z
   .refine((value) => value === value.trim());
 const fingerprint = z.string().regex(/^[0-9a-f]{64}$/);
 const cursor = z.string().min(1).max(256).nullish();
-const speakers = z.array(qqId).max(32).refine(unique);
+const speakers = z.array(qqId).max(2000).refine(unique);
 
 export const channelGroupPauseReasonSchema = z.enum([
   "operator_disabled",
@@ -54,7 +55,13 @@ export const channelGroupPauseReasonSchema = z.enum([
   "route_deleted",
 ]);
 export const channelGroupAudienceRequestSchema = z
-  .object({ schema_version: version, group_id: qqId })
+  .object({
+    schema_version: version,
+    group_id: qqId,
+  })
+  .strict();
+export const channelGroupRegistrationRequestSchema = z
+  .object({ schema_version: version, observation_id: uuid })
   .strict();
 export const channelParticipantLinkCreateSchema = z
   .object({
@@ -98,19 +105,43 @@ export const channelGroupAudienceSnapshotSchema = z
     member_ids: z
       .array(qqId)
       .min(2)
-      .max(32)
+      .max(2000)
       .refine(unique) as unknown as z.ZodType<
       ChannelGroupAudienceSnapshot["member_ids"]
     >,
     member_fingerprint: fingerprint,
     observed_at: dateTime,
     expires_at: dateTime,
+    participant_links: z
+      .array(channelParticipantLinkSnapshotSchema)
+      .max(2000)
+      .optional(),
+    participants: z
+      .array(
+        z
+          .object({
+            participant_id: identifier,
+            display_name: name,
+            created_at: dateTime,
+          })
+          .passthrough(),
+      )
+      .max(2000)
+      .optional(),
+    registered_count: z.number().int().min(0).max(2000).optional(),
+    member_display_names: z.record(qqId, z.string().min(1).max(80)).optional(),
   })
   .passthrough()
   .refine(
     (value) => {
       const ttl = Date.parse(value.expires_at) - Date.parse(value.observed_at);
-      return ttl > 0 && ttl <= 60_000;
+      return (
+        ttl > 0 &&
+        ttl <= 60_000 &&
+        Object.keys(value.member_display_names ?? {}).every((sender) =>
+          value.member_ids.includes(sender),
+        )
+      );
     },
     {
       path: ["expires_at"],
@@ -173,7 +204,7 @@ export const channelGroupRouteSnapshotSchema = z
     members: z
       .array(channelGroupRouteMemberSnapshotSchema)
       .min(2)
-      .max(32)
+      .max(2000)
       .refine(
         (value) =>
           unique(value.map((member) => member.sender_key)) &&
@@ -225,6 +256,11 @@ export const channelGroupTurnPageSchema = z
   })
   .passthrough();
 
+export function parseChannelGroupRegistrationRequest(input: unknown) {
+  return channelGroupRegistrationRequestSchema.parse(
+    input,
+  ) satisfies ChannelGroupRegistrationRequest;
+}
 export function parseChannelGroupAudienceRequest(input: unknown) {
   return channelGroupAudienceRequestSchema.parse(
     input,

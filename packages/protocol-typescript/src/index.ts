@@ -88,6 +88,7 @@ export {
 
 export {
   parseChannelGroupAudienceRequest,
+  parseChannelGroupRegistrationRequest,
   parseChannelGroupAudienceSnapshot,
   parseChannelGroupDeliveryTarget,
   parseChannelParticipantLinkCreate,

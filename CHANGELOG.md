@@ -1,5 +1,13 @@
 # Changelog
 
+## QQ group registration, 2026-10-09
+
+- Preview group members without creating identities; explicitly confirmed batch
+  registration revalidates membership and atomically creates only missing QQ links.
+- Reuse existing identities and labels, preserve revoked links, and support up to
+  2,000 audience members with search, 50-member pages and explicit bulk speaking selection.
+- Keep new routes disabled and require separate shared-context confirmation and enablement.
+
 ## Unreleased
 
 - Give the shared settings center an Apple Liquid Glass presentation with aligned

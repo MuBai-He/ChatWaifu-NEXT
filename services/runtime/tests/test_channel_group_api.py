@@ -12,6 +12,7 @@ import pytest
 from chatwaifu_protocol.channel_groups import (
     ChannelGroupAudienceRequest,
     ChannelGroupAudienceSnapshot,
+    ChannelGroupRegistrationRequest,
     ChannelGroupRouteCreate,
     ChannelGroupRouteMemberSnapshot,
     ChannelGroupRoutePage,
@@ -55,6 +56,7 @@ OPERATOR_TOKEN = "test-only-group-operator-capability"
 NOW = datetime(2026, 10, 4, 12, 0, tzinfo=UTC)
 CASES = (
     ("observe_audience", "POST", "group-audience-observations"),
+    ("register_audience", "POST", "group-participant-registrations"),
     ("list_links", "GET", "participant-links"),
     ("create_link", "POST", "participant-links"),
     ("update_link", "PUT", "participant-links/{link_id}"),
@@ -171,6 +173,12 @@ class _GroupService:
         self._record("observe_audience", connection_id, body)
         return self.audience
 
+    async def register_audience(
+        self, connection_id: UUID, body: ChannelGroupRegistrationRequest
+    ) -> ChannelGroupAudienceSnapshot:
+        self._record("register_audience", connection_id, body)
+        return self.audience
+
     async def list_links(
         self, connection_id: UUID, *, limit: int, cursor: str | None
     ) -> ChannelParticipantLinkPage:
@@ -247,6 +255,7 @@ def _url(service: _GroupService, suffix: str) -> str:
 def _body(service: _GroupService, name: str) -> dict[str, object] | None:
     bodies: dict[str, dict[str, object]] = {
         "observe_audience": {"group_id": "123"},
+        "register_audience": {"observation_id": str(service.observation_id)},
         "create_link": {
             "observation_id": str(service.observation_id),
             "sender_key": "100",
@@ -318,6 +327,7 @@ def test_all_response_dtos_and_typed_service_dispatch(
     if body is not None:
         expected_type = {
             "observe_audience": ChannelGroupAudienceRequest,
+            "register_audience": ChannelGroupRegistrationRequest,
             "create_link": ChannelParticipantLinkCreate,
             "update_link": ChannelParticipantLinkUpdate,
             "create_route": ChannelGroupRouteCreate,
@@ -330,6 +340,7 @@ def test_all_response_dtos_and_typed_service_dispatch(
         assert keywords == {"limit": 25, "cursor": None}
     expected = {
         "observe_audience": service.audience,
+        "register_audience": service.audience,
         "list_links": ChannelParticipantLinkPage(items=[service.link], next_cursor="links-cursor"),
         "create_link": service.link,
         "update_link": service.link,
@@ -492,7 +503,7 @@ def test_disabled_unbound_history_preserves_cancelled_and_confirmed_delivery_fac
 
 def test_router_exposes_only_operator_management_not_group_ingress_or_send() -> None:
     paths = {route.path for route in router.routes if isinstance(route, APIRoute)}
-    assert len(router.routes) == 9
-    assert len(paths) == 7
+    assert len(router.routes) == len(CASES)
+    assert len(paths) == len({suffix for _, _, suffix in CASES})
     assert all("/messages" not in path and "/send" not in path for path in paths)
     assert all(CHANNEL_EXEMPT_RE.fullmatch(path) is None for path in paths)

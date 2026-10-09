@@ -52,6 +52,7 @@ class NapCatGroupMemberList:
     account_key: str
     group_id: str
     member_ids: tuple[str, ...]
+    display_names: dict[str, str] = field(default_factory=dict[str, str])
 
 
 @dataclass(frozen=True, slots=True)

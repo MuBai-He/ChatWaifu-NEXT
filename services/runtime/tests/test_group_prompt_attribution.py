@@ -48,8 +48,8 @@ class PromptModels:
         return "Earlier group conversation."
 
 
-def group_source() -> ConversationSourceContext:
-    audience = tuple(str(uuid4()) for _ in range(32))
+def group_source(size: int = 32) -> ConversationSourceContext:
+    audience = tuple(str(uuid4()) for _ in range(size))
     scene_id = str(uuid4())
     return ConversationSourceContext(
         provider_id="qq_napcat",
@@ -101,8 +101,11 @@ async def compile_group(
     return result, models
 
 
-async def test_large_group_audience_keeps_current_member_and_memory_subject_under_budget() -> None:
-    source = group_source()
+@pytest.mark.parametrize("size", [32, 2000])
+async def test_large_group_audience_keeps_current_member_and_memory_subject_under_budget(
+    size: int,
+) -> None:
+    source = group_source(size)
     bob = source.audience_ids[1]
     result, models = await compile_group(
         source,

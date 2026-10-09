@@ -12,6 +12,7 @@ from uuid import UUID
 from chatwaifu_protocol.channel_groups import (
     ChannelGroupAudienceRequest,
     ChannelGroupAudienceSnapshot,
+    ChannelGroupRegistrationRequest,
     ChannelGroupRouteCreate,
     ChannelGroupRoutePage,
     ChannelGroupRouteSnapshot,
@@ -63,6 +64,18 @@ async def observe_audience(
 ) -> ChannelGroupAudienceSnapshot:
     try:
         return await _service(request).observe_audience(connection_id, body)
+    except ExternalChannelError as error:
+        _raise_error(error)
+
+
+@router.post(
+    "/{connection_id}/group-participant-registrations", response_model=ChannelGroupAudienceSnapshot
+)
+async def register_audience(
+    request: Request, connection_id: UUID, body: ChannelGroupRegistrationRequest
+) -> ChannelGroupAudienceSnapshot:
+    try:
+        return await _service(request).register_audience(connection_id, body)
     except ExternalChannelError as error:
         _raise_error(error)
 

@@ -6,6 +6,7 @@ import pytest
 from chatwaifu_protocol.channel_groups import (
     ChannelGroupAudienceRequest,
     ChannelGroupDeliveryTarget,
+    ChannelGroupRegistrationRequest,
     ChannelGroupRouteCreate,
     ChannelGroupRouteUpdate,
     ChannelParticipantLinkUpdate,
@@ -80,3 +81,13 @@ def test_group_voice_defaults_off_and_omitted_update_preserves_the_setting() -> 
             ChannelGroupRouteUpdate.model_validate(
                 {**update.model_dump(), "allow_requested_voice": value}
             )
+
+
+def test_preview_cannot_request_registration_and_confirmation_has_no_identity_authority() -> None:
+    with pytest.raises(ValidationError):
+        ChannelGroupAudienceRequest.model_validate({"group_id": "123", "auto_register": True})
+    request = {"observation_id": str(uuid4())}
+    assert ChannelGroupRegistrationRequest.model_validate(request).observation_id
+    for field in ("enabled", "participant_id", "member_ids", "speaker_sender_keys"):
+        with pytest.raises(ValidationError):
+            ChannelGroupRegistrationRequest.model_validate({**request, field: True})

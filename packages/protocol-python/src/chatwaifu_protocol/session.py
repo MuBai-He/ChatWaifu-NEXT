@@ -93,5 +93,5 @@ class ParticipantSnapshot(ProtocolModel):
 class SceneSnapshot(ProtocolModel):
     scene_id: str
     display_name: str = Field(min_length=1, max_length=120)
-    participant_ids: list[str] = Field(min_length=2, max_length=32)
+    participant_ids: list[str] = Field(min_length=2, max_length=2000)
     created_at: AwareDatetime

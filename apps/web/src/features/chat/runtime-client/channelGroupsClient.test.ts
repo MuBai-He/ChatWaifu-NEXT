@@ -11,6 +11,7 @@ import {
   getChannelGroupTurns,
   getChannelParticipantLinks,
   observeChannelGroupAudience,
+  registerChannelGroupAudience,
   updateChannelGroupRoute,
   updateChannelParticipantLink,
   type ChannelGroupsRequestOptions,
@@ -110,6 +111,27 @@ function turn() {
 }
 
 describe("group management client", () => {
+  it("registers only through the explicit operator confirmation endpoint", async () => {
+    const fetchMock = fetchReply({
+      observation_id: id,
+      connection_id: id,
+      connection_revision: 1,
+      account_key: "900",
+      group_id: "123",
+      member_ids: ["100", "200"],
+      member_fingerprint: "a".repeat(64),
+      observed_at: now,
+      expires_at: "2026-10-04T00:00:30Z",
+    });
+    await registerChannelGroupAudience(id, other, options);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      `https://runtime.example/v1/channel-connections/${id}/group-participant-registrations`,
+    );
+    expect(bodyOf(fetchMock.mock.calls[0]?.[1])).toEqual({
+      schema_version: "1.0",
+      observation_id: other,
+    });
+  });
   it("observes only the typed group identifier, with pinned credentials", async () => {
     const fetchMock = fetchReply({
       observation_id: id,

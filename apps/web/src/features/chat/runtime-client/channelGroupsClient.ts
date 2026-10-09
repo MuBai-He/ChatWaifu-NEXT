@@ -1,6 +1,7 @@
 import {
   parseChannelConnectionSnapshot,
   parseChannelGroupAudienceRequest,
+  parseChannelGroupRegistrationRequest,
   parseChannelGroupAudienceSnapshot,
   parseChannelGroupRouteCreate,
   parseChannelGroupRoutePage,
@@ -93,6 +94,26 @@ export function observeChannelGroupAudience(
     {
       method: "POST",
       body: JSON.stringify(body),
+      timeoutMs: 30_000,
+      ...options,
+    },
+  );
+}
+export function registerChannelGroupAudience(
+  connectionId: string,
+  observationId: string,
+  options: ChannelGroupsRequestOptions,
+) {
+  const body = parseChannelGroupRegistrationRequest({
+    observation_id: observationId,
+  });
+  return requestRuntime(
+    `${path(connectionId)}/group-participant-registrations`,
+    runtimeParser(parseChannelGroupAudienceSnapshot),
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+      timeoutMs: 35_000,
       ...options,
     },
   );

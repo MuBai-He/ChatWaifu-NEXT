@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 from uuid import uuid4
 
 from chatwaifu_protocol.base import JsonObject, JsonValue
+from chatwaifu_protocol.channel_groups import MAX_GROUP_MEMBERS
 from websockets.asyncio.client import ClientConnection, connect
 from websockets.protocol import State
 
@@ -226,7 +227,7 @@ class NapCatClient:
             additional_headers={"Authorization": f"Bearer {self._token}"},
             open_timeout=8,
             close_timeout=2,
-            max_size=1_048_576,
+            max_size=8 * 1_048_576,
             max_queue=16,
             ping_interval=20,
             ping_timeout=20,
@@ -377,8 +378,8 @@ class NapCatClient:
         self, action: str, params: JsonObject, *, max_items: int = 33
     ) -> tuple[JsonObject, ...]:
         """Bounded object arrays share the ordinary RPC capacity and deadlines."""
-        if type(max_items) is not int or not 1 <= max_items <= 33:
-            raise ValueError("QQ array limit must be between 1 and 33")
+        if type(max_items) is not int or not 1 <= max_items <= MAX_GROUP_MEMBERS + 1:
+            raise ValueError("QQ array limit must be between 1 and 2001")
         response = await self._request(action, params)
         data = response.get("data")
         if (
@@ -702,7 +703,7 @@ class NapCatClient:
                     pass
 
     async def get_group_member_list(self, group_id: str) -> NapCatGroupMemberList:
-        """Observe a small audience; no_cache is not proof of fresh membership."""
+        """Observe a bounded audience; no_cache is not proof of fresh membership."""
         if qq_group_identifier(group_id) != group_id:
             raise ValueError("QQ group must be a canonical identifier")
         account, revision = self._account, self._account_revision
@@ -715,9 +716,12 @@ class NapCatClient:
                 await self._account_preflight(account, revision)
                 self._check_group_observation(epoch)
                 members = await self.call_array(
-                    "get_group_member_list", {"group_id": group_id, "no_cache": True}
+                    "get_group_member_list",
+                    {"group_id": group_id, "no_cache": True},
+                    max_items=MAX_GROUP_MEMBERS + 1,
                 )
                 ids: set[str] = set()
+                names: dict[str, str] = {}
                 for member in members:
                     user_id = qq_group_identifier(member.get("user_id"))
                     if (
@@ -727,15 +731,21 @@ class NapCatClient:
                     ):
                         raise NapCatError("QQ returned inconsistent group membership")
                     ids.add(user_id)
-                if account not in ids or not 2 <= len(ids) - 1 <= 32:
-                    raise NapCatError("QQ group requires self and 2 to 32 other members")
+                    nickname = member.get("nickname")
+                    if isinstance(nickname, str) and nickname.strip():
+                        names[user_id] = nickname.strip()[:80]
+                if account not in ids or not 2 <= len(ids) - 1 <= MAX_GROUP_MEMBERS:
+                    raise NapCatError("QQ group requires self and 2 to 2000 other members")
                 if not self._account_matches(account, revision):
                     raise NapCatRejected("QQ account binding changed during observation")
                 self._check_group_observation(epoch)
                 await self._account_preflight(account, revision)
                 self._check_group_observation(epoch)
                 return NapCatGroupMemberList(
-                    account, group_id, tuple(sorted(ids - {account}, key=int))
+                    account,
+                    group_id,
+                    tuple(sorted(ids - {account}, key=int)),
+                    {sender: label for sender, label in names.items() if sender != account},
                 )
         except TimeoutError:
             raise NapCatError("QQ group observation did not complete") from None
