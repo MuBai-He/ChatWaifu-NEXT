@@ -46,6 +46,16 @@ export interface AvatarProceduralFrame {
   breath: number;
 }
 
+/** Optional local pose driver; gesture and override layers retain ownership. */
+export interface AvatarProceduralMotionSource {
+  apply(
+    base: AvatarProceduralFrame,
+    nowMs: number,
+    suspended: boolean,
+  ): AvatarProceduralFrame;
+  reset(): void;
+}
+
 export type Live2DProceduralChannel = Exclude<
   keyof AvatarProceduralFrame,
   "mode"

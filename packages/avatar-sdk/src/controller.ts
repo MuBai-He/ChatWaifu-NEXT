@@ -17,6 +17,7 @@ import type {
   AvatarInteractionListener,
   AvatarLayer,
   AvatarManifest,
+  AvatarProceduralMotionSource,
   AvatarRuntimeState,
   AvatarWarning,
   CueSchedulerSnapshot,
@@ -35,6 +36,7 @@ export class AvatarController {
   private readonly scheduler: CueScheduler;
   private readonly telemetry = new AvatarTelemetryCollector();
   private readonly behavior = new AvatarBehaviorStateMachine();
+  private proceduralMotion: AvatarProceduralMotionSource | null = null;
   private readonly maxPreReadyCues: number;
   private readonly telemetryIntervalMs: number;
   private readonly preReadyCues: AvatarCue[] = [];
@@ -138,6 +140,7 @@ export class AvatarController {
   reset(): AvatarControllerSnapshot {
     this.scheduler.reset();
     this.behavior.reset();
+    this.proceduralMotion?.reset();
     this.publishSemanticState();
     return this.snapshot();
   }
@@ -147,6 +150,13 @@ export class AvatarController {
     this.lipSync.dispose();
     this.lipSync = source;
     this.publish();
+  }
+
+  setProceduralMotionSource(source: AvatarProceduralMotionSource | null): void {
+    if (source === this.proceduralMotion) return;
+    this.proceduralMotion?.reset();
+    this.proceduralMotion = source;
+    source?.reset();
   }
 
   resize(width: number, height: number, dpr = 1): void {
@@ -200,6 +210,7 @@ export class AvatarController {
     this.lipSync = new SilentLipSyncSource();
     this.scheduler.reset();
     this.behavior.reset();
+    this.proceduralMotion?.reset();
     this.preReadyCues.splice(0);
     await this.renderer.unload();
     this.telemetry.reset();
@@ -211,6 +222,8 @@ export class AvatarController {
   dispose(): void {
     if (this.status === "disposed") return;
     this.stopRenderLoop();
+    this.proceduralMotion?.reset();
+    this.proceduralMotion = null;
     this.lipSync.dispose();
     this.renderer.dispose();
     this.preReadyCues.splice(0);
@@ -232,9 +245,15 @@ export class AvatarController {
         this.lipSync.sample(nowMs),
         this.runtime.procedural,
       );
+      const basePose = this.behavior.step(behaviorInput(semantic), nowMs);
       this.runtime = {
         ...semantic,
-        procedural: this.behavior.step(behaviorInput(semantic), nowMs),
+        procedural:
+          this.proceduralMotion?.apply(
+            basePose,
+            nowMs,
+            semantic.interrupted || semantic.motion !== null,
+          ) ?? basePose,
       };
       this.renderer.render(this.runtime, nowMs);
       this.telemetry.recordFrame(nowMs);

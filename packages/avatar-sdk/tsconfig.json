@@ -5,6 +5,7 @@
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
     "noEmit": false,
     "noUncheckedIndexedAccess": true,
     "outDir": "dist",

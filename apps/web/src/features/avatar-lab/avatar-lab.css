@@ -3,6 +3,46 @@
   padding-top: 44px;
 }
 
+.airi-motion-field {
+  display: grid;
+  gap: 9px;
+  margin: 16px 0;
+}
+
+.airi-motion-field select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+  color: var(--ink);
+}
+
+.airi-motion-field input {
+  width: 100%;
+  accent-color: #ad517e;
+}
+
+.airi-motion-note {
+  color: var(--muted);
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+
+.avatar-lab-experiment {
+  margin: 0 auto;
+  padding-top: 24px;
+}
+
+.avatar-lab-experiment .lab-hero h1 {
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+}
+
+.avatar-lab-experiment .lab-hero {
+  gap: 24px;
+  margin-bottom: 22px;
+}
+
 .lab-hero {
   display: flex;
   align-items: end;
