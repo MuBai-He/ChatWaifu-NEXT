@@ -7,6 +7,9 @@
 - Reuse existing identities and labels, preserve revoked links, and support up to
   2,000 audience members with search, 50-member pages and explicit bulk speaking selection.
 - Keep new routes disabled and require separate shared-context confirmation and enablement.
+- Rename member speaking controls to “允许 AI 回复该成员”. New group drafts
+  default linked members to ON, including members registered after confirmation;
+  preserve manual opt-outs, revoked links and saved existing-group permissions.
 
 ## Unreleased
 

@@ -158,3 +158,15 @@ restores revoked links, imports private memories, or enables requested voice.
 The existing shared-context confirmation and separate route enablement still apply.
 Old manual mapping remains available. This additive protocol has no database
 migration; existing rows and historical migration checksums remain unchanged.
+
+### New-group reply defaults, 2026-10-09
+
+The operator-facing member checkbox is named “允许 AI 回复该成员”; it does not
+change QQ group mute permissions. New-group drafts default enabled identity links
+to checked, including links created after explicit batch registration or manual
+mapping. Registration preserves an operator's existing unchecked selection and
+never restores revoked links. Existing route drafts retain their saved grants on
+selection and audience refresh. These client defaults are persisted only when the
+operator confirms route creation; new routes still start disabled, and shared
+context confirmation and explicit enablement remain required. The service and
+protocol defaults are unchanged.

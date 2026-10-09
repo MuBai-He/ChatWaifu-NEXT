@@ -63,9 +63,13 @@ qq_group_batch_registration:
   status: source_and_server_deployment_verified_real_group_confirmation_pending
   adr: "0069"
   deployment_evidence: "docs/deployments/qq-group-registration-2026-10-09/README.md"
+  reply_permission_default: source_and_web_deployment_verified
+  reply_permission_evidence: "docs/deployments/qq-reply-defaults-2026-10-09/README.md"
   evidence:
     - Group reads only preview QQ identities and nickname labels. Explicit confirmed batch registration reobserves membership and atomically registers missing participants and links; existing identities, labels and revoked links are preserved.
     - Audience limits expand to 2000 across contracts, transport, routes, shared scenes and discussion; the UI searches and pages 50 members and offers separate bulk speaking selection. Routes remain disabled until explicitly enabled.
+    - Member controls now say “允许 AI 回复该成员”. New-group drafts default valid linked members ON after preview, manual association or confirmed batch registration; manual opt-outs, revoked links and saved existing-group permissions are preserved. Web tests passed 480 including these defaults and route-creation payloads; full frontend lint, TypeScript check, architecture and product builds passed.
+    - Web-only follow-up 282b33b851528674ffa99039ed55f70949b799a5 was published on 2026-10-09 at 08:47 CST. All 13 new Web files match HTTP hashes; 87 older compatibility files remain. Runtime source and all seven service PIDs, 13 containers, 11 control tables and 10 configuration file hashes are unchanged relative to this publication's own baseline. No service restart or permission save was performed.
     - Local targeted Python tests passed 439 including the separate concurrency check; Web 477 and TypeScript protocol 127 tests passed. Full strict Pyright, changed-file Ruff, frontend and protocol ESLint, architecture checks and Web/Desktop builds passed. Real 2000-member SQLite registration/closed-route/Conversation and loopback OneBot member reads were tested.
     - On 2026-10-09 feature commit 2222ad39529956784309e2b09e111a76c9a198ff was deployed as an overlay of the current source, preserving the live Home Assistant patch and other reviewed differences. Server Linux regression passed all 439 unique cases after adopting main's test-only 15-second durable-work join guard; Runtime health, live registration authorization guards, HTTPS trust and all 13 new Web file hashes passed. Migration remains 47; all 11 control tables and 10 configuration file hashes are unchanged. Both existing group routes remain disabled; unrelated service PIDs and 13 containers are unchanged. No real group registration, route enablement, phone send or main merge performed.
 external_channel_settings:

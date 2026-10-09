@@ -257,8 +257,13 @@ describe("QQ group operator management", () => {
     expect(client.createChannelGroupRoute).not.toHaveBeenCalled();
     expect(client.updateChannelGroupRoute).not.toHaveBeenCalled();
     expect(
-      screen.getByLabelText<HTMLInputElement>("允许 QQ 100 发言").checked,
-    ).toBe(false);
+      screen.getByLabelText<HTMLInputElement>("允许 AI 回复该成员（QQ 100）")
+        .checked,
+    ).toBe(true);
+    expect(
+      screen.getByLabelText<HTMLInputElement>("允许 AI 回复该成员（QQ 200）")
+        .checked,
+    ).toBe(true);
     expect(
       screen.getByLabelText<HTMLInputElement>(
         "我已核对所有成员身份，并确认全部群上下文可以向该群共享",
@@ -313,10 +318,14 @@ describe("QQ group operator management", () => {
       screen.getByRole("button", { name: "确认自动注册并关联未关联成员" }),
     );
     await screen.findByText(/自动注册并关联 120 名新成员/u);
+    expect(screen.getByText(/已选择 120 名允许 AI 回复的成员/u)).toBeTruthy();
     fireEvent.click(
-      screen.getByRole("button", { name: "允许全部已关联成员发言" }),
+      screen.getByRole("button", { name: "取消全部 AI 回复选择" }),
     );
-    expect(screen.getByText(/已选择 120 名发言者/u)).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole("button", { name: "允许 AI 回复全部已关联成员" }),
+    );
+    expect(screen.getByText(/已选择 120 名允许 AI 回复的成员/u)).toBeTruthy();
     expect(client.createChannelGroupRoute).not.toHaveBeenCalled();
   });
   it("requires fresh audience confirmation for the selected requested-voice setting", async () => {
@@ -408,7 +417,8 @@ describe("QQ group operator management", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "关联 QQ 200" }));
     await screen.findByText(/已关联 Bob/u);
-    fireEvent.click(screen.getByLabelText("允许 QQ 100 发言"));
+    // Newly linked members default ON; the operator can opt a member out.
+    fireEvent.click(screen.getByLabelText("允许 AI 回复该成员（QQ 200）"));
     fireEvent.click(
       screen.getByLabelText(
         "我已核对所有成员身份，并确认全部群上下文可以向该群共享",
@@ -460,7 +470,7 @@ describe("QQ group operator management", () => {
     );
     expect(client.observeChannelGroupAudience).toHaveBeenCalledTimes(2);
   });
-  it("does not silently grant speaking permission from an existing identity mapping", async () => {
+  it("defaults linked new-group members to AI replies without saving or enabling a route", async () => {
     vi.mocked(client.getChannelParticipantLinks).mockResolvedValue({
       schema_version: "1.0",
       items: [link(), link("200")],
@@ -468,12 +478,84 @@ describe("QQ group operator management", () => {
     render(<QQGroupRoutesPanel {...props} />);
     await observeCreation();
     expect(
-      screen.getByLabelText<HTMLInputElement>("允许 QQ 100 发言").checked,
+      screen.getByLabelText<HTMLInputElement>("允许 AI 回复该成员（QQ 100）")
+        .checked,
+    ).toBe(true);
+    expect(
+      screen.getByLabelText<HTMLInputElement>("允许 AI 回复该成员（QQ 200）")
+        .checked,
+    ).toBe(true);
+    expect(client.createChannelParticipantLink).not.toHaveBeenCalled();
+    expect(client.createChannelGroupRoute).not.toHaveBeenCalled();
+    expect(client.updateChannelGroupRoute).not.toHaveBeenCalled();
+  });
+  it("keeps a manual opt-out while defaulting newly registered members ON", async () => {
+    vi.mocked(client.getChannelParticipantLinks).mockResolvedValue({
+      schema_version: "1.0",
+      items: [link("100")],
+    });
+    vi.mocked(client.registerChannelGroupAudience).mockResolvedValue({
+      ...audience(),
+      participant_links: [link("100"), link("200")],
+      registered_count: 1,
+      participants: [
+        { participant_id: "alice", display_name: "Alice", created_at: now() },
+        { participant_id: "bob", display_name: "Bob", created_at: now() },
+      ],
+    });
+    render(<QQGroupRoutesPanel {...props} />);
+    await observeCreation();
+    fireEvent.click(screen.getByLabelText("允许 AI 回复该成员（QQ 100）"));
+    fireEvent.click(
+      screen.getByRole("button", { name: "确认自动注册并关联未关联成员" }),
+    );
+    await screen.findByText(/自动注册并关联 1 名新成员/u);
+    expect(
+      screen.getByLabelText<HTMLInputElement>("允许 AI 回复该成员（QQ 100）")
+        .checked,
     ).toBe(false);
     expect(
-      screen.getByLabelText<HTMLInputElement>("允许 QQ 200 发言").checked,
+      screen.getByLabelText<HTMLInputElement>("允许 AI 回复该成员（QQ 200）")
+        .checked,
+    ).toBe(true);
+    expect(client.createChannelGroupRoute).not.toHaveBeenCalled();
+    expect(client.updateChannelGroupRoute).not.toHaveBeenCalled();
+  });
+  it("keeps revoked identities unchecked instead of defaulting them ON", async () => {
+    vi.mocked(client.getChannelParticipantLinks).mockResolvedValue({
+      schema_version: "1.0",
+      items: [{ ...link("100"), enabled: false }, link("200")],
+    });
+    render(<QQGroupRoutesPanel {...props} />);
+    await observeCreation();
+    const revoked = screen.getByLabelText<HTMLInputElement>(
+      "允许 AI 回复该成员（QQ 100）",
+    );
+    expect(revoked.checked).toBe(false);
+    expect(revoked.matches(":disabled")).toBe(true);
+    expect(
+      screen.getByLabelText<HTMLInputElement>("允许 AI 回复该成员（QQ 200）")
+        .checked,
+    ).toBe(true);
+    expect(client.updateChannelParticipantLink).not.toHaveBeenCalled();
+  });
+  it("preserves saved reply permissions when rereading an existing group", async () => {
+    vi.mocked(client.getChannelParticipantLinks).mockResolvedValue({
+      schema_version: "1.0",
+      items: [link("100"), link("200")],
+    });
+    await selectExisting();
+    fireEvent.click(screen.getByRole("button", { name: "重新读取成员以启用" }));
+    await screen.findByText("QQ 200");
+    expect(
+      screen.getByLabelText<HTMLInputElement>("允许 AI 回复该成员（QQ 100）")
+        .checked,
+    ).toBe(true);
+    expect(
+      screen.getByLabelText<HTMLInputElement>("允许 AI 回复该成员（QQ 200）")
+        .checked,
     ).toBe(false);
-    expect(client.createChannelParticipantLink).not.toHaveBeenCalled();
+    expect(client.updateChannelGroupRoute).not.toHaveBeenCalled();
   });
   it("invalidates an expired observation without automatic refresh or enable", async () => {
     vi.mocked(client.getChannelParticipantLinks).mockResolvedValue({
@@ -544,7 +626,7 @@ describe("QQ group operator management", () => {
   );
   it("edits the speaker subset using current CAS while keeping the route OFF", async () => {
     await selectExisting();
-    fireEvent.click(screen.getByLabelText("允许 Bob（QQ 200）发言"));
+    fireEvent.click(screen.getByLabelText("允许 AI 回复该成员（QQ 200）"));
     fireEvent.click(
       screen.getByRole("button", { name: "保存权限并停用群路由" }),
     );
