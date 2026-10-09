@@ -420,3 +420,232 @@ def _capability(
             "adapter_operation": adapter_operation,
         }
     )
+
+
+def _home_assistant_skill(*, enabled: bool = True) -> SkillDefinition:
+    return _skill(
+        "mcp.tool.ha_connection",
+        "Home Assistant",
+        "Discovered tools from this MCP server. Server: homeassistant.",
+        [
+            _capability(
+                "intent__HassTurnOn",
+                (
+                    "Turns on/opens/presses a device or entity. For locks, this performs a lock "
+                    "action. Use for requests like turn on, activate, enable, or lock."
+                ),
+                side_effect=SideEffect.EXTERNAL_COMMUNICATION,
+                permission="mcp.connection.ha.tool.call",
+                confirmation=True,
+                schema={
+                    "type": "object",
+                    "properties": {"name": {"type": "string"}},
+                    "additionalProperties": False,
+                },
+            ),
+            _capability(
+                "intent__HassTurnOff",
+                (
+                    "Turns off/closes/presses a device or entity. For locks, this performs an "
+                    "unlock action. Use for requests like turn off, deactivate, disable, or unlock."
+                ),
+                side_effect=SideEffect.EXTERNAL_COMMUNICATION,
+                permission="mcp.connection.ha.tool.call",
+                confirmation=True,
+                schema={
+                    "type": "object",
+                    "properties": {"name": {"type": "string"}},
+                    "additionalProperties": False,
+                },
+            ),
+            _capability(
+                "light__HassLightSet",
+                "Sets the brightness percentage or color of a light",
+                side_effect=SideEffect.EXTERNAL_COMMUNICATION,
+                permission="mcp.connection.ha.tool.call",
+                confirmation=True,
+                schema={
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "brightness": {"type": "integer"},
+                    },
+                    "additionalProperties": False,
+                },
+            ),
+            _capability(
+                "climate__HassClimateSetTemperature",
+                "Sets the target temperature of a climate device or entity",
+                side_effect=SideEffect.EXTERNAL_COMMUNICATION,
+                permission="mcp.connection.ha.tool.call",
+                confirmation=True,
+                schema={
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "temperature": {"type": "number"},
+                    },
+                    "additionalProperties": False,
+                },
+            ),
+            _capability(
+                "homeassistant__GetLiveContext",
+                (
+                    "Provides real-time information about the CURRENT state, value, or mode of "
+                    "devices, sensors, entities, or areas. Use this tool for: 1. Answering "
+                    "questions about current conditions (e.g., 'Is the light on?'). 2. As the "
+                    "first step in conditional actions (e.g., 'If the weather is rainy, turn "
+                    "off sprinklers' requires checking the weather first). You may filter for "
+                    "devices by name, domain, and area, including combining those filters. "
+                    "Prefer filtering by domain when searching for multiple devices of the "
+                    "same type."
+                ),
+                side_effect=SideEffect.EXTERNAL_COMMUNICATION,
+                permission="mcp.connection.ha.tool.call",
+                confirmation=True,
+                schema={
+                    "type": "object",
+                    "properties": {"area": {"type": "string"}},
+                    "additionalProperties": False,
+                },
+            ),
+        ],
+        source="mcp_connection",
+        enabled=enabled,
+    )
+
+
+@pytest.mark.parametrize(
+    "query",
+    ["帮我开一下客厅的灯", "把灯打开", "打开空调", "turn on the light", "turn the light on"],
+)
+def test_router_selects_ha_turn_on_and_avoids_turn_off(query: str) -> None:
+    router = RuntimeSkillRouter(lambda: [_home_assistant_skill()])
+    selected = router.select(query)
+    capabilities = {tool.capability for tool in selected}
+    assert "intent__HassTurnOn" in capabilities
+    assert "intent__HassTurnOff" not in capabilities
+
+
+@pytest.mark.parametrize(
+    "query",
+    ["把灯关掉", "关闭客厅的灯", "关掉空调", "turn off the light", "turn the light off"],
+)
+def test_router_selects_ha_turn_off_and_avoids_turn_on(query: str) -> None:
+    router = RuntimeSkillRouter(lambda: [_home_assistant_skill()])
+    selected = router.select(query)
+    capabilities = {tool.capability for tool in selected}
+    assert "intent__HassTurnOff" in capabilities
+    assert "intent__HassTurnOn" not in capabilities
+
+
+@pytest.mark.parametrize(
+    "query",
+    ["把客厅灯调亮一点", "调整灯光亮度", "调暗台灯"],
+)
+def test_router_selects_ha_brightness_for_dimmer_queries(query: str) -> None:
+    router = RuntimeSkillRouter(lambda: [_home_assistant_skill()])
+    selected = router.select(query)
+    capabilities = {tool.capability for tool in selected}
+    assert "light__HassLightSet" in capabilities
+    assert "intent__HassTurnOn" not in capabilities
+    assert "intent__HassTurnOff" not in capabilities
+
+
+@pytest.mark.parametrize(
+    "query",
+    ["把房间温度调到24度", "调整空调温度", "调高室内温度"],
+)
+def test_router_selects_ha_temperature_for_climate_queries(query: str) -> None:
+    router = RuntimeSkillRouter(lambda: [_home_assistant_skill()])
+    selected = router.select(query)
+    capabilities = {tool.capability for tool in selected}
+    assert "climate__HassClimateSetTemperature" in capabilities
+    assert "light__HassLightSet" not in capabilities
+
+
+@pytest.mark.parametrize(
+    "query",
+    ["客厅的灯开着吗", "看看现在的状态", "现在的室温是多少", "设备状态", "传感器数值"],
+)
+def test_router_selects_ha_live_context_for_status_queries(query: str) -> None:
+    router = RuntimeSkillRouter(lambda: [_home_assistant_skill()])
+    selected = router.select(query)
+    capabilities = {tool.capability for tool in selected}
+    assert "homeassistant__GetLiveContext" in capabilities
+    if query == "客厅的灯开着吗":
+        assert "intent__HassTurnOn" not in capabilities
+        assert "intent__HassTurnOff" not in capabilities
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "今天吃了什么",
+        "讲个笑话",
+        "你好",
+        "陪我聊天",
+        "什么情况",
+        "今天情况怎么样",
+        "最近情况如何",
+        "早上好，今天过得怎么样？",
+        "只回复 17 乘以 23 的结果。",
+    ],
+)
+def test_router_excludes_ha_tools_for_unrelated_queries(query: str) -> None:
+    router = RuntimeSkillRouter(lambda: [_home_assistant_skill()])
+    assert router.select(query) == ()
+
+
+def test_router_excludes_disabled_ha_skill() -> None:
+    router = RuntimeSkillRouter(lambda: [_home_assistant_skill(enabled=False)])
+    assert router.select("帮我开一下客厅的灯") == ()
+    assert router.select("客厅的灯开着吗") == ()
+
+
+def test_router_preserves_ha_permissions_confirmation_and_opaque_names() -> None:
+    router = RuntimeSkillRouter(lambda: [_home_assistant_skill()])
+    selected = router.select("把客厅灯调亮一点")
+    assert len(selected) > 0
+    light_tool = next(tool for tool in selected if tool.capability == "light__HassLightSet")
+
+    assert light_tool.confirmation_required is True
+    assert light_tool.side_effect == SideEffect.EXTERNAL_COMMUNICATION
+    assert light_tool.name.startswith("cw_")
+    assert "light__HassLightSet" not in light_tool.name
+    assert "requires local user confirmation" in light_tool.description
+
+    # Capabilities without confirmation or without required_permissions must not be exposed
+    unconfirmed = _skill(
+        "mcp.tool.ha_connection",
+        "Home Assistant",
+        "Discovered tools.",
+        [
+            _capability(
+                "intent__HassTurnOn",
+                "Turns on a device.",
+                side_effect=SideEffect.EXTERNAL_COMMUNICATION,
+                permission="mcp.connection.ha.tool.call",
+                confirmation=False,  # unconfirmed third-party capability
+            )
+        ],
+        source="mcp_connection",
+    )
+    assert RuntimeSkillRouter(lambda: [unconfirmed]).select("打开客厅的灯") == ()
+
+    unpermissioned = _skill(
+        "mcp.tool.ha_connection",
+        "Home Assistant",
+        "Discovered tools.",
+        [
+            _capability(
+                "intent__HassTurnOn",
+                "Turns on a device.",
+                side_effect=SideEffect.EXTERNAL_COMMUNICATION,
+                permission=None,  # unpermissioned third-party capability
+                confirmation=True,
+            )
+        ],
+        source="mcp_connection",
+    )
+    assert RuntimeSkillRouter(lambda: [unpermissioned]).select("打开客厅的灯") == ()

@@ -25,6 +25,7 @@ from chatwaifu_protocol.skills import (
     McpToolDescriptor,
 )
 from mcp import ClientSession
+from mcp.shared.exceptions import MCPError
 from mcp.types import PaginatedRequestParams
 
 from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
@@ -728,9 +729,14 @@ async def _list_resource_templates(
     items: list[McpResourceTemplateDescriptor] = []
     cursor: str | None = None
     while True:
-        result = await session.list_resource_templates(
-            params=PaginatedRequestParams(cursor=cursor) if cursor else None
-        )
+        try:
+            result = await session.list_resource_templates(
+                params=PaginatedRequestParams(cursor=cursor) if cursor else None
+            )
+        except MCPError as error:
+            if cursor is None and error.code == -32601:
+                return []
+            raise
         items.extend(
             McpResourceTemplateDescriptor(
                 uri_template=template.uri_template,

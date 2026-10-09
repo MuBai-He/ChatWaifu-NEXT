@@ -27,6 +27,7 @@ _BUILTIN_COMPANIONS = {("web.search", "search"): ("web.read", "read")}
 _ASCII_WORD = re.compile(r"[a-z0-9][a-z0-9_-]*")
 _CJK_RUN = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]+")
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]+")
+_CAMEL_CASE = re.compile(r"([a-z0-9])([A-Z])")
 _ASCII_STOPWORDS = frozenset(
     {
         "a",
@@ -54,6 +55,7 @@ _ASCII_STOPWORDS = frozenset(
         "this",
         "to",
         "tool",
+        "turn",
         "with",
     }
 )
@@ -95,20 +97,148 @@ _CONCEPT_TERMS: dict[str, tuple[str, ...]] = {
         "runtime",
         "diagnostic",
         "available",
+        "state",
+        "states",
+        "condition",
+        "conditions",
+        "sensor",
+        "sensors",
+        "live",
+        "mode",
+        "value",
         "状态",
         "健康",
         "运行情况",
         "可用",
         "正常",
         "诊断",
+        "设备情况",
+        "开着吗",
+        "关着吗",
+        "开着没",
+        "关着没",
+        "是否开启",
+        "是否打开",
+        "是否关闭",
+        "是否开着",
+        "是否关着",
+        "数值",
+        "读数",
+        "指标",
+        "传感器",
+        "几度",
+        "多少度",
+        "室温是多少",
+        "温度是多少",
     ),
-    "weather": ("weather", "forecast", "temperature", "天气", "预报", "气温", "温度"),
+    "weather": ("weather", "forecast", "天气", "预报"),
+    "temperature": (
+        "temperature",
+        "thermostat",
+        "climate",
+        "temp",
+        "room temperature",
+        "温度",
+        "室温",
+        "室内温度",
+        "房间温度",
+        "气温",
+        "设定温度",
+        "调温",
+        "水温",
+        "几度",
+        "多少度",
+    ),
+    "climate": (
+        "climate",
+        "thermostat",
+        "hvac",
+        "air conditioner",
+        "ac",
+        "空调",
+        "温控",
+        "冷气",
+        "暖气",
+        "制冷",
+        "制热",
+    ),
     "time": ("time", "clock", "timezone", "date", "时间", "几点", "日期", "时区"),
     "file": ("file", "folder", "document", "文件", "目录", "文档"),
     "calendar": ("calendar", "event", "schedule", "日历", "日程", "安排"),
     "note": ("note", "memo", "append", "笔记", "备忘", "记录", "追加"),
     "echo": ("echo", "repeat", "原样返回", "复述", "重复"),
     "wait": ("wait", "delay", "sleep", "等待", "延迟"),
+    "turn_on": (
+        "turn on",
+        "turns on",
+        "turn_on",
+        "activate",
+        "enable",
+        "打开",
+        "开启",
+        "开一下",
+        "开灯",
+        "开门",
+        "开机",
+        "通电",
+        "启动",
+    ),
+    "turn_off": (
+        "turn off",
+        "turns off",
+        "turn_off",
+        "deactivate",
+        "disable",
+        "关闭",
+        "关掉",
+        "关上",
+        "关一下",
+        "关灯",
+        "关门",
+        "关机",
+        "断电",
+    ),
+    "brightness": (
+        "brightness",
+        "brighten",
+        "dim",
+        "dimmer",
+        "lightness",
+        "亮度",
+        "调亮",
+        "调暗",
+        "变亮",
+        "变暗",
+        "明亮",
+        "明暗",
+    ),
+    "light": (
+        "light",
+        "lights",
+        "lighting",
+        "lamp",
+        "bulb",
+        "illumination",
+        "灯",
+        "台灯",
+        "吸顶灯",
+        "筒灯",
+        "落地灯",
+        "吊灯",
+        "灯光",
+        "照明",
+    ),
+    "device": (
+        "device",
+        "devices",
+        "appliance",
+        "entity",
+        "entities",
+        "设备",
+        "电器",
+        "实体",
+        "家电",
+    ),
 }
 
 
@@ -448,7 +578,8 @@ def score_capability_metadata(
 
 
 def _features(text: str) -> set[str]:
-    lowered = text.casefold()
+    split_text = _CAMEL_CASE.sub(r"\1 \2", text)
+    lowered = split_text.casefold()
     raw_ascii = set(_ASCII_WORD.findall(lowered))
     ascii_tokens = {
         part
@@ -474,6 +605,29 @@ def _features(text: str) -> set[str]:
 
 def _matches_concept_term(term: str, lowered: str, ascii_tokens: set[str]) -> bool:
     if term.isascii():
+        if " " in term or "_" in term or "-" in term:
+            parts = [p for p in re.split(r"[\s_-]+", term) if p]
+            if not parts:
+                return False
+            pattern = r"\b" + r"\s+".join(re.escape(p) for p in parts) + r"\b"
+            if re.search(pattern, lowered):
+                return True
+            if parts in (["turn", "on"], ["turn", "off"]):
+                # English permits a short object between the verb and particle.
+                # Do not cross another action or an opposite on/off particle.
+                separated = (
+                    r"\bturn(?:s)?(?:\s+(?!(?:on|off|and|then)\b)[\w-]+){1,6}\s+"
+                    + re.escape(parts[1])
+                    + r"\b"
+                )
+                if re.search(separated, lowered):
+                    return True
+            stemmed_pattern = (
+                r"\b"
+                + r"\s+".join(rf"{re.escape(_stem_ascii(p))}(?:ing|ed|es|s)?" for p in parts)
+                + r"\b"
+            )
+            return bool(re.search(stemmed_pattern, lowered))
         return _stem_ascii(term) in {_stem_ascii(token) for token in ascii_tokens}
     return term in lowered
 
