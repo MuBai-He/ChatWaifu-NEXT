@@ -111,7 +111,7 @@
           "items": {
             "$ref": "#/$defs/ChannelGroupRouteMemberSnapshot"
           },
-          "maxItems": 32,
+          "maxItems": 2000,
           "minItems": 2,
           "title": "Members",
           "type": "array"

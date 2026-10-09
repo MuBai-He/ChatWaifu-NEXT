@@ -16,7 +16,7 @@
       "items": {
         "type": "string"
       },
-      "maxItems": 32,
+      "maxItems": 2000,
       "minItems": 2,
       "title": "Participant Ids",
       "type": "array"

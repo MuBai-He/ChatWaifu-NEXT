@@ -17,6 +17,7 @@ import {
   getChannelGroupTurns,
   getChannelParticipantLinks,
   observeChannelGroupAudience,
+  registerChannelGroupAudience,
   updateChannelGroupRoute,
   updateChannelParticipantLink,
   type ChannelGroupAudienceSnapshot,
@@ -296,6 +297,70 @@ function QQGroupRoutesContent({
       }
     });
   };
+  const registerMembers = (
+    observation: ChannelGroupAudienceSnapshot,
+    route = false,
+  ) => {
+    if (!observationIsFresh(observation)) return;
+    void run("link", async (request) => {
+      const result = await registerChannelGroupAudience(
+        connectionId,
+        observation.observation_id,
+        request,
+      );
+      guard(request);
+      if (
+        result.connection_id !== connectionId ||
+        result.account_key !== config.account_key ||
+        result.connection_revision !== connection.revision ||
+        result.group_id !== observation.group_id ||
+        result.member_fingerprint !== observation.member_fingerprint ||
+        !observationIsFresh(result)
+      )
+        throw new Error("registration audience mismatch");
+
+      const observedLinks = result.participant_links ?? [];
+      const people = result.participants ?? [];
+      checkLinks(observedLinks, config.account_key);
+      if (
+        observedLinks.length !== result.member_ids.length ||
+        new Set(observedLinks.map((link) => link.sender_key)).size !==
+          result.member_ids.length ||
+        observedLinks.some(
+          (link) =>
+            !result.member_ids.includes(link.sender_key) ||
+            !people.some(
+              (person) => person.participant_id === link.participant_id,
+            ),
+        )
+      )
+        throw new Error("automatic registration incomplete");
+      setLinks((old) => [
+        ...old.filter(
+          (item) =>
+            !observedLinks.some((link) => link.link_id === item.link_id),
+        ),
+        ...observedLinks,
+      ]);
+      setParticipants((old) => [
+        ...old.filter(
+          (item) =>
+            !people.some(
+              (person) => person.participant_id === item.participant_id,
+            ),
+        ),
+        ...people,
+      ]);
+      setNotice(
+        `已读取 ${result.member_ids.length} 名成员，自动注册并关联 ${result.registered_count ?? 0} 名新成员；已有身份继续沿用。`,
+      );
+
+      setCreationConfirmed(false);
+      setRouteConfirmed(false);
+      if (route) setRouteObservation(result);
+      else setCreationObservation(result);
+    });
+  };
   const rememberLink = (result: ChannelParticipantLinkSnapshot) => {
     checkLinks([result], config.account_key);
     setLinks((old) => [
@@ -367,15 +432,13 @@ function QQGroupRoutesContent({
     });
   };
   const allLinked = (observation: ChannelGroupAudienceSnapshot | null) => {
-    if (!observation || linkCursor) return false;
-    const found = observation.member_ids.map((id) =>
-      links.find(
-        (link) =>
-          link.sender_key === id &&
-          link.enabled &&
-          participants.some((p) => p.participant_id === link.participant_id),
-      ),
-    );
+    if (!observation) return false;
+    const known = new Set(participants.map((person) => person.participant_id));
+    const bySender = new Map(links.map((link) => [link.sender_key, link]));
+    const found = observation.member_ids.map((id) => {
+      const link = bySender.get(id);
+      return link?.enabled && known.has(link.participant_id) ? link : undefined;
+    });
     return (
       found.every(Boolean) &&
       new Set(found.map((link) => link?.participant_id)).size === found.length
@@ -564,9 +627,10 @@ function QQGroupRoutesContent({
         </button>
       ) : null}
       <p>
-        成员须先在“对话设置 → 添加参与者”中注册。关联 QQ
-        号时必须逐一选择；不会按昵称自动匹配。一个群内的不同成员须关联不同的
-        participant。
+        读取成员只展示预览。确认后可按 QQ
+        号批量注册并关联，已有身份和名称继续沿用。
+        昵称只用于显示，同名成员各自保留身份。支持 2–2,000 名成员；
+        如需关联已注册的人，也可逐一手动选择。
       </p>
       <p className="qq-group-risk">
         群成员观测可能来自 NapCat 缓存，无法实时锁定受众。新加入的人可能在
@@ -585,7 +649,7 @@ function QQGroupRoutesContent({
       </button>
       {linkCursor ? (
         <div>
-          <p>成员映射尚未完整读取，创建和启用暂不可用。</p>
+          <p>还有其他成员映射未加载；自动注册会完整读取当前群的身份。</p>
           <button
             type="button"
             disabled={!readAvailable || busy}
@@ -666,6 +730,7 @@ function QQGroupRoutesContent({
             }}
             onLink={linkMember}
             onToggle={toggleLink}
+            onRegister={() => registerMembers(creationObservation)}
           />
         ) : null}
         {creationObservation ? (
@@ -823,10 +888,15 @@ function QQGroupRoutesContent({
                 }}
                 onLink={linkMember}
                 onToggle={toggleLink}
+                onRegister={() => registerMembers(routeObservation, true)}
               />
             ) : (
               <div>
-                {selected.members.map((member) => (
+                <p>
+                  已登记 {selected.members.length}{" "}
+                  名成员；重新读取后可搜索成员并批量选择发言权限。
+                </p>
+                {selected.members.slice(0, 50).map((member) => (
                   <label className="qq-group-check" key={member.sender_key}>
                     <input
                       type="checkbox"
@@ -948,6 +1018,7 @@ function AudienceMapper({
   setSpeakers,
   onLink,
   onToggle,
+  onRegister,
 }: {
   observation: ChannelGroupAudienceSnapshot;
   fresh: boolean;
@@ -959,7 +1030,30 @@ function AudienceMapper({
   setSpeakers: (value: string[]) => void;
   onLink: (observation: ChannelGroupAudienceSnapshot, sender: string) => void;
   onToggle: (link: ChannelParticipantLinkSnapshot) => void;
+  onRegister: () => void;
 }) {
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const pageSize = 50;
+  const bySender = new Map(links.map((link) => [link.sender_key, link]));
+  const names = new Map(
+    participants.map((person) => [person.participant_id, person.display_name]),
+  );
+  const filtered = observation.member_ids.filter((sender) => {
+    const link = bySender.get(sender);
+    return `${sender} ${link ? (names.get(link.participant_id) ?? "") : (observation.member_display_names?.[sender] ?? "")}`
+      .toLocaleLowerCase()
+      .includes(query.trim().toLocaleLowerCase());
+  });
+  const lastPage = Math.max(0, Math.ceil(filtered.length / pageSize) - 1);
+  const currentPage = Math.min(page, lastPage);
+  const visible = filtered.slice(
+    currentPage * pageSize,
+    (currentPage + 1) * pageSize,
+  );
+  const enabled = observation.member_ids.filter(
+    (sender) => bySender.get(sender)?.enabled,
+  );
   return (
     <div className="qq-group-audience">
       <p role="status">
@@ -967,12 +1061,56 @@ function AudienceMapper({
           ? `观测有效至 ${formatDate(observation.expires_at)}，仍可能是缓存列表。`
           : "成员观测已过期，请重新读取；不会自动刷新或启用。"}
       </p>
+      {observation.member_ids.some((sender) => !bySender.has(sender)) ? (
+        <div>
+          <p>
+            预览不会创建身份。确认后将注册未关联成员，保留已有身份及已撤销的关联；不会启用群回复。
+          </p>
+          <button type="button" disabled={!fresh} onClick={onRegister}>
+            确认自动注册并关联未关联成员
+          </button>
+        </div>
+      ) : null}
+      <p>
+        共 {observation.member_ids.length} 名成员 · 已选择 {speakers.length}{" "}
+        名发言者
+      </p>
+      <label>
+        搜索群成员
+        <input
+          value={query}
+          onChange={(event) => {
+            setQuery(event.currentTarget.value);
+            setPage(0);
+          }}
+          placeholder="输入 QQ 号或参与者名称"
+        />
+      </label>
+      <div className="qq-group-bulk-actions">
+        <button
+          type="button"
+          disabled={!fresh || !enabled.length}
+          onClick={() => setSpeakers(enabled)}
+        >
+          允许全部已关联成员发言
+        </button>
+        <button
+          type="button"
+          disabled={!fresh || !speakers.length}
+          onClick={() => setSpeakers([])}
+        >
+          取消全部发言选择
+        </button>
+      </div>
       <ul className="qq-group-list">
-        {observation.member_ids.map((sender) => {
-          const link = links.find((item) => item.sender_key === sender);
+        {visible.map((sender) => {
+          const link = bySender.get(sender);
           return (
             <li key={sender}>
               <strong>QQ {sender}</strong>
+              {observation.member_display_names?.[sender] ? (
+                <span>{observation.member_display_names[sender]}</span>
+              ) : null}
               {link ? (
                 <>
                   <span>
@@ -1053,6 +1191,35 @@ function AudienceMapper({
           );
         })}
       </ul>
+      {!filtered.length ? <p>没有匹配的群成员。</p> : null}
+      {lastPage > 0 ? (
+        <div className="qq-group-bulk-actions">
+          <button
+            type="button"
+            disabled={currentPage === 0}
+            onClick={() => setPage(currentPage - 1)}
+          >
+            上一页成员
+          </button>
+          <span>
+            第 {currentPage + 1} / {lastPage + 1} 页 · 匹配 {filtered.length} 人
+          </span>
+          <button
+            type="button"
+            disabled={currentPage === lastPage}
+            onClick={() => setPage(currentPage + 1)}
+          >
+            下一页成员
+          </button>
+        </div>
+      ) : null}
+      {observation.member_ids.some(
+        (sender) => !bySender.get(sender)?.enabled,
+      ) ? (
+        <p role="status">
+          尚有成员未关联或关联已撤销；完成关联后才能确认共享并创建或启用。
+        </p>
+      ) : null}
     </div>
   );
 }

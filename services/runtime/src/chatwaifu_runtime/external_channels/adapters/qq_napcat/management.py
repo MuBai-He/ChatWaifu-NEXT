@@ -36,6 +36,7 @@ from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.external_channels.credentials import ChannelCredentialStore
 from chatwaifu_runtime.external_channels.group_models import (
     GROUP_MENTION_ONLY_TEXT,
+    ChannelGroupAudienceDetails,
     ChannelGroupInboundDescriptor,
 )
 from chatwaifu_runtime.external_channels.models import (
@@ -161,7 +162,7 @@ class NapCatManagement:
 
     async def _group_audience(
         self, connection_id: UUID, group_id: str
-    ) -> tuple[str, tuple[str, ...]]:
+    ) -> ChannelGroupAudienceDetails:
         client = self._clients.get(connection_id)
         if client is None or not self._group_transport_ready(connection_id):
             raise NapCatError("QQ group transport is unavailable")
@@ -170,7 +171,9 @@ class NapCatManagement:
             connection_id
         ):
             raise NapCatError("QQ group transport changed during audience observation")
-        return members.account_key, members.member_ids
+        return ChannelGroupAudienceDetails(
+            members.account_key, members.member_ids, members.display_names
+        )
 
     async def scoped_agent_call(
         self,

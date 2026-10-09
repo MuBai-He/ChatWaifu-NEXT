@@ -953,3 +953,55 @@ async def test_group_target_and_unknown_send_fence_survive_reopen_then_known_rec
         assert await reopened.fetchall("PRAGMA foreign_key_check") == []
     finally:
         await reopened.close()
+
+
+async def test_bulk_registration_rolls_back_all_participants_and_links_on_failure(
+    group: Group,
+) -> None:
+    observation = ChannelGroupAudienceObservation(
+        uuid4(),
+        group.connection_id,
+        1,
+        "900",
+        "501",
+        ("333", "444"),
+        NOW,
+        NOW + timedelta(seconds=60),
+    )
+    await group.repository.create_observation(observation)
+    before = await group.database.fetchall("SELECT * FROM participants")
+    async with group.database.transaction() as db:
+        await db.execute(
+            "CREATE TRIGGER fixture_reject_registration BEFORE INSERT ON channel_participant_links "
+            "WHEN NEW.sender_key='444' BEGIN SELECT RAISE(ABORT,'fixture failure'); END"
+        )
+    with pytest.raises(sqlite3.IntegrityError):
+        await group.repository.register_audience(observation.observation_id, {}, created_at=NOW)
+    assert await group.database.fetchall("SELECT * FROM participants") == before
+    rows = await group.database.fetchall(
+        "SELECT * FROM channel_participant_links WHERE sender_key IN ('333','444')"
+    )
+    assert not rows
+
+
+async def test_concurrent_bulk_confirmation_reuses_each_identity(group: Group) -> None:
+    observation = ChannelGroupAudienceObservation(
+        uuid4(),
+        group.connection_id,
+        1,
+        "900",
+        "501",
+        ("333", "444"),
+        NOW,
+        NOW + timedelta(seconds=60),
+    )
+    await group.repository.create_observation(observation)
+    first, second = await asyncio.gather(
+        group.repository.register_audience(
+            observation.observation_id, {"333": "same", "444": "same"}, created_at=NOW
+        ),
+        group.repository.register_audience(observation.observation_id, {}, created_at=NOW),
+    )
+    assert sorted((first[2], second[2])) == [0, 2]
+    assert first[0] == second[0]
+    assert len({link.participant_id for link in first[0]}) == 2

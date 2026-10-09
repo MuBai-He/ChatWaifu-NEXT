@@ -3699,6 +3699,13 @@
           "title": "Group Id",
           "type": "string"
         },
+        "member_display_names": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Member Display Names",
+          "type": "object"
+        },
         "member_fingerprint": {
           "pattern": "^[0-9a-f]{64}$",
           "title": "Member Fingerprint",
@@ -3708,7 +3715,7 @@
           "items": {
             "type": "string"
           },
-          "maxItems": 32,
+          "maxItems": 2000,
           "minItems": 2,
           "title": "Member Ids",
           "type": "array"
@@ -3722,6 +3729,29 @@
           "format": "date-time",
           "title": "Observed At",
           "type": "string"
+        },
+        "participant_links": {
+          "items": {
+            "$ref": "#/$defs/ChannelParticipantLinkSnapshot"
+          },
+          "maxItems": 2000,
+          "title": "Participant Links",
+          "type": "array"
+        },
+        "participants": {
+          "items": {
+            "$ref": "#/$defs/ParticipantSnapshot"
+          },
+          "maxItems": 2000,
+          "title": "Participants",
+          "type": "array"
+        },
+        "registered_count": {
+          "default": 0,
+          "maximum": 2000,
+          "minimum": 0,
+          "title": "Registered Count",
+          "type": "integer"
         },
         "schema_version": {
           "const": "1.0",
@@ -3835,6 +3865,27 @@
       "title": "ChannelGroupPauseReason",
       "type": "string"
     },
+    "ChannelGroupRegistrationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "observation_id": {
+          "format": "uuid",
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "observation_id"
+      ],
+      "title": "ChannelGroupRegistrationRequest",
+      "type": "object"
+    },
     "ChannelGroupRouteCreate": {
       "additionalProperties": false,
       "properties": {
@@ -3864,7 +3915,7 @@
           "items": {
             "type": "string"
           },
-          "maxItems": 32,
+          "maxItems": 2000,
           "title": "Speaker Sender Keys",
           "type": "array"
         }
@@ -4005,7 +4056,7 @@
           "items": {
             "$ref": "#/$defs/ChannelGroupRouteMemberSnapshot"
           },
-          "maxItems": 32,
+          "maxItems": 2000,
           "minItems": 2,
           "title": "Members",
           "type": "array"
@@ -4117,7 +4168,7 @@
           "items": {
             "type": "string"
           },
-          "maxItems": 32,
+          "maxItems": 2000,
           "title": "Speaker Sender Keys",
           "type": "array"
         }
@@ -11351,7 +11402,7 @@
           "items": {
             "type": "string"
           },
-          "maxItems": 32,
+          "maxItems": 2000,
           "minItems": 2,
           "title": "Participant Ids",
           "type": "array"
@@ -13996,6 +14047,9 @@
     "channel_group_delivery_target": {
       "$ref": "#/$defs/ChannelGroupDeliveryTarget"
     },
+    "channel_group_registration_request": {
+      "$ref": "#/$defs/ChannelGroupRegistrationRequest"
+    },
     "channel_group_route_create": {
       "$ref": "#/$defs/ChannelGroupRouteCreate"
     },
@@ -14344,6 +14398,7 @@
     "channel_connection_configuration",
     "channel_connection",
     "channel_gateway_status",
+    "channel_group_registration_request",
     "channel_group_audience_request",
     "channel_group_audience_snapshot",
     "channel_group_turn_snapshot",

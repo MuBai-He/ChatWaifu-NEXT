@@ -1,4 +1,96 @@
 {
+  "$defs": {
+    "ChannelParticipantLinkSnapshot": {
+      "properties": {
+        "account_key": {
+          "title": "Account Key",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "link_id": {
+          "format": "uuid",
+          "title": "Link Id",
+          "type": "string"
+        },
+        "participant_id": {
+          "title": "Participant Id",
+          "type": "string"
+        },
+        "provider_id": {
+          "const": "qq_napcat",
+          "default": "qq_napcat",
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "revision": {
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sender_key": {
+          "title": "Sender Key",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "link_id",
+        "account_key",
+        "sender_key",
+        "participant_id",
+        "enabled",
+        "revision",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "ChannelParticipantLinkSnapshot",
+      "type": "object"
+    },
+    "ParticipantSnapshot": {
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "display_name": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "participant_id": {
+          "title": "Participant Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "participant_id",
+        "display_name",
+        "created_at"
+      ],
+      "title": "ParticipantSnapshot",
+      "type": "object"
+    }
+  },
   "$id": "https://chatwaifu.local/schemas/domain/v1/channel-group-audience-snapshot.schema.json",
   "properties": {
     "account_key": {
@@ -24,6 +116,13 @@
       "title": "Group Id",
       "type": "string"
     },
+    "member_display_names": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Member Display Names",
+      "type": "object"
+    },
     "member_fingerprint": {
       "pattern": "^[0-9a-f]{64}$",
       "title": "Member Fingerprint",
@@ -33,7 +132,7 @@
       "items": {
         "type": "string"
       },
-      "maxItems": 32,
+      "maxItems": 2000,
       "minItems": 2,
       "title": "Member Ids",
       "type": "array"
@@ -47,6 +146,29 @@
       "format": "date-time",
       "title": "Observed At",
       "type": "string"
+    },
+    "participant_links": {
+      "items": {
+        "$ref": "#/$defs/ChannelParticipantLinkSnapshot"
+      },
+      "maxItems": 2000,
+      "title": "Participant Links",
+      "type": "array"
+    },
+    "participants": {
+      "items": {
+        "$ref": "#/$defs/ParticipantSnapshot"
+      },
+      "maxItems": 2000,
+      "title": "Participants",
+      "type": "array"
+    },
+    "registered_count": {
+      "default": 0,
+      "maximum": 2000,
+      "minimum": 0,
+      "title": "Registered Count",
+      "type": "integer"
     },
     "schema_version": {
       "const": "1.0",

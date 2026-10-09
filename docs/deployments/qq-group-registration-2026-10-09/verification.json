@@ -1,0 +1,91 @@
+{
+  "verified_at": "2026-10-09T00:35:16.524407+00:00",
+  "release": "/home/mubai/chatwaifu-server/releases/qq-group-registration-20261009-2222ad39",
+  "release_pointers_match": true,
+  "new_api_schema_live": true,
+  "max_group_members": 2000,
+  "registration_guard_statuses": {
+    "no_operator_auth": 401,
+    "invalid_body": 422,
+    "unknown_observation": 404
+  },
+  "web_disk_http_hashes_verified": 13,
+  "settings_spa_entry_verified": true,
+  "confirmation_ui_and_endpoint_in_served_build": true,
+  "https_hostname_trust_verified": true,
+  "control_tables_unchanged_after_api_checks": true,
+  "control_counts": {
+    "participants": 6,
+    "channel_participant_links": 6,
+    "conversation_scenes": 2,
+    "channel_group_routes": 2,
+    "channel_group_route_members": 343,
+    "channel_runtime_settings": 1,
+    "channel_proactive_policies": 1,
+    "agent_group_policies": 2,
+    "agent_development_policy": 0,
+    "model_role_configs": 5,
+    "schema_migrations": 47
+  },
+  "integrity_check": "ok",
+  "foreign_key_violations": 0,
+  "migration": 47,
+  "group_routes": [
+    {
+      "enabled": false,
+      "revision": 64,
+      "pause_reason": "reconnect"
+    },
+    {
+      "enabled": false,
+      "revision": 43,
+      "pause_reason": "reconnect"
+    }
+  ],
+  "channel_connection_statuses": [
+    {
+      "provider_id": "qq_napcat",
+      "status": "ready",
+      "enabled": true
+    },
+    {
+      "provider_id": "weixin_ilink",
+      "status": "ready",
+      "enabled": true
+    }
+  ],
+  "configuration_hashes_unchanged": true,
+  "service_states": {
+    "chatwaifu-runtime.service": "active",
+    "chatwaifu-web.service": "active",
+    "chatwaifu-https.service": "active",
+    "chatwaifu-stt.service": "active",
+    "chatwaifu-gpt-sovits.service": "active",
+    "chatwaifu-qwen3-tts.service": "active",
+    "chatwaifu-qq-stage-proxy.service": "active"
+  },
+  "unrelated_service_pids_unchanged": true,
+  "container_count_unchanged": 13,
+  "status": "verified",
+  "real_group_registration_performed": false,
+  "group_route_enable_performed": false,
+  "real_channel_send_performed": false,
+  "main_merge_performed": false,
+  "cutover_ready_at": "2026-10-09T00:32:21.572618+00:00",
+  "feature_commit": "2222ad39529956784309e2b09e111a76c9a198ff",
+  "source_files_hash_verified": 1431,
+  "previous_source": "/home/mubai/chatwaifu-server/releases/home-assistant-mcp-20261008/source",
+  "previous_web": "/home/mubai/chatwaifu-server/releases/chat-clean-interface-20261008/web",
+  "unmodified_source_files_preserved": 1390,
+  "linux_regression": {
+    "initial_passed": 438,
+    "initial_failed": 1,
+    "final_application_rerun_passed": 53,
+    "final_unique_cases_passed": 439,
+    "final_failed": 0,
+    "rerun_seconds": 92.79,
+    "test_guard": "main 15 seconds; no production code changed"
+  },
+  "backup_directory": "/home/mubai/chatwaifu-server/backups/qq-group-registration-20261009-2222ad39",
+  "browser_check": "Fresh LAN Web entry rendered the connection screen; protected group-management UI awaits user session refresh."
+}

@@ -14,6 +14,7 @@ import pytest
 from chatwaifu_protocol.channel_groups import (
     ChannelGroupAudienceRequest,
     ChannelGroupPauseReason,
+    ChannelGroupRegistrationRequest,
     ChannelGroupRouteCreate,
     ChannelGroupRouteSnapshot,
     ChannelGroupRouteUpdate,
@@ -40,6 +41,7 @@ from chatwaifu_runtime.conversation.models import ConversationSourceContext
 from chatwaifu_runtime.external_channels.group_models import (
     ChannelGroupAdmission,
     ChannelGroupAdmissionResult,
+    ChannelGroupAudienceDetails,
     ChannelGroupAuthorization,
     ChannelGroupInboundDescriptor,
     ChannelGroupPlanResult,
@@ -180,8 +182,8 @@ async def app(runtime_settings: Settings, monkeypatch: pytest.MonkeyPatch) -> As
     service.set_authenticator(container.external_channels.authenticate_group_transport)
     service.set_transport_ready(lambda _connection: True)
 
-    async def reader(_connection: UUID, _group: str) -> tuple[str, tuple[str, ...]]:
-        return "900", ("111", "222")
+    async def reader(_connection: UUID, _group: str) -> ChannelGroupAudienceDetails:
+        return ChannelGroupAudienceDetails("900", ("111", "222"))
 
     service.set_audience_reader(reader)
     observation = await service.observe_audience(
@@ -979,8 +981,8 @@ async def test_audience_change_keeps_route_id_creates_scene_and_never_imports_ol
     await app.join(first.channel_turn_id)
     old_scene = app.route.scene_id
 
-    async def reader(_connection: UUID, _group: str) -> tuple[str, tuple[str, ...]]:
-        return "900", ("111", "333")
+    async def reader(_connection: UUID, _group: str) -> ChannelGroupAudienceDetails:
+        return ChannelGroupAudienceDetails("900", ("111", "333"))
 
     app.service.set_audience_reader(reader)
     observation = await app.service.observe_audience(
@@ -1054,10 +1056,10 @@ async def test_observation_account_change_or_notice_during_read_cannot_become_en
 ) -> None:
     entered, release = asyncio.Event(), asyncio.Event()
 
-    async def reader(_connection: UUID, _group: str) -> tuple[str, tuple[str, ...]]:
+    async def reader(_connection: UUID, _group: str) -> ChannelGroupAudienceDetails:
         entered.set()
         await release.wait()
-        return "900", ("111", "222")
+        return ChannelGroupAudienceDetails("900", ("111", "222"))
 
     app.service.set_audience_reader(reader)
     incoming = asyncio.create_task(
@@ -1160,10 +1162,10 @@ async def test_group_only_notice_invalidates_inflight_observation_without_relyin
 ) -> None:
     entered, release = asyncio.Event(), asyncio.Event()
 
-    async def reader(_connection: UUID, _group: str) -> tuple[str, tuple[str, ...]]:
+    async def reader(_connection: UUID, _group: str) -> ChannelGroupAudienceDetails:
         entered.set()
         await release.wait()
-        return "900", ("111", "222")
+        return ChannelGroupAudienceDetails("900", ("111", "222"))
 
     app.service.set_audience_reader(reader)
     incoming = asyncio.create_task(
@@ -1352,10 +1354,10 @@ async def test_overflow_epoch_prevents_late_observation_after_pause_and_resume(a
     await app.enable()
     entered, release = asyncio.Event(), asyncio.Event()
 
-    async def held_reader(_connection: UUID, _group: str) -> tuple[str, tuple[str, ...]]:
+    async def held_reader(_connection: UUID, _group: str) -> ChannelGroupAudienceDetails:
         entered.set()
         await release.wait()
-        return "900", ("111", "222")
+        return ChannelGroupAudienceDetails("900", ("111", "222"))
 
     app.service.set_audience_reader(held_reader)
     incoming = asyncio.create_task(
@@ -1370,8 +1372,8 @@ async def test_overflow_epoch_prevents_late_observation_after_pause_and_resume(a
     assert route is not None
     app.route = app.route.model_copy(update={"revision": route.revision})
 
-    async def fresh_reader(_connection: UUID, _group: str) -> tuple[str, tuple[str, ...]]:
-        return "900", ("111", "222")
+    async def fresh_reader(_connection: UUID, _group: str) -> ChannelGroupAudienceDetails:
+        return ChannelGroupAudienceDetails("900", ("111", "222"))
 
     app.service.set_audience_reader(fresh_reader)
     await app.enable()
@@ -1553,3 +1555,114 @@ async def test_wide_pause_clears_only_captured_group_blocks_and_keeps_epochs(
     app.route = app.route.model_copy(update={"revision": route.revision})
     await app.enable()
     assert app.route.enabled
+
+
+@pytest.mark.parametrize("size", [120, 1999])
+async def test_large_group_preview_has_no_identity_writes_and_confirmation_creates_closed_route(
+    app: App,
+    size: int,
+) -> None:
+    audience = (*(str(1000 + index) for index in range(size)), "999")
+
+    async def reader(_connection: UUID, _group: str) -> ChannelGroupAudienceDetails:
+        return ChannelGroupAudienceDetails(
+            "900", audience, {sender: "same nickname" for sender in audience}
+        )
+
+    app.service.set_audience_reader(reader)
+    before = await app.container.sessions.list_participants()
+    observation = await app.service.observe_audience(
+        app.connection_id, ChannelGroupAudienceRequest(group_id="501")
+    )
+    assert len(observation.member_ids) == size + 1
+    assert await app.container.sessions.list_participants() == before
+    assert observation.participant_links == []
+    assert observation.member_display_names["1000"] == "same nickname"
+    request = ChannelGroupRegistrationRequest(observation_id=observation.observation_id)
+    registered = await app.service.register_audience(app.connection_id, request)
+    assert registered.registered_count == size + 1
+    assert len({link.participant_id for link in registered.participant_links}) == size + 1
+    owner = next(link for link in registered.participant_links if link.sender_key == "999")
+    assert owner.participant_id == "local"
+    repeated = await app.service.register_audience(app.connection_id, request)
+    assert repeated.registered_count == 0
+    assert repeated.participant_links == registered.participant_links
+    assert len(await app.container.sessions.list_participants()) == len(before) + size
+    route = await app.service.create_route(
+        app.connection_id,
+        ChannelGroupRouteCreate(
+            observation_id=repeated.observation_id,
+            display_name="large fixture",
+        ),
+    )
+    assert len(route.members) == size + 1 and not route.enabled
+    assert all(not member.can_speak for member in route.members)
+    app.route = await app.service.update_route(
+        app.connection_id,
+        route.route_id,
+        ChannelGroupRouteUpdate(
+            expected_revision=route.revision,
+            enabled=True,
+            observation_id=repeated.observation_id,
+            speaker_sender_keys=["1000"],
+        ),
+    )
+    # Actual Conversation accepts a newly registered member in the large scene.
+    admitted = await app.service.ingest_group(
+        replace(app.message("800", "1000"), group_id="501"), access_token=TOKEN
+    )
+    await app.join(admitted.channel_turn_id)
+    assert app.provider.requests
+    assert len(app.provider.requests[-1].user_text) > 0
+
+
+async def test_confirmation_preserves_existing_names_and_revoked_links(app: App) -> None:
+    member = app.route.members[0]
+    await app.service.update_link(
+        app.connection_id,
+        member.link_id,
+        ChannelParticipantLinkUpdate(
+            enabled=False,
+            expected_revision=1,
+        ),
+    )
+    observation = await app.service.observe_audience(
+        app.connection_id, ChannelGroupAudienceRequest(group_id="501")
+    )
+    registered = await app.service.register_audience(
+        app.connection_id,
+        ChannelGroupRegistrationRequest(
+            observation_id=observation.observation_id,
+        ),
+    )
+    assert registered.registered_count == 0
+    assert (
+        next(
+            link for link in registered.participant_links if link.link_id == member.link_id
+        ).enabled
+        is False
+    )
+    assert all(person.display_name == "same display name" for person in registered.participants)
+    assert app.service.active_count == 0 and not app.provider.requests
+
+
+async def test_confirmation_rejects_changed_expired_or_cross_connection_preview(app: App) -> None:
+    observation = await app.service.observe_audience(
+        app.connection_id, ChannelGroupAudienceRequest(group_id="501")
+    )
+    request = ChannelGroupRegistrationRequest(observation_id=observation.observation_id)
+    before = await app.container.sessions.list_participants()
+
+    async def changed(_connection: UUID, _group: str) -> ChannelGroupAudienceDetails:
+        return ChannelGroupAudienceDetails("900", ("111", "333"))
+
+    app.service.set_audience_reader(changed)
+    with pytest.raises(ChannelConflictError):
+        await app.service.register_audience(app.connection_id, request)
+    assert await app.container.sessions.list_participants() == before
+    with pytest.raises(ChannelNotFoundError):
+        await app.service.register_audience(uuid4(), request)
+    app.service._clock = lambda: observation.expires_at
+    with pytest.raises(ChannelPolicyError):
+        await app.service.register_audience(app.connection_id, request)
+    assert await app.container.sessions.list_participants() == before

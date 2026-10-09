@@ -58,3 +58,14 @@
 .qq-group-reply {
   white-space: pre-wrap;
 }
+
+.qq-group-audience {
+  display: grid;
+  gap: 12px;
+}
+.qq-group-bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}

@@ -10,7 +10,7 @@
 
 D3 remains disabled until the Runtime operator selects a fixed small group and
 links every observed human audience member to a registered participant. A group
-scene contains 2–32 registered participants. The speaking grant is a subset of
+scene contains 2–2,000 registered participants (expanded on 2026-10-09). The speaking grant is a subset of
 that audience. QQ nicknames and model output never resolve or grant identities.
 The existing paired-owner private route remains independent.
 
@@ -131,3 +131,30 @@ correct. Real operator enablement and two-member QQ phone acceptance are separat
 gates. Roll back by disabling routes and cancelling unsent work while preserving
 all admissions, receipts and unknown fences. Never restore an old database over
 new business facts.
+
+## Confirmed batch registration and large audiences, 2026-10-09
+
+Membership reads remain previews: they persist a bounded observation and display
+provider nickname labels, but never create participants or identity links. The
+operator may explicitly confirm batch registration through the separate
+`group-participant-registrations` endpoint using that preview's observation ID.
+The service checks the preview's account, connection revision and 60-second TTL,
+reobserves membership, and rejects a changed audience before creating identities.
+An atomic repository transaction creates a separate participant for each missing
+QQ identity and its immutable account/sender link. Existing mappings, operator
+labels and revoked links are retained. The paired owner's known sender maps to
+`local` when no link exists. Nicknames supply labels only; duplicate names never
+merge participants. Repeated or concurrent confirmations reuse stored links.
+
+The audience bound is raised from 32 to 2,000 non-self accounts across NapCat,
+protocol parsers, group routing, shared scenes and discussion validation. Transport
+frames remain bounded at 8 MiB. Runtime generation/queue/discussion budgets are
+unchanged; the prompt compiler continues trimming optional audience metadata while
+retaining the current speaker and memory subjects. The UI displays 50 members per
+page, supports QQ/name search, and offers explicit bulk speaking selection.
+
+Registration never creates or enables a group route, grants speaking rights,
+restores revoked links, imports private memories, or enables requested voice.
+The existing shared-context confirmation and separate route enablement still apply.
+Old manual mapping remains available. This additive protocol has no database
+migration; existing rows and historical migration checksums remain unchanged.

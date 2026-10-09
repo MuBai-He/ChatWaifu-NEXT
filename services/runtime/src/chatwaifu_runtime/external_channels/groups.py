@@ -18,6 +18,7 @@ from chatwaifu_protocol.channel_groups import (
     ChannelGroupAudienceRequest,
     ChannelGroupAudienceSnapshot,
     ChannelGroupPauseReason,
+    ChannelGroupRegistrationRequest,
     ChannelGroupRouteCreate,
     ChannelGroupRouteMemberSnapshot,
     ChannelGroupRoutePage,
@@ -57,6 +58,7 @@ from chatwaifu_runtime.external_channels.group_discussion import GroupDiscussion
 from chatwaifu_runtime.external_channels.group_models import (
     ChannelGroupAdmission,
     ChannelGroupAdmissionResult,
+    ChannelGroupAudienceDetails,
     ChannelGroupAudienceObservation,
     ChannelGroupInboundDescriptor,
     ChannelGroupRouteMember,
@@ -93,7 +95,7 @@ from chatwaifu_runtime.sessions.service import SessionService
 from chatwaifu_runtime.sticker_library.models import StickerLearningSource
 from chatwaifu_runtime.sticker_library.service import StickerLibraryService
 
-type AudienceReader = Callable[[UUID, str], Awaitable[tuple[str, tuple[str, ...]]]]
+type AudienceReader = Callable[[UUID, str], Awaitable[ChannelGroupAudienceDetails]]
 type Authenticator = Callable[[UUID, str], Awaitable[ChannelConnectionRecord]]
 
 _TERMINAL_EVENTS = frozenset(
@@ -360,7 +362,8 @@ class ChannelGroupService:
             raise ChannelPolicyError("group audience is being revalidated")
         try:
             async with asyncio.timeout(20):
-                account, members = await reader(connection_id, request.group_id)
+                details = await reader(connection_id, request.group_id)
+                account, members = details.account_key, details.member_ids
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -394,6 +397,7 @@ class ChannelGroupService:
         ):
             raise ChannelConflictError("audience changed during observation")
         return ChannelGroupAudienceSnapshot(
+            member_display_names=details.display_names,
             observation_id=observation.observation_id,
             connection_id=connection_id,
             connection_revision=observation.connection_revision,
@@ -403,6 +407,28 @@ class ChannelGroupService:
             member_fingerprint=observation.member_fingerprint,
             observed_at=now,
             expires_at=observation.expires_at,
+        )
+
+    async def register_audience(
+        self, connection_id: UUID, request: ChannelGroupRegistrationRequest
+    ) -> ChannelGroupAudienceSnapshot:
+        """An explicit operator confirmation, independently of membership preview."""
+        previous = await self._observation(connection_id, request.observation_id)
+        fresh = await self.observe_audience(
+            connection_id, ChannelGroupAudienceRequest(group_id=previous.group_id)
+        )
+        if fresh.member_fingerprint != previous.member_fingerprint:
+            raise ChannelConflictError("audience changed; preview and confirm the new members")
+        await self._observation(connection_id, fresh.observation_id)
+        links, participants, count = await self._repository.register_audience(
+            fresh.observation_id, fresh.member_display_names, created_at=self._clock()
+        )
+        return fresh.model_copy(
+            update={
+                "participant_links": [_link_snapshot(link) for link in links],
+                "participants": list(participants),
+                "registered_count": count,
+            }
         )
 
     async def list_links(
