@@ -32,3 +32,10 @@ vendor/live2d/model/
 apps/web/public/vendor/live2d/
 apps/desktop/src-tauri/gen/
 CODEX_HANDOFF.md
+
+# Mutable isolated evaluation databases and local one-off QQ probes.
+/docs/research/**/isolated_db/eval_isolated.db
+/docs/research/**/isolated_db/eval_isolated.db-wal
+/docs/research/**/isolated_db/eval_isolated.db-shm
+/.qq-*-probe.py
+/.qq-*-probe-result.json
