@@ -60,12 +60,14 @@ schema_version: "1.0"
 updated_at: "2026-10-07"
 current_phase: "13.6"
 qq_group_batch_registration:
-  status: local_source_verified_server_deployment_pending
+  status: source_and_server_deployment_verified_real_group_confirmation_pending
   adr: "0069"
+  deployment_evidence: "docs/deployments/qq-group-registration-2026-10-09/README.md"
   evidence:
     - Group reads only preview QQ identities and nickname labels. Explicit confirmed batch registration reobserves membership and atomically registers missing participants and links; existing identities, labels and revoked links are preserved.
     - Audience limits expand to 2000 across contracts, transport, routes, shared scenes and discussion; the UI searches and pages 50 members and offers separate bulk speaking selection. Routes remain disabled until explicitly enabled.
-    - Local targeted Python tests passed 438 before the separate concurrency check; Web 477 and TypeScript protocol 127 tests passed. Full strict Pyright, changed-file Ruff, frontend and protocol ESLint, architecture checks and Web/Desktop builds passed. Real 2000-member SQLite registration/closed-route/Conversation and loopback OneBot member reads were tested. No live group registration, service restart, phone send, main merge or server publication performed.
+    - Local targeted Python tests passed 439 including the separate concurrency check; Web 477 and TypeScript protocol 127 tests passed. Full strict Pyright, changed-file Ruff, frontend and protocol ESLint, architecture checks and Web/Desktop builds passed. Real 2000-member SQLite registration/closed-route/Conversation and loopback OneBot member reads were tested.
+    - On 2026-10-09 feature commit 2222ad39529956784309e2b09e111a76c9a198ff was deployed as an overlay of the current source, preserving the live Home Assistant patch and other reviewed differences. Server Linux regression passed all 439 unique cases after adopting main's test-only 15-second durable-work join guard; Runtime health, live registration authorization guards, HTTPS trust and all 13 new Web file hashes passed. Migration remains 47; all 11 control tables and 10 configuration file hashes are unchanged. Both existing group routes remain disabled; unrelated service PIDs and 13 containers are unchanged. No real group registration, route enablement, phone send or main merge performed.
 external_channel_settings:
   status: source_server_deployment_and_mac_remote_ui_verified_phone_acceptance_pending
   adr: "0077"
