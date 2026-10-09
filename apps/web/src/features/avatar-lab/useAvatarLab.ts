@@ -34,6 +34,7 @@ export function useAvatarLab(rendererKind: RendererKind) {
     setError(null);
     setSnapshot(null);
     setInteractions([]);
+    let active = true;
 
     const manifest: AvatarManifest =
       rendererKind === "fake" ? AVATAR_LAB_MANIFEST : LIVE2D_LAB_MANIFEST;
@@ -46,7 +47,9 @@ export function useAvatarLab(rendererKind: RendererKind) {
         : new Live2DAvatarRenderer(canvas, {
             onMotionEnded: (cueId) =>
               controllerHolder.current?.notifyMotionEnded(cueId),
-            onWarning: setError,
+            onWarning: (warning) => {
+              if (active) setError(warning);
+            },
           });
     const controller = new AvatarController(renderer, manifest);
     controllerHolder.current = controller;
@@ -56,6 +59,7 @@ export function useAvatarLab(rendererKind: RendererKind) {
       setInteractions((current) => [interaction, ...current].slice(0, 8));
     });
     void controller.load().catch((loadError: unknown) => {
+      if (!active) return;
       const warning =
         loadError instanceof AvatarRendererError
           ? loadError.toWarning()
@@ -71,6 +75,7 @@ export function useAvatarLab(rendererKind: RendererKind) {
     });
 
     return () => {
+      active = false;
       unsubscribe();
       unsubscribeInteraction();
       controller.dispose();

@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { AvatarProceduralFrame } from "../src/types";
 
 import type { AnimationClock } from "../src/audio-clock";
 import { AvatarController } from "../src/controller";
@@ -35,6 +36,44 @@ class ManualAnimationClock implements AnimationClock {
 }
 
 describe("AvatarController", () => {
+  it("routes optional motion through the frame loop and yields on gesture and interruption", async () => {
+    const clock = new ManualAnimationClock();
+    const renderer = new FakeAvatarRenderer();
+    const controller = new AvatarController(renderer, AVATAR_LAB_MANIFEST, {
+      clock,
+    });
+    const source = {
+      apply: vi.fn(
+        (base: AvatarProceduralFrame, _now: number, suspended: boolean) =>
+          suspended ? base : { ...base, headYaw: 0.7 },
+      ),
+      reset: vi.fn(),
+    };
+    controller.setProceduralMotionSource(source);
+    await controller.load();
+    clock.step(100);
+    expect(renderer.getLastState()?.procedural.headYaw).toBe(0.7);
+    controller.applyCue(cue("motion", "headpat"));
+    clock.step(116);
+    expect(source.apply.mock.calls.at(-1)?.[2]).toBe(true);
+    controller.reset();
+    controller.applyCue(
+      cue("override", "interrupt", { priority: 100, duration_ms: 500 }),
+    );
+    clock.step(132);
+    expect(source.apply.mock.calls.at(-1)?.[2]).toBe(true);
+    clock.step(800);
+    expect(source.apply.mock.calls.at(-1)?.[2]).toBe(false);
+    controller.setProceduralMotionSource(null);
+    clock.step(816);
+    expect(renderer.getLastState()?.procedural.headYaw).not.toBe(0.7);
+    const count = source.apply.mock.calls.length;
+    controller.dispose();
+    clock.step(832);
+    expect(source.apply).toHaveBeenCalledTimes(count);
+    expect(source.reset.mock.calls.length).toBeGreaterThanOrEqual(3);
+  });
+
   it("keeps its render loop outside React and derives semantic state", async () => {
     const clock = new ManualAnimationClock();
     const renderer = new FakeAvatarRenderer();
