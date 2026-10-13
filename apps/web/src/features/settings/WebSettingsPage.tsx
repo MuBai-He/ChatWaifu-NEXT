@@ -7,6 +7,7 @@ import {
 } from "../chat/runtimeEndpoint";
 import { ModelsSettingsSection } from "./ModelsSettingsSection";
 import { VoiceSettingsSection } from "./VoiceSettingsSection";
+import { KnowledgeSettingsSection } from "./KnowledgeSettingsSection";
 import { SettingsShell } from "./SettingsShell";
 import {
   settingsContext,
@@ -85,6 +86,15 @@ const sections = defineSettingsRegistry<CommonSettingsContext>()([
     component: MemorySettingsSection,
   },
   {
+    id: "knowledge",
+    label: "知识图谱",
+    description: "关系地图、记忆事项与来源",
+    icon: "memory",
+    group: "记忆与资料",
+    keywords: ["知识地图", "关系", "图谱", "资料", "来源", "冲突"],
+    component: KnowledgeSettingsSection,
+  },
+  {
     id: "personal-assistant",
     label: "日程与提醒",
     description: "日历、提醒和计划任务",
@@ -99,6 +109,7 @@ const sections = defineSettingsRegistry<CommonSettingsContext>()([
     icon: "models",
     group: "连接与设备",
     component: ConnectionSettingsSection,
+    keywords: ["密码", "令牌", "登录", "认证"],
   },
 ]);
 

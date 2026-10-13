@@ -8,11 +8,13 @@ describe("Web product surfaces", () => {
     expect(resolveWebSurface("/avatar-lab")).toBe("avatar-lab");
     expect(resolveWebSurface("/settings/channels")).toBe("channels-settings");
     expect(resolveWebSurface("/settings/agent")).toBe("agent-settings");
+    expect(resolveWebSurface("/knowledge")).toBe("knowledge");
     for (const path of [
       "/settings",
       "/settings/models",
       "/settings/voice",
       "/settings/memory",
+      "/settings/knowledge",
       "/settings/extensions",
       "/settings/personal-assistant",
       "/settings/connection",

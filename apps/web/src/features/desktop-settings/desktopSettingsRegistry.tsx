@@ -13,6 +13,7 @@ import { ModelsSettingsSection } from "./ModelsSettingsSection";
 import { defineSettingsRegistry } from "./settingsRegistry";
 import { VoiceSettingsSection } from "./VoiceSettingsSection";
 import { PersonalAssistantSettingsSection } from "./PersonalAssistantSettingsSection";
+import { KnowledgeSettingsSection } from "../settings/KnowledgeSettingsSection";
 
 export const desktopSettingsRegistry =
   defineSettingsRegistry<DesktopSettingsContext>()([
@@ -23,6 +24,7 @@ export const desktopSettingsRegistry =
       description: "运行方式与对话范围",
       icon: "models",
       component: ConnectionSettingsSection,
+      keywords: ["密码", "令牌", "登录", "认证"],
     },
     {
       id: "appearance",
@@ -97,6 +99,15 @@ export const desktopSettingsRegistry =
       icon: "memory",
       group: "记忆与资料",
       component: MemorySettingsSection,
+    },
+    {
+      id: "knowledge",
+      label: "知识图谱",
+      description: "关系地图、记忆事项与来源",
+      icon: "memory",
+      group: "记忆与资料",
+      keywords: ["知识地图", "图谱", "关系", "来源", "冲突"],
+      component: KnowledgeSettingsSection,
     },
     {
       id: "extensions",

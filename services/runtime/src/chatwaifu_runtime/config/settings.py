@@ -38,6 +38,7 @@ class RuntimeConfig(BaseModel):
     port: int = Field(default=8765, ge=0, le=65_535)
     web_origin: str = "http://127.0.0.1:5173"
     event_queue_size: int = Field(default=128, ge=8, le=4096)
+    web_client_dir: Path | None = None
 
 
 class StorageConfig(BaseModel):
@@ -371,6 +372,7 @@ class Settings(BaseSettings):
         public = self.model_dump(
             mode="json", exclude={"security", "llm", "stt", "tts", "realtime", "public_web"}
         )
+        public["runtime"] = self.runtime.model_dump(mode="json", exclude={"web_client_dir"})
         public["llm"] = self.llm.model_dump(mode="json", exclude={"api_key"})
         public["stt"] = self.stt.model_dump(mode="json", exclude={"worker_token"})
         public["tts"] = self.tts.model_dump(mode="json", exclude={"worker_token"})

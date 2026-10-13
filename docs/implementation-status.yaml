@@ -1031,3 +1031,19 @@ constraints:
   character_kernel: persistent-affect-relationship-response-plan-and-prompt-compiler
   model_configuration: runtime-db-plus-write-only-local-secret-store
   external_channel_gateway: native_weixin_macos_owner_direct_text_and_static_media_accepted
+
+runtime_password_auth:
+  status: reviewed_linux_overlay_and_browser_verified_deployment_pending
+  adr: "0082"
+  evidence:
+    - Shared Web/desktop setup and password change controls, salted scrypt persistence, bounded password exchange, credential revocation, Host/Origin guards and existing-token compatibility are implemented.
+    - Local auth/API/lifecycle and Web-shell tests passed 69 cases; production-compatible Linux overlay tests passed 53 including existing knowledge, sync and native viewer scope checks. Web 496, strict types/lint, both product builds, artifact isolation and architecture checks passed.
+    - Browser acceptance passed both development and prefixed Runtime-hosted builds, including password setup/change, wrong-password rejection, old credentials, reconnect, settings-to-map navigation and return to settings. The graph browser fixture uses synthetic nodes; live data verification is separate.
+    - Original primary-workspace changes remain byte-identical. Work uses an independent clone after a macOS cloud-file stall prevented managed-worktree creation. No AGY was used for this delivery.
+
+knowledge_settings_navigation:
+  status: source_and_disposable_browser_verified_deployment_pending
+  adr: "0083"
+  evidence:
+    - Searchable Web/desktop settings entry opens the standalone knowledge canvas. Web retains the current tab and login scope; desktop links contain no credentials. The graph returns to settings and preserves native embedded-cookie access.
+    - An optional operator web_client_dir provides the root/login/settings/knowledge Web documents under the existing Runtime listener, without allowing unauthenticated API, MCP or private-data access. The host directory is omitted from public configuration.

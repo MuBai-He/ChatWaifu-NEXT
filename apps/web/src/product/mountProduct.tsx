@@ -8,6 +8,7 @@ export type ProductSurface =
   | "channels-settings"
   | "agent-settings"
   | "settings"
+  | "knowledge"
   | "desktop-pet"
   | "desktop-settings";
 

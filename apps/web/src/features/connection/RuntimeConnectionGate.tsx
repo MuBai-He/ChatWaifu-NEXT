@@ -24,13 +24,14 @@ import {
 } from "../chat/runtimeEndpoint";
 import { ConnectionControlsContext } from "./clientControls";
 import { useDialogNavigation } from "./useDialogNavigation";
+import { loginWithPassword } from "./runtimePassword";
 import "./connection.css";
 
 type ClientConnection =
   { mode: "local" } | { mode: "remote"; base_url: string; token: string };
 const browserKey = "chatwaifu.client.connection";
 
-function validateRemote(address: string, token: string): ClientConnection {
+function validateRemoteAddress(address: string): string {
   const url = new URL(address.trim());
   const octets = url.hostname.split(".").map(Number);
   const privateIpv4 =
@@ -57,9 +58,14 @@ function validateRemote(address: string, token: string): ClientConnection {
       "请填写 HTTPS 或局域网 IP 的 HTTP 根地址，例如 http://192.168.1.103:18780。",
     );
   }
+  return url.origin;
+}
+
+function validateRemote(address: string, token: string): ClientConnection {
+  const base_url = validateRemoteAddress(address);
   if (token.trim().length < 32)
     throw new Error("请填写服务器生成的访问令牌（至少 32 字符）。");
-  return { mode: "remote", base_url: url.origin, token: token.trim() };
+  return { mode: "remote", base_url, token: token.trim() };
 }
 
 async function activate(connection: ClientConnection): Promise<void> {
@@ -87,6 +93,9 @@ export function RuntimeConnectionGate({
   const [mode, setMode] = useState<"remote" | "local">("remote");
   const [address, setAddress] = useState("");
   const [token, setToken] = useState("");
+  const [credentialType, setCredentialType] = useState<"password" | "token">(
+    "password",
+  );
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [showToken, setShowToken] = useState(false);
@@ -97,12 +106,13 @@ export function RuntimeConnectionGate({
     setBusy(false);
     setEditing(false);
     setError("");
+    setToken("");
   };
   const openConnection = () => {
     if (active) {
       setMode(active.mode);
       setAddress(active.mode === "remote" ? active.base_url : "");
-      setToken(active.mode === "remote" ? active.token : "");
+      setToken("");
     }
     setShowToken(false);
     setError("");
@@ -116,6 +126,7 @@ export function RuntimeConnectionGate({
   useEffect(() => () => pendingConnection.current?.abort(), []);
 
   useEffect(() => {
+    const restore = new AbortController();
     let cancelled = false;
     let unlisten: (() => void) | undefined;
     async function load() {
@@ -137,7 +148,15 @@ export function RuntimeConnectionGate({
       } else {
         const raw = sessionStorage.getItem(browserKey);
         saved = raw ? (JSON.parse(raw) as ClientConnection) : null;
-        setAddress(localStorage.getItem(`${browserKey}.address`) ?? "");
+        let defaultAddress = "";
+        try {
+          defaultAddress = validateRemoteAddress(window.location.origin);
+        } catch {
+          /* A development origin may not support remote connection. */
+        }
+        setAddress(
+          localStorage.getItem(`${browserKey}.address`) ?? defaultAddress,
+        );
         // Preserve explicitly configured source-development environments.
         if (!saved && import.meta.env.VITE_RUNTIME_URL)
           saved = { mode: "local" };
@@ -151,21 +170,48 @@ export function RuntimeConnectionGate({
         setMode(saved.mode);
         if (saved.mode === "remote") {
           setAddress(saved.base_url);
-          setToken(saved.token);
+          const response = await runtimeFetchWithConnection(
+            { baseUrl: saved.base_url, token: saved.token },
+            "/v1/characters",
+            {
+              signal: AbortSignal.any([
+                restore.signal,
+                AbortSignal.timeout(10_000),
+              ]),
+              redirect: "error",
+              cache: "no-store",
+            },
+          );
+          if (!response.ok) {
+            if (!isDesktopHost() && response.status === 401)
+              sessionStorage.removeItem(browserKey);
+            throw new Error(
+              response.status === 401
+                ? "登录已失效，请重新输入密码或访问令牌。"
+                : `无法恢复服务器连接（${response.status}）。`,
+            );
+          }
         }
+        restore.signal.throwIfAborted();
         await activate(saved);
         if (!cancelled) setActive(saved);
       }
     }
     void load()
-      .catch(() => {
-        if (!cancelled) setError("无法恢复连接设置，请重新选择连接方式。");
+      .catch((cause: unknown) => {
+        if (!cancelled)
+          setError(
+            cause instanceof Error
+              ? cause.message
+              : "无法恢复连接设置，请重新选择连接方式。",
+          );
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
+      restore.abort();
       unlisten?.();
     };
   }, []);
@@ -182,8 +228,20 @@ export function RuntimeConnectionGate({
     setBusy(true);
     setError("");
     try {
-      const next: ClientConnection =
-        mode === "remote" ? validateRemote(address, token) : { mode: "local" };
+      let next: ClientConnection = { mode: "local" };
+      if (mode === "remote") {
+        const baseUrl = validateRemoteAddress(address);
+        if (
+          credentialType === "password" &&
+          (!token || [...token].length > 128)
+        )
+          throw new Error("请填写登录密码（最多 128 个字符）。");
+        const credential =
+          credentialType === "password"
+            ? await loginWithPassword(baseUrl, token, signal)
+            : token;
+        next = validateRemote(baseUrl, credential);
+      }
       if (next.mode === "remote") {
         const response = await runtimeFetchWithConnection(
           { baseUrl: next.base_url, token: next.token },
@@ -319,8 +377,10 @@ export function RuntimeConnectionGate({
                     name="connection-mode"
                     value={value}
                     checked={mode === value}
+                    disabled={busy}
                     onChange={() => {
                       setMode(value);
+                      setToken("");
                       setError("");
                     }}
                   />
@@ -350,15 +410,51 @@ export function RuntimeConnectionGate({
                   />
                 </label>
                 <label className="connection-field">
+                  登录方式
+                  <select
+                    aria-label="登录方式"
+                    value={credentialType}
+                    disabled={busy}
+                    onChange={(event) => {
+                      setCredentialType(
+                        event.target.value as "password" | "token",
+                      );
+                      setToken("");
+                      setError("");
+                      setShowToken(false);
+                    }}
+                  >
+                    <option value="password">密码</option>
+                    <option value="token">访问令牌</option>
+                  </select>
+                </label>
+                <small>
+                  首次连接请使用访问令牌，进入“设置 →
+                  连接与诊断”后设置登录密码。
+                </small>
+                <label className="connection-field">
                   <span>
-                    访问令牌 <small>由服务器提供</small>
+                    {credentialType === "password" ? "登录密码" : "访问令牌"}{" "}
+                    <small>
+                      {credentialType === "password"
+                        ? "在连接设置中设置"
+                        : "由服务器提供"}
+                    </small>
                   </span>
                   <span className="connection-secret">
                     <input
                       type={showToken ? "text" : "password"}
                       required
-                      autoComplete="off"
-                      placeholder="粘贴访问令牌"
+                      autoComplete={
+                        credentialType === "password"
+                          ? "current-password"
+                          : "off"
+                      }
+                      placeholder={
+                        credentialType === "password"
+                          ? "输入登录密码"
+                          : "粘贴访问令牌"
+                      }
                       value={token}
                       disabled={busy}
                       onChange={(event) => setToken(event.target.value)}
@@ -366,7 +462,7 @@ export function RuntimeConnectionGate({
                     <button
                       type="button"
                       className="connection-reveal"
-                      aria-label={showToken ? "隐藏令牌" : "显示令牌"}
+                      aria-label={showToken ? "隐藏登录凭据" : "显示登录凭据"}
                       aria-pressed={showToken}
                       onClick={() => setShowToken(!showToken)}
                     >
@@ -412,7 +508,7 @@ export function RuntimeConnectionGate({
                 ? "随时可以切换为远程连接"
                 : isDesktopHost()
                   ? "连接信息仅保存在这台设备"
-                  : "令牌仅保留在当前浏览器会话"}
+                  : "登录凭据仅保留在当前浏览器会话"}
             </p>
             {active && (
               <button

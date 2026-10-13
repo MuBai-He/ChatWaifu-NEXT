@@ -202,7 +202,8 @@
   color: #aa96ae;
   font-size: 10px;
 }
-.connection-field input {
+.connection-field input,
+.connection-field select {
   width: 100%;
   height: 44px;
   padding: 11px 13px;
@@ -219,7 +220,8 @@
 .connection-field input::placeholder {
   color: #928298;
 }
-.connection-field input:focus {
+.connection-field input:focus,
+.connection-field select:focus {
   border-color: #ac7e9b;
   box-shadow: 0 0 0 3px #b888a61f;
 }

@@ -19,10 +19,12 @@ from chatwaifu_runtime.api.guard import LocalClientGuardMiddleware
 from chatwaifu_runtime.api.interaction_diagnostics_routes import (
     router as interaction_diagnostics_router,
 )
+from chatwaifu_runtime.api.password_routes import router as password_router
 from chatwaifu_runtime.api.personal_assistant_routes import router as personal_assistant_router
 from chatwaifu_runtime.api.photo_memory_routes import router as photo_memory_router
 from chatwaifu_runtime.api.routes import router
 from chatwaifu_runtime.api.sticker_library_routes import router as sticker_library_router
+from chatwaifu_runtime.api.web_client import mount_web_client
 from chatwaifu_runtime.bootstrap.container import (
     RuntimeCleanupError,
     RuntimeContainer,
@@ -94,6 +96,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return JSONResponse(status_code=422, content={"detail": "授权请求格式无效"})
         if _request.url.path.startswith("/v1/channel-pairing-sessions"):
             return JSONResponse(status_code=422, content={"detail": "QQ 配对请求格式无效。"})
+        if _request.url.path.startswith("/v1/runtime/password"):
+            return JSONResponse(
+                status_code=422,
+                content={"detail": "密码请求格式无效，请使用 12-128 个字符的新密码。"},
+                headers={"Cache-Control": "no-store"},
+            )
         if _request.url.path != "/v1/realtime/configuration":
             return await request_validation_exception_handler(_request, exc)
         # Both error locations and custom messages can contain submitted text.
@@ -132,8 +140,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         settings=resolved_settings,
         capability_token=container.capability_token,
         ticket_store=container.ws_ticket_store,
+        password_auth=container.password_auth,
     )
+    mount_web_client(app, resolved_settings)
     app.include_router(router)
+    app.include_router(password_router)
     app.include_router(agent_router)
     app.include_router(channel_pairing_router)
     app.include_router(channel_proactive_router)

@@ -16,6 +16,7 @@ REQUIRED_MODULES: dict[ProductName, tuple[str, ...]] = {
         "src/product/web/WebProductApp.tsx",
         "src/features/chat/ChatDemoPage.tsx",
         "src/features/avatar-lab/AvatarLabPage.tsx",
+        "src/features/knowledge/KnowledgePage.tsx",
     ),
     "desktop": (
         "src/product/desktop/DesktopProductApp.tsx",
