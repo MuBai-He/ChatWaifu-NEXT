@@ -9,6 +9,7 @@ import {
   conflictsSchema,
   graphSchema,
   kindLabels,
+  predicateLabels,
   KnowledgeClient,
   nodeSchema,
   recordSchema,
@@ -481,6 +482,32 @@ export function KnowledgePage() {
                     {n.label}
                   </button>
                   <small>{kindLabels[n.kind]}</small>
+                </li>
+              ))}
+            </ul>
+          </details>
+          <details className="km-node-list km-edge-list">
+            <summary>关系列表（{graph.edges.length}）</summary>
+            <ul>
+              {graph.edges.map((relation) => (
+                <li key={relation.relation_id}>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() =>
+                      void run(() => choose(relation.relation_id, true))
+                    }
+                  >
+                    {graph.nodes.find(
+                      (item) => item.node_id === relation.source,
+                    )?.label ?? relation.source}
+                    {" → "}
+                    {graph.nodes.find(
+                      (item) => item.node_id === relation.target,
+                    )?.label ?? relation.target}
+                    {" · "}
+                    {predicateLabels[relation.predicate] ?? relation.predicate}
+                  </button>
                 </li>
               ))}
             </ul>

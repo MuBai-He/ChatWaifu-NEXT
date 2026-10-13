@@ -98,6 +98,13 @@ test("configure, exchange, change and reconnect with a password", async ({
   await expect(
     page.getByRole("img", { name: /知识关系图，2 个节点/ }),
   ).toBeVisible();
+  await page.getByText("关系列表（1）", { exact: true }).click();
+  await expect(
+    page.getByRole("button", {
+      name: "测试人物 → 测试项目 · 参与",
+      exact: true,
+    }),
+  ).toBeVisible();
   await page.screenshot({
     path: info.outputPath("knowledge-from-settings.png"),
   });

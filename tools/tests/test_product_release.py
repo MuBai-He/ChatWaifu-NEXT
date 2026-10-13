@@ -59,6 +59,7 @@ def test_artifact_verifier_accepts_only_owned_modules(product: str, tmp_path: Pa
             "src/product/web/WebProductApp.tsx",
             "src/features/chat/ChatDemoPage.tsx",
             "src/features/avatar-lab/AvatarLabPage.tsx",
+            "src/features/knowledge/KnowledgePage.tsx",
         ],
         "desktop": [
             "src/product/desktop/DesktopProductApp.tsx",
@@ -99,6 +100,7 @@ def test_artifact_verifier_rejects_cross_product_module(tmp_path: Path) -> None:
                     "src/product/web/WebProductApp.tsx",
                     "src/features/chat/ChatDemoPage.tsx",
                     "src/features/avatar-lab/AvatarLabPage.tsx",
+                    "src/features/knowledge/KnowledgePage.tsx",
                     "src/features/desktop-pet/DesktopPetPage.tsx",
                 ],
             }
