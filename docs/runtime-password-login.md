@@ -35,6 +35,10 @@ Origin 和单次 WebSocket ticket 检查。密码登录不会取得 `admin_event
 
 此功能的源码验证与服务器发布、原生安装包更新分别验收。
 
+2026-10-14 服务器已发布密码功能及公网设置中心。首次仍需用原令牌进入
+`/settings/connection` 设置自己的密码。发布验证和回退记录见
+[运行记录](operations/runtime-password-knowledge-settings-2026-10-14.md)。
+
 ## 可重复的本地验收
 
 在一个终端启动独立测试 Runtime，测试状态会写入新建的临时目录：
