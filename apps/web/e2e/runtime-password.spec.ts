@@ -30,6 +30,11 @@ test("configure, exchange, change and reconnect with a password", async ({
   await expect(
     page.getByText("尚未设置登录密码，请先设置一次。"),
   ).toBeVisible();
+  const brand = page.locator('img[src$="brand/chatwaifu-mark-small.png"]');
+  await expect(brand).toHaveJSProperty("complete", true);
+  expect(
+    await brand.evaluate((element: HTMLImageElement) => element.naturalWidth),
+  ).toBeGreaterThan(0);
   await page.getByLabel("新密码", { exact: true }).fill(password);
   await page.getByLabel("确认新密码", { exact: true }).fill(password);
   await page.getByRole("button", { name: "设置密码", exact: true }).click();
