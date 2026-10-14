@@ -13,6 +13,16 @@
 
 ## Unreleased
 
+- Add a searchable knowledge-map entry to Web/desktop settings, keep the graph
+  on its own authenticated Web surface, and return to settings from the map.
+  Serve an explicitly configured same-origin Web shell on the Runtime TLS
+  listener while retaining authentication for API data and MCP.
+
+- Add shared Web/desktop login-password setup and change controls. Exchange
+  passwords for expiring Runtime credentials, persist only salted scrypt hashes,
+  bound login attempts, revoke old password sessions on change/restart, and
+  retain existing access-token connections.
+
 - Give the shared settings center an Apple Liquid Glass presentation with aligned
   content frames, readable controls and responsive navigation. Manage Skills,
   plugins and MCP in the page; reuse accessible dialogs for chat shortcuts.

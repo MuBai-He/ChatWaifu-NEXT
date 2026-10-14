@@ -10,9 +10,11 @@ import urllib.parse
 from dataclasses import dataclass
 from typing import Final, Literal
 
-from starlette.types import ASGIApp, Receive, Scope, Send
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from chatwaifu_runtime.api.web_client import is_web_client_request
 from chatwaifu_runtime.config.settings import Settings
+from chatwaifu_runtime.security.password import RuntimePasswordAuth
 
 type TicketPurpose = Literal["events", "audio", "admin_events"]
 
@@ -132,11 +134,13 @@ class LocalClientGuardMiddleware:
         settings: Settings,
         capability_token: str,
         ticket_store: WebSocketTicketStore,
+        password_auth: RuntimePasswordAuth | None = None,
     ) -> None:
         self.app = app
         self.settings = settings
         self.capability_token = capability_token
         self.ticket_store = ticket_store
+        self.password_auth = password_auth
         self._allowed_hosts = self._compute_allowed_hosts()
         self._allowed_origins = self._compute_allowed_origins()
 
@@ -205,6 +209,10 @@ class LocalClientGuardMiddleware:
         if not token:
             return False
         candidate = token.strip()
+        if not candidate.isascii():
+            return False
+        if self.password_auth and self.password_auth.is_token_valid(candidate):
+            return True
         if self.capability_token and hmac.compare_digest(candidate, self.capability_token):
             return True
         admin_token = self.settings.security.admin_token
@@ -269,6 +277,44 @@ class LocalClientGuardMiddleware:
             await self.app(scope, receive, send)
             return
 
+        # Public password exchange admits only a small JSON body, including for
+        # chunked requests. Do this after perimeter checks and before parsing.
+        if scope["type"] == "http" and (
+            (scope.get("path") == "/v1/runtime/password/login" and scope.get("method") == "POST")
+            or (scope.get("path") == "/v1/runtime/password" and scope.get("method") == "PUT")
+        ):
+            body = bytearray()
+            while True:
+                message = await receive()
+                if message["type"] == "http.disconnect":
+                    return
+                chunk = message.get("body", b"")
+                if len(body) + len(chunk) > 4096:
+                    await self._send_json(
+                        send,
+                        413,
+                        {"detail": "密码请求过大。"},
+                        headers=[
+                            (b"cache-control", b"no-store"),
+                            *self._cors_headers(origin_header),
+                        ],
+                    )
+                    return
+                body.extend(chunk)
+                if not message.get("more_body", False):
+                    break
+            original_receive = receive
+            replayed = False
+
+            async def password_receive() -> Message:
+                nonlocal replayed
+                if not replayed:
+                    replayed = True
+                    return {"type": "http.request", "body": bytes(body), "more_body": False}
+                return await original_receive()
+
+            receive = password_receive
+
         # 4. Authentication Check
         if not self.settings.security.auth_enabled:
             await self.app(scope, receive, send)
@@ -332,7 +378,15 @@ class LocalClientGuardMiddleware:
         if scope["type"] == "http":
             path = scope.get("path", "")
 
+            if is_web_client_request(self.settings, path, scope.get("method", "")):
+                await self.app(scope, receive, send)
+                return
+
             if path in EXEMPT_HTTP_PATHS:
+                await self.app(scope, receive, send)
+                return
+
+            if path == "/v1/runtime/password/login" and scope.get("method") == "POST":
                 await self.app(scope, receive, send)
                 return
 

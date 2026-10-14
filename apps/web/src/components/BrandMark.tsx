@@ -6,7 +6,7 @@ export function BrandMark(props: ImgHTMLAttributes<HTMLImageElement>) {
     <img
       alt=""
       aria-hidden="true"
-      src="/brand/chatwaifu-mark-small.png"
+      src={`${import.meta.env.BASE_URL}brand/chatwaifu-mark-small.png`}
       {...props}
     />
   );

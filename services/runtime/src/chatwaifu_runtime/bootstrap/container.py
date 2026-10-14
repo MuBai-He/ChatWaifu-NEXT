@@ -154,6 +154,7 @@ from chatwaifu_runtime.runtime_skills.agent_router import RuntimeSkillRouter
 from chatwaifu_runtime.runtime_skills.execution_context import authorized_task
 from chatwaifu_runtime.runtime_skills.sandbox import RuntimeSandboxLauncher, SandboxPlanner
 from chatwaifu_runtime.runtime_skills.service import RuntimeSkillService
+from chatwaifu_runtime.security.password import RuntimePasswordAuth
 from chatwaifu_runtime.sessions.service import SessionService
 from chatwaifu_runtime.sticker_library.classifier import StickerClassifier
 from chatwaifu_runtime.sticker_library.service import StickerLibraryService
@@ -189,6 +190,7 @@ class RuntimeContainer:
             else secrets.token_urlsafe(32)
         )
         self.ws_ticket_store = WebSocketTicketStore()
+        self.password_auth = RuntimePasswordAuth(settings.config_dir)
         self.database = Database(settings.database_path, settings.storage)
         self.personal_assistant = PersonalAssistantIntegration(
             settings, SQLiteAssistantRepository(self.database), SQLiteTaskRepository(self.database)

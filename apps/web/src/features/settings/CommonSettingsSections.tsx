@@ -11,6 +11,7 @@ import {
   useScopeControls,
 } from "../connection/clientControls";
 import { McpConnectionsPanel } from "./McpConnectionsPanel";
+import { PasswordSettingsPanel } from "../connection/PasswordSettingsPanel";
 import { SettingsTabs } from "./SettingsTabs";
 import { SettingsGroup, SettingsSectionIntro } from "./SettingsPrimitives";
 import type { CommonSettingsContext } from "./SettingsRuntimeContext";
@@ -130,7 +131,7 @@ export function ScheduleSettingsSection({ context, active = true }: Props) {
   );
 }
 
-export function ConnectionSettingsSection({ context }: Props) {
+export function ConnectionSettingsSection({ context, active = true }: Props) {
   const connection = useConnectionControls();
   const scope = useScopeControls();
   return (
@@ -177,6 +178,10 @@ export function ConnectionSettingsSection({ context }: Props) {
           </button>
         </div>
       </SettingsGroup>
+      <PasswordSettingsPanel
+        active={active}
+        online={context.runtime.connection === "connected"}
+      />
       <InteractionDiagnosticsPanel
         sessionId={context.sessionId}
         runtimeOnline={context.runtime.connection === "connected"}

@@ -76,7 +76,7 @@ function productManifestPlugin(product: ProductMode): Plugin {
             version: releaseProducts.products[product].version,
             surfaces:
               product === "web"
-                ? ["application", "avatar-lab"]
+                ? ["application", "avatar-lab", "settings", "knowledge"]
                 : ["desktop-pet", "desktop-settings"],
             modules: [...new Set(modules)].sort(),
           },

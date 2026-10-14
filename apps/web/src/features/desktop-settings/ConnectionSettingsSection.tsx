@@ -1,4 +1,5 @@
 import type { DesktopSettingsContext } from "./DesktopSettingsContext";
+import { PasswordSettingsPanel } from "../connection/PasswordSettingsPanel";
 import { InteractionDiagnosticsPanel } from "../diagnostics/InteractionDiagnosticsPanel";
 import {
   useConnectionControls,
@@ -8,8 +9,10 @@ import { SettingsGroup, SettingsSectionIntro } from "./SettingsPrimitives";
 
 export function ConnectionSettingsSection({
   context,
+  active = true,
 }: {
   context: DesktopSettingsContext;
+  active?: boolean;
 }) {
   const connection = useConnectionControls();
   const scope = useScopeControls();
@@ -56,6 +59,10 @@ export function ConnectionSettingsSection({
           </button>
         </div>
       </SettingsGroup>
+      <PasswordSettingsPanel
+        active={active}
+        online={context.runtime.connection === "connected"}
+      />
       <InteractionDiagnosticsPanel
         sessionId={context.sessionId}
         runtimeOnline={context.runtime.connection === "connected"}

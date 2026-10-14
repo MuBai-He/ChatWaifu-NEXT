@@ -9,11 +9,14 @@ import { resolveWebSurface } from "./product/web/webSurface";
 import "./features/settings/settings-controls.css";
 
 const surface = resolveWebSurface(window.location.pathname);
+const embeddedKnowledge =
+  surface === "knowledge" &&
+  new URLSearchParams(window.location.search).get("embedded") === "1";
 mountProduct({
   product: "web",
   surface,
   children:
-    surface === "avatar-lab" ? (
+    surface === "avatar-lab" || embeddedKnowledge ? (
       <WebProductApp surface={surface} />
     ) : (
       <RuntimeConnectionGate showSwitch={surface === "application"}>

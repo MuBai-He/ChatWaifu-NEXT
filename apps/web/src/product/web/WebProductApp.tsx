@@ -9,6 +9,11 @@ const WebSettingsPage = lazy(() =>
   })),
 );
 import { resolveWebSurface, type WebSurface } from "./webSurface";
+const KnowledgePage = lazy(() =>
+  import("../../features/knowledge/KnowledgePage").then((module) => ({
+    default: module.KnowledgePage,
+  })),
+);
 
 interface WebProductAppProps {
   surface?: WebSurface;
@@ -17,6 +22,12 @@ interface WebProductAppProps {
 export function WebProductApp({
   surface = resolveWebSurface(window.location.pathname),
 }: WebProductAppProps) {
+  if (surface === "knowledge")
+    return (
+      <Suspense fallback={<main role="status">正在打开知识地图…</main>}>
+        <KnowledgePage />
+      </Suspense>
+    );
   return surface === "avatar-lab" ? (
     <AvatarLabPage />
   ) : (

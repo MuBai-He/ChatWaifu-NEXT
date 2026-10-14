@@ -25,6 +25,7 @@
     "@chatwaifu/protocol": "workspace:*",
     "@tauri-apps/api": "2.11.1",
     "@tauri-apps/plugin-dialog": "2.7.3",
+    "cytoscape": "3.34.3",
     "lucide-react": "1.37.0",
     "pdfjs-dist": "^6.4.299",
     "qrcode.react": "^4.2.0",
