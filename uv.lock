@@ -252,6 +252,15 @@ wheels = [
 ]
 
 [[package]]
+name = "backoff"
+version = "2.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/d7/5bbeb12c44d7c4f2fb5b56abce497eb5ed9f34d85701de869acedd602619/backoff-2.2.1.tar.gz", hash = "sha256:03f829f5bb1923180821643f8753b0502c3b682293992485b0eef2807afa5cba", size = 17001, upload-time = "2022-10-05T19:19:32.061Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/df/73/b6e24bd22e6720ca8ee9a85a0c4a2971af8497d8f3193fa05390cbd46e09/backoff-2.2.1-py3-none-any.whl", hash = "sha256:63579f9a0628e06278f7e47b7d7d5b6ce20dc65c5e96a6f3ca99a6adca0396e8", size = 15148, upload-time = "2022-10-05T19:19:30.546Z" },
+]
+
+[[package]]
 name = "certifi"
 version = "2026.7.22"
 source = { registry = "https://pypi.org/simple" }
@@ -445,6 +454,11 @@ dependencies = [
     { name = "websockets" },
 ]
 
+[package.optional-dependencies]
+knowledge = [
+    { name = "graphiti-core" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "aiosqlite", specifier = ">=0.21,<1" },
@@ -453,6 +467,7 @@ requires-dist = [
     { name = "chatwaifu-protocol", editable = "packages/protocol-python" },
     { name = "cryptography", specifier = ">=50,<51" },
     { name = "fastapi", specifier = ">=0.116,<1" },
+    { name = "graphiti-core", marker = "extra == 'knowledge'", specifier = "==0.30.2" },
     { name = "httpcore2", specifier = ">=2.12,<3" },
     { name = "httpx", specifier = ">=0.28,<1" },
     { name = "httpx2", specifier = ">=2.12,<3" },
@@ -475,6 +490,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.35,<1" },
     { name = "websockets", specifier = ">=17,<18" },
 ]
+provides-extras = ["knowledge"]
 
 [package.metadata.requires-dev]
 dev = []
@@ -676,6 +692,24 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/ce/42/b468aec74a0354b34c8cbf748db20d6e350a68a2b0912e128cabee49806c/google_crc32c-1.8.0-cp313-cp313-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:3b9776774b24ba76831609ffbabce8cdf6fa2bd5e9df37b594221c7e333a81fa", size = 33344, upload-time = "2025-12-16T00:40:24.742Z" },
     { url = "https://files.pythonhosted.org/packages/1c/e8/b33784d6fc77fb5062a8a7854e43e1e618b87d5ddf610a88025e4de6226e/google_crc32c-1.8.0-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:89c17d53d75562edfff86679244830599ee0a48efc216200691de8b02ab6b2b8", size = 33694, upload-time = "2025-12-16T00:40:25.505Z" },
     { url = "https://files.pythonhosted.org/packages/92/b1/d3cbd4d988afb3d8e4db94ca953df429ed6db7282ed0e700d25e6c7bfc8d/google_crc32c-1.8.0-cp313-cp313-win_amd64.whl", hash = "sha256:57a50a9035b75643996fbf224d6661e386c7162d1dfdab9bc4ca790947d1007f", size = 34435, upload-time = "2025-12-16T00:35:22.107Z" },
+]
+
+[[package]]
+name = "graphiti-core"
+version = "0.30.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "neo4j" },
+    { name = "numpy" },
+    { name = "openai" },
+    { name = "posthog" },
+    { name = "pydantic" },
+    { name = "python-dotenv" },
+    { name = "tenacity" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4a/a1/3e0fe119b6f3116ef7671ae1b2d98ef70655ac634d9914e748b5f97ecacb/graphiti_core-0.30.2.tar.gz", hash = "sha256:b8ac6999705d350ebb53d799505d49b76f5d74c20265a09df4094645b5d8ada9", size = 6978112, upload-time = "2026-09-08T20:39:14.59Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/13/19/7ee37826a9dff81eb4d242a785c4ca76d2d510528dd52fc7dd10fb45d9cd/graphiti_core-0.30.2-py3-none-any.whl", hash = "sha256:97674a49514130db175faecf23221ce9338240be3cbe13a7e23e5a5033892b9f", size = 363163, upload-time = "2026-09-08T20:39:12.422Z" },
 ]
 
 [[package]]
@@ -1141,6 +1175,18 @@ wheels = [
 ]
 
 [[package]]
+name = "neo4j"
+version = "6.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytz" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/80/db/024bd576bde5d97436d0acb71b41cf928c036ed8fec95ea1122eb05e47d1/neo4j-6.4.0.tar.gz", hash = "sha256:056676698f080b5af5b24b0fc5abb485b8db1b95edf366d01dcfd63bcff9b71d", size = 287786, upload-time = "2026-10-05T15:37:45.216Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c9/5d/519aefe3b38a490924641e980a16ea6c70f6c96c08d84cf661d32c4a08c2/neo4j-6.4.0-py3-none-any.whl", hash = "sha256:fdd048ba827be138063b045cf59e40056fbf0405ac02dadc24f64e369fbd9d3d", size = 390611, upload-time = "2026-10-05T15:37:43.491Z" },
+]
+
+[[package]]
 name = "nltk"
 version = "3.10.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1395,6 +1441,21 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f9/e2/3e91f31a7d2b083fe6ef3fa267035b518369d9511ffab804f839851d2779/pluggy-1.6.0.tar.gz", hash = "sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3", size = 69412, upload-time = "2025-05-15T12:30:07.975Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl", hash = "sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746", size = 20538, upload-time = "2025-05-15T12:30:06.134Z" },
+]
+
+[[package]]
+name = "posthog"
+version = "7.68.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "backoff" },
+    { name = "distro" },
+    { name = "requests" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a0/1a/50db33309070ea8dc9e8a6d7c4928548e6b7fcbeaf764f38f26ec8eb2220/posthog-7.68.0.tar.gz", hash = "sha256:4ffd260fd2720da81375743f70f0c63f6d79ad79e3cee79e91ad2959efdb6ca1", size = 752477, upload-time = "2026-10-12T14:48:04.78Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/68/ea/8b2085e5f3b28b783972e13e39e29d11d12310a6e88b555c1a12fe679178/posthog-7.68.0-py3-none-any.whl", hash = "sha256:9b37fddc50f71f91bf5fe8326ba7ea844f1f25ed22ec3d339c3b5b18ca6a5c4d", size = 880209, upload-time = "2026-10-12T14:48:03.043Z" },
 ]
 
 [[package]]
@@ -1761,6 +1822,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pytz"
+version = "2026.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/14/21/d83d6ef28c4c912c4bb4d1dcf591f7b8c6bde87b9c66f9f454677314e16d/pytz-2026.5.tar.gz", hash = "sha256:fa23724b9c486543b9ff54a327ee7569ac83ade54bb9afd0fc18676620401c86", size = 318572, upload-time = "2026-10-04T02:37:58.719Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4f/ef/c66110d46fb800dda0bf33164182dfadabe26a90e4476844d502a23dca8e/pytz-2026.5-py2.py3-none-any.whl", hash = "sha256:e658af3757f9e26a9d25dd2aff38335acd92bc9104f890a894b2c1ba28311b03", size = 506342, upload-time = "2026-10-04T02:37:56.814Z" },
+]
+
+[[package]]
 name = "pywin32"
 version = "312"
 source = { registry = "https://pypi.org/simple" }
@@ -2094,6 +2164,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/83/d3/803453b36afefb7c2bb238361cd4ae6125a569b4db67cd9e79846ba2d68c/sympy-1.14.0.tar.gz", hash = "sha256:d3d3fe8df1e5a0b42f0e7bdf50541697dbe7d23746e894990c030e2b05e72517", size = 7793921, upload-time = "2025-04-27T18:05:01.611Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a2/09/77d55d46fd61b4a135c444fc97158ef34a095e5681d0a6c10b75bf356191/sympy-1.14.0-py3-none-any.whl", hash = "sha256:e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5", size = 6299353, upload-time = "2025-04-27T18:04:59.103Z" },
+]
+
+[[package]]
+name = "tenacity"
+version = "9.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/82/9e/497c1c8ebe5a5b5d1d4a7511aea22c0bb1a97e3170d98abdef0e1b34265a/tenacity-9.2.1.tar.gz", hash = "sha256:a606b5c808d0cded4a359d5b9932d867ff2a6a6b64d37350260fd01bbdf83839", size = 58261, upload-time = "2026-10-07T12:13:01.633Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d6/26/1ff2b0721ac66a3ec5b1402b333110b352ab0a8724052ac279a7b82d40c4/tenacity-9.2.1-py3-none-any.whl", hash = "sha256:9e56f17539296baab7beabb08b92f6ee3d7be92d8be72d763360677c2ad6580e", size = 32310, upload-time = "2026-10-07T12:13:00.102Z" },
 ]
 
 [[package]]

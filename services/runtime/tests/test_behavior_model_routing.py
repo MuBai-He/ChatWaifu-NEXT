@@ -27,7 +27,8 @@ async def test_schema_46_upgrade_preserves_all_model_rows_secrets_and_restart(
     tmp_path: Path, runtime_settings: Settings
 ) -> None:
     path = tmp_path / "upgrade.db"
-    old = Database(path, runtime_settings.storage, migrations=MIGRATIONS[:-1])
+    schema_46 = tuple(migration for migration in MIGRATIONS if migration[0] <= 46)
+    old = Database(path, runtime_settings.storage, migrations=schema_46)
     await old.open()
     try:
         async with old.transaction() as connection:

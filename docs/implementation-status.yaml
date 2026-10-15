@@ -1049,3 +1049,11 @@ knowledge_settings_navigation:
     - Searchable Web/desktop settings entry opens the standalone knowledge canvas. Web retains the current tab and login scope; desktop links contain no credentials. The graph returns to settings and preserves native embedded-cookie access.
     - An optional operator web_client_dir provides the root/login/settings/knowledge Web documents under the existing Runtime listener, without allowing unauthenticated API, MCP or private-data access. The host directory is omitted from public configuration.
     - Live same-origin navigation from settings to the graph and back passed. The map loaded 200 real nodes; the accessible relation list remains available. Existing model/channel configuration and migration hashes were preserved; Runtime restarted and the socket TLS proxy reactivated, while model/indexing workers and the LAN Web service retained their processes.
+personal_information_knowledge:
+  status: implementation_integrated_local_and_owner_device_verified_ci_pending
+  adr: "0084"
+  evidence:
+    - Owner-private source and object sync, CAS conflicts, exact-version evidence, exclusion/forgetting fences and device application receipts are implemented in migration 48.
+    - Graphiti 0.30.2 remains an optional derived index behind the standalone leased worker; model SDKs stay in its adapter and read-only knowledge.search is limited to private owner sessions.
+    - Android 0.5.4 is independently buildable under apps/info-inbox-android. The owner handset upgrade and category/multiselect screens were verified on 2026-10-15 with existing confirmed data and exclusions preserved.
+    - Latest-main integration preserves PR 81 password login, settings navigation and artifact isolation; local Runtime, Web/browser and Android checks are recorded in docs/operations/personal-knowledge-main-integration.md. CI and main merge remain separate gates.

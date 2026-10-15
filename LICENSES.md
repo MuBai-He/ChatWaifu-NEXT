@@ -1,5 +1,9 @@
 # Licensing status
 
+The independent Android information inbox bundles its phone-local collector dependencies with
+their original notices and package digests. See
+[`apps/info-inbox-android/THIRD_PARTY_NOTICES.md`](apps/info-inbox-android/THIRD_PARTY_NOTICES.md).
+
 The ChatWaifu NEXT source code is licensed under the **PolyForm Noncommercial License 1.0.0**
 (see `LICENSE`). Noncommercial use, personal study, local research, and noncommercial modification
 are permitted. Commercial use, paid SaaS, productized commercial distribution, and proprietary

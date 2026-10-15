@@ -10,3 +10,4 @@ uv.lock
 docs/research/qq-agent-plus-evidence/character_scenarios_ab_gemini_3_8_flash_high_v5_targeted_primary/primary-masked-review.json
 docs/research/qq-agent-plus-evidence/character_scenarios_ab_claude_sonnet_4_6_v5_targeted_primary/primary-masked-review.json
 docs/research/qq-agent-plus-evidence/character_scenarios_ab_claude_opus_4_6_thinking_v5_targeted_primary/primary-masked-review.json
+apps/web/dist-knowledge/

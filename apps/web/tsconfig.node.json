@@ -28,6 +28,7 @@
     "playwright.settings.config.ts",
     "playwright.glass.config.ts",
     "playwright.chat.config.ts",
-    "playwright.password.config.ts"
+    "playwright.password.config.ts",
+    "playwright.knowledge.config.ts"
   ]
 }

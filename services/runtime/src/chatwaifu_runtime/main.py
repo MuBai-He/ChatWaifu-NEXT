@@ -9,6 +9,8 @@ from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.responses import FileResponse
+from starlette.staticfiles import StaticFiles
 
 from chatwaifu_runtime.api.agent_routes import router as agent_router
 from chatwaifu_runtime.api.channel_group_routes import router as channel_group_router
@@ -16,9 +18,12 @@ from chatwaifu_runtime.api.channel_pairing_routes import router as channel_pairi
 from chatwaifu_runtime.api.channel_proactive_routes import router as channel_proactive_router
 from chatwaifu_runtime.api.channel_settings_routes import router as channel_settings_router
 from chatwaifu_runtime.api.guard import LocalClientGuardMiddleware
+from chatwaifu_runtime.api.information_routes import router as information_router
 from chatwaifu_runtime.api.interaction_diagnostics_routes import (
     router as interaction_diagnostics_router,
 )
+from chatwaifu_runtime.api.knowledge_routes import router as knowledge_router
+from chatwaifu_runtime.api.knowledge_routes import sync_router
 from chatwaifu_runtime.api.password_routes import router as password_router
 from chatwaifu_runtime.api.personal_assistant_routes import router as personal_assistant_router
 from chatwaifu_runtime.api.photo_memory_routes import router as photo_memory_router
@@ -92,6 +97,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def validation_exception_handler(
         _request: Request, exc: RequestValidationError
     ) -> JSONResponse:
+        if _request.url.path.startswith(("/v1/personal-information/", "/v1/knowledge/")):
+            return JSONResponse(status_code=422, content={"detail": "information_request_invalid"})
         if _request.url.path.startswith("/v1/personal-assistant/oauth/"):
             return JSONResponse(status_code=422, content={"detail": "授权请求格式无效"})
         if _request.url.path.startswith("/v1/channel-pairing-sessions"):
@@ -141,8 +148,34 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         capability_token=container.capability_token,
         ticket_store=container.ws_ticket_store,
         password_auth=container.password_auth,
+        knowledge_viewer=container.knowledge.repository.validate_viewer,
     )
+    knowledge_web = resolved_settings.knowledge.web_dir
+    if resolved_settings.knowledge.enabled and knowledge_web is not None:
+        if not (knowledge_web / "index.html").is_file():
+            raise ValueError("knowledge_web_build_missing")
+        app.mount(
+            "/knowledge-assets", StaticFiles(directory=knowledge_web), name="knowledge-assets"
+        )
+
+        async def knowledge_page() -> FileResponse:
+            return FileResponse(
+                knowledge_web / "index.html",
+                headers={
+                    "Cache-Control": "no-store",
+                    "Content-Security-Policy": "default-src 'self'; script-src 'self'; "
+                    "style-src 'self' "
+                    "'unsafe-inline'; img-src 'self' data: blob:; connect-src "
+                    "'self'; frame-ancestors 'none'; object-src 'none'; base-uri "
+                    "'none'",
+                    "Referrer-Policy": "no-referrer",
+                },
+            )
+
+        app.add_api_route("/knowledge", knowledge_page, methods=["GET"], include_in_schema=False)
+
     mount_web_client(app, resolved_settings)
+
     app.include_router(router)
     app.include_router(password_router)
     app.include_router(agent_router)
@@ -152,6 +185,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(channel_settings_router)
     app.include_router(interaction_diagnostics_router)
     app.include_router(personal_assistant_router)
+    app.include_router(information_router)
+    app.include_router(sync_router)
+    app.include_router(knowledge_router)
     app.include_router(sticker_library_router)
     app.include_router(photo_memory_router)
     # Keep this catch-all mount last so existing /v1 and documentation routes

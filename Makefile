@@ -2,6 +2,15 @@ UV ?= uv
 PNPM ?= $(UV) run python tools/run_pnpm.py
 CARGO ?= cargo
 
+.PHONY: test-info-inbox-android build-info-inbox-android
+
+test-info-inbox-android:
+	cd apps/info-inbox-android && ./gradlew :app:testDebugUnitTest :app:lintDebug
+	python3 -m unittest discover -s apps/info-inbox-android/tests/python -v
+
+build-info-inbox-android:
+	cd apps/info-inbox-android && ./gradlew :app:assembleDebug
+
 .PHONY: client-setup client server-setup server server-unit
 
 # Thin browser client: no Python, Runtime, Rust or model Worker setup.
