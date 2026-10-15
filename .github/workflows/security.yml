@@ -68,6 +68,6 @@ jobs:
       # Re-review: 2026-10-31.
       # Remove this ignore when an upstream patched version is available.
       - if: steps.scope.outputs.python_dependencies == 'true'
-        run: uv run --with pip-audit pip-audit --ignore-vuln PYSEC-2026-3740
+        run: uv run --all-packages --extra knowledge --with pip-audit pip-audit --ignore-vuln PYSEC-2026-3740
       - if: steps.scope.outputs.javascript_dependencies == 'true'
         run: pnpm audit --audit-level high
