@@ -55,7 +55,7 @@ jobs:
           cache: true
           install: false
       - if: steps.scope.outputs.python_dependencies == 'true'
-        run: uv sync --all-packages --all-groups --locked
+        run: uv sync --all-packages --all-groups --extra knowledge --locked
       - if: steps.scope.outputs.javascript_dependencies == 'true'
         run: pnpm install --frozen-lockfile
       # PYSEC-2026-3740 / CVE-2026-81726:
