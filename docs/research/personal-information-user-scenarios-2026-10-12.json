@@ -1,0 +1,429 @@
+{
+  "schema_version": "1.0",
+  "research_date": "2026-10-12",
+  "status": "scenario_hypotheses_for_product_review",
+  "scope": "Personal information from WeChat, email, notes, files and calendars; long-term memory and short-term action support.",
+  "method": "Synthesis of official product documentation, established personal knowledge/work management methods, current project contracts and the user's stated WeChat-first goal. No user interviews or demand-frequency statistics were performed.",
+  "scenarios": [
+    {
+      "id": "L01",
+      "category": "long_term_memory",
+      "priority": "P0",
+      "need": "记住本人稳定偏好",
+      "example": "我一般不接早上九点以前的会议。",
+      "expected": "带有效期和出处的本人偏好；在安排会议时使用",
+      "objects": ["memory"],
+      "confirmation": "区分稳定偏好与一次性抱怨，区分本人和他人"
+    },
+    {
+      "id": "L02",
+      "category": "long_term_memory",
+      "priority": "P1",
+      "need": "记住沟通和工作习惯",
+      "example": "重要事情先给我文字清单，晚上再一起确认。",
+      "expected": "沟通偏好与提醒策略，可由用户修改",
+      "objects": ["memory"],
+      "confirmation": "不能仅从回复速度推测习惯"
+    },
+    {
+      "id": "L03",
+      "category": "long_term_memory",
+      "priority": "P1",
+      "need": "维护本人背景和常用信息",
+      "example": "我现在搬到新地址了，旧地址不用了。",
+      "expected": "当前事实与旧事实的有效期，保留变化来源",
+      "objects": ["memory"],
+      "confirmation": "确认信息主体和生效时间；敏感信息可仅本地保留"
+    },
+    {
+      "id": "L04",
+      "category": "long_term_memory",
+      "priority": "P0",
+      "need": "记住重要人物的身份和职责",
+      "example": "小李以后负责这个项目的验收。",
+      "expected": "人物、项目和职责关系，回答以后找谁",
+      "objects": ["memory"],
+      "confirmation": "同名人物和群昵称不能合并为同一人"
+    },
+    {
+      "id": "L05",
+      "category": "long_term_memory",
+      "priority": "P1",
+      "need": "维护联系方式和关系变化",
+      "example": "后续联系我用这个新号码。",
+      "expected": "联系方式变更候选及历史来源",
+      "objects": ["memory", "reference"],
+      "confirmation": "确认说话人；不凭消息频率推断亲密程度"
+    },
+    {
+      "id": "L06",
+      "category": "long_term_memory",
+      "priority": "P1",
+      "need": "记住亲友偏好和相处细节",
+      "example": "她说生日礼物更喜欢实用的小东西。",
+      "expected": "明确归属于该人物的偏好，供相关问题检索",
+      "objects": ["memory"],
+      "confirmation": "不把他人的偏好写成用户自己的偏好"
+    },
+    {
+      "id": "L07",
+      "category": "long_term_memory",
+      "priority": "P1",
+      "need": "保留值得回顾的经历",
+      "example": "上次旅行我们在哪家店吃的饭？",
+      "expected": "带时间、人物和地点的经历索引及原文",
+      "objects": ["memory", "reference"],
+      "confirmation": "摘要不替代事实；无法确定的地点保持未知"
+    },
+    {
+      "id": "L08",
+      "category": "long_term_memory",
+      "priority": "P0",
+      "need": "恢复项目背景",
+      "example": "这个项目当时的目标和约束是什么？",
+      "expected": "项目背景、目标、约束和近期状态的来源化摘要",
+      "objects": ["memory", "reference"],
+      "confirmation": "区分历史背景与当前状态"
+    },
+    {
+      "id": "L09",
+      "category": "long_term_memory",
+      "priority": "P0",
+      "need": "记住决定及理由",
+      "example": "最终用方案 B，因为维护成本更低。",
+      "expected": "决策、理由、备选方案和后续变更",
+      "objects": ["memory"],
+      "confirmation": "讨论、建议和最终决定分别标注"
+    },
+    {
+      "id": "L10",
+      "category": "long_term_memory",
+      "priority": "P1",
+      "need": "找回办事和排障方法",
+      "example": "上次这个设备出问题是怎么解决的？",
+      "expected": "经过验证的步骤、适用条件和出处",
+      "objects": ["memory", "reference"],
+      "confirmation": "区分尝试过的步骤与确认有效的步骤"
+    },
+    {
+      "id": "L11",
+      "category": "long_term_memory",
+      "priority": "P0",
+      "need": "找回重要链接、文件和资料",
+      "example": "客户之前发的最新合同在哪？",
+      "expected": "资料索引、版本、发送人和原消息入口",
+      "objects": ["reference"],
+      "confirmation": "不能把文件名当成已读取的文件内容"
+    },
+    {
+      "id": "L12",
+      "category": "long_term_memory",
+      "priority": "P1",
+      "need": "保留个人目标和想法",
+      "example": "今年想把英语口语练起来，但暂时没定计划。",
+      "expected": "目标或想法记录，可在复盘时提出规划建议",
+      "objects": ["memory", "idea"],
+      "confirmation": "表达兴趣不等于承诺，不能自动变成待办"
+    },
+    {
+      "id": "T01",
+      "category": "tasks_and_planning",
+      "priority": "P0",
+      "need": "从消息提取分配给自己的任务",
+      "example": "麻烦你把这份资料补齐发给我。",
+      "expected": "负责人、动作、交付物、来源明确的任务候选",
+      "objects": ["task"],
+      "confirmation": "确认任务确实分配给本人，而不是群内其他人"
+    },
+    {
+      "id": "T02",
+      "category": "tasks_and_planning",
+      "priority": "P0",
+      "need": "跟踪自己答应的事情",
+      "example": "我今晚整理好发你。",
+      "expected": "承诺任务、对象、时间和完成证据",
+      "objects": ["task", "reminder"],
+      "confirmation": "聊天中没出现完成证据，只能标疑似未完成"
+    },
+    {
+      "id": "T03",
+      "category": "tasks_and_planning",
+      "priority": "P0",
+      "need": "追踪明确截止时间",
+      "example": "报价最晚周五中午交。",
+      "expected": "独立的截止时间、优先级和提前准备提醒",
+      "objects": ["task", "reminder"],
+      "confirmation": "相对时间基于原消息日期和时区解析"
+    },
+    {
+      "id": "T04",
+      "category": "tasks_and_planning",
+      "priority": "P0",
+      "need": "发现可能漏回的问题",
+      "example": "这个方案你确认了吗？",
+      "expected": "待回复候选，附问题及后续上下文",
+      "objects": ["task"],
+      "confirmation": "未读、未回复和未处理是不同状态"
+    },
+    {
+      "id": "T05",
+      "category": "tasks_and_planning",
+      "priority": "P0",
+      "need": "跟踪等待别人回复或交付",
+      "example": "我等设计稿到了再提交。",
+      "expected": "等待对象、等待内容、跟进时间和解除条件",
+      "objects": ["waiting_for", "reminder"],
+      "confirmation": "不能把别人的交付任务变成用户自己的任务"
+    },
+    {
+      "id": "T06",
+      "category": "tasks_and_planning",
+      "priority": "P1",
+      "need": "管理依赖和阻塞",
+      "example": "先等负责人批准，再开始采购。",
+      "expected": "任务依赖、阻塞原因和下一步",
+      "objects": ["task", "waiting_for"],
+      "confirmation": "前置条件未满足时不催用户执行后续动作"
+    },
+    {
+      "id": "T07",
+      "category": "tasks_and_planning",
+      "priority": "P1",
+      "need": "拆解复杂目标",
+      "example": "下个月要把产品第一版做出来。",
+      "expected": "建议的里程碑、子任务和下一步",
+      "objects": ["project_plan", "task"],
+      "confirmation": "缺少范围、时间预算和资源时先补充约束"
+    },
+    {
+      "id": "T08",
+      "category": "tasks_and_planning",
+      "priority": "P0",
+      "need": "决定今天先做什么",
+      "example": "今天只有两个小时空闲，哪些事最要紧？",
+      "expected": "结合截止、责任、重要性和可用时间的候选安排",
+      "objects": ["daily_plan"],
+      "confirmation": "建议可调整，不自动替用户承诺工作量"
+    },
+    {
+      "id": "T09",
+      "category": "tasks_and_planning",
+      "priority": "P1",
+      "need": "为任务留出执行时间",
+      "example": "写方案大概需要两小时，周四前完成。",
+      "expected": "区分工作时间块与最终截止时间的计划建议",
+      "objects": ["task", "time_block"],
+      "confirmation": "估计时长和占用日历需用户认可"
+    },
+    {
+      "id": "T10",
+      "category": "tasks_and_planning",
+      "priority": "P1",
+      "need": "合并购物和零碎事务",
+      "example": "回去顺便买牛奶，再拿一下快递。",
+      "expected": "按情境组织的行动清单，合并重复项",
+      "objects": ["task"],
+      "confirmation": "临时取件码等信息应有到期策略"
+    },
+    {
+      "id": "T11",
+      "category": "tasks_and_planning",
+      "priority": "P1",
+      "need": "周期性办事和检查",
+      "example": "每月最后一个工作日核对订阅续费。",
+      "expected": "可暂停、修改和取消的周期任务",
+      "objects": ["task", "reminder"],
+      "confirmation": "记录执行次数；关闭提醒不代表该期任务完成"
+    },
+    {
+      "id": "T12",
+      "category": "tasks_and_planning",
+      "priority": "P1",
+      "need": "保存以后可能做的事",
+      "example": "有空研究一下这个方案。",
+      "expected": "稍后考虑清单，在复盘时决定是否激活",
+      "objects": ["idea"],
+      "confirmation": "没有承诺和时间时不制造逾期任务"
+    },
+    {
+      "id": "C01",
+      "category": "calendar_and_reminders",
+      "priority": "P0",
+      "need": "从聊天提取明确约定",
+      "example": "明天下午三点，在会议室开评审。",
+      "expected": "时间、地点、参与人和来源明确的日程候选",
+      "objects": ["event", "reminder"],
+      "confirmation": "确认已约定而不是一方提议"
+    },
+    {
+      "id": "C02",
+      "category": "calendar_and_reminders",
+      "priority": "P0",
+      "need": "管理尚未定下来的约会",
+      "example": "下周找一天一起讨论，时间再定。",
+      "expected": "待协调事项或时间候选，不占用正式日历",
+      "objects": ["tentative_event", "task"],
+      "confirmation": "待对方确认后再转为正式事件"
+    },
+    {
+      "id": "C03",
+      "category": "calendar_and_reminders",
+      "priority": "P0",
+      "need": "处理改期和地点变更",
+      "example": "会议改到四点，地点也换了。",
+      "expected": "更新同一事件，保留修订来源并撤销旧提醒",
+      "objects": ["event_update", "reminder_update"],
+      "confirmation": "不能只新建另一条日程而留下旧版本"
+    },
+    {
+      "id": "C04",
+      "category": "calendar_and_reminders",
+      "priority": "P0",
+      "need": "处理取消",
+      "example": "今天的会议取消，不用来了。",
+      "expected": "取消对应事件或提醒，保持历史可追溯",
+      "objects": ["event_cancel", "reminder_cancel"],
+      "confirmation": "对象不明确时不得批量取消其他事项"
+    },
+    {
+      "id": "C05",
+      "category": "calendar_and_reminders",
+      "priority": "P0",
+      "need": "到场前准备和提前提醒",
+      "example": "会前带上合同，提前十分钟到。",
+      "expected": "日程关联准备任务和提醒时间",
+      "objects": ["event", "task", "reminder"],
+      "confirmation": "开始时间、准备截止和提醒时间分别保存"
+    },
+    {
+      "id": "C06",
+      "category": "calendar_and_reminders",
+      "priority": "P1",
+      "need": "识别日程冲突和缓冲不足",
+      "example": "两个会议重叠，或者前一场结束后赶不到下一场。",
+      "expected": "冲突说明和可选调整建议",
+      "objects": ["conflict_suggestion"],
+      "confirmation": "不擅自修改已有会议或通知他人"
+    },
+    {
+      "id": "C07",
+      "category": "calendar_and_reminders",
+      "priority": "P1",
+      "need": "整理出行和预约确认",
+      "example": "车票、酒店和活动确认分散在几个消息里。",
+      "expected": "关联行程、确认号、地点、时间和来源",
+      "objects": ["event", "reference", "reminder"],
+      "confirmation": "后续变更或取消应更新行程；以原始确认信息为依据"
+    },
+    {
+      "id": "C08",
+      "category": "calendar_and_reminders",
+      "priority": "P1",
+      "need": "生日、纪念日和周期日期",
+      "example": "他的生日是农历九月初三。",
+      "expected": "保留历法及人物归属，按用户选择生成提醒",
+      "objects": ["memory", "recurring_event", "reminder"],
+      "confirmation": "农历、闰月和公历不能直接当同一种日期"
+    },
+    {
+      "id": "C09",
+      "category": "calendar_and_reminders",
+      "priority": "P1",
+      "need": "关注有效期和行动窗口",
+      "example": "这个报名周三关闭，材料要提前准备。",
+      "expected": "有效期、行动截止和准备任务",
+      "objects": ["reference", "task", "reminder"],
+      "confirmation": "重要期限需回看原始通知，AI 不应补猜缺失时间"
+    },
+    {
+      "id": "C10",
+      "category": "calendar_and_reminders",
+      "priority": "P2",
+      "need": "按地点或联系情境提醒",
+      "example": "下次和小王聊天时，提醒我问合同进展。",
+      "expected": "与人物或位置情境关联的提醒候选",
+      "objects": ["context_reminder"],
+      "confirmation": "需要相应上下文来源和可控授权，避免在每次聊天重复提醒"
+    },
+    {
+      "id": "X01",
+      "category": "combined_information_support",
+      "priority": "P0",
+      "need": "每日简报",
+      "example": "今天有什么安排、待办和可能遗漏？",
+      "expected": "按重要性组织的日程、截止、承诺、待回复和变化摘要",
+      "objects": ["briefing"],
+      "confirmation": "限制条目数量，保留原始出处和不确定性"
+    },
+    {
+      "id": "X02",
+      "category": "combined_information_support",
+      "priority": "P1",
+      "need": "晚间和每周复盘",
+      "example": "这周答应了哪些事情，哪些还在等人？",
+      "expected": "完成、未处理、等待、改期与值得保留的记忆候选",
+      "objects": ["review", "memory_candidate"],
+      "confirmation": "区分没完成、没收到提醒和没点击提醒"
+    },
+    {
+      "id": "X03",
+      "category": "combined_information_support",
+      "priority": "P0",
+      "need": "会前找回相关历史资料",
+      "example": "马上要讨论这个项目，把上次决定和资料找出来。",
+      "expected": "与当前事件相关的决定、文件和未决问题",
+      "objects": ["context_bundle"],
+      "confirmation": "仅选与当前人物、项目和授权范围相关的材料"
+    },
+    {
+      "id": "X04",
+      "category": "combined_information_support",
+      "priority": "P0",
+      "need": "更新和纠正旧记忆",
+      "example": "这个负责人已经换了，之前那条信息过时了。",
+      "expected": "新事实候选、旧事实失效状态和历史来源",
+      "objects": ["memory_update"],
+      "confirmation": "不无声覆盖历史；允许用户纠正和撤销"
+    },
+    {
+      "id": "X05",
+      "category": "combined_information_support",
+      "priority": "P0",
+      "need": "利用后续消息更新任务状态",
+      "example": "对方说资料已经收到，原来的跟进任务可以结束。",
+      "expected": "关联原任务的完成候选和证据",
+      "objects": ["task_update"],
+      "confirmation": "已读、点赞、收到与实际完成不能无条件等同"
+    },
+    {
+      "id": "X06",
+      "category": "combined_information_support",
+      "priority": "P1",
+      "need": "把目标与进展联系起来",
+      "example": "最近有没有在推进我之前的学习计划？",
+      "expected": "关联目标、执行记录和阶段复盘的摘要",
+      "objects": ["progress_review"],
+      "confirmation": "活动记录不能自动当作目标已达成"
+    },
+    {
+      "id": "X07",
+      "category": "combined_information_support",
+      "priority": "P1",
+      "need": "合并跨来源的同一件事",
+      "example": "微信谈安排、邮件发文件、日历确认时间。",
+      "expected": "同一事项下的多来源证据和当前版本",
+      "objects": ["linked_item"],
+      "confirmation": "使用稳定身份和来源标识，不能仅靠相似标题合并"
+    },
+    {
+      "id": "X08",
+      "category": "combined_information_support",
+      "priority": "P0",
+      "need": "降低消息和提醒噪声",
+      "example": "群消息很多，只想关注与我有关的重要事项。",
+      "expected": "可配置来源、人物、项目、重要性及提醒频率",
+      "objects": ["attention_policy"],
+      "confirmation": "允许忽略、静默、汇总和恢复，不把所有问题都升级成任务"
+    }
+  ]
+}

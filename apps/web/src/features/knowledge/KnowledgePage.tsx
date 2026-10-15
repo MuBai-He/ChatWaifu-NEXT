@@ -3,6 +3,7 @@ import { z } from "zod";
 import { bootstrapRuntimeSession } from "../chat/chatSessionBootstrap";
 import { readConversationScope } from "../chat/conversationScope";
 import { KnowledgeCanvas } from "./KnowledgeCanvas";
+import { RelationEditor } from "./RelationEditor";
 import {
   answerSchema,
   citationSchema,
@@ -488,11 +489,15 @@ export function KnowledgePage() {
           </details>
           <details className="km-node-list km-edge-list">
             <summary>关系列表（{graph.edges.length}）</summary>
+            {graph.edges.length > 200 && (
+              <p>列表显示前 200 条关系，可用搜索缩小范围。</p>
+            )}
             <ul>
-              {graph.edges.map((relation) => (
+              {graph.edges.slice(0, 200).map((relation) => (
                 <li key={relation.relation_id}>
                   <button
                     type="button"
+                    aria-label={`查看关系：${relation.description}`}
                     disabled={busy}
                     onClick={() =>
                       void run(() => choose(relation.relation_id, true))
@@ -698,13 +703,15 @@ export function KnowledgePage() {
           {source ? (
             <>
               <span className="km-badge">
-                原始证据 · 版本 {source.revision}
+                {source.kind === "source" ? "原始证据" : "确认记录"} · 版本{" "}
+                {source.revision}
               </span>
               <h2>{source.title || "消息原文"}</h2>
               <p>
                 {stamp(source.occurred_at)} · {source.sender_name}
               </p>
               <pre>{source.text}</pre>
+              {sourceButtons(source.source_refs)}
               {embedded &&
                 source.kind === "source" &&
                 source.origin.source_type === "wechat_root" && (
@@ -896,6 +903,21 @@ export function KnowledgePage() {
                     ))}
                   </div>
                 </>
+              )}
+              {edge && client && (
+                <RelationEditor
+                  key={edge.relation_id + ":" + edge.revision}
+                  client={client}
+                  edge={edge}
+                  nodes={graph.nodes}
+                  busy={busy}
+                  run={run}
+                  onSaved={async () => {
+                    setEdge(null);
+                    setNotice("关系已更正，原始证据和旧版本保留。");
+                    await refresh();
+                  }}
+                />
               )}
               <h3>来源证据</h3>
               {sourceButtons(refs)}

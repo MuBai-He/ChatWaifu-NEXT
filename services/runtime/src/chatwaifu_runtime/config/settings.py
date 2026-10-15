@@ -329,6 +329,18 @@ class PersonalAssistantConfig(BaseModel):
         return self
 
 
+class KnowledgeConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    enabled: bool = False
+    neo4j_uri: str = "bolt://127.0.0.1:17688"
+    neo4j_user: str = "neo4j"
+    neo4j_password: SecretStr | None = None
+    history_daily_limit: int = Field(default=100, ge=0, le=10000)
+    history_enabled: bool = True
+    viewer_ttl_seconds: int = Field(default=900, ge=60, le=3600)
+    web_dir: Path | None = None
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="CHATWAIFU_",
@@ -349,6 +361,7 @@ class Settings(BaseSettings):
     privacy: PrivacyConfig = PrivacyConfig()
     security: SecurityConfig = SecurityConfig()
     personal_assistant: PersonalAssistantConfig = PersonalAssistantConfig()
+    knowledge: KnowledgeConfig = KnowledgeConfig()
     llm: LlmConfig = LlmConfig()
     tts: TtsConfig = TtsConfig()
     realtime: RealtimeConfig = RealtimeConfig()
@@ -373,6 +386,9 @@ class Settings(BaseSettings):
             mode="json", exclude={"security", "llm", "stt", "tts", "realtime", "public_web"}
         )
         public["runtime"] = self.runtime.model_dump(mode="json", exclude={"web_client_dir"})
+        public["knowledge"] = self.knowledge.model_dump(
+            mode="json", exclude={"neo4j_password", "web_dir"}
+        )
         public["llm"] = self.llm.model_dump(mode="json", exclude={"api_key"})
         public["stt"] = self.stt.model_dump(mode="json", exclude={"worker_token"})
         public["tts"] = self.tts.model_dump(mode="json", exclude={"worker_token"})

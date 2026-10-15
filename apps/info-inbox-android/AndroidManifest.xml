@@ -1,0 +1,40 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <permission android:name="com.mubai.infoinbox.permission.COLLECTOR_EVENT" android:protectionLevel="signature" />
+    <queries><package android:name="me.weishu.kernelsu" /></queries>
+    <application android:name=".InboxApplication" android:label="信息收件箱" android:icon="@drawable/app_icon"
+        android:theme="@style/AppTheme" android:allowBackup="false" android:fullBackupContent="false" android:dataExtractionRules="@xml/data_extraction_rules" android:supportsRtl="true"
+        android:usesCleartextTraffic="true">
+        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".KnowledgeActivity" android:exported="false" />
+        <activity android:name=".OrganizerActivity" android:exported="false" />
+        <provider android:name=".ExportProvider" android:authorities="com.mubai.infoinbox.exports"
+            android:exported="false" android:grantUriPermissions="true" />
+        <service android:name=".HistoryImportService" android:exported="false" android:foregroundServiceType="dataSync" />
+        <service android:name=".KnowledgeJob" android:exported="false" android:permission="android.permission.BIND_JOB_SERVICE" />
+        <service android:name=".AnalysisJob" android:exported="false" android:permission="android.permission.BIND_JOB_SERVICE" />
+        <receiver android:name=".CollectorReceiver" android:exported="true" android:permission="com.mubai.infoinbox.permission.COLLECTOR_EVENT">
+            <intent-filter><action android:name="com.mubai.infoinbox.COLLECTED" /></intent-filter>
+        </receiver>
+        <receiver android:name=".ReminderReceiver" android:exported="false" />
+        <receiver android:name=".RecoveryReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

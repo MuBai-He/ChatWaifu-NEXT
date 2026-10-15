@@ -1,0 +1,70 @@
+plugins { id 'com.android.application' }
+
+def ownerSigningKey = System.getenv('INBOX_SIGNING_KEY')
+
+android {
+    namespace 'com.mubai.infoinbox'
+    compileSdk 36
+    buildToolsVersion '36.0.0'
+    defaultConfig {
+        applicationId 'com.mubai.infoinbox'
+        minSdk 26
+        targetSdk 35
+        versionCode 15
+        versionName '0.5.4'
+    }
+    signingConfigs {
+        if (ownerSigningKey) {
+            owner {
+                storeFile file(ownerSigningKey)
+                storePassword System.getenv('INBOX_SIGNING_PASSWORD') ?: 'android'
+                keyAlias System.getenv('INBOX_SIGNING_ALIAS') ?: 'inbox-debug'
+                keyPassword System.getenv('INBOX_SIGNING_KEY_PASSWORD') ?: 'android'
+                storeType System.getenv('INBOX_SIGNING_STORE_TYPE') ?: 'PKCS12'
+            }
+        }
+    }
+    buildTypes {
+        debug {
+            if (ownerSigningKey) signingConfig signingConfigs.owner
+        }
+        release {
+            if (ownerSigningKey) signingConfig signingConfigs.owner
+            minifyEnabled false
+        }
+    }
+    sourceSets {
+        main {
+            manifest.srcFile '../AndroidManifest.xml'
+            java.srcDirs = ['../src']
+            java.exclude '**/*Instrumentation.java'
+            res.srcDirs = ['../res']
+            assets.srcDirs = ['../assets']
+        }
+        debug {
+            java.srcDirs = ['../src']
+            java.include '**/*Instrumentation.java'
+        }
+        test.java.srcDirs = ['../tests/java']
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    testOptions {
+        unitTests.includeAndroidResources = true
+        unitTests.all {
+            systemProperty "robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2"
+            systemProperty "sun.net.client.defaultConnectTimeout", "15000"
+            systemProperty "sun.net.client.defaultReadTimeout", "45000"
+            jvmArgs '--add-opens=java.base/java.lang=ALL-UNNAMED', '--add-opens=java.base/java.util=ALL-UNNAMED', '--add-opens=java.base/java.io=ALL-UNNAMED', '--add-opens=java.base/java.net=ALL-UNNAMED', '--add-opens=java.base/java.security=ALL-UNNAMED', '--add-opens=java.base/java.text=ALL-UNNAMED', '--add-opens=java.base/jdk.internal.access=ALL-UNNAMED', '--add-opens=java.desktop/java.awt.font=ALL-UNNAMED', '--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED'
+        }
+    }
+    lint { abortOnError true }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
+    testImplementation 'org.robolectric:robolectric:4.17'
+}

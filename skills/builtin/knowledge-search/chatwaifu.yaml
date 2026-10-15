@@ -1,0 +1,26 @@
+schema_version: "1.0"
+instructions: SKILL.md
+definition:
+  skill_id: knowledge.search
+  version: 1.0.0
+  name: 个人知识检索
+  description: 在本人私有知识库中跨消息、人物、项目检索关系与原文。返回版本化来源和待核实状态，不创建任务或提醒。
+  capabilities:
+    - name: execute
+      description: 检索个人资料中的关系与原文。
+      input_schema:
+        type: object
+        properties:
+          question: {type: string, minLength: 1, maxLength: 2000}
+          hops: {type: integer, minimum: 1, maximum: 3, default: 2}
+          at: {type: integer, description: 可选历史时点，Unix 毫秒}
+        required: [question]
+        additionalProperties: false
+      output_schema: {type: object}
+      side_effect: read
+      required_permissions: [knowledge.read]
+      confirmation_required: false
+      timeout_seconds: 60
+  interruptible: true
+  background_allowed: false
+adapter: {kind: builtin, handler: knowledge_search}

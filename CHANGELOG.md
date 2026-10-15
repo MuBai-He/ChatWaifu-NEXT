@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — personal information inbox and knowledge backend
+
+- Add owner-private versioned source/object synchronization, explicit conflict resolution,
+  per-device application receipts, provenance-aware graph retrieval and cited answers.
+- Add SQLite migration 48 and a separately leased Graphiti/Neo4j worker; exclusions,
+  forgetting and human corrections fence stale indexing and retrieval results.
+- Integrate the Android 0.5.4 inbox as an independent Gradle module: standalone collection,
+  resumable history processing, local reminders, category labels/sections and reviewed bulk actions.
+- Preserve the current password login and knowledge settings surface while adding the backend,
+  scoped native viewer cookie and relation correction/history controls.
+
 ## QQ group registration, 2026-10-09
 
 - Preview group members without creating identities; explicitly confirmed batch

@@ -1,0 +1,39 @@
+name: Information Inbox Android CI
+
+on:
+  pull_request:
+    paths:
+      - "apps/info-inbox-android/**"
+      - ".github/workflows/ci-info-inbox-android.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/info-inbox-android/**"
+      - ".github/workflows/ci-info-inbox-android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Test, build, and lint the standalone client
+        working-directory: apps/info-inbox-android
+        run: ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:lintDebug --no-daemon --max-workers=2
+      - name: Collector restoration regressions
+        run: python3 -m unittest discover -s apps/info-inbox-android/tests/python -v

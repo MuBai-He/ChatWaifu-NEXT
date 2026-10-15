@@ -37,6 +37,9 @@ dependencies = [
   "pypdf>=6,<7",
 ]
 
+[project.optional-dependencies]
+knowledge = ["graphiti-core==0.30.2"]
+
 [project.scripts]
 chatwaifu-runtime = "chatwaifu_runtime.main:run"
 

@@ -1,6 +1,7 @@
 """Ordered SQLite migrations for the local Runtime."""
 
 from chatwaifu_runtime.persistence.agent_delivery_migration import AGENT_DELIVERY_MIGRATION_SQL
+from chatwaifu_runtime.persistence.knowledge_migration import KNOWLEDGE_MIGRATION
 
 _BASE_MIGRATIONS: tuple[tuple[int, str], ...] = (
     (
@@ -2195,4 +2196,5 @@ MIGRATIONS = (
     (45, _AGENT_TASK_MIGRATION),
     (46, AGENT_DELIVERY_MIGRATION_SQL),
     (47, _BEHAVIOR_MODEL_MIGRATION),
+    (48, KNOWLEDGE_MIGRATION),
 )
