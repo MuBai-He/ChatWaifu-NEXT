@@ -37,7 +37,12 @@ Android gate. Local focused checks and earlier device/model acceptance do not re
 
 ## Deployment and merge
 
-This PR does not switch the server release or update the owner's primary checkout. Existing
+PR #82 merged on 2026-10-25 as `6543f283796057710d4ea7147efee8e6d67cdb8d` after all 14
+checks passed at `2809f0bc5a55405044e807116f39975f5e263734`. The October 25 alignment and
+its deployment/checkout evidence are recorded separately in
+[the framework alignment record](framework-alignment-2026-10-25.md).
+
+The original October 15 PR preparation did not switch the server release or update the owner's primary checkout. Existing
 production source may contain additional owner overlays; deploy using the existing scoped release
 procedure after CI/review, with a consistent database/config/secret backup.
 
@@ -46,7 +51,7 @@ worker runs `tools/knowledge_worker.py` using operator-provided config/env files
 synthetic flow probes take explicit `--workspace` and `--production-state` paths; they do not infer
 or mutate a user's production data directory.
 
-Recommend a squash merge after the PR head's full checks pass and GitHub reports it mergeable.
+The accepted source was integrated using a squash merge after its checks passed.
 Database rollback from schema 48 requires the matching pre-migration backup; switching only the
 source back to a schema-47 Runtime is insufficient. No credentials, keystores, messages or handset
 snapshots are included in the PR.

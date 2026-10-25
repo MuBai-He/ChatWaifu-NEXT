@@ -57,8 +57,23 @@ qq_account_operations:
     - Broad related Python regression passed 798 cases before final shared-conversation and discovery refinements; final QQ/settings chain passed 23, shared/group/cancellation/catalog suite passed 121 with two routing failures subsequently repaired and all 35 routing/account/catalog cases passed. Web 457 and protocol 127 passed; changed-code Ruff/strict types, architecture and Web lint/build passed. Global protocol lint retains one existing no-control-regex finding in an unchanged parser.
 
 schema_version: "1.0"
-updated_at: "2026-10-07"
-current_phase: "13.6"
+updated_at: "2026-10-25"
+current_phase: "integration-and-release-validation"
+delivery_alignment:
+  status: main_primary_checkout_and_server_product_aligned_verified
+  evidence_document: "docs/operations/framework-alignment-2026-10-25.md"
+  source_commit: "6543f283796057710d4ea7147efee8e6d67cdb8d"
+  server_release: "framework-align-20261025-6543f28"
+  evidence:
+    - PR 81 password login and knowledge navigation merged as bd6d0f5; PR 82 private knowledge sync, graph backend and Android inbox merged as 6543f28 on 2026-10-25 after all 14 checks passed at 2809f0b.
+    - Independent focused Runtime verification passed 56 authentication, knowledge, information and migration tests; Web passed all 496 unit tests, Web/Desktop/knowledge builds and both product isolation checks on the same source tree.
+    - The primary checkout contained 31 pre-existing modified/untracked files. An owner-private byte-verified snapshot preserves them before source alignment; unique local edits remain separate from committed product delivery.
+    - Primary main and origin/main match 6543f28 with three unique modified files and one pre-existing untracked deployment note retained. The server release preserves migration 48 SQL, eight configuration file hashes, seven control-table digests, six unrelated service PIDs and 21 containers; database integrity and 48 new frontend file checks passed. Public TLS root/settings/knowledge and the LAN entry return HTML 200.
+  remaining_gates:
+    - Real-device voice interruption, long-running multi-turn playback, public-network TURN and multi-machine recovery.
+    - Long-term memory quality, cross-model character consistency and the original Q02 source discovery/factual-fidelity acceptance.
+    - Native installer updates, clean-account acceptance, installed sandbox reconciliation, signing, update/rollback and distributable character/voice assets.
+    - Full Cloud Realtime provider/device acceptance, dual-brain/Local Omni, additional ambient event sources and remaining animated-media/shared-joke sticker slices.
 qq_group_batch_registration:
   status: source_and_server_deployment_verified_real_group_confirmation_pending
   adr: "0069"
@@ -1027,7 +1042,7 @@ constraints:
   persistence_target: sqlite-wal-fts5
   memory_scheme: structured-records-and-fts5
   memory_semantic_index: sqlite-rebuildable-role-routed-projection
-  memory_temporal_graph: reserved_null_port
+  memory_temporal_graph: optional-owner-private-graphiti-projection-with-sqlite-authority
   character_kernel: persistent-affect-relationship-response-plan-and-prompt-compiler
   model_configuration: runtime-db-plus-write-only-local-secret-store
   external_channel_gateway: native_weixin_macos_owner_direct_text_and_static_media_accepted
@@ -1050,10 +1065,11 @@ knowledge_settings_navigation:
     - An optional operator web_client_dir provides the root/login/settings/knowledge Web documents under the existing Runtime listener, without allowing unauthenticated API, MCP or private-data access. The host directory is omitted from public configuration.
     - Live same-origin navigation from settings to the graph and back passed. The map loaded 200 real nodes; the accessible relation list remains available. Existing model/channel configuration and migration hashes were preserved; Runtime restarted and the socket TLS proxy reactivated, while model/indexing workers and the LAN Web service retained their processes.
 personal_information_knowledge:
-  status: implementation_integrated_local_and_owner_device_verified_ci_pending
+  status: merged_main_server_aligned_ci_and_prior_owner_device_verified
   adr: "0084"
   evidence:
     - Owner-private source and object sync, CAS conflicts, exact-version evidence, exclusion/forgetting fences and device application receipts are implemented in migration 48.
     - Graphiti 0.30.2 remains an optional derived index behind the standalone leased worker; model SDKs stay in its adapter and read-only knowledge.search is limited to private owner sessions.
     - Android 0.5.4 is independently buildable under apps/info-inbox-android. The owner handset upgrade and category/multiselect screens were verified on 2026-10-15 with existing confirmed data and exclusions preserved.
-    - Latest-main integration preserves PR 81 password login, settings navigation and artifact isolation; local Runtime, Web/browser and Android checks are recorded in docs/operations/personal-knowledge-main-integration.md. CI and main merge remain separate gates.
+    - Latest-main integration preserves PR 81 password login, settings navigation and artifact isolation. All 14 PR 82 CI checks passed at 2809f0b; PR 82 merged as 6543f28 on 2026-10-25. Local Runtime, Web/browser and Android evidence remains scoped in docs/operations/personal-knowledge-main-integration.md.
+    - The 2026-10-25 server alignment deploys the merged product baseline with matching migration SQL and preserved owner configuration/data. It does not repeat handset acceptance or a real-model indexing evaluation; see docs/operations/framework-alignment-2026-10-25.md.
