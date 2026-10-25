@@ -7,7 +7,9 @@ import re
 import secrets
 import time
 import urllib.parse
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from http.cookies import SimpleCookie
 from typing import Final, Literal
 
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -135,12 +137,14 @@ class LocalClientGuardMiddleware:
         capability_token: str,
         ticket_store: WebSocketTicketStore,
         password_auth: RuntimePasswordAuth | None = None,
+        knowledge_viewer: Callable[[str], Awaitable[str | None]] | None = None,
     ) -> None:
         self.app = app
         self.settings = settings
         self.capability_token = capability_token
         self.ticket_store = ticket_store
         self.password_auth = password_auth
+        self.knowledge_viewer = knowledge_viewer
         self._allowed_hosts = self._compute_allowed_hosts()
         self._allowed_origins = self._compute_allowed_origins()
 
@@ -382,6 +386,14 @@ class LocalClientGuardMiddleware:
                 await self.app(scope, receive, send)
                 return
 
+            if (
+                self.settings.knowledge.enabled
+                and self.settings.knowledge.web_dir is not None
+                and scope.get("method") in ("GET", "HEAD")
+                and (path == "/knowledge" or path.startswith("/knowledge-assets/"))
+            ):
+                await self.app(scope, receive, send)
+                return
             if path in EXEMPT_HTTP_PATHS:
                 await self.app(scope, receive, send)
                 return
@@ -395,7 +407,24 @@ class LocalClientGuardMiddleware:
                 return
 
             bearer_token = self._extract_bearer_token(auth_header)
-            if not self._is_token_valid(bearer_token):
+            viewer_session = None
+            if (
+                self.knowledge_viewer is not None
+                and path.startswith("/v1/knowledge/")
+                and path != "/v1/knowledge/viewer-session"
+                and not bearer_token
+            ):
+                cookie = SimpleCookie()
+                try:
+                    cookie.load(self._get_header(headers, b"cookie") or "")
+                    value = cookie.get("cw2_knowledge")
+                    if value is not None:
+                        viewer_session = await self.knowledge_viewer(value.value)
+                except (ValueError, KeyError):
+                    viewer_session = None
+            if viewer_session:
+                scope.setdefault("state", {})["knowledge_viewer_session"] = viewer_session
+            if not viewer_session and not self._is_token_valid(bearer_token):
                 await self._send_json(
                     send,
                     401,

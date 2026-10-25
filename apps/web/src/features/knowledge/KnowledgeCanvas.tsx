@@ -108,7 +108,7 @@ export function KnowledgeCanvas({
           },
         },
         {
-          selector: 'edge[status = "proposed"]',
+          selector: 'edge[status = "proposed"], edge[status = "superseded"]',
           style: { "line-style": "dashed" },
         },
         {

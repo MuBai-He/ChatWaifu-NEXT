@@ -88,6 +88,11 @@ from chatwaifu_runtime.external_channels.settings import ChannelSettingsService
 from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
 from chatwaifu_runtime.external_channels.voice import ChannelVoiceSkill
 from chatwaifu_runtime.index_orchestration.service import IndexRebuildService
+from chatwaifu_runtime.information.service import PersonalInformationService
+from chatwaifu_runtime.knowledge.memory_graph import KnowledgeMemoryGraph
+from chatwaifu_runtime.knowledge.retrieval import KnowledgeRetrieval
+from chatwaifu_runtime.knowledge.service import KnowledgeService
+from chatwaifu_runtime.knowledge.skill import KnowledgeSearchSkill
 from chatwaifu_runtime.memory.semantic_index import SQLiteSemanticMemoryIndex
 from chatwaifu_runtime.memory.service import MemoryService
 from chatwaifu_runtime.memory.spoken_observer import SpokenMemoryObserver
@@ -109,6 +114,8 @@ from chatwaifu_runtime.persistence.sqlite_external_channels import (
 from chatwaifu_runtime.persistence.sqlite_interaction_diagnostics import (
     SQLiteInteractionDiagnosticsReader,
 )
+from chatwaifu_runtime.persistence.sqlite_knowledge import SQLiteKnowledgeRepository
+from chatwaifu_runtime.persistence.sqlite_knowledge_graph import SQLiteKnowledgeGraph
 from chatwaifu_runtime.persistence.sqlite_memory_repository import SQLiteMemoryRepository
 from chatwaifu_runtime.persistence.sqlite_personal_assistant import SQLiteAssistantRepository
 from chatwaifu_runtime.persistence.sqlite_photo_memory import SQLitePhotoMemoryRepository
@@ -203,6 +210,28 @@ class RuntimeContainer:
         self.activity = ActivityTracker()
         self.companion_settings = CompanionSettingsService(self.database)
         self.model_configurations = ModelConfigurationService(self.database, settings)
+        knowledge_repository = SQLiteKnowledgeRepository(self.database)
+        self.knowledge = KnowledgeService(knowledge_repository)
+        self.knowledge_graph = SQLiteKnowledgeGraph(self.database, knowledge_repository)
+        self.knowledge.enabled = settings.knowledge.enabled
+        if settings.knowledge.enabled and settings.knowledge.neo4j_password is not None:
+            from chatwaifu_runtime.knowledge.adapters.graphiti_index import GraphitiIndex
+
+            self.knowledge.index = GraphitiIndex(
+                settings.knowledge.neo4j_uri,
+                settings.knowledge.neo4j_user,
+                settings.knowledge.neo4j_password.get_secret_value(),
+                self.model_configurations,
+            )
+        self.knowledge.retrieval = KnowledgeRetrieval(
+            knowledge_repository,
+            self.knowledge_graph,
+            self.model_configurations,
+            self.knowledge.index,
+        )
+        self.information = PersonalInformationService(
+            self.model_configurations, SQLiteAssistantRepository(self.database)
+        )
         self.tts_configurations = TtsConfigurationService(
             self.database, settings, TTS_PROVIDER_REGISTRATIONS
         )
@@ -227,6 +256,11 @@ class RuntimeContainer:
             self.memory_repository,
             self.event_publisher,
             semantic_index=self.semantic_memory_index,
+            temporal_graph=KnowledgeMemoryGraph(
+                knowledge_repository, self.knowledge_graph, self.knowledge.index
+            )
+            if settings.knowledge.enabled
+            else None,
             models=self.model_configurations,
         )
         self.playback = PlaybackService(
@@ -305,6 +339,7 @@ class RuntimeContainer:
                 enabled=lambda: self.channel_settings.get().policy.qq_owner_public_web_enabled,
             ),
             session_builtin_handlers={
+                "knowledge_search": KnowledgeSearchSkill(self.knowledge),
                 "workspace_list": self.workspace_skills.list,
                 "workspace_read": self.workspace_skills.read,
                 "workspace_write": self.workspace_skills.write,
@@ -1176,6 +1211,8 @@ class RuntimeContainer:
             _CleanupStep("resources", lambda: self.resources.stop()),
             _CleanupStep("voice_media", lambda: self.voice_media.close()),
         ]
+        if self.knowledge.index is not None:
+            steps.append(_CleanupStep("knowledge", lambda: self.knowledge.close()))
         if self.cloud_realtime_backend is not None:
             backend = self.cloud_realtime_backend
             steps.append(_CleanupStep("cloud_realtime_backend", lambda: backend.close()))

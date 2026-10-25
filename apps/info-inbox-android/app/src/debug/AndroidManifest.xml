@@ -1,0 +1,11 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <instrumentation android:name=".SmokeInstrumentation" android:targetPackage="com.mubai.infoinbox" />
+    <instrumentation android:name=".AiReviewInstrumentation" android:targetPackage="com.mubai.infoinbox" />
+    <instrumentation android:name=".FlowInstrumentation" android:targetPackage="com.mubai.infoinbox" />
+    <instrumentation android:name=".BackendSmokeInstrumentation" android:targetPackage="com.mubai.infoinbox" />
+    <instrumentation android:name=".ReminderInstrumentation" android:targetPackage="com.mubai.infoinbox" />
+    <instrumentation android:name=".BackendConnectInstrumentation" android:targetPackage="com.mubai.infoinbox" />
+    <instrumentation android:name=".AutomaticInstrumentation" android:targetPackage="com.mubai.infoinbox" />
+    <instrumentation android:name=".KnowledgeInstrumentation" android:targetPackage="com.mubai.infoinbox" />
+    <instrumentation android:name="com.mubai.infoinbox.HistoryImportInstrumentation" android:targetPackage="com.mubai.infoinbox" android:label="History import acceptance" />
+</manifest>

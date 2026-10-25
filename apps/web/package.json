@@ -18,7 +18,8 @@
     "typecheck": "tsc -b --pretty false",
     "preview": "vite preview --mode web",
     "preview:web": "vite preview --mode web",
-    "preview:desktop": "vite preview --mode desktop"
+    "preview:desktop": "vite preview --mode desktop",
+    "build:knowledge": "tsc -b && vite build --mode web --base /knowledge-assets/ --outDir dist-knowledge"
   },
   "dependencies": {
     "@chatwaifu/avatar-sdk": "workspace:*",

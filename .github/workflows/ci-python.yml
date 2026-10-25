@@ -76,7 +76,7 @@ jobs:
           version: "0.12.5"
           python-version: "3.12"
           enable-cache: true
-      - run: uv sync --all-packages --all-groups --locked
+      - run: uv sync --all-packages --all-groups --extra knowledge --locked
       - run: uv run ruff format --check .
       - run: uv run ruff check .
       - run: uv run pyright
