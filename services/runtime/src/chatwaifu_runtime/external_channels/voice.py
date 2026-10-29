@@ -30,7 +30,6 @@ from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.external_channels.models import (
     ChannelDeliveryPlanRecord,
     ChannelTurnRecord,
-    DeliveryTransitionResult,
 )
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
 from chatwaifu_runtime.providers.contracts import SynthesisRequest
@@ -198,9 +197,8 @@ class ChannelVoiceSkill:
                     ],
                     created_at=datetime.now(UTC),
                 )
-                if isinstance(transition, DeliveryTransitionResult):
-                    for event in transition.persisted_events:
-                        await self._publisher.publish_persisted(event)
+                for event in transition.persisted_events:
+                    await self._publisher.publish_persisted(event)
             timed_out = False
             try:
                 async with asyncio.timeout(45):

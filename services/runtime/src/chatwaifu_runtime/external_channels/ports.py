@@ -38,6 +38,12 @@ from chatwaifu_runtime.external_channels.models import (
 
 
 class ExternalChannelRepository(Protocol):
+    """Persist transitions and their events atomically; callers publish returned events.
+
+    Empty persisted_events means no events to publish, including idempotent no-ops.
+    Runtime implementations must provide an event store; repository-only tests may omit it.
+    """
+
     async def create_task_delivery_plan(
         self,
         target: TaskDeliveryTarget,
@@ -133,7 +139,7 @@ class ExternalChannelRepository(Protocol):
         delivery_id: UUID,
         completed_at: datetime,
         parts: Sequence[ChannelDeliveryPartDraft] | None = None,
-    ) -> CompleteTurnResult | ChannelTurnRecord: ...
+    ) -> CompleteTurnResult: ...
 
     async def add_burst_member(
         self,
@@ -160,7 +166,7 @@ class ExternalChannelRepository(Protocol):
         delivery_id: UUID,
         parts: Sequence[ChannelDeliveryPartDraft],
         created_at: datetime,
-    ) -> DeliveryTransitionResult | ChannelDeliveryPlanRecord: ...
+    ) -> DeliveryTransitionResult: ...
 
     async def get_delivery_plan(self, delivery_id: UUID) -> ChannelDeliveryPlanRecord | None: ...
 

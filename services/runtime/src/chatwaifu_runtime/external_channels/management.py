@@ -1443,7 +1443,7 @@ class ChannelManagementService:
             recovery_result = await self._repository.recover_expired_delivery_part_leases(
                 as_of=datetime.now(UTC)
             )
-            if hasattr(recovery_result, "persisted_events") and self._event_publisher is not None:
+            if self._event_publisher is not None:
                 for ev in recovery_result.persisted_events:
                     try:
                         await self._event_publisher.publish_persisted(ev)

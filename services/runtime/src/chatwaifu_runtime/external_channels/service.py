@@ -6,7 +6,7 @@ import asyncio
 import hashlib
 import logging
 import secrets
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from time import monotonic
@@ -25,7 +25,6 @@ from chatwaifu_protocol.channels import (
     ChannelDeliveryClaimRequest,
     ChannelDeliveryPartAcknowledgement,
     ChannelDeliveryPartClaimRequest,
-    ChannelDeliveryPartDraft,
     ChannelDeliveryPartsCancelRequest,
     ChannelDeliveryPartSnapshot,
     ChannelDeliveryPartStatus,
@@ -76,7 +75,6 @@ from chatwaifu_runtime.external_channels.models import (
     ChannelInboundImageInput,
     ChannelTranscriptionIdentity,
     ChannelTurnRecord,
-    CompleteTurnResult,
 )
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
 from chatwaifu_runtime.external_channels.presentation import (
@@ -85,6 +83,7 @@ from chatwaifu_runtime.external_channels.presentation import (
     SingleTextDeliveryPlanFactory,
     messaging_presentation_policy,
 )
+from chatwaifu_runtime.external_channels.snapshots import turn_snapshot
 from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
 from chatwaifu_runtime.photo_memory.metadata import strip_image_exif
 from chatwaifu_runtime.photo_memory.observer import PhotoMemoryObserver, PhotoObservationSource
@@ -1805,10 +1804,10 @@ class ExternalChannelService:
                     ChannelTurnStatus.PROCESSING,
                     ChannelTurnStatus.CANCELLING,
                 }:
-                    return self._turn_snapshot(turn)
+                    return turn_snapshot(turn)
                 remaining = deadline - asyncio.get_running_loop().time()
                 if subscription is None or remaining <= 0:
-                    return self._turn_snapshot(turn)
+                    return turn_snapshot(turn)
                 try:
                     await asyncio.wait_for(subscription.receive(), timeout=min(remaining, 2.0))
                 except TimeoutError:
@@ -2072,7 +2071,7 @@ class ExternalChannelService:
             raise ChannelNotFoundError(f"unknown channel delivery plan {delivery_id}")
         if plan.channel_turn_id is None:
             raise ChannelPolicyError("outbound deliveries require the proactive owner policy")
-        turn = await self._required_turn(connection_id, plan.channel_turn_id)
+        await self._required_turn(connection_id, plan.channel_turn_id)
         try:
             result = await self._repository.claim_next_delivery_part(
                 claim,
@@ -2082,11 +2081,8 @@ class ExternalChannelService:
             raise ChannelConflictError(str(error)) from error
         if result is None or result.part is None:
             return None
-        if result.persisted_events:
-            for ev in result.persisted_events:
-                await self._publisher.publish_persisted(ev)
-        else:
-            await self._emit_delivery_part_claimed_event(turn, result.part)
+        for event in result.persisted_events:
+            await self._publisher.publish_persisted(event)
         return _delivery_part_snapshot(result.part)
 
     async def acknowledge_delivery_part(
@@ -2105,7 +2101,7 @@ class ExternalChannelService:
             raise ChannelNotFoundError(f"unknown channel delivery plan {delivery_id}")
         if plan.channel_turn_id is None:
             raise ChannelPolicyError("outbound deliveries require the proactive owner policy")
-        turn = await self._required_turn(connection_id, plan.channel_turn_id)
+        await self._required_turn(connection_id, plan.channel_turn_id)
         try:
             result = await self._repository.acknowledge_delivery_part(
                 acknowledgement,
@@ -2114,11 +2110,8 @@ class ExternalChannelService:
         except (KeyError, ValueError) as error:
             raise ChannelConflictError(str(error)) from error
 
-        if result.persisted_events:
-            for ev in result.persisted_events:
-                await self._publisher.publish_persisted(ev)
-        elif result.applied and result.part is not None:
-            await self._emit_delivery_part_acknowledged_events(turn, result.plan, result.part)
+        for event in result.persisted_events:
+            await self._publisher.publish_persisted(event)
 
         part_record = (
             result.part
@@ -2145,7 +2138,7 @@ class ExternalChannelService:
             raise ChannelNotFoundError(f"unknown channel delivery plan {delivery_id}")
         if plan.channel_turn_id is None:
             raise ChannelPolicyError("outbound deliveries require the proactive owner policy")
-        turn = await self._required_turn(connection_id, plan.channel_turn_id)
+        await self._required_turn(connection_id, plan.channel_turn_id)
         try:
             result = await self._repository.cancel_remaining_delivery_parts(
                 delivery_id,
@@ -2154,252 +2147,9 @@ class ExternalChannelService:
             )
         except (KeyError, ValueError) as error:
             raise ChannelConflictError(str(error)) from error
-        if result.persisted_events:
-            for ev in result.persisted_events:
-                await self._publisher.publish_persisted(ev)
-        else:
-            now = datetime.now(UTC)
-            await self._publisher.emit(
-                GenericCoreEvent.model_validate(
-                    {
-                        "event_id": uuid4(),
-                        "event_type": "channel.delivery_plan_cancel_requested",
-                        "session_id": turn.session_id,
-                        "turn_id": turn.turn_id,
-                        "generation_id": turn.generation_id,
-                        "occurred_at": now,
-                        "source": "runtime.external_channels",
-                        "privacy": PrivacyLevel.PRIVATE,
-                        "payload": {
-                            "connection_id": str(turn.connection_id),
-                            "channel_turn_id": str(turn.channel_turn_id),
-                            "delivery_id": str(delivery_id),
-                            "reason": cancel_request.reason,
-                        },
-                    }
-                )
-            )
-            if result.plan.status is ChannelDeliveryStatus.CANCELLED:
-                await self._publisher.emit(
-                    GenericCoreEvent.model_validate(
-                        {
-                            "event_id": uuid4(),
-                            "event_type": "channel.delivery_plan_cancelled",
-                            "session_id": turn.session_id,
-                            "turn_id": turn.turn_id,
-                            "generation_id": turn.generation_id,
-                            "occurred_at": now,
-                            "source": "runtime.external_channels",
-                            "privacy": PrivacyLevel.PRIVATE,
-                            "payload": {
-                                "connection_id": str(turn.connection_id),
-                                "channel_turn_id": str(turn.channel_turn_id),
-                                "delivery_id": str(delivery_id),
-                            },
-                        }
-                    )
-                )
+        for event in result.persisted_events:
+            await self._publisher.publish_persisted(event)
         return delivery_plan_snapshot(result.plan)
-
-    async def _emit_delivery_plan_created_event(
-        self,
-        turn: ChannelTurnRecord,
-        delivery_id: UUID,
-        parts: Sequence[ChannelDeliveryPartDraft],
-    ) -> None:
-        await self._publisher.emit(
-            GenericCoreEvent.model_validate(
-                {
-                    "event_id": uuid4(),
-                    "event_type": "channel.delivery_plan_created",
-                    "session_id": turn.session_id,
-                    "turn_id": turn.turn_id,
-                    "generation_id": turn.generation_id,
-                    "occurred_at": datetime.now(UTC),
-                    "source": "runtime.external_channels",
-                    "privacy": PrivacyLevel.PRIVATE,
-                    "payload": {
-                        "connection_id": str(turn.connection_id),
-                        "channel_turn_id": str(turn.channel_turn_id),
-                        "delivery_id": str(delivery_id),
-                        "part_count": len(parts),
-                        "chat_type": turn.chat_type.value,
-                        "conversation_key": turn.conversation_key,
-                        "sender_key": turn.sender_key,
-                    },
-                }
-            )
-        )
-
-    async def _emit_delivery_part_claimed_event(
-        self, turn: ChannelTurnRecord, part: ChannelDeliveryPartRecord
-    ) -> None:
-        await self._publisher.emit(
-            GenericCoreEvent.model_validate(
-                {
-                    "event_id": uuid4(),
-                    "event_type": "channel.delivery_part_claimed",
-                    "session_id": turn.session_id,
-                    "turn_id": turn.turn_id,
-                    "generation_id": turn.generation_id,
-                    "occurred_at": datetime.now(UTC),
-                    "source": "runtime.external_channels",
-                    "privacy": PrivacyLevel.PRIVATE,
-                    "payload": {
-                        "connection_id": str(turn.connection_id),
-                        "channel_turn_id": str(turn.channel_turn_id),
-                        "delivery_id": str(part.delivery_id),
-                        "part_id": str(part.part_id),
-                        "ordinal": part.ordinal,
-                        "attempt": part.attempt,
-                        "lease_id": str(part.lease_id) if part.lease_id else None,
-                        "provider_client_id": part.provider_client_id,
-                    },
-                }
-            )
-        )
-
-    async def _emit_delivery_part_acknowledged_events(
-        self,
-        turn: ChannelTurnRecord,
-        plan: ChannelDeliveryPlanRecord,
-        part: ChannelDeliveryPartRecord,
-    ) -> None:
-        now = datetime.now(UTC)
-        await self._publisher.emit(
-            GenericCoreEvent.model_validate(
-                {
-                    "event_id": uuid4(),
-                    "event_type": "channel.delivery_part_acknowledged",
-                    "session_id": turn.session_id,
-                    "turn_id": turn.turn_id,
-                    "generation_id": turn.generation_id,
-                    "occurred_at": now,
-                    "source": "runtime.external_channels",
-                    "privacy": PrivacyLevel.PRIVATE,
-                    "payload": {
-                        "connection_id": str(turn.connection_id),
-                        "channel_turn_id": str(turn.channel_turn_id),
-                        "delivery_id": str(part.delivery_id),
-                        "part_id": str(part.part_id),
-                        "ordinal": part.ordinal,
-                        "status": part.status.value,
-                        "provider_message_id": part.provider_message_id,
-                    },
-                }
-            )
-        )
-        if part.status is ChannelDeliveryPartStatus.DELIVERED:
-            await self._publisher.emit(
-                GenericCoreEvent.model_validate(
-                    {
-                        "event_id": uuid4(),
-                        "event_type": "channel.delivery_part_delivered",
-                        "session_id": turn.session_id,
-                        "turn_id": turn.turn_id,
-                        "generation_id": turn.generation_id,
-                        "occurred_at": now,
-                        "source": "runtime.external_channels",
-                        "privacy": PrivacyLevel.PRIVATE,
-                        "payload": {
-                            "connection_id": str(turn.connection_id),
-                            "channel_turn_id": str(turn.channel_turn_id),
-                            "delivery_id": str(part.delivery_id),
-                            "part_id": str(part.part_id),
-                            "ordinal": part.ordinal,
-                            "provider_message_id": part.provider_message_id,
-                        },
-                    }
-                )
-            )
-        elif part.status is ChannelDeliveryPartStatus.FAILED:
-            await self._publisher.emit(
-                GenericCoreEvent.model_validate(
-                    {
-                        "event_id": uuid4(),
-                        "event_type": "channel.delivery_part_failed",
-                        "session_id": turn.session_id,
-                        "turn_id": turn.turn_id,
-                        "generation_id": turn.generation_id,
-                        "occurred_at": now,
-                        "source": "runtime.external_channels",
-                        "privacy": PrivacyLevel.PRIVATE,
-                        "payload": {
-                            "connection_id": str(turn.connection_id),
-                            "channel_turn_id": str(turn.channel_turn_id),
-                            "delivery_id": str(part.delivery_id),
-                            "part_id": str(part.part_id),
-                            "ordinal": part.ordinal,
-                            "error": (
-                                part.last_error.model_dump(mode="json") if part.last_error else None
-                            ),
-                        },
-                    }
-                )
-            )
-        if plan.status is ChannelDeliveryStatus.DELIVERED:
-            await self._publisher.emit(
-                GenericCoreEvent.model_validate(
-                    {
-                        "event_id": uuid4(),
-                        "event_type": "channel.delivery_plan_completed",
-                        "session_id": turn.session_id,
-                        "turn_id": turn.turn_id,
-                        "generation_id": turn.generation_id,
-                        "occurred_at": now,
-                        "source": "runtime.external_channels",
-                        "privacy": PrivacyLevel.PRIVATE,
-                        "payload": {
-                            "connection_id": str(turn.connection_id),
-                            "channel_turn_id": str(turn.channel_turn_id),
-                            "delivery_id": str(plan.delivery_id),
-                            "part_count": plan.part_count,
-                        },
-                    }
-                )
-            )
-            # Legacy event for backwards compatibility
-            await self._emit_delivery_event(turn, plan.delivery)
-        elif plan.status is ChannelDeliveryStatus.CANCELLED:
-            await self._publisher.emit(
-                GenericCoreEvent.model_validate(
-                    {
-                        "event_id": uuid4(),
-                        "event_type": "channel.delivery_plan_cancelled",
-                        "session_id": turn.session_id,
-                        "turn_id": turn.turn_id,
-                        "generation_id": turn.generation_id,
-                        "occurred_at": now,
-                        "source": "runtime.external_channels",
-                        "privacy": PrivacyLevel.PRIVATE,
-                        "payload": {
-                            "connection_id": str(turn.connection_id),
-                            "channel_turn_id": str(turn.channel_turn_id),
-                            "delivery_id": str(plan.delivery_id),
-                        },
-                    }
-                )
-            )
-        elif plan.status is ChannelDeliveryStatus.FAILED:
-            await self._publisher.emit(
-                GenericCoreEvent.model_validate(
-                    {
-                        "event_id": uuid4(),
-                        "event_type": "channel.delivery_plan_failed",
-                        "session_id": turn.session_id,
-                        "turn_id": turn.turn_id,
-                        "generation_id": turn.generation_id,
-                        "occurred_at": now,
-                        "source": "runtime.external_channels",
-                        "privacy": PrivacyLevel.PRIVATE,
-                        "payload": {
-                            "connection_id": str(turn.connection_id),
-                            "channel_turn_id": str(turn.channel_turn_id),
-                            "delivery_id": str(plan.delivery_id),
-                        },
-                    }
-                )
-            )
 
     async def _sync_turn(self, turn: ChannelTurnRecord) -> ChannelTurnRecord:
         if turn.chat_type is ChannelChatType.GROUP:
@@ -2628,17 +2378,11 @@ class ExternalChannelService:
                     completed_at=now,
                     parts=parts,
                 )
-                turn_record = (
-                    turn_result.turn if isinstance(turn_result, CompleteTurnResult) else turn_result
-                )
+                turn_record = turn_result.turn
                 if turn_record.status is not ChannelTurnStatus.COMPLETED:
                     return turn_record
-                persisted_events = getattr(turn_result, "persisted_events", ())
-                if persisted_events:
-                    for event in persisted_events:
-                        await self._publisher.publish_persisted(event)
-                else:
-                    await self._emit_delivery_plan_created_event(turn_record, delivery_id, parts)
+                for event in turn_result.persisted_events:
+                    await self._publisher.publish_persisted(event)
                 await self._notify_turn_terminal(turn_record)
                 members = await self._repository.list_burst_members(turn.channel_turn_id)
                 for member in members:
@@ -2854,33 +2598,6 @@ class ExternalChannelService:
             revision=turn.revision,
             accepted_at=turn.accepted_at,
             poll_after_ms=(250 if turn.status is ChannelTurnStatus.PROCESSING else None),
-        )
-
-    @staticmethod
-    def _turn_snapshot(turn: ChannelTurnRecord) -> ChannelTurnSnapshot:
-        return ChannelTurnSnapshot(
-            channel_turn_id=turn.channel_turn_id,
-            connection_id=turn.connection_id,
-            account_key=turn.account_key,
-            external_message_id=turn.external_message_id,
-            conversation_key=turn.conversation_key,
-            sender_key=turn.sender_key,
-            principal_scope=turn.principal_scope,
-            chat_type=turn.chat_type,
-            conversation_label=turn.conversation_label,
-            sender_display_name=turn.sender_display_name,
-            session_id=turn.session_id,
-            turn_id=turn.turn_id,
-            generation_id=turn.generation_id,
-            status=turn.status,
-            reply_text=turn.reply_text,
-            delivery_id=turn.delivery_id,
-            delivery_status=turn.delivery_status,
-            error=turn.error,
-            revision=turn.revision,
-            created_at=turn.created_at,
-            updated_at=turn.updated_at,
-            completed_at=turn.completed_at,
         )
 
     async def _emit_delivery_event(

@@ -22,7 +22,6 @@ from chatwaifu_runtime.agent.artifacts import ArtifactService
 from chatwaifu_runtime.eventing.publisher import EventPublisher
 from chatwaifu_runtime.external_channels.models import (
     ChannelDeliveryPlanRecord,
-    DeliveryTransitionResult,
 )
 from chatwaifu_runtime.external_channels.ports import ExternalChannelRepository
 from chatwaifu_runtime.external_channels.qq_capabilities import QQSceneCapabilities
@@ -94,9 +93,8 @@ class ChannelFileSkill:
                 parts=parts,
                 created_at=datetime.now(UTC),
             )
-        if isinstance(transition, DeliveryTransitionResult):
-            for event in transition.persisted_events:
-                await self.publisher.publish_persisted(event)
+        for event in transition.persisted_events:
+            await self.publisher.publish_persisted(event)
         try:
             async with asyncio.timeout(110):
                 async with self.changed:
