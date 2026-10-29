@@ -913,11 +913,6 @@ async def test_photos_never_enter_memory_records_or_memory_embeddings(test_db: D
 
 
 # ---------------------------------------------------------------------------
-# Test 17: reindex_all is non-blocking and increments route generation
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
 # Test 18: ModelConfigurationService rejects image modality before network
 # ---------------------------------------------------------------------------
 @pytest.mark.asyncio
@@ -942,10 +937,12 @@ async def test_model_config_service_multimodal_fail_closed(tmp_path: Path) -> No
 
 
 # ---------------------------------------------------------------------------
-# Test 19: Routes embedding update notifies photo semantic even if memory reindex fails
+# Test 19: Saving an embedding route invalidates indexes without starting a rebuild
 # ---------------------------------------------------------------------------
 @pytest.mark.asyncio
-async def test_routes_embedding_update_photo_reindex_on_memory_failure(test_db: Database) -> None:
+async def test_routes_embedding_update_invalidates_without_starting_rebuild(
+    test_db: Database,
+) -> None:
     from unittest.mock import AsyncMock, MagicMock
 
     from chatwaifu_runtime.api.routes import (
@@ -961,17 +958,13 @@ async def test_routes_embedding_update_photo_reindex_on_memory_failure(test_db: 
     mock_container.model_configurations.update = AsyncMock(
         return_value=MagicMock(model_dump=MagicMock(return_value={"role": "embedding"}))
     )
-    mock_memory = MagicMock()
-    mock_memory.reindex_all = AsyncMock()
-    mock_container.memory = mock_memory
-
     mock_photo_semantic = MagicMock()
-    mock_photo_semantic.reindex_all = AsyncMock()
     mock_photo_semantic.notify_route_change = MagicMock()
     mock_container.photo_semantic = mock_photo_semantic
 
     mock_index_rebuild = MagicMock()
     mock_index_rebuild.on_model_route_change = MagicMock()
+    mock_index_rebuild.start_rebuild = AsyncMock()
     mock_container.index_rebuild = mock_index_rebuild
 
     mock_request = MagicMock(spec=Request)
@@ -986,9 +979,7 @@ async def test_routes_embedding_update_photo_reindex_on_memory_failure(test_db: 
     result = await update_model_configuration(mock_request, "embedding", body)
     assert result == {"role": "embedding"}
 
-    # ZERO automatic rebuild calls on config save!
-    mock_memory.reindex_all.assert_not_called()
-    mock_photo_semantic.reindex_all.assert_not_called()
+    mock_index_rebuild.start_rebuild.assert_not_awaited()
     mock_index_rebuild.on_model_route_change.assert_called_once()
     mock_photo_semantic.notify_route_change.assert_called_once()
 

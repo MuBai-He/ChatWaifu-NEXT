@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Self, cast
+from typing import cast
 from uuid import UUID
 
 from chatwaifu_protocol.agent import TaskDeliveryTarget
@@ -287,50 +287,15 @@ class DeliveryTransitionResult:
     applied: bool
     persisted_events: tuple[GenericCoreEvent, ...] = ()
 
-    def __iter__(self):
-        return iter((self.plan, self.part))
-
-    def __getitem__(self, index: int) -> object:
-        return (self.plan, self.part)[index]
-
-    def __getattr__(self, name: str) -> object:
-        if self.part is not None and hasattr(self.part, name):
-            return getattr(self.part, name)
-        if hasattr(self.plan, name):
-            return getattr(self.plan, name)
-        raise AttributeError(f"'DeliveryTransitionResult' object has no attribute '{name}'")
-
 
 @dataclass(frozen=True, slots=True)
 class CompleteTurnResult:
     turn: ChannelTurnRecord
     persisted_events: tuple[GenericCoreEvent, ...] = ()
 
-    def __iter__(self):
-        return iter((self.turn, self.persisted_events))
 
-    def __getitem__(self, index: int) -> object:
-        return (self.turn, self.persisted_events)[index]
-
-    def __getattr__(self, name: str) -> object:
-        if hasattr(self.turn, name):
-            return getattr(self.turn, name)
-        raise AttributeError(f"'CompleteTurnResult' object has no attribute '{name}'")
-
-
-class LeaseRecoveryResult(int):
-    """Subclass of int for backward compatibility with `recovered_count: int` callers."""
-
-    terminal_plans: tuple[ChannelDeliveryPlanRecord, ...]
-    persisted_events: tuple[GenericCoreEvent, ...]
-
-    def __new__(
-        cls,
-        count: int,
-        terminal_plans: tuple[ChannelDeliveryPlanRecord, ...] = (),
-        persisted_events: tuple[GenericCoreEvent, ...] = (),
-    ) -> Self:
-        obj = super().__new__(cls, count)
-        obj.terminal_plans = tuple(terminal_plans)
-        obj.persisted_events = tuple(persisted_events)
-        return obj
+@dataclass(frozen=True, slots=True)
+class LeaseRecoveryResult:
+    count: int
+    terminal_plans: tuple[ChannelDeliveryPlanRecord, ...] = ()
+    persisted_events: tuple[GenericCoreEvent, ...] = ()

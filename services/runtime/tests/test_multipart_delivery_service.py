@@ -397,6 +397,20 @@ async def test_multipart_service_flow_and_events(
             if getattr(e, "event_type", None) == "channel.delivery_plan_completed"
         ]
         assert len(completed_events) == 1
+        events_before = await container.event_store.read_stream(snapshot.session_id, limit=1000)
+        unchanged = await container.external_channels.cancel_remaining_delivery_parts(
+            connection_id,
+            delivery_id,
+            ChannelDeliveryPartsCancelRequest(
+                reason="Cancellation after delivery", requested_at=datetime.now(UTC)
+            ),
+            access_token=created.access_token,
+        )
+        assert unchanged.status is ChannelDeliveryStatus.DELIVERED
+        assert (
+            await container.event_store.read_stream(snapshot.session_id, limit=1000)
+            == events_before
+        )
     finally:
         await container.stop()
 
@@ -473,6 +487,21 @@ async def test_multipart_tail_cancellation_service_level(
         assert plan_cancelled.parts[1].status is ChannelDeliveryPartStatus.CANCELLED
         assert plan_cancelled.parts[2].status is ChannelDeliveryPartStatus.CANCELLED
         assert plan_cancelled.delivered_part_count == 1
+
+        events_before = await container.event_store.read_stream(snapshot.session_id, limit=1000)
+        repeated = await container.external_channels.cancel_remaining_delivery_parts(
+            connection_id,
+            delivery_id,
+            ChannelDeliveryPartsCancelRequest(
+                reason="Repeated cancellation", requested_at=datetime.now(UTC)
+            ),
+            access_token=created.access_token,
+        )
+        assert repeated == plan_cancelled
+        assert (
+            await container.event_store.read_stream(snapshot.session_id, limit=1000)
+            == events_before
+        )
 
         # No more parts can be claimed
         assert (

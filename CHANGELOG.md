@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — channel internals simplification
+
+- Keep repeated cancellation and cancellation of delivered plans from appending
+  new delivery events. Channel services publish only transactionally persisted events.
+- Standardize internal channel results on named fields, including lease recovery
+  counts; remove legacy record forwarding and tuple/integer compatibility.
+- Remove the superseded memory reindex path, share photo/turn mappings, and remove
+  three unused desktop settings compatibility exports. Public APIs and database
+  migrations remain unchanged.
+
 ## Unreleased — personal information inbox and knowledge backend
 
 - Add owner-private versioned source/object synchronization, explicit conflict resolution,

@@ -969,20 +969,6 @@ class MemoryService:
         if active is not None and active.task is task:
             self._active_projection = None
 
-    async def reindex_all(self) -> int:
-        records = await self._repository.list_records(limit=500)
-        rebuild = getattr(self._semantic_index, "rebuild", None)
-        if rebuild is not None:
-            return int(await rebuild(records))
-        count = 0
-        for record in records:
-            try:
-                await self._semantic_index.upsert(record)
-            except Exception:
-                continue
-            count += 1
-        return count
-
     async def _process_candidate(
         self,
         session_id: UUID,

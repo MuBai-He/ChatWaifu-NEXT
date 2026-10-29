@@ -128,9 +128,9 @@ class State:
 
 
 def claimed_part(
-    claim: ChannelDeliveryPartRecord | DeliveryTransitionResult,
+    claim: DeliveryTransitionResult,
 ) -> ChannelDeliveryPartRecord:
-    part = claim.part if isinstance(claim, DeliveryTransitionResult) else claim
+    part = claim.part
     assert part is not None
     return part
 
