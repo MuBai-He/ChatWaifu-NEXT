@@ -124,6 +124,40 @@ def test_linux_plan_uses_namespaces_without_binding_home(tmp_path: Path) -> None
     assert str(Path.home()) not in plan.command
 
 
+@pytest.mark.skipif(
+    not sys.platform.startswith("linux") or not shutil.which("bwrap"),
+    reason="requires actual Linux bubblewrap",
+)
+def test_linux_sandbox_preserves_symlinked_python_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    alias = tmp_path / "current-environment"
+    alias.symlink_to(Path(sys.prefix).resolve(), target_is_directory=True)
+    executable = alias / "bin" / Path(sys.executable).name
+    workspace = tmp_path / "candidate"
+    workspace.mkdir()
+    unrelated = tmp_path / "outside.txt"
+    unrelated.write_text("private fixture", encoding="utf-8")
+    monkeypatch.setattr(sys, "prefix", str(alias))
+    code = (
+        "import json,sys,socket;from pathlib import Path;"
+        "print(json.dumps({'prefix':sys.prefix,'outside':Path(sys.argv[1]).exists()}))"
+    )
+    plan = SandboxPlanner().prepare(
+        [str(executable), "-I", "-B", "-c", code, str(unrelated)],
+        working_dir=workspace,
+        mode="required",
+        trust_level="untrusted",
+        network_policy="deny",
+    )
+    completed = subprocess.run(plan.command, capture_output=True, text=True, timeout=10)
+    assert completed.returncode == 0, completed.stderr
+    result = json.loads(completed.stdout)
+    assert result["prefix"] == str(alias)
+    assert result["outside"] is False
+    assert plan.enforced and plan.network_policy == "deny"
+
+
 def test_oci_backend_is_available_on_windows_when_image_is_configured(tmp_path: Path) -> None:
     planner = SandboxPlanner(
         platform_name="win32",

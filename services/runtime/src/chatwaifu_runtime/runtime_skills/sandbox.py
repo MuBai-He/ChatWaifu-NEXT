@@ -513,13 +513,20 @@ def _bubblewrap_command(
     for system_root in ("/usr", "/bin", "/lib", "/lib64", "/etc"):
         if Path(system_root).exists():
             result.extend(("--ro-bind", system_root, system_root))
-    for python_root in {Path(sys.base_prefix).resolve(), Path(sys.prefix).resolve()}:
-        if python_root.exists() and not any(
-            python_root.is_relative_to(Path(parent))
-            for parent in ("/usr", "/bin", "/lib", "/lib64")
-            if Path(parent).exists()
-        ):
-            result.extend(("--ro-bind", str(python_root), str(python_root)))
+    for python_prefix in {Path(sys.base_prefix).absolute(), Path(sys.prefix).absolute()}:
+        python_root = python_prefix.resolve()
+        if not python_root.exists():
+            continue
+        # Preserve the interpreter's logical environment path as well as its
+        # resolved location. A release/venv symlink otherwise disappears inside
+        # the namespace, even though its target was mounted read-only.
+        for destination in sorted({python_root, python_prefix}, key=str):
+            if not any(
+                destination.is_relative_to(Path(parent))
+                for parent in ("/usr", "/bin", "/lib", "/lib64")
+                if Path(parent).exists()
+            ):
+                result.extend(("--ro-bind", str(python_root), str(destination)))
     for read_only_root in read_only_roots:
         if read_only_root != root:
             result.extend(("--ro-bind", str(read_only_root), str(read_only_root)))

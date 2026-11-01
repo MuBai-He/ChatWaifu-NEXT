@@ -105,4 +105,9 @@ export {
   parseChannelGroupTurnPage,
 } from "./parsers/channelGroups";
 
-export { parseEvidenceRef, parseStandingIntent, parseWorkItem, parseActivityEntry } from "./parsers/harness";
+export {
+  parseEvidenceRef,
+  parseStandingIntent,
+  parseWorkItem,
+  parseActivityEntry,
+} from "./parsers/harness";

@@ -935,19 +935,16 @@ class AgentTaskService:
                             except LlmToolCallProtocolError as error:
                                 current = await self.repository.get(task_id)
                                 journal = await self.repository.steps(task_id)
-                                if (
-                                    current is None
-                                    or any(
-                                        step.get("side_effect") != "read"
-                                        and (
-                                            step.get("state") != "settled"
-                                            or (
-                                                not step.get("ok")
-                                                and step.get("effect_possible") is True
-                                            )
+                                if current is None or any(
+                                    step.get("side_effect") != "read"
+                                    and (
+                                        step.get("state") != "settled"
+                                        or (
+                                            not step.get("ok")
+                                            and step.get("effect_possible") is True
                                         )
-                                        for step in journal
                                     )
+                                    for step in journal
                                 ):
                                     raise
                                 self.ensure_current(task_id)
