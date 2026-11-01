@@ -123,7 +123,8 @@ async def test_candidate_sandbox_review_hash_and_activation(runtime_settings: Se
                 sandbox_mode="required",
                 network_policy="deny",
             )
-            probe = subprocess.run(
+            probe = await asyncio.to_thread(
+                subprocess.run,
                 [prepared.command, *prepared.args],
                 cwd=prepared.cwd,
                 env=prepared.env,
