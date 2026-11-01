@@ -1,10 +1,7 @@
 """Actual sandbox execution, disabled-by-default development and explicit activation."""
 
 import asyncio
-import json
-import os
 import shutil
-import subprocess
 import sys
 from collections.abc import AsyncIterator
 
@@ -21,7 +18,7 @@ from chatwaifu_runtime.providers.contracts import (
     LlmToolCall,
     LlmToolCallRequested,
 )
-from chatwaifu_runtime.runtime_skills.transports import NoopSandboxLauncher, PreparedStdioCommand
+from chatwaifu_runtime.runtime_skills.transports import NoopSandboxLauncher
 
 
 class CandidateModel:
@@ -102,39 +99,7 @@ async def test_candidate_sandbox_review_hash_and_activation(runtime_settings: Se
                 if current.state not in {"queued", "developing"}:
                     break
                 await asyncio.sleep(0.01)
-        diagnostic = current.test_summary
-        if current.state != "tested":
-            # Replay only this test's fixed stateless fixture under the same
-            # enforcing policy, so CI reports bootstrap errors instead of only
-            # the worker's redacted exception class. Never run user candidates.
-            from chatwaifu_runtime.agent.development import _python_roots
-
-            directory = service.root / candidate.candidate_id.hex
-            prepared = service.launcher.prepare(
-                PreparedStdioCommand(
-                    command=sys.executable,
-                    args=("-I", "-B", "test_runner.py"),
-                    cwd=directory,
-                    env={"PATH": os.environ.get("PATH", "")},
-                    read_only_roots=_python_roots(),
-                    sandbox_subject_id="candidate:" + candidate.candidate_id.hex,
-                ),
-                trust_level="untrusted",
-                sandbox_mode="required",
-                network_policy="deny",
-            )
-            probe = await asyncio.to_thread(
-                subprocess.run,
-                [prepared.command, *prepared.args],
-                cwd=prepared.cwd,
-                env=prepared.env,
-                input=json.dumps([{"text": "abc"}, {"text": ""}, {"text": "宁宁a"}]),
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-            diagnostic = f"{diagnostic}; exit={probe.returncode}; {probe.stderr[:2000]}"
-        assert current.state == "tested", diagnostic
+        assert current.state == "tested", current.test_summary
         assert model.requests == 2
         assert current.artifact is not None and current.package_sha256 is not None
         assert current.plugin_id not in {s.skill_id for s in container.runtime_skills.list()}

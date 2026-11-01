@@ -513,7 +513,20 @@ def _bubblewrap_command(
     for system_root in ("/usr", "/bin", "/lib", "/lib64", "/etc"):
         if Path(system_root).exists():
             result.extend(("--ro-bind", system_root, system_root))
-    for python_prefix in {Path(sys.base_prefix).absolute(), Path(sys.prefix).absolute()}:
+    python_prefixes = {Path(sys.base_prefix).absolute(), Path(sys.prefix).absolute()}
+    resolved_prefixes = {prefix.resolve() for prefix in python_prefixes}
+    interpreter = Path(sys.executable).absolute()
+    for _ in range(32):
+        if not interpreter.is_symlink():
+            break
+        target = interpreter.readlink()
+        interpreter = target if target.is_absolute() else interpreter.parent / target
+        alias = interpreter.parent.parent.absolute()
+        # Only aliases of the runtime's already permitted Python roots qualify;
+        # never bind an interpreter cache/home parent or paths from plugin args.
+        if alias.resolve() in resolved_prefixes:
+            python_prefixes.add(alias)
+    for python_prefix in sorted(python_prefixes, key=str):
         python_root = python_prefix.resolve()
         if not python_root.exists():
             continue

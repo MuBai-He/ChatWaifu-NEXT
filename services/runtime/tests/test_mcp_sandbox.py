@@ -128,17 +128,33 @@ def test_linux_plan_uses_namespaces_without_binding_home(tmp_path: Path) -> None
     not sys.platform.startswith("linux") or not shutil.which("bwrap"),
     reason="requires actual Linux bubblewrap",
 )
+@pytest.mark.parametrize("alias_kind", ["environment", "base_interpreter"])
 def test_linux_sandbox_preserves_symlinked_python_environment(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, alias_kind: str
 ) -> None:
     alias = tmp_path / "current-environment"
-    alias.symlink_to(Path(sys.prefix).resolve(), target_is_directory=True)
     executable = alias / "bin" / Path(sys.executable).name
+    if alias_kind == "environment":
+        alias.symlink_to(Path(sys.prefix).resolve(), target_is_directory=True)
+    else:
+        # uv-managed Python can link the venv executable through a versionless
+        # base-directory alias that differs from sys.base_prefix.
+        base_alias = tmp_path / "versionless-python"
+        base_alias.symlink_to(Path(sys.base_prefix).resolve(), target_is_directory=True)
+        executable.parent.mkdir(parents=True)
+        executable.symlink_to(
+            base_alias / Path(sys.executable).resolve().relative_to(Path(sys.base_prefix).resolve())
+        )
+        (alias / "pyvenv.cfg").write_text(
+            f"home = {Path(sys.base_prefix) / 'bin'}\ninclude-system-site-packages = false\n",
+            encoding="utf-8",
+        )
     workspace = tmp_path / "candidate"
     workspace.mkdir()
     unrelated = tmp_path / "outside.txt"
     unrelated.write_text("private fixture", encoding="utf-8")
     monkeypatch.setattr(sys, "prefix", str(alias))
+    monkeypatch.setattr(sys, "executable", str(executable))
     code = (
         "import json,sys,socket;from pathlib import Path;"
         "print(json.dumps({'prefix':sys.prefix,'outside':Path(sys.argv[1]).exists()}))"

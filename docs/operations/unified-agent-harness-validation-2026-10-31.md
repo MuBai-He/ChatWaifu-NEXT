@@ -333,3 +333,6 @@ v48 正式 Runtime 仅追加一个信息服务文件的定向修复 `inbox-repai
 不依赖未提交文件的检出已通过核心 Harness/信息接口 65 项、Android 103 项与 Debug 构建/Lint、Web 500 项、Harness 专项 4 项、TypeScript、Web 构建、lint 和架构检查。此前完整回归仍作为历史冻结证据。39 段既有基础迁移 SQL 的实际字符串逐项相同；代码表示形式变化不改变迁移内容。Gitleaks 扫描新增提交无发现。
 
 GitHub 首轮暴露两处格式不一致及旧分支也失败的 Linux 候选沙箱用例。格式已按现有检查修正。在独立 Linux 检出新增现有套件中的真实 bubblewrap 回归：符号链接虚拟环境在旧实现中以 execvp/No such file 失败；保留 Python 逻辑前缀与真实路径的只读挂载后通过，且候选不能读取同级无关文件。Linux 沙箱/候选开发检查 26 passed、3 macOS-only skipped，macOS 28 passed、1 Linux-only skipped。未关闭沙箱、开放网络、跳过失败用例或修改正式服务。该缺陷是否解释 GitHub 上原候选失败仍需新一轮 CI 确认，不将隔离机通过冒充 CI 通过。
+
+
+GitHub 临时合成用例诊断进一步确认原错误为 `bwrap: execvp .../.venv/bin/python: No such file or directory`。第一轮只保留虚拟环境路径仍不足：解释器还可能经过版本别名目录，与 `sys.base_prefix` 不同。新增同一真实 Linux 回归的 base-interpreter 参数，第一修复下该参数仍失败；补充最多 32 层、且解析结果必须属于既有可信 Python 前缀的链接别名后，两种参数均通过。只增加这些前缀的只读映射，不挂载用户家目录或缓存父目录。Linux 相关检查现为 27 passed、3 macOS-only skipped；临时失败重放诊断已移除，保留原候选测试断言。严格类型 618 文件零错误，格式/lint 通过。新 GitHub CI 尚待确认。
