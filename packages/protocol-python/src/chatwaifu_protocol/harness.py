@@ -5,7 +5,7 @@ from typing import Literal, Self
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import AwareDatetime, Field, model_validator
+from pydantic import AwareDatetime, Field, PositiveInt, model_validator
 
 from chatwaifu_protocol.base import JsonObject, ProtocolModel
 
@@ -115,6 +115,9 @@ class IntentAction(ProtocolModel):
 
 
 class Observation(ProtocolModel):
+    revision: int = Field(default=1, ge=1)
+    error_code: str | None = Field(default=None, max_length=64)
+    last_review_id: UUID | None = None
     observation_id: UUID
     owner: str
     room_id: str
@@ -127,7 +130,22 @@ class Observation(ProtocolModel):
     attempts: int = 0
 
 
+class OwnerWorkDecision(ProtocolModel):
+    operation_id: UUID
+    request_hash: str = Field(pattern="^[0-9a-f]{64}$")
+    received_at: AwareDatetime
+    pending: bool = True
+
+
+class ConfirmedWorkReview(ProtocolModel):
+    session_id: UUID
+    operation_id: UUID = Field(default_factory=uuid4)
+    record_id: str = Field(min_length=1, max_length=200)
+    expected_record_revision: int = Field(ge=1)
+
+
 class WorkItem(ProtocolModel):
+    owner_decision: OwnerWorkDecision | None = None
     requested_fields: list[str] = Field(default_factory=list[str], max_length=16)
     migration_target: JsonObject = Field(default_factory=dict)
     work_item_id: str = Field(min_length=1, max_length=200)
@@ -225,10 +243,16 @@ class ProcessingRequest(ProtocolModel):
 class ActivityReceipt(ProtocolModel):
     session_id: UUID
     device_id: UUID
-    state: Literal["accepted", "presented", "blocked", "opened", "unknown"]
+    state: Literal["accepted", "presented", "blocked", "opened", "unknown", "withdrawn"]
+
+
+class ActivityValidationRequest(ProtocolModel):
+    session_id: UUID
+    sequences: list[PositiveInt] = Field(min_length=1, max_length=200)
 
 
 class ActivityEntry(ProtocolModel):
+    redacted: bool = False
     delivery_history: list[JsonObject] = Field(default_factory=list[JsonObject])
     details: JsonObject = Field(default_factory=dict)
     delivery: dict[str, str] = Field(default_factory=dict[str, str])

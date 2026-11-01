@@ -51,14 +51,74 @@ public final class RuntimeProcessing {
   }
 
   public static boolean owns(Context context) {
-    return !context.getSharedPreferences("runtime-processing", Context.MODE_PRIVATE)
-        .getString(new BackendSettings(context).base(), "").isEmpty();
+    android.content.SharedPreferences prefs = context.getSharedPreferences("runtime-processing", Context.MODE_PRIVATE);
+    String base = new BackendSettings(context).base(), state = prefs.getString(base, "");
+    return state.equals("runtime") || (!state.isEmpty() && !prefs.getBoolean("granular:" + base, false));
+  }
+
+  static String nativeScopeSql(MemoryStore memory, String account, String talker, boolean attached)
+      throws Exception {
+    String base = new BackendSettings(memory.applicationContext()).base();
+    if (base.isEmpty()) return "1";
+    String prefix = attached ? "appstate." : "";
+    return "NOT EXISTS(SELECT 1 FROM " + prefix + "knowledge_rooms k JOIN " + prefix
+        + "knowledge_meta p ON p.space=k.space AND p.key='processing_owner:'||k.room_id"
+        + " WHERE k.space=" + SourceRules.sqlQuote(AnalysisContract.hash(base))
+        + " AND k.account_id=" + account + " AND k.talker=" + talker
+        + " AND p.value IN ('preparing','runtime'))";
+  }
+
+  static void rememberOwnership(Context context, KnowledgeStore store, BackendSettings backend,
+      JSONArray states) throws Exception {
+    store.db.beginTransactionNonExclusive();
+    try {
+      for (int i=0;i<states.length();i++) {
+        JSONObject state=states.getJSONObject(i);String room=state.getString("room_id");
+        store.putMeta("processing_owner:"+room,state.getString("state"));
+        store.putMeta("processing_epoch:"+room,Integer.toString(state.getInt("epoch")));
+      }
+      store.db.setTransactionSuccessful();
+    } finally { store.db.endTransaction(); }
+    boolean complete;
+    try (Cursor count=store.db.rawQuery("SELECT count(*),sum(CASE WHEN p.value='runtime' THEN 1 ELSE 0 END)"
+        + " FROM knowledge_rooms k LEFT JOIN knowledge_meta p ON p.space=k.space"
+        + " AND p.key='processing_owner:'||k.room_id WHERE k.space=? AND coalesce(k.remote_excluded,0)=0",
+        new String[] {store.space})) {
+      count.moveToFirst();complete=count.getInt(0)>0&&count.getInt(0)==count.getInt(1);
+    }
+    context.getSharedPreferences("runtime-processing",Context.MODE_PRIVATE).edit()
+        .putBoolean("granular:"+backend.base(),true)
+        .putString(backend.base(),complete?"runtime":"").apply();
+  }
+
+  private static boolean activeLease(KnowledgeStore store, String room) throws Exception {
+    try (Cursor leases=store.db.rawQuery("SELECT input_json FROM analysis_runs WHERE state='running' AND lease_until>?",
+        new String[] {Long.toString(System.currentTimeMillis())})) {
+      while(leases.moveToNext()) {
+        JSONArray sources=new JSONArray(leases.getString(0));
+        for(int i=0;i<sources.length();i++)if(KnowledgeWire.room(sources.getJSONObject(i)).equals(room))return true;
+      }
+    }
+    return false;
+  }
+
+  static JSONArray prepareRequests(BackendSettings backend, KnowledgeStore store, JSONArray rooms)
+      throws Exception {
+    JSONArray requests=new JSONArray();
+    for(int offset=0;offset<rooms.length();offset+=100) {
+      JSONArray batch=new JSONArray();
+      for(int n=offset;n<Math.min(offset+100,rooms.length());n++)batch.put(rooms.getString(n));
+      requests.put(request(backend,store,batch,"prepare",0));
+    }
+    return requests;
   }
 
   static void synchronize(Context context, KnowledgeStore store, RuntimeBackendClient client,
       BackendSettings backend) throws Exception {
     JSONObject status = client.request("/v1/personal-information/processing?session_id=" + backend.session(), null);
+    store.putMeta("owner_review_supported", Boolean.toString(status.optBoolean("owner_review_supported")));
     JSONArray states = status.getJSONArray("items");
+    rememberOwnership(context,store,backend,states);
     JSONArray rooms = new JSONArray();
     try (Cursor c = store.db.rawQuery("SELECT room_id FROM knowledge_rooms WHERE space=? AND coalesce(remote_excluded,0)=0", new String[] {store.space})) {
       while (c.moveToNext()) {
@@ -67,29 +127,23 @@ public final class RuntimeProcessing {
         if (!enrolled) rooms.put(c.getString(0));
       }
     }
-    if (rooms.length()>0) {
-      JSONObject prepared = client.request("/v1/personal-information/processing", request(backend,store,rooms,"prepare",0));
-      context.getSharedPreferences("runtime-processing", Context.MODE_PRIVATE).edit()
-          .putString(backend.base(), "preparing").apply();
-      context.getSystemService(android.app.job.JobScheduler.class).cancel(8802);
+    JSONArray preparations=prepareRequests(backend,store,rooms);
+    for (int offset=0;offset<preparations.length();offset++) {
+      client.request("/v1/personal-information/processing", preparations.getJSONObject(offset));
       states = client.request("/v1/personal-information/processing?session_id=" + backend.session(), null).getJSONArray("items");
+      rememberOwnership(context,store,backend,states);
     }
     for (int i=0;i<states.length();i++) {
       JSONObject state = states.getJSONObject(i);
       boolean runtime=state.getString("state").equals("runtime");
       boolean mine=state.getString("device_id").equals(store.device());
       if(runtime&&(mine||store.meta("joined:"+state.getString("room_id"),"").equals(Integer.toString(state.getInt("epoch"))))) {
-        context.getSharedPreferences("runtime-processing", Context.MODE_PRIVATE).edit()
-            .putString(backend.base(), "runtime").apply();
         store.putMeta("processing_epoch", Integer.toString(state.getInt("epoch")));
         retireReviews(store,state.getString("room_id"));
         continue;
       }
       if (!(runtime||state.getString("state").equals("preparing")&&mine)) continue;
-      context.getSharedPreferences("runtime-processing",Context.MODE_PRIVATE).edit().putString(backend.base(),"preparing").apply();
-      try (Cursor c=store.db.rawQuery("SELECT count(*) FROM analysis_runs WHERE state='running' AND lease_until>?",new String[]{Long.toString(System.currentTimeMillis())})) {
-        if (c.moveToFirst() && c.getInt(0)>0) return;
-      }
+      if (activeLease(store,state.getString("room_id"))) continue;
       store.db.execSQL("UPDATE queued_sources SET state='pending',run_id=NULL WHERE state='leased' AND run_id IN (SELECT id FROM analysis_runs WHERE state='running' AND lease_until<=?)",new Object[]{System.currentTimeMillis()});
       store.db.execSQL("UPDATE analysis_runs SET state='expired' WHERE state='running' AND lease_until<=?",new Object[]{System.currentTimeMillis()});
       JSONArray one = new JSONArray().put(state.getString("room_id"));
@@ -151,9 +205,11 @@ public final class RuntimeProcessing {
       JSONObject activated=client.request("/v1/personal-information/processing",request(backend,store,one,"activate",state.getInt("epoch")).put("drained",true));
       store.putMeta("processing_epoch",Integer.toString(activated.getInt("epoch")));
       store.putMeta("joined:"+state.getString("room_id"),Integer.toString(activated.getInt("epoch")));
+      store.putMeta("processing_owner:"+state.getString("room_id"),"runtime");
+      store.putMeta("processing_epoch:"+state.getString("room_id"),Integer.toString(activated.getInt("epoch")));
       retireReviews(store,state.getString("room_id"));
-      context.getSharedPreferences("runtime-processing",Context.MODE_PRIVATE).edit().putString(backend.base(),"runtime").apply();
     }
+    rememberOwnership(context,store,backend,new JSONArray());
     RuntimeActions.flush(store,client,backend);
     progress(store,client,backend);
     notifyChanges(context,store,client,backend);
@@ -198,46 +254,117 @@ public final class RuntimeProcessing {
     synchronized(ACTIVITY_LOCK) {notifyChanges(context,store,client,backend,false);}
   }
 
+  private static java.util.Set<Long> validActivity(KnowledgeStore store,RuntimeBackendClient client,
+      BackendSettings backend,java.util.Collection<Long> sequences) throws Exception {
+    java.util.List<Long> ids=new java.util.ArrayList<>(new java.util.LinkedHashSet<>(sequences));
+    java.util.Set<Long> valid=new java.util.HashSet<>();
+    for(int offset=0;offset<ids.size();offset+=200) {
+      JSONArray batch=new JSONArray();
+      for(int i=offset;i<Math.min(offset+200,ids.size());i++)batch.put(ids.get(i));
+      JSONArray accepted=client.request("/v1/agent/activity/validate",new JSONObject()
+          .put("session_id",backend.session()).put("sequences",batch)).getJSONArray("valid_sequences");
+      for(int i=0;i<accepted.length();i++)valid.add(accepted.getLong(i));
+    }
+    return valid;
+  }
+
+  private static JSONArray keepValidActivity(KnowledgeStore store,RuntimeBackendClient client,
+      BackendSettings backend,JSONArray entries) throws Exception {
+    java.util.List<Long> ids=new java.util.ArrayList<>();
+    for(int i=0;i<entries.length();i++)ids.add(entries.getJSONObject(i).getLong("sequence"));
+    java.util.Set<Long> valid=validActivity(store,client,backend,ids);
+    JSONArray kept=new JSONArray();
+    for(int i=0;i<entries.length();i++) {
+      JSONObject entry=entries.getJSONObject(i);long sequence=entry.getLong("sequence");
+      if(valid.contains(sequence))kept.put(entry);
+      else acknowledge(store,client,backend,sequence,"withdrawn");
+    }
+    return kept;
+  }
+
+  private static void activityPause(boolean wait) throws InterruptedException {
+    if(wait)synchronized(ACTIVITY_WAIT){ACTIVITY_WAIT.wait(25000);}
+  }
+
   private static void notifyChanges(Context context,KnowledgeStore store,RuntimeBackendClient client,BackendSettings backend,boolean wait) throws Exception {
     flushAcknowledgements(store,client,backend);
     String previous=store.meta("activity_cursor","");
     JSONObject page=client.request("/v1/agent/activity?session_id="+backend.session()+"&after="+(previous.isEmpty()?0:previous)+(wait&&!previous.isEmpty()?"&wait_seconds=25":""),null);
     String epoch=page.optString("context_epoch","");
-    if(!epoch.equals(store.meta("activity_context_epoch",""))) {
-      store.putMeta("activity_pending_summaries","[]");
-      store.putMeta("harness_snapshot","");
-      store.putMeta("activity_context_epoch",epoch);
-      android.app.NotificationManager notices=context.getSystemService(android.app.NotificationManager.class);
+    boolean validate=page.optBoolean("delivery_validation_supported");
+    JSONArray ordinary=new JSONArray(store.meta("activity_pending_summaries","[]"));
+    boolean contextChanged=!epoch.equals(store.meta("activity_context_epoch",""));
+    android.app.NotificationManager notices=context.getSystemService(android.app.NotificationManager.class);
+    if(validate) {
+      java.util.List<Long> ids=new java.util.ArrayList<>();
+      for(android.service.notification.StatusBarNotification shown:notices.getActiveNotifications())
+        if("ningning-action".equals(shown.getTag()))ids.add(shown.getNotification().extras.getLong("activity_sequence",shown.getId()));
+      java.util.Set<Long> valid=validActivity(store,client,backend,ids);
+      for(android.service.notification.StatusBarNotification shown:notices.getActiveNotifications())if("ningning-action".equals(shown.getTag())) {
+        long sequence=shown.getNotification().extras.getLong("activity_sequence",shown.getId());
+        if(!valid.contains(sequence)){notices.cancel(shown.getTag(),shown.getId());acknowledge(store,client,backend,sequence,"withdrawn");}
+      }
+      ordinary=keepValidActivity(store,client,backend,ordinary);
+    } else if(contextChanged) {
+      ordinary=new JSONArray();
       for(android.service.notification.StatusBarNotification shown:notices.getActiveNotifications())if("ningning-action".equals(shown.getTag()))notices.cancel(shown.getTag(),shown.getId());
     }
-    if(page.optBoolean("quiet")&&!previous.isEmpty()) { if(wait) { synchronized(ACTIVITY_WAIT){ACTIVITY_WAIT.wait(25000);} } return; }
-    JSONArray values=page.getJSONArray("items"),ordinary=new JSONArray();
-    JSONArray pending=new JSONArray(store.meta("activity_pending_summaries","[]"));
-    for(int i=0;i<pending.length();i++)ordinary.put(pending.getJSONObject(i));
+    store.putMeta("activity_pending_summaries",ordinary.toString());
+    if(contextChanged) {
+      store.putMeta("harness_snapshot","");
+      store.putMeta("activity_context_epoch",epoch);
+    }
+    if(page.optBoolean("quiet")&&!previous.isEmpty()){activityPause(wait);return;}
+    JSONArray values=page.getJSONArray("items");
+    java.util.List<Long> deliveryIds=new java.util.ArrayList<>();
+    for(int i=0;i<values.length();i++) {
+      JSONObject entry=values.getJSONObject(i);String kind=entry.getString("kind");
+      if(kind.startsWith("action.")||kind.equals("waiting"))deliveryIds.add(entry.getLong("sequence"));
+    }
+    java.util.Set<Long> deliverable=validate?validActivity(store,client,backend,deliveryIds):null;
+    long nextCursor=page.getLong("next_cursor");boolean backpressure=false;
     for(int i=0;i<values.length();i++) {
       JSONObject entry=values.getJSONObject(i);String kind=entry.getString("kind");
       if(previous.isEmpty()||!(kind.startsWith("action.")||kind.equals("waiting")))continue;
+      if(entry.optBoolean("redacted")||(deliverable!=null&&!deliverable.contains(entry.getLong("sequence")))){acknowledge(store,client,backend,entry.getLong("sequence"),"withdrawn");continue;}
       long created=java.time.Instant.parse(entry.getString("created_at")).toEpochMilli();
       if(System.currentTimeMillis()-created>86400000)continue;
       boolean important=kind.equals("action.event")||kind.equals("waiting")||!entry.getString("state").equals("verified");
-      if(important)postNotice(context,store,client,backend,entry,entry.getString("summary"));
-      else if(ordinary.length()<100)ordinary.put(entry);
+      if(important) {
+        String state=postNotice(context,store,client,backend,entry,entry.getString("summary"));
+        if(state.equals("blocked")) {
+          store.putMeta("activity_pending_summaries",ordinary.toString());
+          store.putMeta("activity_cursor",Long.toString(entry.getLong("sequence")-1));
+          activityPause(wait);return;
+        }
+      } else if(ordinary.length()<100)ordinary.put(entry);
+      else {
+        store.putMeta("activity_pending_summaries",ordinary.toString());
+        nextCursor=entry.getLong("sequence")-1;backpressure=true;
+        // Keep this page queued until the current digest can be delivered.
+        break;
+      }
     }
+    if(validate)ordinary=keepValidActivity(store,client,backend,ordinary);
     long last=Long.parseLong(store.meta("activity_summary_at","0"));
     if(ordinary.length()>0&&System.currentTimeMillis()-last>=300000) {
       JSONObject entry=ordinary.getJSONObject(ordinary.length()-1);
       String state=postNotice(context,store,client,backend,entry,"已完成 "+ordinary.length()+" 项处理，可打开查看详情。");
-      for(int i=0;i<ordinary.length()-1;i++)acknowledge(store,client,backend,ordinary.getJSONObject(i).getLong("sequence"),state);
-      ordinary=new JSONArray();store.putMeta("activity_summary_at",Long.toString(System.currentTimeMillis()));
+      if(!state.equals("blocked")) {
+        for(int i=0;i<ordinary.length()-1;i++)acknowledge(store,client,backend,ordinary.getJSONObject(i).getLong("sequence"),state);
+        ordinary=new JSONArray();store.putMeta("activity_summary_at",Long.toString(System.currentTimeMillis()));
+      }
     }
     store.putMeta("activity_pending_summaries",ordinary.toString());
-    store.putMeta("activity_cursor",Long.toString(page.getLong("next_cursor")));
+    store.putMeta("activity_cursor",Long.toString(nextCursor));
+    if(backpressure||(ordinary.length()>0&&!ReminderScheduler.notificationsAllowed(context)))activityPause(wait);
   }
 
   private static String postNotice(Context context,KnowledgeStore store,RuntimeBackendClient client,BackendSettings backend,JSONObject entry,String summary) throws Exception {
     long sequence=entry.getLong("sequence");String key="activity_notice:"+sequence;
     String state=store.meta(key,"");
     android.app.NotificationManager manager=context.getSystemService(android.app.NotificationManager.class);
+    if(state.equals("blocked")&&ReminderScheduler.notificationsAllowed(context))state="";
     if(state.equals("posting")) {
       state="unknown";
       for(android.service.notification.StatusBarNotification visible:manager.getActiveNotifications())if("ningning-action".equals(visible.getTag())&&visible.getId()==(int)(sequence%Integer.MAX_VALUE))state="presented";
@@ -250,7 +377,12 @@ public final class RuntimeProcessing {
         android.content.Intent open=new android.content.Intent(context,HarnessActivity.class).putExtra("activity_sequence",sequence);
         android.app.PendingIntent pending=android.app.PendingIntent.getActivity(context,(int)(sequence%Integer.MAX_VALUE),open,android.app.PendingIntent.FLAG_UPDATE_CURRENT|android.app.PendingIntent.FLAG_IMMUTABLE);
         store.putMeta(key,"posting");
-        manager.notify("ningning-action",(int)(sequence%Integer.MAX_VALUE),new android.app.Notification.Builder(context,"ningning-actions").setSmallIcon(com.mubai.infoinbox.R.drawable.app_icon).setContentTitle("宁宁的处理进展").setContentText(summary).setVisibility(android.app.Notification.VISIBILITY_PRIVATE).setContentIntent(pending).setAutoCancel(true).setOnlyAlertOnce(true).build());
+        android.os.Bundle extras=new android.os.Bundle();extras.putLong("activity_sequence",sequence);
+        try {
+          manager.notify("ningning-action",(int)(sequence%Integer.MAX_VALUE),new android.app.Notification.Builder(context,"ningning-actions").setSmallIcon(com.mubai.infoinbox.R.drawable.app_icon).setContentTitle("宁宁的处理进展").setContentText(summary).setExtras(extras).setVisibility(android.app.Notification.VISIBILITY_PRIVATE).setContentIntent(pending).setAutoCancel(true).setOnlyAlertOnce(true).build());
+        } catch(SecurityException permissionChanged) {
+          store.putMeta(key,"blocked");acknowledge(store,client,backend,sequence,"blocked");return "blocked";
+        }
         state="accepted";
         for(android.service.notification.StatusBarNotification visible:manager.getActiveNotifications())if("ningning-action".equals(visible.getTag())&&visible.getId()==(int)(sequence%Integer.MAX_VALUE))state="presented";
       }

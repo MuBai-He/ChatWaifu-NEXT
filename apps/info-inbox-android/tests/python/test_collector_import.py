@@ -72,7 +72,7 @@ class ImportedHistoryTests(unittest.TestCase):
             .replace("$FULL_RESCAN", "1" if full else "0")
         )
         sql = "\n".join(x for x in sql.splitlines() if not x.startswith("."))
-        with sqlite3.connect(self.cache) as c:
+        with sqlite3.connect(self.cache, uri=True) as c:
             c.executescript(sql)
 
     def count(self):
@@ -89,6 +89,26 @@ class ImportedHistoryTests(unittest.TestCase):
         self.assertEqual(self.count(), 1502)
         self.collect()
         self.assertEqual(self.count(), 1502)
+
+    def test_capture_mode_tracks_collection_not_later_sync_time(self):
+        self.add(100)
+        self.collect()
+        with sqlite3.connect(self.cache) as c:
+            c.execute("UPDATE collection_state SET last_success=1800000000")
+        self.add(101, "实时新增", 1800000001000)
+        self.add(102, "源端延迟", 1700000000000)
+        self.add(2, "回填旧记录", 1500000000000)
+        self.collect()
+        with sqlite3.connect(self.cache) as c:
+            modes = dict(c.execute("SELECT msg_id,capture_mode FROM message_capture"))
+            times = dict(c.execute("SELECT msg_id,created_at FROM messages"))
+        self.assertEqual(modes, {100: "historical", 101: "live", 102: "delayed", 2: "historical"})
+        self.assertEqual(times[102], 1700000000000)
+        self.collect(full=True)
+        with sqlite3.connect(self.cache) as c:
+            self.assertEqual(
+                dict(c.execute("SELECT msg_id,capture_mode FROM message_capture")), modes
+            )
 
     def test_restore_finds_old_id_below_checkpoint_without_manual_rescan(self):
         self.add(1)

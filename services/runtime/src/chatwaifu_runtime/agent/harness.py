@@ -25,9 +25,11 @@ from chatwaifu_protocol.agent import (
 from chatwaifu_protocol.base import JsonObject
 from chatwaifu_protocol.harness import (
     ActionProposal,
+    ConfirmedWorkReview,
     EvidenceRef,
     IntentAction,
     Observation,
+    OwnerWorkDecision,
     ProcessingRequest,
     StandingIntent,
     StandingIntentInput,
@@ -1058,7 +1060,7 @@ class AgentHarnessService:
                     if (
                         work
                         and work.owner == intent.owner
-                        and work.ingestion_mode != "historical"
+                        and (work.ingestion_mode != "historical" or work.owner_decision is not None)
                         and work.state not in {"completed", "cancelled", "rejected"}
                         and not await self.repository.dispatch_known(identifier, work.work_item_id)
                         and await self.eligible(work.owner, work.evidence)
@@ -1124,10 +1126,12 @@ class AgentHarnessService:
     async def _run(self) -> None:
         while True:
             try:
+                requested = self._changed.is_set()
                 self._changed.clear()
                 progressed = await self.run_once()
                 if (
-                    progressed
+                    requested
+                    or progressed
                     or self._changed.is_set()
                     or datetime.now(UTC) - self._last_reconcile >= timedelta(minutes=5)
                 ):
@@ -1172,11 +1176,14 @@ class AgentHarnessService:
                 await self._process(item, batch)
         except asyncio.CancelledError:
             for leased in batch:
-                await self.repository.settle(leased, failed=True)
+                await self.repository.release_observation(leased)
             raise
-        except Exception:
+        except Exception as error:
             for leased in batch:
-                await self.repository.settle(leased, failed=True)
+                await self.repository.settle(
+                    leased.model_copy(update={"error_code": type(error).__name__[:64]}), failed=True
+                )
+            self.notify()
             raise
         else:
             for leased in batch:
@@ -1776,12 +1783,16 @@ class AgentHarnessService:
             if cursor is None:
                 break
 
-    async def eligible(self, owner: str, refs: list[EvidenceRef]) -> bool:
+    async def eligible(
+        self, owner: str, refs: list[EvidenceRef], *, historical: bool = False
+    ) -> bool:
         return all(
             [
                 r.kind == "knowledge"
                 and await self.knowledge.repository.eligible(
-                    owner, Citation(record_id=r.reference, revision=r.revision)
+                    owner,
+                    Citation(record_id=r.reference, revision=r.revision),
+                    historical=historical,
                 )
                 for r in refs
             ]
@@ -1960,7 +1971,8 @@ class AgentHarnessService:
 
     async def _dispatch(
         self, work: WorkItem, source: Record, session: UUID, *, only_intent: UUID | None = None
-    ) -> None:
+    ) -> AgentTask | None:
+        dispatched: AgentTask | None = None
         if work.acceptance == "pending" and work.temporal_status != "current":
             return
         if work.acceptance == "pending" and work.kind in {"todo", "event"}:
@@ -2122,6 +2134,7 @@ class AgentHarnessService:
             identifier = await self.repository.reserve_dispatch(intent.intent_id, work)
             task = await self.tasks.repository.get(identifier)
             if task is not None:
+                dispatched = task
                 continue
             existing = await self.repository.active_task(
                 work.owner, intent.intent_id, work.work_item_id, work.target_id
@@ -2168,6 +2181,7 @@ class AgentHarnessService:
                         session,
                         AgentTaskAction(action="resume", expected_revision=existing.revision),
                     )
+                dispatched = existing
                 continue
             goal = (
                 (decision.goal or intent.goal)
@@ -2206,11 +2220,59 @@ class AgentHarnessService:
             task = await self.tasks.create(
                 request, task_id=identifier, work_item_id=work.work_item_id
             )
+            dispatched = task
             if not await self.repository.save_work(
                 work.model_copy(update={"task_id": task.task_id, "revision": work.revision + 1}),
                 work.revision,
             ):
                 logger.info("agent.work_link_changed")
+        return dispatched
+
+    async def review_confirmed(self, body: ConfirmedWorkReview) -> WorkItem:
+        owner = await self.owner(body.session_id)
+        digest = hashlib.sha256(
+            body.model_dump_json(exclude={"session_id", "operation_id"}).encode()
+        ).hexdigest()
+        async with self._command_lock:
+            previous = await self.repository.command(owner, body.operation_id, digest)
+            item = (
+                await self.repository.work_item(previous)
+                if previous
+                else await self.repository.legacy_work(owner, body.record_id)
+            )
+            if item is None or item.owner != owner:
+                raise KeyError("confirmed_work_not_synced")
+            if previous:
+                return item
+            if item.owner_decision and item.owner_decision.operation_id == body.operation_id:
+                if item.owner_decision.request_hash != digest:
+                    raise ValueError("operation_id_reused")
+                result = item
+            else:
+                record = await self.knowledge.repository.get(owner, body.record_id)
+                if (
+                    record is None
+                    or record.deleted
+                    or not record.confirmed
+                    or record.kind not in {"todo", "event"}
+                    or record.revision != body.expected_record_revision
+                ):
+                    raise ValueError("confirmed_record_revision_changed")
+                result = await self._act_work(
+                    item.work_item_id,
+                    WorkItemAction(
+                        session_id=body.session_id,
+                        operation_id=body.operation_id,
+                        action="confirm",
+                        expected_revision=item.revision,
+                    ),
+                    request_hash=digest,
+                )
+            await self.repository.finish_command(
+                owner, body.operation_id, digest, result.work_item_id
+            )
+            self.notify()
+            return result
 
     async def act_work(self, identifier: str, body: WorkItemAction) -> WorkItem:
         owner = await self.owner(body.session_id)
@@ -2230,13 +2292,27 @@ class AgentHarnessService:
                 if item is None or item.owner != owner:
                     raise KeyError("work_not_visible")
                 return item
-            result = await self._act_work(identifier, body)
+            item = await self.repository.work_item(identifier)
+            if (
+                item is not None
+                and item.owner == owner
+                and item.owner_decision is not None
+                and item.owner_decision.operation_id == body.operation_id
+            ):
+                if item.owner_decision.request_hash != digest:
+                    raise ValueError("operation_id_reused")
+                result = item
+            else:
+                result = await self._act_work(identifier, body, request_hash=digest)
             await self.repository.finish_command(
                 owner, body.operation_id, digest, result.work_item_id
             )
+            self.notify()
             return result
 
-    async def _act_work(self, identifier: str, body: WorkItemAction) -> WorkItem:
+    async def _act_work(
+        self, identifier: str, body: WorkItemAction, *, request_hash: str
+    ) -> WorkItem:
         owner = await self.owner(body.session_id)
         item = await self.repository.work_item(identifier)
         if item is None or item.owner != owner:
@@ -2444,15 +2520,31 @@ class AgentHarnessService:
         if first_day is not None and (start is not None or end is not None):
             raise ValueError("mixed_event_window")
 
+        review = (
+            OwnerWorkDecision(
+                operation_id=body.operation_id,
+                request_hash=request_hash,
+                received_at=datetime.now(UTC),
+                pending=item.task_id is None and not item.bindings,
+            )
+            if body.action == "confirm" and item.kind in {"todo", "event"}
+            else item.owner_decision
+        )
         changed = item.model_copy(
             update={
                 **changes,
+                "owner_decision": review,
                 **(
                     {"temporal_status": "current", "temporal_reason": ""}
                     if body.action == "confirm"
                     else {}
                 ),
-                "state": states[body.action],
+                "state": "waiting"
+                if body.action == "confirm" and review and review.pending
+                else states[body.action],
+                "waiting_reason": "已确认，等待 Runtime 核对并继续处理。"
+                if review and review.pending
+                else item.waiting_reason,
                 "acceptance": "pending"
                 if body.action == "edit" and item.acceptance == "pending"
                 else "human",
@@ -2501,8 +2593,13 @@ class AgentHarnessService:
                         AgentTaskAction(action="cancel", expected_revision=task.revision),
                     )
         if body.action != "reject" and changed.state != "proposed":
-            await self.publish_work(changed)
-            if body.action == "confirm" and changed.task_id is not None:
+            if not (
+                changed.owner_decision
+                and changed.owner_decision.pending
+                and any(ref.reference == changed.legacy_record_id for ref in changed.evidence)
+            ):
+                await self.publish_work(changed)
+            if body.action in {"confirm", "edit"} and changed.task_id is not None:
                 await self._resume_reviewed_task(changed)
 
         await self.repository.record(
@@ -2805,7 +2902,85 @@ class AgentHarnessService:
         async with self._reconcile_lock:
             await self._reconcile()
 
+    async def _continue_owner_reviews(self) -> None:
+        for work in await self.repository.pending_owner_reviews("local"):
+            decision = work.owner_decision
+            if decision is None:
+                continue
+            reason = "尚未配置覆盖此事项的持续委托，请核对来源和目标范围。"
+            dispatched: AgentTask | None = None
+            try:
+                if not await self.eligible(work.owner, work.evidence):
+                    reason = "来源已更新、排除或遗忘，请重新核对可用依据。"
+                else:
+                    source = None
+                    for ref in work.evidence:
+                        if ref.kind == "knowledge":
+                            record = await self.knowledge.repository.get(
+                                work.owner, ref.reference, ref.revision
+                            )
+                            if record is not None and record.kind == "source":
+                                source = record
+                                break
+                    if source is None:
+                        reason = "尚无可用的原文依据，请先同步原文或补充事项资料。"
+                    else:
+                        async with asyncio.timeout(300):
+                            dispatched = await self._dispatch(work, source, await self.session())
+            except asyncio.CancelledError:
+                raise
+            except Exception as error:
+                logger.warning("agent.owner_review_failed type=%s", type(error).__name__)
+                reason = "处理暂未完成，确认内容已保留，请在行动时间线核对后重试。"
+            current = await self.repository.work_item(work.work_item_id)
+            if (
+                current is None
+                or current.owner_decision is None
+                or current.owner_decision.operation_id != decision.operation_id
+                or current.state in {"completed", "cancelled", "rejected"}
+            ):
+                continue
+            changed = current.model_copy(
+                update={
+                    "owner_decision": current.owner_decision.model_copy(update={"pending": False}),
+                    "task_id": current.task_id or (dispatched.task_id if dispatched else None),
+                    "state": "waiting" if current.task_id or dispatched else "blocked",
+                    "waiting_reason": "正在核对资料并继续处理。"
+                    if current.task_id or dispatched
+                    else reason,
+                    "revision": current.revision + 1,
+                    "updated_at": datetime.now(UTC),
+                }
+            )
+            if not await self.repository.save_work(changed, current.revision):
+                continue
+            if not any(ref.reference == changed.legacy_record_id for ref in changed.evidence):
+                await self.publish_work(changed)
+            if changed.task_id is None:
+                await self.repository.record(
+                    changed.owner,
+                    "waiting",
+                    changed.work_item_id,
+                    "review_required",
+                    reason,
+                    changed.evidence,
+                    dedup_key="owner-review:" + str(decision.operation_id),
+                )
+
     async def _reconcile(self) -> None:
+        for failed in await self.repository.failed_observations("local"):
+            if await self.eligible(failed.owner, [failed.evidence]):
+                await self.repository.record(
+                    failed.owner,
+                    "waiting",
+                    str(failed.observation_id),
+                    "understanding_failed",
+                    "资料处理未完成，已保留原文。请在需要核对中查看原因并重试。",
+                    [failed.evidence],
+                    details={"error_code": failed.error_code, "attempts": failed.attempts},
+                    dedup_key=f"observation-failed:{failed.observation_id}:{failed.last_review_id}",
+                )
+        await self._continue_owner_reviews()
         for candidate in await self.repository.pending_commands("local"):
             if await self.eligible(candidate.owner, candidate.evidence):
                 await self._start_work_command(candidate)

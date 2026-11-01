@@ -1,0 +1,34 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/confirmed-work-review.schema.json",
+  "properties": {
+    "expected_record_revision": {
+      "minimum": 1,
+      "title": "Expected Record Revision",
+      "type": "integer"
+    },
+    "operation_id": {
+      "format": "uuid",
+      "title": "Operation Id",
+      "type": "string"
+    },
+    "record_id": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Record Id",
+      "type": "string"
+    },
+    "session_id": {
+      "format": "uuid",
+      "title": "Session Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "session_id",
+    "record_id",
+    "expected_record_revision"
+  ],
+  "title": "ConfirmedWorkReview",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

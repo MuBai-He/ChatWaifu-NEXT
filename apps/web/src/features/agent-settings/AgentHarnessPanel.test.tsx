@@ -160,3 +160,32 @@ it("requires an explicit current-relevance decision for historical work", async 
     ),
   );
 });
+
+it("offers a bounded retry for failed understanding instead of sync-conflict choices", async () => {
+  setup();
+  const failed = {
+    kind: "observation",
+    reference: "failed-source",
+    title: "资料处理失败",
+    text: "原文仍保留",
+    reason: "提取结果不符合契约",
+    revision: 6,
+    evidence: [
+      { kind: "knowledge", reference: "original-source", revision: 1 },
+    ],
+  };
+  client.getHarnessReview.mockResolvedValue({ items: [failed] });
+  client.decideHarnessReview.mockResolvedValue({ accepted: true });
+  render(<AgentHarnessPanel sessionId="session" />);
+  fireEvent.click(await screen.findByText(/需要核对/));
+  const retry = await screen.findByRole("button", { name: "重新处理" });
+  expect(screen.queryByRole("button", { name: "保留本机修改" })).toBeNull();
+  fireEvent.click(retry);
+  await waitFor(() =>
+    expect(client.decideHarnessReview).toHaveBeenCalledWith(
+      "session",
+      failed,
+      "retry",
+    ),
+  );
+});

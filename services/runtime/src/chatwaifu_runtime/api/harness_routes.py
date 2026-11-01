@@ -6,7 +6,10 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from chatwaifu_protocol.harness import (
+    ActivityEntry,
     ActivityReceipt,
+    ActivityValidationRequest,
+    ConfirmedWorkReview,
     IntentAction,
     ProcessingRequest,
     StandingIntentInput,
@@ -62,6 +65,16 @@ async def create_intent(request: Request, body: StandingIntentInput):
         raise failure(error) from None
 
 
+@router.get("/v1/agent/intents/{intent_id}")
+async def get_intent(request: Request, intent_id: UUID, session_id: UUID):
+    app = service(request)
+    scope = await owner(app, session_id)
+    item = await app.repository.intent(intent_id)
+    if item is None or item.owner != scope:
+        raise HTTPException(404, "intent_not_visible")
+    return item
+
+
 @router.put("/v1/agent/intents/{intent_id}")
 async def update_intent(request: Request, intent_id: UUID, body: StandingIntentUpdate):
     try:
@@ -104,14 +117,41 @@ async def activity(
     quiet = settings.quiet_hours_enabled and is_quiet_time(
         datetime.now(ZoneInfo("Asia/Shanghai")), settings.quiet_start, settings.quiet_end
     )
+    visible: list[ActivityEntry] = []
+    for item in items:
+        visible.append(
+            item
+            if await app.eligible(scope, item.evidence, historical=True)
+            else item.model_copy(
+                update={
+                    "summary": "来源已不可用，相关内容已隐藏。",
+                    "evidence": [],
+                    "details": {},
+                    "redacted": True,
+                }
+            )
+        )
     return {
-        "items": items,
+        "items": visible,
         "next_cursor": items[-1].sequence if items else after,
+        "next_before": items[0].sequence if len(items) == 100 and after == 0 else None,
         "quiet": quiet,
-        ("context_epoch"): (
-            f"{request.app.state.container.boot_id}:"
-            f"{request.app.state.container.memory.knowledge_epoch}"
-        ),
+        "context_epoch": f"{scope}:{await app.knowledge.repository.epoch(scope)}",
+        "delivery_validation_supported": True,
+    }
+
+
+@router.post("/v1/agent/activity/validate")
+async def validate_activity(request: Request, body: ActivityValidationRequest):
+    app = service(request)
+    scope = await owner(app, body.session_id)
+    valid: list[int] = []
+    for item in await app.repository.activity_by_ids(scope, body.sequences):
+        if await app.eligible(scope, item.evidence):
+            valid.append(item.sequence)
+    return {
+        "valid_sequences": valid,
+        "context_epoch": f"{scope}:{await app.knowledge.repository.epoch(scope)}",
     }
 
 
@@ -139,6 +179,24 @@ async def work_items(
     return {"items": rows, "next_offset": offset + len(rows) if len(rows) == limit else None}
 
 
+@router.post("/v1/personal-assistant/work-items/review-confirmed")
+async def review_confirmed_work(request: Request, body: ConfirmedWorkReview):
+    try:
+        return await service(request).review_confirmed(body)
+    except (PermissionError, ValueError, KeyError) as error:
+        raise failure(error) from None
+
+
+@router.get("/v1/personal-assistant/work-items/{work_item_id}")
+async def get_work_item(request: Request, work_item_id: str, session_id: UUID):
+    app = service(request)
+    scope = await owner(app, session_id)
+    item = await app.repository.work_item(work_item_id)
+    if item is None or item.owner != scope:
+        raise HTTPException(404, "work_not_visible")
+    return item
+
+
 @router.post("/v1/personal-assistant/work-items/{work_item_id}")
 async def work_action(request: Request, work_item_id: str, body: WorkItemAction):
     try:
@@ -155,6 +213,7 @@ async def processing(request: Request, session_id: UUID):
         "items": await app.repository.processing(scope),
         "supported_sync_versions": ["1.0", "1.1"],
         "processing_owner": "runtime",
+        "owner_review_supported": True,
     }
 
 
@@ -185,9 +244,13 @@ async def reminder_occurrences(request: Request, session_id: UUID):
 
 
 @router.get("/v1/agent/review")
-async def review_items(request: Request, session_id: UUID):
+async def review_items(request: Request, session_id: UUID, include_failures: bool = False):
     await owner(service(request), session_id)
-    return {"items": await request.app.state.container.harness_review.list(session_id)}
+    return {
+        "items": await request.app.state.container.harness_review.list(
+            session_id, include_failures=include_failures
+        )
+    }
 
 
 @router.post("/v1/agent/review/{kind}/{reference}")

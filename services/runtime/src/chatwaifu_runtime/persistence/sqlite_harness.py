@@ -205,6 +205,7 @@ async def project_work_in(
         kind=current.kind if current else cast(Literal["todo", "event"], record.kind),
         source_room_ids=current.source_room_ids if current else [record.room_id],
         ingestion_mode=current.ingestion_mode if current else "historical",
+        owner_decision=current.owner_decision if current else None,
         title=record.title,
         details=record.text,
         state="cancelled"
@@ -1216,7 +1217,14 @@ class SQLiteHarnessRepository:
     async def settle(self, item: Observation, failed: bool = False) -> None:
         attempts = item.attempts + int(failed)
         state = "failed" if attempts >= 5 else "pending" if failed else "done"
-        updated = item.model_copy(update={"state": state, "attempts": attempts})
+        updated = item.model_copy(
+            update={
+                "state": state,
+                "attempts": attempts,
+                "revision": item.revision + 1,
+                "error_code": item.error_code if failed else None,
+            }
+        )
         async with self.db.transaction() as c:
             if not failed:
                 await c.execute(
@@ -1233,6 +1241,69 @@ class SQLiteHarnessRepository:
                     "observation_id=? AND state='running'"
                 ),
                 (state, now_ms() + 60000, updated.model_dump_json(), str(item.observation_id)),
+            )
+
+    async def release_observation(self, item: Observation) -> None:
+        pending = item.model_copy(update={"state": "pending", "revision": item.revision + 1})
+        await self.db.execute(
+            "UPDATE harness_observations SET state='pending',available_at=?,"
+            "lease_until=0,payload=? "
+            "WHERE observation_id=? AND state='running'",
+            (now_ms(), pending.model_dump_json(), str(item.observation_id)),
+        )
+
+    async def failed_observations(self, owner: str) -> list[Observation]:
+        rows = await self.db.fetchall(
+            "SELECT payload FROM harness_observations WHERE owner=? AND state='failed' "
+            "ORDER BY rowid DESC LIMIT 100",
+            (owner,),
+        )
+        return [Observation.model_validate_json(row[0]) for row in rows]
+
+    async def review_observation(
+        self,
+        owner: str,
+        identifier: UUID,
+        expected: int,
+        retry: bool,
+        operation: UUID,
+        digest: str,
+    ) -> None:
+        async with self.db.transaction() as c:
+            rows = await fetch_rows(
+                c,
+                "SELECT payload FROM harness_observations WHERE owner=? "
+                "AND observation_id=? AND state='failed'",
+                (owner, str(identifier)),
+            )
+            if not rows:
+                raise ValueError("observation_review_changed")
+            item = Observation.model_validate_json(rows[0][0])
+            if item.revision != expected:
+                raise ValueError("observation_review_changed")
+            changed = item.model_copy(
+                update={
+                    "state": "pending" if retry else "done",
+                    "revision": item.revision + 1,
+                    "attempts": 0 if retry else item.attempts,
+                    "error_code": None,
+                    "last_review_id": operation,
+                }
+            )
+            await c.execute(
+                "UPDATE harness_observations SET state=?,available_at=?,lease_until=0,payload=? "
+                "WHERE observation_id=?",
+                (changed.state, now_ms(), changed.model_dump_json(), str(identifier)),
+            )
+            if not retry:
+                await c.execute(
+                    "INSERT OR IGNORE INTO harness_processing_receipts(owner,reference,revision) "
+                    "VALUES(?,?,?)",
+                    (owner, item.evidence.reference, item.evidence.revision),
+                )
+            await c.execute(
+                "INSERT OR IGNORE INTO harness_commands VALUES(?,?,?,?)",
+                (str(operation), owner, digest, "review:" + str(identifier)),
             )
 
     async def work_items(
@@ -1273,6 +1344,17 @@ class SQLiteHarnessRepository:
                 )
             return result.rowcount == 1
 
+    async def pending_owner_reviews(self, owner: str) -> list[WorkItem]:
+        rows = await self.db.fetchall(
+            "SELECT payload FROM harness_work_items WHERE owner=? "
+            "AND json_extract(payload,'$.owner_decision.pending')=1 "
+            "AND json_extract(payload,'$.kind') IN ('todo','event') "
+            "AND json_extract(payload,'$.state') NOT IN ('completed','cancelled','rejected') "
+            "ORDER BY rowid LIMIT 100",
+            (owner,),
+        )
+        return [WorkItem.model_validate_json(row[0]) for row in rows]
+
     async def reserve_dispatch(self, intent: UUID, work: WorkItem) -> UUID:
         key = uuid5(intent, work.work_item_id)
         async with self.db.transaction() as c:
@@ -1305,6 +1387,19 @@ class SQLiteHarnessRepository:
                     )
                 )
             )
+        return await self._activity_entries(rows)
+
+    async def activity_by_ids(self, owner: str, identifiers: list[int]) -> list[ActivityEntry]:
+        if not identifiers:
+            return []
+        placeholders = ",".join("?" for _ in identifiers)
+        rows = await self.db.fetchall(
+            f"SELECT * FROM harness_activity WHERE owner=? AND sequence IN ({placeholders})",
+            (owner, *identifiers),
+        )
+        return await self._activity_entries(rows)
+
+    async def _activity_entries(self, rows: Sequence[aiosqlite.Row]) -> list[ActivityEntry]:
         entries: list[ActivityEntry] = []
         for row in rows:
             receipts = await self.db.fetchall(
@@ -1312,7 +1407,14 @@ class SQLiteHarnessRepository:
                 (row["sequence"],),
             )
             delivery: dict[str, str] = {}
-            ranks = {"blocked": 0, "unknown": 1, "accepted": 2, "presented": 3, "opened": 4}
+            ranks = {
+                "blocked": 0,
+                "unknown": 1,
+                "accepted": 2,
+                "presented": 3,
+                "opened": 4,
+                "withdrawn": 5,
+            }
             for receipt in receipts:
                 if ranks.get(receipt[1], 0) >= ranks.get(delivery.get(receipt[0], "blocked"), 0):
                     delivery[receipt[0]] = receipt[1]

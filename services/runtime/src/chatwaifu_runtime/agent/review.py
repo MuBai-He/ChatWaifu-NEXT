@@ -17,7 +17,7 @@ from chatwaifu_runtime.memory.service import MemoryService
 class ReviewDecision(BaseModel):
     model_config = ConfigDict(extra="forbid")
     session_id: UUID
-    decision: Literal["accept", "reject", "keep_local", "keep_server"]
+    decision: Literal["accept", "reject", "keep_local", "keep_server", "retry"]
     operation_id: UUID = Field(default_factory=uuid4)
     expected_revision: int = Field(default=0, ge=0)
 
@@ -26,7 +26,7 @@ class HarnessReviewService:
     def __init__(self, harness: AgentHarnessService, memory: MemoryService) -> None:
         self.harness, self.memory = harness, memory
 
-    async def list(self, session: UUID) -> list[JsonObject]:
+    async def list(self, session: UUID, *, include_failures: bool = True) -> list[JsonObject]:
         owner = await self.harness.owner(session)
         result: list[JsonObject] = []
         for proposal in await self.memory.list_proposals(status="pending", session_id=session):
@@ -73,6 +73,31 @@ class HarnessReviewService:
                     "record_id": conflict["record_id"],
                 }
             )
+        reasons = {
+            "TimeoutError": "模型或补查超时",
+            "ValueError": "提取格式或来源版本校验未通过",
+            "ValidationError": "提取结果不符合数据契约",
+            "PermissionError": "来源或执行权限已变化",
+        }
+        failures = (
+            await self.harness.repository.failed_observations(owner) if include_failures else []
+        )
+        for failed in failures:
+            if not await self.harness.eligible(owner, [failed.evidence]):
+                continue
+            result.append(
+                {
+                    "kind": "observation",
+                    "reference": str(failed.observation_id),
+                    "title": "资料处理失败",
+                    "text": "原文已保留，尚未生成完整处理结果。",
+                    "reason": f"{reasons.get(failed.error_code or '', '处理服务暂不可用')}。"
+                    f"已自动尝试 {failed.attempts} 次。可重试或跳过当前来源版本。",
+                    "revision": failed.revision,
+                    "error_code": failed.error_code,
+                    "evidence": [failed.evidence.model_dump(mode="json")],
+                }
+            )
         return result
 
     async def decide(self, kind: str, reference: str, body: ReviewDecision) -> JsonObject:
@@ -90,7 +115,27 @@ class HarnessReviewService:
         ).hexdigest()
         if await self.harness.repository.command(owner, body.operation_id, digest):
             return {"accepted": True, "reference": reference}
-        if kind == "memory" and body.decision in {"accept", "reject"}:
+        if kind == "observation" and body.decision in {"retry", "reject"}:
+            failed = next(
+                (
+                    item
+                    for item in await self.harness.repository.failed_observations(owner)
+                    if str(item.observation_id) == reference
+                ),
+                None,
+            )
+            if failed is None or not await self.harness.eligible(owner, [failed.evidence]):
+                raise ValueError("observation_review_changed")
+            await self.harness.repository.review_observation(
+                owner,
+                failed.observation_id,
+                body.expected_revision,
+                body.decision == "retry",
+                body.operation_id,
+                digest,
+            )
+            data: JsonObject = {"accepted": True, "reference": reference}
+        elif kind == "memory" and body.decision in {"accept", "reject"}:
             result = await self.memory.decide_proposal(
                 body.session_id, UUID(reference), cast(Literal["accept", "reject"], body.decision)
             )
@@ -183,7 +228,7 @@ class HarnessReviewService:
             "review",
             reference,
             "human",
-            "主人已核对记忆或离线冲突。",
+            "主人已核对处理失败、记忆或离线冲突。",
             details={"kind": kind, "decision": body.decision},
             dedup_key="review:" + str(body.operation_id),
         )

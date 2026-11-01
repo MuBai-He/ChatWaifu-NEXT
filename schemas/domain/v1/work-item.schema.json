@@ -66,6 +66,37 @@
           "type": "null"
         }
       ]
+    },
+    "OwnerWorkDecision": {
+      "properties": {
+        "operation_id": {
+          "format": "uuid",
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "pending": {
+          "default": true,
+          "title": "Pending",
+          "type": "boolean"
+        },
+        "received_at": {
+          "format": "date-time",
+          "title": "Received At",
+          "type": "string"
+        },
+        "request_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Request Hash",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation_id",
+        "request_hash",
+        "received_at"
+      ],
+      "title": "OwnerWorkDecision",
+      "type": "object"
     }
   },
   "$id": "https://chatwaifu.local/schemas/domain/v1/work-item.schema.json",
@@ -245,6 +276,17 @@
       "default": "local",
       "title": "Owner",
       "type": "string"
+    },
+    "owner_decision": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/OwnerWorkDecision"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "previous_ends_at": {
       "anyOf": [

@@ -470,18 +470,53 @@ export function AgentHarnessPanel({ sessionId }: { sessionId: string }) {
             <p>{item.reason}</p>
             {item.evidence?.map((e, i) => (
               <blockquote key={i}>
-                {e.text} · {new Date(e.occurred_at).toLocaleString()}
+                {e.text ?? e.reference ?? "原文依据"}
+                {e.occurred_at && (
+                  <> · {new Date(e.occurred_at).toLocaleString()}</>
+                )}
+                {e.kind === "knowledge" && e.reference && (
+                  <button
+                    disabled={busy}
+                    onClick={() => {
+                      const reference = e.reference;
+                      if (!reference) return;
+                      void run(async () => {
+                        const row = await readHarnessEvidence(
+                          sessionId,
+                          reference,
+                          e.revision ?? 1,
+                        );
+                        if (active.current)
+                          setEvidence(
+                            [row.sender_name, row.text]
+                              .filter(Boolean)
+                              .join("\n"),
+                          );
+                      });
+                    }}
+                  >
+                    查看原文
+                  </button>
+                )}
               </blockquote>
             ))}
-            {(item.kind === "memory"
+            {(item.kind === "observation"
               ? [
-                  { label: "确认保存", decision: "accept" as const },
-                  { label: "拒绝保存", decision: "reject" as const },
+                  { label: "重新处理", decision: "retry" as const },
+                  { label: "跳过本次版本", decision: "reject" as const },
                 ]
-              : [
-                  { label: "保留本机修改", decision: "keep_local" as const },
-                  { label: "采用服务端版本", decision: "keep_server" as const },
-                ]
+              : item.kind === "memory"
+                ? [
+                    { label: "确认保存", decision: "accept" as const },
+                    { label: "拒绝保存", decision: "reject" as const },
+                  ]
+                : [
+                    { label: "保留本机修改", decision: "keep_local" as const },
+                    {
+                      label: "采用服务端版本",
+                      decision: "keep_server" as const,
+                    },
+                  ]
             ).map((option) => (
               <button
                 key={option.decision}

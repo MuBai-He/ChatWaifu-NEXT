@@ -429,7 +429,7 @@ public final class SuggestionReview {
                                             && !activity.isDestroyed()
                                             && dialog.isShowing()) {
                                           dialog.dismiss();
-                                          toast("已保存，消息出处与变更记录已保留");
+                                          toast("已保存到本机。宁宁的后续处理和日历核验结果请查看行动记录。");
                                           onSaved.run();
                                         }
                                       });

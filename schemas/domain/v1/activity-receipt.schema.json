@@ -17,7 +17,8 @@
         "presented",
         "blocked",
         "opened",
-        "unknown"
+        "unknown",
+        "withdrawn"
       ],
       "title": "State",
       "type": "string"

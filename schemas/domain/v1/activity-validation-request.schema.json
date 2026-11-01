@@ -1,0 +1,27 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/activity-validation-request.schema.json",
+  "properties": {
+    "sequences": {
+      "items": {
+        "exclusiveMinimum": 0,
+        "type": "integer"
+      },
+      "maxItems": 200,
+      "minItems": 1,
+      "title": "Sequences",
+      "type": "array"
+    },
+    "session_id": {
+      "format": "uuid",
+      "title": "Session Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "session_id",
+    "sequences"
+  ],
+  "title": "ActivityValidationRequest",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

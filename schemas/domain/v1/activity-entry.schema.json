@@ -103,6 +103,11 @@
       "title": "Kind",
       "type": "string"
     },
+    "redacted": {
+      "default": false,
+      "title": "Redacted",
+      "type": "boolean"
+    },
     "reference": {
       "title": "Reference",
       "type": "string"

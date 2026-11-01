@@ -139,6 +139,54 @@ public class AiReviewBatchTest {
   }
 
   @Test
+  public void confirmedWorkKeepsOneDurableRuntimeReviewAcrossReopen() throws Exception {
+    String base = "https://fixture.invalid";
+    context.getSharedPreferences("backend", Context.MODE_PRIVATE).edit()
+        .putString("base", base).putString("owner_session", UUID.randomUUID().toString()).commit();
+    JSONObject item = proposal("runtime-review", "event");
+    JSONArray preview=prepare(item);
+    assertEquals(1, AiReviewBatch.confirm(memory, preview, NOW));
+    KnowledgeStore knowledge = new KnowledgeStore(memory, base);
+    JSONArray queued = RuntimeActions.list(knowledge);
+    assertEquals(1, queued.length());
+    String operation = queued.getJSONObject(0).getString("operation");
+    assertEquals("/v1/personal-assistant/work-items/review-confirmed",
+        queued.getJSONObject(0).getString("path"));
+    assertEquals(1, queued.getJSONObject(0).getJSONObject("payload")
+        .getInt("_native_work_revision"));
+    memory.close();
+    memory = new MemoryStore(context, name);
+    assertEquals(1, count("work_items"));
+    assertEquals(operation, RuntimeActions.list(new KnowledgeStore(memory, base))
+        .getJSONObject(0).getString("operation"));
+    assertThrows(IllegalStateException.class, () -> AiReviewBatch.confirm(memory, preview, NOW));
+    assertEquals(1, RuntimeActions.list(new KnowledgeStore(memory, base)).length());
+  }
+
+  @Test
+  public void reviewOutboxCapacityRollsBackTheWholeConfirmationBatch() throws Exception {
+    String base = "https://fixture.invalid";
+    context.getSharedPreferences("backend", Context.MODE_PRIVATE).edit()
+        .putString("base", base).putString("owner_session", UUID.randomUUID().toString()).commit();
+    KnowledgeStore knowledge = new KnowledgeStore(memory, base);
+    memory.getWritableDatabase().beginTransactionNonExclusive();
+    try {
+      for (int i = 0; i < 999; i++) memory.getWritableDatabase().execSQL(
+          "INSERT INTO runtime_actions(space,operation,path,payload,label) VALUES(?,?,?,?,?)",
+          new Object[] {knowledge.space, "existing-" + i, "/v1/agent/intents/fixture", "{}", "fixture"});
+      memory.getWritableDatabase().setTransactionSuccessful();
+    } finally { memory.getWritableDatabase().endTransaction(); }
+    JSONObject first = proposal("runtime-batch-first", "todo");
+    JSONObject second = proposal("runtime-batch-second", "event");
+    JSONArray preview = prepare(first, second);
+    assertThrows(IllegalStateException.class, () -> AiReviewBatch.confirm(memory, preview, NOW));
+    assertEquals(0, count("work_items"));
+    assertEquals(999, count("runtime_actions"));
+    assertEquals("pending", state(first));
+    assertEquals("pending", state(second));
+  }
+
+  @Test
   public void previewDoesNotWaitForTheWriterAndSiblingCloseKeepsTheDatabaseAlive() throws Exception {
     JSONObject item = proposal("read-only-preview", "fact");
     java.util.concurrent.ExecutorService threads = java.util.concurrent.Executors.newFixedThreadPool(2);

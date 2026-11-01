@@ -1120,7 +1120,7 @@ unified_owner_agent_harness:
   proposal: "docs/plans/unified-agent-harness-proposal-2026-10-31.md"
   evidence: "docs/operations/unified-agent-harness-validation-2026-10-31.md"
   storage_migration: 49
-  android_schema: 6
+  android_schema: 7
   runtime_owns_extraction: true
   production_runtime_owns_extraction: false
   open_delivery_gaps:
@@ -1133,6 +1133,14 @@ unified_owner_agent_harness:
     acceptance_data: 9
     release_blockers: 11
     note: "Delivery work items, not thirty independent code defects; see the original-plan audit at the end of the shared validation record."
+  gap_closure_batch_1:
+    status: source_and_local_checks_only
+    branch: "codex/harness-completion-20261101"
+    merged_baseline: "2b102b64241acabb7e8b3c98df95a78b525a95a3"
+    scope: "C01-C10 and U01-U03; real migration, rollout and acceptance remain open"
+    android: "0.6.4 / code 25 / schema 7; not installed"
+    local_checks: "86 backend, 127 TypeScript protocol, 5 Web review and 111 Android tests; types and Android build/lint pass"
+    note: "No delegation, no production switch and no new real-resource authorization. Original 30 delivery gates are not marked closed from source tests."
   default_standing_intent_shadow: true
   task_state_machine: existing_AgentTaskService
   temporal_review_fix:

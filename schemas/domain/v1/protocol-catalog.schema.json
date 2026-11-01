@@ -140,6 +140,11 @@
           "title": "Kind",
           "type": "string"
         },
+        "redacted": {
+          "default": false,
+          "title": "Redacted",
+          "type": "boolean"
+        },
         "reference": {
           "title": "Reference",
           "type": "string"
@@ -186,7 +191,8 @@
             "presented",
             "blocked",
             "opened",
-            "unknown"
+            "unknown",
+            "withdrawn"
           ],
           "title": "State",
           "type": "string"
@@ -198,6 +204,31 @@
         "state"
       ],
       "title": "ActivityReceipt",
+      "type": "object"
+    },
+    "ActivityValidationRequest": {
+      "properties": {
+        "sequences": {
+          "items": {
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          },
+          "maxItems": 200,
+          "minItems": 1,
+          "title": "Sequences",
+          "type": "array"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "sequences"
+      ],
+      "title": "ActivityValidationRequest",
       "type": "object"
     },
     "AffectState": {
@@ -6541,6 +6572,38 @@
       "title": "CharacterPromptCompiledPayload",
       "type": "object"
     },
+    "ConfirmedWorkReview": {
+      "properties": {
+        "expected_record_revision": {
+          "minimum": 1,
+          "title": "Expected Record Revision",
+          "type": "integer"
+        },
+        "operation_id": {
+          "format": "uuid",
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "record_id": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Record Id",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "record_id",
+        "expected_record_revision"
+      ],
+      "title": "ConfirmedWorkReview",
+      "type": "object"
+    },
     "ConversationInterruptCommand": {
       "properties": {
         "command_id": {
@@ -10614,6 +10677,19 @@
           "title": "Attempts",
           "type": "integer"
         },
+        "error_code": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Code"
+        },
         "evidence": {
           "$ref": "#/$defs/EvidenceRef"
         },
@@ -10625,6 +10701,19 @@
           ],
           "title": "Ingestion Mode",
           "type": "string"
+        },
+        "last_review_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Review Id"
         },
         "observation_id": {
           "format": "uuid",
@@ -10645,6 +10734,12 @@
         },
         "received_at": {
           "title": "Received At",
+          "type": "integer"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
           "type": "integer"
         },
         "room_id": {
@@ -10675,6 +10770,37 @@
         "policy_epoch"
       ],
       "title": "Observation",
+      "type": "object"
+    },
+    "OwnerWorkDecision": {
+      "properties": {
+        "operation_id": {
+          "format": "uuid",
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "pending": {
+          "default": true,
+          "title": "Pending",
+          "type": "boolean"
+        },
+        "received_at": {
+          "format": "date-time",
+          "title": "Received At",
+          "type": "string"
+        },
+        "request_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Request Hash",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation_id",
+        "request_hash",
+        "received_at"
+      ],
+      "title": "OwnerWorkDecision",
       "type": "object"
     },
     "ParticipantSnapshot": {
@@ -15567,6 +15693,17 @@
           "title": "Owner",
           "type": "string"
         },
+        "owner_decision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OwnerWorkDecision"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "previous_ends_at": {
           "anyOf": [
             {
@@ -16088,6 +16225,9 @@
     "activity_receipt": {
       "$ref": "#/$defs/ActivityReceipt"
     },
+    "activity_validation_request": {
+      "$ref": "#/$defs/ActivityValidationRequest"
+    },
     "agent_development_policy": {
       "$ref": "#/$defs/AgentDevelopmentPolicy"
     },
@@ -16321,6 +16461,9 @@
       ],
       "title": "Command"
     },
+    "confirmed_work_review": {
+      "$ref": "#/$defs/ConfirmedWorkReview"
+    },
     "conversation_interruption": {
       "$ref": "#/$defs/ConversationInterruption"
     },
@@ -16533,8 +16676,10 @@
     "reminder_occurrence",
     "work_item",
     "work_item_action",
+    "confirmed_work_review",
     "action_proposal",
     "activity_receipt",
+    "activity_validation_request",
     "activity_entry",
     "agent_development_policy",
     "candidate_feature",

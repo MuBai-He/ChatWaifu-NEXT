@@ -107,6 +107,8 @@ from chatwaifu_protocol.harness import (
     ActionProposal,
     ActivityEntry,
     ActivityReceipt,
+    ActivityValidationRequest,
+    ConfirmedWorkReview,
     EvidenceRef,
     ExecutionContext,
     IntentAction,
@@ -181,8 +183,10 @@ class ProtocolCatalog(ProtocolModel):
     reminder_occurrence: ReminderOccurrence
     work_item: WorkItem
     work_item_action: WorkItemAction
+    confirmed_work_review: ConfirmedWorkReview
     action_proposal: ActionProposal
     activity_receipt: ActivityReceipt
+    activity_validation_request: ActivityValidationRequest
     activity_entry: ActivityEntry
     agent_development_policy: AgentDevelopmentPolicy
     candidate_feature: CandidateFeature
@@ -320,11 +324,13 @@ SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "standing-intent-input": StandingIntentInput,
     "standing-intent-update": StandingIntentUpdate,
     "work-item": WorkItem,
+    "confirmed-work-review": ConfirmedWorkReview,
     "observation": Observation,
     "processing-request": ProcessingRequest,
     "reminder-occurrence": ReminderOccurrence,
     "action-proposal": ActionProposal,
     "activity-receipt": ActivityReceipt,
+    "activity-validation-request": ActivityValidationRequest,
     "activity-entry": ActivityEntry,
     "agent-development-policy": AgentDevelopmentPolicy,
     "candidate-feature": CandidateFeature,

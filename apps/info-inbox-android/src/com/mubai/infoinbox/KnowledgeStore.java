@@ -237,12 +237,14 @@ public final class KnowledgeStore {
         long captured=Long.parseLong(meta(captureKey,"0"));
         if(captured==0){captured=System.currentTimeMillis();putMeta(captureKey,Long.toString(captured));}
         long messageAt=source.getLong("created_at");
-        String mode=source.optString("_capture_mode",messageAt>=System.currentTimeMillis()-300000?"live":messageAt<captured?"historical":"delayed");
+        String mode=source.optString("_capture_mode","historical");
+        long sourceCaptured=source.optLong("_captured_at",captured);
         JSONArray drafts = KnowledgeWire.sourceRecords(source), ids = new JSONArray();
         boolean deferred = false;
         for (int j = 0; j < drafts.length(); j++) {
           JSONObject draft = drafts.getJSONObject(j);
           draft.getJSONObject("origin").put("capture_mode",mode);
+          draft.getJSONObject("origin").put("captured_at",sourceCaptured);
           JSONObject flight = pending(draft.getString("record_id"));
           if (flight != null && !flight.getString("hash").equals(KnowledgeWire.fingerprint(draft)))
             deferred = true;

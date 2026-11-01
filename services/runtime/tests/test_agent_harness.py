@@ -35,13 +35,21 @@ def source(
     }
 
 
-def push(c: TestClient, session: str, device: str, value: dict[str, Any], *, epoch: int = 0):
+def push(
+    c: TestClient,
+    session: str,
+    device: str,
+    value: dict[str, Any],
+    *,
+    epoch: int = 0,
+    policy_epoch: int = 0,
+):
     return c.post(
         "/v1/personal-information/sync/push",
         json={
             "session_id": session,
             "device_id": device,
-            "policy_epoch": 0,
+            "policy_epoch": policy_epoch,
             "schema_version": "1.1" if epoch else "1.0",
             "processing_epoch": epoch,
             "ingestion_mode": "live",
@@ -296,6 +304,306 @@ def test_simple_self_fact_uses_original_quote_instead_of_model_paraphrase(
     assert edited.status_code == 200, edited.text
     assert edited.json()["details"] == expanded
     assert 0 < len(edited.json()["title"]) <= 256
+
+
+@pytest.mark.parametrize("authorized", [False, True])
+def test_unbound_owner_confirmation_persists_continuation_without_expanding_authority(
+    harness: tuple[TestClient, RuntimeContainer, str, str],
+    monkeypatch: pytest.MonkeyPatch,
+    authorized: bool,
+) -> None:
+    from datetime import UTC, datetime
+
+    from chatwaifu_protocol.agent import DecisionRecord
+    from chatwaifu_protocol.harness import EvidenceRef, WorkItem
+
+    c, r, session, _device = harness
+    assert c.portal is not None
+    intent_id = None
+    if authorized:
+
+        class Planner:
+            async def decide(
+                self, persona: str, situation: JsonObject, source_refs: frozenset[str]
+            ) -> DecisionRecord:
+                return DecisionRecord(
+                    action="task",
+                    reason="先补查课程依据",
+                    source_refs=list(source_refs),
+                    goal="只读补查课程时间，缺少事实则等待主人补充。",
+                )
+
+        def hold_task(task_id: UUID) -> None:
+            return None
+
+        monkeypatch.setattr(r.agent_tasks, "_launch", hold_task)
+        r.harness.behavior.decision_factory = Planner
+        intent = c.post(
+            "/v1/agent/intents",
+            json={
+                "session_id": session,
+                "goal": "跟进课程并补查必要依据",
+                "room_ids": [ROOM],
+                "allowed_skill_ids": ["knowledge.search"],
+                "allow_writes": False,
+                "shadow": False,
+            },
+        )
+        assert intent.status_code == 201, intent.text
+        intent_id = intent.json()["intent_id"]
+    work = WorkItem(
+        work_item_id="review:unbound-course",
+        room_id=ROOM,
+        source_room_ids=[ROOM],
+        kind="event",
+        title="课程同周三，需要补查",
+        state="proposed",
+        acceptance="pending",
+        involvement="self",
+        ingestion_mode="historical",
+        evidence=[EvidenceRef(kind="knowledge", reference="source:seed", revision=1)],
+        updated_at=datetime.now(UTC),
+    )
+    assert c.portal.call(r.harness.repository.save_work, work, 0)
+    operation = str(uuid4())
+    body = {
+        "session_id": session,
+        "operation_id": operation,
+        "action": "confirm",
+        "expected_revision": 1,
+    }
+    response = c.post("/v1/personal-assistant/work-items/" + work.work_item_id, json=body)
+    assert response.status_code == 200, response.text
+    assert response.json()["state"] == "waiting"
+    assert response.json()["ingestion_mode"] == "historical"
+    assert response.json()["owner_decision"]["operation_id"] == operation
+    # The durable marker must survive a lost command receipt and must not depend
+    # on the original chat staying active or on another source message arriving.
+    c.portal.call(
+        r.database.execute,
+        "DELETE FROM harness_commands WHERE operation_id=?",
+        (operation,),
+    )
+    c.portal.call(r.harness.reconcile)
+    saved = c.get("/v1/personal-assistant/work-items", params={"session_id": session}).json()[
+        "items"
+    ][0]
+    assert saved["owner_decision"]["pending"] is False
+    if authorized:
+        assert saved["task_id"] is not None
+        task = c.portal.call(r.agent_tasks.repository.get, UUID(saved["task_id"]))
+        assert task is not None and task.state.value == "queued"
+        assert task.authorization.allow_writes is False
+        assert task.authorization.calendar_ids == []
+        assert str(task.authorization.intent_id) == intent_id
+        # Reproduce interruption after creating the durable task but before
+        # attaching it to the reviewed work. Recovery must reuse that task.
+        orphan = WorkItem.model_validate(saved)
+        assert orphan.owner_decision is not None
+        orphan = orphan.model_copy(
+            update={
+                "task_id": None,
+                "revision": orphan.revision + 1,
+                "owner_decision": orphan.owner_decision.model_copy(update={"pending": True}),
+            }
+        )
+        assert c.portal.call(r.harness.repository.save_work, orphan, saved["revision"])
+        c.portal.call(r.harness.reconcile)
+        recovered = c.get(
+            "/v1/personal-assistant/work-items", params={"session_id": session}
+        ).json()["items"][0]
+        assert recovered["task_id"] == saved["task_id"]
+    else:
+        assert saved["state"] == "blocked" and saved["task_id"] is None
+        assert "持续委托" in saved["waiting_reason"]
+    replay = c.post("/v1/personal-assistant/work-items/" + work.work_item_id, json=body)
+    assert replay.status_code == 200, replay.text
+    assert replay.json()["task_id"] == saved["task_id"]
+    conflict = c.post(
+        "/v1/personal-assistant/work-items/" + work.work_item_id,
+        json={**body, "changes": {"title": "不同的操作内容"}},
+    )
+    assert conflict.status_code == 409
+
+
+def test_native_confirmed_review_checks_record_version_and_recovers_lost_receipt(
+    harness: tuple[TestClient, RuntimeContainer, str, str],
+) -> None:
+    c, r, session, device = harness
+    assert c.portal is not None
+    value = source("native:course", "当天课程同周三，需要补查")
+    value["record"].update(
+        kind="event",
+        confirmed=True,
+        title="补课课程",
+        origin={"involvement": "self", "native_work_revision": 1},
+        source_refs=[{"record_id": "source:seed", "revision": 1}],
+    )
+    assert push(c, session, device, value).status_code == 200
+    body = {
+        "session_id": session,
+        "operation_id": str(uuid4()),
+        "record_id": "native:course",
+        "expected_record_revision": 1,
+    }
+    stale = c.post(
+        "/v1/personal-assistant/work-items/review-confirmed",
+        json={**body, "expected_record_revision": 2},
+    )
+    assert stale.status_code == 409
+    accepted = c.post("/v1/personal-assistant/work-items/review-confirmed", json=body)
+    assert accepted.status_code == 200, accepted.text
+    assert accepted.json()["owner_decision"]["operation_id"] == body["operation_id"]
+    c.portal.call(r.harness.reconcile)
+    # An acknowledged native record may be reprojected meanwhile. A replay still
+    # returns the same command result, including after a lost final receipt.
+    c.portal.call(
+        r.database.execute,
+        "DELETE FROM harness_commands WHERE operation_id=?",
+        (body["operation_id"],),
+    )
+    replay = c.post("/v1/personal-assistant/work-items/review-confirmed", json=body)
+    assert replay.status_code == 200, replay.text
+    assert replay.json()["work_item_id"] == accepted.json()["work_item_id"]
+    assert replay.json()["state"] == "blocked"
+    changed = c.post(
+        "/v1/personal-assistant/work-items/review-confirmed",
+        json={**body, "record_id": "source:seed"},
+    )
+    assert changed.status_code == 409
+
+
+@pytest.mark.parametrize("decision", ["retry", "reject"])
+def test_failed_understanding_has_versioned_review_and_bounded_recovery(
+    harness: tuple[TestClient, RuntimeContainer, str, str],
+    monkeypatch: pytest.MonkeyPatch,
+    decision: str,
+) -> None:
+    c, r, session, device = harness
+    assert c.portal is not None
+    activate(c, session, device, [{"kind": "knowledge", "reference": "source:seed", "revision": 1}])
+    assert (
+        push(c, session, device, source("source:failed-understanding"), epoch=2).status_code == 200
+    )
+
+    async def fail(request: object, **kwargs: object) -> None:
+        raise ValueError("synthetic invalid extraction")
+
+    monkeypatch.setattr(r.information, "analyze", fail)
+    for _ in range(5):
+        c.portal.call(r.database.execute, "UPDATE harness_observations SET available_at=0", ())
+        with pytest.raises(ValueError):
+            c.portal.call(r.harness.run_once)
+    failed = c.portal.call(r.harness.repository.failed_observations, "local")
+    assert len(failed) == 1 and failed[0].attempts == 5
+    assert failed[0].error_code == "ValueError"
+    # New failure variants are negotiated; old clients keep their previous inbox shape.
+    legacy = c.get("/v1/agent/review", params={"session_id": session}).json()["items"]
+    assert not any(item["kind"] == "observation" for item in legacy)
+    inbox = c.get(
+        "/v1/agent/review", params={"session_id": session, "include_failures": True}
+    ).json()["items"]
+    item = next(row for row in inbox if row["kind"] == "observation")
+    body = {
+        "session_id": session,
+        "decision": decision,
+        "expected_revision": item["revision"],
+        "operation_id": str(uuid4()),
+    }
+    path = "/v1/agent/review/observation/" + item["reference"]
+    response = c.post(path, json=body)
+    assert response.status_code == 200, response.text
+    assert c.post(path, json=body).status_code == 200
+    stale = c.post(path, json={**body, "operation_id": str(uuid4())})
+    assert stale.status_code == 409
+    assert c.portal.call(r.harness.repository.failed_observations, "local") == []
+
+    async def current():
+        row = await r.database.fetchone(
+            "SELECT state,payload FROM harness_observations WHERE observation_id=?",
+            (item["reference"],),
+        )
+        assert row is not None
+        return row[0], json.loads(str(row[1]))
+
+    state, payload = c.portal.call(current)
+    assert state == ("pending" if decision == "retry" else "done")
+    assert payload["attempts"] == (0 if decision == "retry" else 5)
+    assert payload["revision"] > item["revision"]
+
+
+def test_cancelled_understanding_releases_lease_without_spending_retry_budget(
+    harness: tuple[TestClient, RuntimeContainer, str, str],
+) -> None:
+    c, r, session, device = harness
+    assert c.portal is not None
+    activate(c, session, device, [{"kind": "knowledge", "reference": "source:seed", "revision": 1}])
+    assert push(c, session, device, source("source:interrupted"), epoch=2).status_code == 200
+    for _ in range(6):
+        c.portal.call(r.database.execute, "UPDATE harness_observations SET available_at=0", ())
+        item = c.portal.call(r.harness.repository.claim)
+        assert item is not None and item.attempts == 0
+        c.portal.call(r.harness.repository.release_observation, item)
+    assert c.portal.call(r.harness.repository.failed_observations, "local") == []
+
+
+def test_activity_survives_ordinary_updates_and_hides_only_revoked_sources(
+    harness: tuple[TestClient, RuntimeContainer, str, str],
+) -> None:
+    from chatwaifu_protocol.harness import EvidenceRef
+
+    c, r, session, device = harness
+    assert c.portal is not None
+    second = source("source:second")
+    assert push(c, session, device, second).status_code == 200
+    for key in ("source:seed", "source:second"):
+        c.portal.call(
+            r.harness.repository.record,
+            "local",
+            "action.event",
+            key,
+            "verified",
+            "合成日程已核验",
+            [EvidenceRef(kind="knowledge", reference=key, revision=1)],
+        )
+
+    def activity():
+        return c.get("/v1/agent/activity", params={"session_id": session}).json()
+
+    before = activity()
+    assert push(c, session, device, source("source:ordinary-update")).status_code == 200
+    assert activity()["context_epoch"] == before["context_epoch"]
+    ids = {
+        item["reference"]: item["sequence"]
+        for item in before["items"]
+        if item["kind"] == "action.event"
+    }
+    request = {"session_id": session, "sequences": list(ids.values())}
+    checked = c.post("/v1/agent/activity/validate", json=request)
+    assert checked.status_code == 200, checked.text
+    assert set(checked.json()["valid_sequences"]) == set(ids.values())
+    forgotten = source("source:seed")
+    forgotten.update(action="forget", expected_revision=1)
+    assert push(c, session, device, forgotten).status_code == 200
+    after = activity()
+    assert after["context_epoch"] != before["context_epoch"]
+    entries = {item["reference"]: item for item in after["items"] if item["kind"] == "action.event"}
+    assert entries["source:seed"]["redacted"] is True
+    assert entries["source:seed"]["evidence"] == [] and entries["source:seed"]["details"] == {}
+    assert entries["source:second"]["redacted"] is False
+    validated = c.post("/v1/agent/activity/validate", json=request).json()
+    assert validated["valid_sequences"] == [ids["source:second"]]
+    changed = source("source:second", text="合成原文修订", revision=1)
+    updated = push(
+        c, session, device, changed, policy_epoch=int(after["context_epoch"].rsplit(":", 1)[1])
+    )
+    assert updated.status_code == 200, updated.text
+    assert activity()["context_epoch"] == after["context_epoch"]
+    assert c.post("/v1/agent/activity/validate", json=request).json()["valid_sequences"] == []
+    revised_entries = {
+        item["reference"]: item for item in activity()["items"] if item["kind"] == "action.event"
+    }
+    assert revised_entries["source:second"]["redacted"] is False
 
 
 def test_third_party_is_reviewed_and_forgotten_evidence_cannot_be_confirmed(
@@ -1365,21 +1673,32 @@ def test_precise_capture_distinguishes_delayed_sync_from_backfill(
     delayed["record"]["origin"] = {"capture_mode": "delayed"}
     history = source("source:restored")
     history["record"]["origin"] = {"capture_mode": "historical"}
+    late = source("source:received-late")
+    late["record"]["origin"] = {
+        "capture_mode": "live",
+        "captured_at": int(time.time() * 1000) - 3600000,
+    }
     assert push(c, s, d, delayed, epoch=2).status_code == 200
     assert push(c, s, d, history, epoch=2).status_code == 200
+    assert push(c, s, d, late, epoch=2).status_code == 200
     assert c.portal is not None
 
     async def read():
         rows = await r.database.fetchall(
-            "SELECT reference,json_extract(pa"
-            "yload,'$.ingestion_mode') FROM h"
-            "arness_observations WHERE refere"
-            "nce IN ('source:offline','source"
-            ":restored')"
+            "SELECT reference,json_extract(payload,'$.ingestion_mode') "
+            "FROM harness_observations WHERE reference "
+            "IN ('source:offline','source:restored','source:received-late')"
         )
         return {str(row[0]): str(row[1]) for row in rows}
 
-    assert c.portal.call(read) == {"source:offline": "delayed", "source:restored": "historical"}
+    assert c.portal.call(read) == {
+        "source:offline": "delayed",
+        "source:restored": "historical",
+        "source:received-late": "delayed",
+    }
+    # Reception delay changes the observation, never the immutable input version.
+    assert push(c, s, d, late, epoch=2).status_code == 200
+    assert c.portal.call(read)["source:received-late"] == "delayed"
 
 
 def test_enable_and_resume_recheck_only_unhandled_live_work(
