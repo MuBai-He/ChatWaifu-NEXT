@@ -38,6 +38,19 @@
       "title": "Attempts",
       "type": "integer"
     },
+    "error_code": {
+      "anyOf": [
+        {
+          "maxLength": 64,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error Code"
+    },
     "evidence": {
       "$ref": "#/$defs/EvidenceRef"
     },
@@ -49,6 +62,19 @@
       ],
       "title": "Ingestion Mode",
       "type": "string"
+    },
+    "last_review_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Last Review Id"
     },
     "observation_id": {
       "format": "uuid",
@@ -69,6 +95,12 @@
     },
     "received_at": {
       "title": "Received At",
+      "type": "integer"
+    },
+    "revision": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Revision",
       "type": "integer"
     },
     "room_id": {

@@ -38,6 +38,7 @@ public final class RootGateway {
   public static final String BASE = "/data/adb/wechat-collector";
   private static final String BOOT = "/data/adb/service.d/info-inbox-collector.sh";
   private final Context context;
+  private Boolean captureMetadataSupported;
 
   public RootGateway(Context context) {
     this.context = context.getApplicationContext();
@@ -109,7 +110,7 @@ public final class RootGateway {
     return result;
   }
 
-  public void prepareHistoryCollection() throws Exception {
+  private void installCollectorScript() throws Exception {
     File script = new File(context.getCacheDir(), "collector-history-update.sh");
     try (InputStream in = context.getAssets().open("collector.sh");
         FileOutputStream out = new FileOutputStream(script)) {
@@ -129,6 +130,21 @@ public final class RootGateway {
             + "/collector.sh.next "
             + BASE
             + "/collector.sh");
+  }
+
+  public void ensureCaptureMetadata() throws Exception {
+    if (exec("grep -q 'CREATE TABLE IF NOT EXISTS message_capture' " + BASE
+        + "/collector.sh && echo yes || echo no").equals("yes")) return;
+    boolean running = status().optBoolean("running");
+    if (running) control("stop");
+    try {
+      installCollectorScript();
+      control("once");
+    } finally { if (running) control("start"); }
+  }
+
+  public void prepareHistoryCollection() throws Exception {
+    installCollectorScript();
     JSONObject state = status();
     if (state.optBoolean("running")) control("stop");
     try {
@@ -263,6 +279,25 @@ public final class RootGateway {
                + " sender_name";
   }
 
+  private String captureFields() throws Exception {
+    if(captureMetadataSupported==null)captureMetadataSupported=query(
+        "SELECT 1 AS supported FROM sqlite_master WHERE type='table'"
+        + " AND name='message_capture' LIMIT 1;").length()>0;
+    boolean supported=captureMetadataSupported;
+    return fields() + (supported
+        ? ",coalesce((SELECT capture_mode FROM message_capture f WHERE f.account_id=m.account_id"
+          + " AND f.msg_id=m.msg_id),'historical') AS _capture_mode,coalesce((SELECT captured_at"
+          + " FROM message_capture f WHERE f.account_id=m.account_id AND f.msg_id=m.msg_id),"
+          + "m.collected_at*1000) AS _captured_at"
+        : ",'historical' AS _capture_mode,m.collected_at*1000 AS _captured_at");
+  }
+
+  private String currentCaptureSql() {
+    return Boolean.TRUE.equals(captureMetadataSupported)
+        ? "EXISTS(SELECT 1 FROM message_capture f WHERE f.account_id=m.account_id"
+          + " AND f.msg_id=m.msg_id AND f.capture_mode IN ('live','delayed'))" : "0";
+  }
+
   public JSONArray knowledgeCandidates(MemoryStore store, String space, boolean history)
       throws Exception {
     long floor = System.currentTimeMillis() - 30L * 86400000L;
@@ -270,26 +305,27 @@ public final class RootGateway {
         "EXISTS(SELECT 1 FROM appstate.knowledge_priority p WHERE p.space="
             + SourceRules.sqlQuote(space)
             + " AND p.account_id=m.account_id AND p.msg_id=m.msg_id)";
-    String fullFields = fields().replace("substr(m.content,1,20000)", "m.content");
+    String fullFields = captureFields().replace("substr(m.content,1,20000)", "m.content");
+    String recent="(m.created_at>="+floor+" OR "+currentCaptureSql()+")";
     // Choose identities before projecting full text and sender/contact metadata.
     // Large restored histories must not sort hundreds of thousands of message bodies.
     return query(
         attachAppState(store)
             + "WITH chosen AS (SELECT m.account_id,m.msg_id,CASE WHEN "
             + confirmed
-            + " THEN 0 WHEN m.created_at>="
-            + floor
+            + " THEN 0 WHEN "
+            + recent
             + " THEN 1 ELSE 2 END AS priority"
             + " FROM messages m WHERE m.type=1 AND "
             + inboxScope(false)
-            + (history ? "" : " AND (m.created_at>=" + floor + " OR " + confirmed + ")")
+            + (history ? "" : " AND ("+recent+" OR " + confirmed + ")")
             + " AND NOT EXISTS(SELECT 1 FROM appstate.knowledge_sources k WHERE k.space="
             + SourceRules.sqlQuote(space)
             + " AND k.account_id=m.account_id AND k.msg_id=m.msg_id AND k.content=m.content)"
             + " ORDER BY CASE WHEN "
             + confirmed
-            + " THEN 0 WHEN m.created_at>="
-            + floor
+            + " THEN 0 WHEN "
+            + recent
             + " THEN 1 ELSE 2 END,m.created_at DESC LIMIT 10) SELECT "
             + fullFields
             + " FROM chosen q JOIN messages m ON m.account_id=q.account_id AND m.msg_id=q.msg_id"
@@ -413,7 +449,7 @@ public final class RootGateway {
     String state =
         "file:" + context.getDatabasePath("information.db").getAbsolutePath() + "?mode=ro";
     String fields =
-        fields().replace("substr(m.content,1,20000) AS content", "m.content AS content");
+        captureFields().replace("substr(m.content,1,20000) AS content", "m.content AS content");
     return query(
         "ATTACH DATABASE "
             + SourceRules.sqlQuote(state)
@@ -421,9 +457,11 @@ public final class RootGateway {
             + fields
             + " FROM messages m LEFT JOIN contacts c ON c.account_id=m.account_id AND"
             + " c.username=m.talker LEFT JOIN appstate.source_snapshots s ON"
-            + " s.account_id=m.account_id AND s.msg_id=m.msg_id WHERE m.type=1 AND m.created_at>="
+            + " s.account_id=m.account_id AND s.msg_id=m.msg_id WHERE m.type=1 AND (m.created_at>="
             + floor
+            + " OR " + currentCaptureSql() + ")"
             + earlier
+            + " AND " + RuntimeProcessing.nativeScopeSql(store,"m.account_id","m.talker",true)
             + " AND NOT EXISTS(SELECT 1 FROM appstate.conversation_exclusions e WHERE"
             + " e.account_id=m.account_id AND e.talker=m.talker)"
             + " AND ((s.base_ref IS NULL AND NOT EXISTS(SELECT 1 FROM appstate.ai_processed p WHERE"

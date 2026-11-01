@@ -269,6 +269,14 @@ class SQLiteKnowledgeRepository:
                             if body.schema_version == "1.1"
                             else None
                         )
+                        captured_at = record.origin.get("captured_at")
+                        if (
+                            declared == "live"
+                            and isinstance(captured_at, int)
+                            and not isinstance(captured_at, bool)
+                            and now_ms() - captured_at > 300000
+                        ):
+                            declared = "delayed"
                         mode = (
                             declared
                             if isinstance(declared, str)

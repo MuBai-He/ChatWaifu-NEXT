@@ -87,6 +87,12 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE INDEX IF NOT EXISTS messages_talker_time ON messages(account_id,talker,created_at,msg_id);
 CREATE INDEX IF NOT EXISTS messages_type_time ON messages(type,created_at DESC,msg_id DESC);
 CREATE INDEX IF NOT EXISTS messages_server_id ON messages(account_id,server_id);
+CREATE TABLE IF NOT EXISTS message_capture (
+ account_id TEXT NOT NULL,msg_id INTEGER NOT NULL,
+ capture_mode TEXT NOT NULL CHECK(capture_mode IN ('live','delayed','historical')),
+ first_seen_at INTEGER NOT NULL,captured_at INTEGER NOT NULL,
+ PRIMARY KEY(account_id,msg_id)
+);
 CREATE TABLE IF NOT EXISTS contacts (
  account_id TEXT NOT NULL, username TEXT NOT NULL, nickname TEXT,
  remark TEXT, type INTEGER, PRIMARY KEY(account_id,username)
@@ -104,6 +110,17 @@ CREATE TEMP TABLE batch AS SELECT b.* FROM source.message b WHERE b.msgId >= (
 );
 CREATE TEMP TABLE stats AS SELECT count(*) AS new_messages FROM batch b
  WHERE NOT EXISTS(SELECT 1 FROM messages m WHERE m.account_id='$ACCOUNT_ID' AND m.msg_id=b.msgId);
+INSERT INTO message_capture(account_id,msg_id,capture_mode,first_seen_at,captured_at)
+ SELECT '$ACCOUNT_ID',b.msgId,
+ CASE WHEN m.msg_id IS NOT NULL THEN 'live'
+ WHEN p.account_id IS NULL OR b.msgId<=p.last_msg_id THEN 'historical'
+ WHEN b.createTime<p.last_success*1000 THEN 'delayed' ELSE 'live' END,
+ coalesce(m.collected_at,unixepoch())*1000,unixepoch()*1000
+ FROM batch b LEFT JOIN messages m ON m.account_id='$ACCOUNT_ID' AND m.msg_id=b.msgId
+ LEFT JOIN collection_state p ON p.account_id='$ACCOUNT_ID'
+ WHERE m.msg_id IS NULL OR m.content IS NOT b.content OR m.created_at IS NOT b.createTime
+ ON CONFLICT(account_id,msg_id) DO UPDATE SET capture_mode=excluded.capture_mode,
+ captured_at=excluded.captured_at;
 INSERT INTO messages(account_id,msg_id,server_id,type,status,is_send,is_show_timer,created_at,talker,content,
  img_path,reserved,lvbuffer,trans_content,trans_brand_wording,talker_id,biz_client_msg_id,
  biz_chat_id,biz_chat_user_id,msg_seq,flag,solitaire_fold_info,history_id,collected_at,updated_at)

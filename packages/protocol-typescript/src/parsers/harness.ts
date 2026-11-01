@@ -47,6 +47,15 @@ export const intentSchema = z.object({
   created_at: z.string(),
 });
 export const workSchema = z.object({
+  owner_decision: z
+    .object({
+      operation_id: z.string().uuid(),
+      request_hash: z.string().regex(/^[0-9a-f]{64}$/),
+      received_at: z.string(),
+      pending: z.boolean().default(true),
+    })
+    .nullable()
+    .default(null),
   requested_fields: z.array(z.string()).max(16).default([]),
   migration_target: z.record(z.string(), z.json()).default({}),
   work_item_id: z.string(),
@@ -108,6 +117,7 @@ export const workSchema = z.object({
   updated_at: z.string(),
 });
 export const activitySchema = z.object({
+  redacted: z.boolean().default(false),
   delivery_history: z.array(z.record(z.string(), z.json())).default([]),
   details: z.record(z.string(), z.json()).default({}),
   delivery: z.record(z.string(), z.string()).default({}),

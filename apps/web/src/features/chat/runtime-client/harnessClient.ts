@@ -152,25 +152,33 @@ export const readHarnessEvidence = (
 
 const reviewEntry = z.object({
   current_text: z.string().optional(),
-  kind: z.enum(["memory", "sync"]),
+  kind: z.enum(["memory", "sync", "observation"]),
   reference: z.string(),
   title: z.string(),
   text: z.string(),
   reason: z.string(),
   revision: z.number().int(),
   evidence: z
-    .array(z.object({ text: z.string(), occurred_at: z.string() }))
+    .array(
+      z.object({
+        text: z.string().optional(),
+        occurred_at: z.string().optional(),
+        kind: z.enum(["event", "knowledge"]).optional(),
+        reference: z.string().optional(),
+        revision: z.number().int().positive().optional(),
+      }),
+    )
     .optional(),
 });
 export const getHarnessReview = (session: string) =>
   requestRuntime(
-    `/v1/agent/review?session_id=${encodeURIComponent(session)}`,
+    `/v1/agent/review?session_id=${encodeURIComponent(session)}&include_failures=true`,
     z.object({ items: z.array(reviewEntry) }),
   );
 export const decideHarnessReview = (
   session: string,
   item: z.infer<typeof reviewEntry>,
-  decision: "accept" | "reject" | "keep_local" | "keep_server",
+  decision: "accept" | "reject" | "keep_local" | "keep_server" | "retry",
 ) =>
   requestRuntime(
     `/v1/agent/review/${item.kind}/${encodeURIComponent(item.reference)}`,

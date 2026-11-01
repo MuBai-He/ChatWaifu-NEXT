@@ -18,6 +18,10 @@ public final class HarnessActivity extends Activity {
   private final ExecutorService worker = Executors.newSingleThreadExecutor();
   private LinearLayout content;
   private int generation;
+  private int workOffset;
+  private long activityBefore;
+  private final java.util.ArrayList<Long> activityPages=new java.util.ArrayList<>();
+  private String connection="";
 
   @Override public void onCreate(Bundle state) {
     super.onCreate(state);
@@ -47,6 +51,8 @@ public final class HarnessActivity extends Activity {
     worker.execute(() -> {
       try (MemoryStore memory = new MemoryStore(this)) {
         BackendSettings backend = new BackendSettings(this);
+        String identity=backend.base()+"\n"+backend.session();
+        if(!identity.equals(connection)){connection=identity;workOffset=0;activityBefore=0;activityPages.clear();}
         KnowledgeStore store = new KnowledgeStore(memory, backend.base());
         RuntimeBackendClient client = backend.client();
         JSONObject snapshot;
@@ -59,11 +65,15 @@ public final class HarnessActivity extends Activity {
             getIntent().removeExtra("activity_sequence");
           }
           String session = backend.session();
+          JSONObject workPage=client.request("/v1/personal-assistant/work-items?session_id="+session+"&limit=30&offset="+workOffset,null);
+          JSONObject activityPage=client.request("/v1/agent/activity?session_id="+session+(activityBefore>0?"&before="+activityBefore:""),null);
           snapshot = new JSONObject()
-              .put("review", client.request("/v1/agent/review?session_id=" + session, null).getJSONArray("items"))
+              .put("review", client.request("/v1/agent/review?session_id=" + session + "&include_failures=true", null).getJSONArray("items"))
               .put("intents", client.request("/v1/agent/intents?session_id=" + session, null).getJSONArray("items"))
-              .put("work", client.request("/v1/personal-assistant/work-items?session_id=" + session, null).getJSONArray("items"))
-              .put("activity", client.request("/v1/agent/activity?session_id=" + session, null).getJSONArray("items"));
+              .put("work",workPage.getJSONArray("items")).put("work_offset",workOffset)
+              .put("work_next",workPage.opt("next_offset"))
+              .put("activity",activityPage.getJSONArray("items")).put("activity_before",activityBefore)
+              .put("activity_next",activityPage.opt("next_before"));
           store.putMeta("harness_snapshot", snapshot.toString());
         } catch (Exception unavailable) {
           String cached = store.meta("harness_snapshot", "");
@@ -131,10 +141,14 @@ public final class HarnessActivity extends Activity {
       JSONObject check=checks.getJSONObject(i);label(check.getString("title"),17);label(check.getString("text"),14);label(check.getString("reason"),14);if(check.has("current_text"))label("当前服务端："+check.getString("current_text"),14);
       JSONArray evidence=check.optJSONArray("evidence");if(evidence!=null)for(int j=0;j<evidence.length();j++)label(evidence.getJSONObject(j).optString("text"),14);
       boolean memory=check.getString("kind").equals("memory");
-      content.addView(NativeUi.button(this,memory?"确认保存":"保留本机修改",()->decideReview(check,memory?"accept":"keep_local"),false));
-      content.addView(NativeUi.button(this,memory?"拒绝保存":"采用服务端版本",()->decideReview(check,memory?"reject":"keep_server"),false));
+      boolean failed=check.getString("kind").equals("observation");
+      if(failed)content.addView(NativeUi.button(this,"查看原文",()->showEvidence(check),false));
+      content.addView(NativeUi.button(this,failed?"重新处理":memory?"确认保存":"保留本机修改",()->decideReview(check,failed?"retry":memory?"accept":"keep_local"),false));
+      content.addView(NativeUi.button(this,failed?"跳过本次版本":memory?"拒绝保存":"采用服务端版本",()->decideReview(check,failed||memory?"reject":"keep_server"),false));
     }
     JSONArray work = snapshot.getJSONArray("work");
+    workOffset=snapshot.optInt("work_offset",0);
+    activityBefore=snapshot.optLong("activity_before",0);
     int pending = 0;
     for (int i = 0; i < work.length(); i++) {
       JSONObject item = work.getJSONObject(i);
@@ -157,6 +171,8 @@ public final class HarnessActivity extends Activity {
       if (item.getString("state").matches("waiting|blocked"))
         label(item.getString("title") + "\n" + item.optString("waiting_reason", "需要补充资料或检查授权，可在对话中继续。"), 14);
     }
+    if(workOffset>0)content.addView(NativeUi.button(this,"上一页事项",()->{workOffset=Math.max(0,workOffset-30);refresh();},false));
+    if(!snapshot.isNull("work_next")&&snapshot.has("work_next"))content.addView(NativeUi.button(this,"下一页事项",()->{workOffset=snapshot.optInt("work_next");refresh();},false));
     label("行动时间线", 20);
     JSONArray activity = snapshot.getJSONArray("activity");
     if (activity.length() == 0) label("尚无处理记录。", 14);
@@ -164,6 +180,10 @@ public final class HarnessActivity extends Activity {
       JSONObject item = activity.getJSONObject(i);
       label(item.getString("created_at") + "\n" + item.getString("summary"), 14);
     }
+    if(!activityPages.isEmpty())content.addView(NativeUi.button(this,"较新的行动记录",()->{
+      activityBefore=activityPages.remove(activityPages.size()-1);refresh();},false));
+    if(!snapshot.isNull("activity_next")&&snapshot.has("activity_next"))content.addView(NativeUi.button(this,"更早的行动记录",()->{
+      activityPages.add(activityBefore);activityBefore=snapshot.optLong("activity_next");refresh();},false));
   }
 
   private void showEvidence(JSONObject item) {
@@ -235,16 +255,73 @@ public final class HarnessActivity extends Activity {
   }
 
   private void showDraft(JSONObject action) {
-    try {
-      JSONObject body = action.getJSONObject("payload"), changes = body.optJSONObject("changes");
-      String text = changes == null ? "待提交的操作：" + body.getString("action") : changes.optString("title") + "\n" + changes.optString("details");
-      new AlertDialog.Builder(this).setTitle(action.getString("label")).setMessage(text + "\n\n如有版本冲突，请保留或复制修改内容，刷新后重新核对。")
-          .setNegativeButton("保留", null).setPositiveButton("撤回本机修改", (d, which) -> worker.execute(() -> {
-            try (MemoryStore memory = new MemoryStore(this)) { RuntimeActions.discard(new KnowledgeStore(memory, new BackendSettings(this).base()), action.optString("operation")); }
-            catch(Exception unavailable) {runOnUiThread(()->Toast.makeText(this,"撤回未完成，本机修改仍保留。",Toast.LENGTH_LONG).show());}
-            runOnUiThread(this::refresh);
-          })).show();
-    } catch (Exception invalid) { Toast.makeText(this, "无法读取这项修改", Toast.LENGTH_LONG).show(); }
+    final int ticket=generation;
+    worker.execute(()->{
+      try(MemoryStore memory=new MemoryStore(this)) {
+        BackendSettings backend=new BackendSettings(this);
+        String base=backend.base(),session=backend.session();
+        KnowledgeStore store=new KnowledgeStore(memory,base);
+        JSONObject body=action.getJSONObject("payload"),changes=body.optJSONObject("changes");
+        boolean nativeReview=body.has("_native_local_id"),conflict=action.getString("state").equals("conflict");
+        JSONObject local=nativeReview?new OrganizerStore(memory).work(body.getString("_native_local_id")):changes;
+        String text="本机修改\n"+(local==null?action.getString("label"):draftSummary(local));
+        int revision=0;boolean retry=false;
+        if(conflict) {
+          if(nativeReview&&local!=null) {
+            text+="\n\n将使用上面这份本机当前内容重新确认。原文和事项同步后，宁宁仍会核对服务端版本及授权范围。";
+            retry=true;
+          } else if(!nativeReview) {
+            try {
+              JSONObject current=backend.client().request(action.getString("path")+"?session_id="+android.net.Uri.encode(session),null);
+              revision=current.getInt("revision");retry=true;
+              text+="\n\n当前服务端\n"+draftSummary(current)+"\n\n确认后将按这个版本重新提交本机修改，再有变化时仍会进入核对。";
+            } catch(Exception unavailable) {text+="\n\n暂时无法读取当前服务端版本。请联网后重新打开，本机内容已保留。";}
+          }
+        }
+        final String message=text;final int expected=revision;final boolean allowRetry=retry;
+        runOnUiThread(()->{
+          if(isFinishing()||isDestroyed()||ticket!=generation)return;
+          try {
+            AlertDialog.Builder dialog=new AlertDialog.Builder(this).setTitle(action.getString("label"))
+                .setMessage(message).setNegativeButton("保留",null)
+                .setNeutralButton("撤回本机修改",(d,w)->discardDraft(action,base));
+            if(allowRetry)dialog.setPositiveButton("确认并重新提交",(d,w)->worker.execute(()->{
+              try(MemoryStore current=new MemoryStore(this)) {
+                BackendSettings now=new BackendSettings(this);
+                if(!base.equals(now.base())||!session.equals(now.session()))throw new IllegalStateException("连接已变化");
+                RuntimeActions.rebase(new KnowledgeStore(current,base),action.getString("operation"),expected);
+                runOnUiThread(this::refresh);
+              } catch(Exception changed){runOnUiThread(()->Toast.makeText(this,"未重新提交，请刷新后核对连接或版本。本机修改仍保留。",Toast.LENGTH_LONG).show());}
+            }));
+            dialog.show();
+          }catch(Exception invalid){Toast.makeText(this,"无法读取这项修改",Toast.LENGTH_LONG).show();}
+        });
+      }catch(Exception invalid){runOnUiThread(()->Toast.makeText(this,"无法读取这项修改，本机内容仍保留。",Toast.LENGTH_LONG).show());}
+    });
+  }
+
+  private String draftSummary(JSONObject value) {
+    StringBuilder text=new StringBuilder(value.optString("title",value.optString("goal","事项")));
+    if(!value.optString("details").isEmpty())text.append("\n").append(value.optString("details"));
+    if(value.has("state")) {
+      String state=value.optString("state");
+      text.append("\n状态：").append(state.equals("paused")?"已暂停":state.equals("revoked")?"已撤销":
+          state.equals("active")?"生效中":state.equals("completed")?"已完成":state.equals("cancelled")?"已取消":
+          state.equals("blocked")?"需要核对":state.equals("waiting")?"正在等待":"待处理");
+    }
+    if(value.has("allow_writes"))text.append("\n允许动作：").append(value.optBoolean("allow_writes")?"所选范围内可修改":"只读");
+    for(String key:new String[]{"start_date","end_date","starts_at","ends_at","due_at","due_date","remind_at"})
+      if(value.has(key)&&!value.isNull(key))text.append("\n").append(
+          key.startsWith("start")?"开始：":key.startsWith("end")?"结束：":key.equals("remind_at")?"提醒：":"截止：").append(value.optString(key));
+    return text.toString();
+  }
+
+  private void discardDraft(JSONObject action, String base) {
+    worker.execute(()->{
+      try(MemoryStore memory=new MemoryStore(this)){RuntimeActions.discard(new KnowledgeStore(memory,base),action.optString("operation"));}
+      catch(Exception unavailable){runOnUiThread(()->Toast.makeText(this,"撤回未完成，本机修改仍保留。",Toast.LENGTH_LONG).show());}
+      runOnUiThread(this::refresh);
+    });
   }
 
   private void intentButton(JSONObject item, String label, String action) throws Exception {

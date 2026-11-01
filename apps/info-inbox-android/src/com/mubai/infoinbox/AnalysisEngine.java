@@ -120,6 +120,7 @@ public final class AnalysisEngine {
         batch =
             store.claim(System.currentTimeMillis(), fullHistory ? 0 : store.intakeFloor(), oldest);
         if (batch == null) return null;
+        if(batch.optInt("priority",2)<2)oldest=false;
         if (!oldest) break;
         JSONArray earlier =
             root.earlierPendingSources(memory, batch.getJSONArray("sources").getJSONObject(0));
@@ -143,8 +144,8 @@ public final class AnalysisEngine {
               store.workItems(false),
               background,
               historyGate(
-                  context, fullHistory, epoch, new ConversationPolicy(memory).gate(store, batch)));
-      requireHistoryScope(context, fullHistory, epoch);
+                  context, fullHistory && oldest, epoch, new ConversationPolicy(memory).gate(store, batch)));
+      requireHistoryScope(context, fullHistory && oldest, epoch);
       if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
       store.finish(batch, response, System.currentTimeMillis());
       try {

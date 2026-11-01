@@ -41,6 +41,12 @@ public final class KnowledgeSync {
         KnowledgeStore store = new KnowledgeStore(memory, backend.base());
         RuntimeBackendClient client = backend.client();
         store.device();
+        if (Integer.parseInt(store.meta("processing_epoch", "0")) > 0) {
+          JSONObject ownership = client.request("/v1/personal-information/processing?session_id="
+              + backend.session(), null);
+          RuntimeProcessing.rememberOwnership(context, store, backend, ownership.getJSONArray("items"));
+          store.putMeta("owner_review_supported", Boolean.toString(ownership.optBoolean("owner_review_supported")));
+        }
         synchronized (ConversationPolicy.SEND_LOCK) {
           // Capture local edits before any remote version can replace their baseline.
           store.captureLocalState();
@@ -61,10 +67,10 @@ public final class KnowledgeSync {
                     || context
                         .getSharedPreferences("knowledge", Context.MODE_PRIVATE)
                         .getBoolean("history", true));
-        JSONArray sources =
-            new RootGateway(context).knowledgeCandidates(memory, store.space, history);
+        RootGateway root = new RootGateway(context);
+        root.ensureCaptureMetadata();
+        JSONArray sources = root.knowledgeCandidates(memory, store.space, history);
         synchronized (ConversationPolicy.SEND_LOCK) {
-          if(HistoryImport.requested(context))for(int i=0;i<sources.length();i++)if(sources.getJSONObject(i).getLong("created_at")<System.currentTimeMillis()-300000)sources.getJSONObject(i).put("_capture_mode","historical");
           store.intake(sources);
         }
         for (int batch = 0; batch < 3; batch++) {
@@ -135,6 +141,23 @@ public final class KnowledgeSync {
       JSONArray mutations,
       JSONArray policies)
       throws Exception {
+    if (policies.length() > 0 || mutations.length() == 0)
+      pushGroup(client, backend, store, new JSONArray(), policies, 0);
+    java.util.LinkedHashMap<Integer,JSONArray> groups = new java.util.LinkedHashMap<>();
+    for (int i=0;i<mutations.length();i++) {
+      JSONObject mutation=mutations.getJSONObject(i),record=mutation.getJSONObject("record");
+      int epoch=Integer.parseInt(store.meta("processing_epoch:"+record.getString("room_id"),"0"));
+      JSONArray batch=groups.get(epoch);
+      if(batch==null){batch=new JSONArray();groups.put(epoch,batch);}
+      batch.put(mutation);
+    }
+    for(java.util.Map.Entry<Integer,JSONArray> group:groups.entrySet())
+      pushGroup(client,backend,store,group.getValue(),new JSONArray(),group.getKey());
+  }
+
+  private static void pushGroup(RuntimeBackendClient client, BackendSettings backend,
+      KnowledgeStore store, JSONArray mutations, JSONArray policies, int processingEpoch)
+      throws Exception {
     JSONObject body =
         new JSONObject()
             .put("session_id", backend.session())
@@ -142,7 +165,7 @@ public final class KnowledgeSync {
             .put("policy_epoch", store.epoch())
             .put("mutations", mutations)
             .put("policies", policies);
-    if(Integer.parseInt(store.meta("processing_epoch","0"))>0) body.put("device_label",android.os.Build.MANUFACTURER+" "+android.os.Build.MODEL).put("schema_version","1.1").put("processing_epoch",Integer.parseInt(store.meta("processing_epoch","0"))).put("ingestion_mode","live");
+    if(processingEpoch>0) body.put("device_label",android.os.Build.MANUFACTURER+" "+android.os.Build.MODEL).put("schema_version","1.1").put("processing_epoch",processingEpoch).put("ingestion_mode","historical");
     JSONObject response =
         client.request(
             "/v1/personal-information/sync/push",

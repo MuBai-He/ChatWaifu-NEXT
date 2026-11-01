@@ -31,8 +31,9 @@ public final class OrganizerStore {
         "CREATE TABLE queued_sources(ref TEXT PRIMARY KEY,base_ref TEXT NOT NULL,revision TEXT NOT"
             + " NULL,segment INTEGER NOT NULL,source_json TEXT NOT NULL,state TEXT NOT NULL DEFAULT"
             + " 'pending',run_id TEXT,retries INTEGER NOT NULL DEFAULT 0,next_attempt INTEGER NOT"
-            + " NULL DEFAULT 0,created_at INTEGER NOT NULL)");
+            + " NULL DEFAULT 0,created_at INTEGER NOT NULL,priority INTEGER NOT NULL DEFAULT 2)");
     db.execSQL("CREATE INDEX queue_ready ON queued_sources(state,next_attempt,created_at)");
+    db.execSQL("CREATE INDEX queue_priority_ready ON queued_sources(state,priority,created_at)");
     db.execSQL(
         "CREATE TABLE analysis_runs(id TEXT PRIMARY KEY,state TEXT NOT NULL,lease_until INTEGER NOT"
             + " NULL,input_json TEXT NOT NULL,error_code TEXT,created_at INTEGER NOT NULL)");
@@ -54,6 +55,15 @@ public final class OrganizerStore {
         "CREATE TABLE delivery_history(id TEXT PRIMARY KEY,work_id TEXT NOT NULL,revision INTEGER"
             + " NOT NULL,due_at INTEGER NOT NULL,state TEXT NOT NULL,updated_at INTEGER NOT NULL)");
     db.execSQL("CREATE TABLE organizer_meta(key TEXT PRIMARY KEY,value TEXT NOT NULL)");
+  }
+
+  static void ensureQueuePriority(SQLiteDatabase db) {
+    boolean found=false;
+    try(Cursor columns=db.rawQuery("PRAGMA table_info(queued_sources)",null)) {
+      while(columns.moveToNext())if(columns.getString(1).equals("priority"))found=true;
+    }
+    if(!found)db.execSQL("ALTER TABLE queued_sources ADD COLUMN priority INTEGER NOT NULL DEFAULT 2");
+    db.execSQL("CREATE INDEX IF NOT EXISTS queue_priority_ready ON queued_sources(state,priority,created_at)");
   }
 
   public long intakeFloor() {
@@ -139,6 +149,9 @@ public final class OrganizerStore {
           v.put("source_json", segment.toString());
           v.put("state", "pending");
           v.put("created_at", source.getLong("created_at"));
+          String capture=source.optString("_capture_mode","");
+          v.put("priority",capture.matches("live|delayed")?0:capture.equals("historical")?2:
+              source.getLong("created_at")>=intakeFloor()?1:2);
           db.insertOrThrow("queued_sources", null, v);
           added++;
           from = to;
@@ -196,18 +209,21 @@ public final class OrganizerStore {
       JSONArray sources = new JSONArray();
       int size = 0;
       String selectedAccount = null, selectedRoom = null;
+      int selectedPriority=-1;
       long latest = 0;
       try (Cursor c =
           db.rawQuery(
-              "SELECT q.source_json FROM queued_sources q JOIN source_snapshots s ON"
+              "SELECT q.source_json,q.priority FROM queued_sources q JOIN source_snapshots s ON"
                   + " s.base_ref=q.base_ref AND s.revision=q.revision WHERE q.state='pending' AND"
                   + " NOT EXISTS(SELECT 1 FROM conversation_exclusions e WHERE"
                   + " e.account_id=s.account_id AND e.talker=s.talker) AND q.next_attempt<=? AND"
-                  + " q.created_at>=? AND (s.account_id,s.talker) NOT IN (SELECT"
+                  + " (q.created_at>=? OR q.priority=0) AND "
+                  + RuntimeProcessing.nativeScopeSql(store,"s.account_id","s.talker",false)
+                  + " AND (s.account_id,s.talker) NOT IN (SELECT"
                   + " a.account_id,a.talker FROM queued_sources active JOIN source_snapshots a ON"
                   + " a.base_ref=active.base_ref WHERE active.state='leased') "
                   + (oldestFirst
-                      ? "AND NOT EXISTS(SELECT 1 FROM (SELECT base_ref,created_at,segment FROM"
+                      ? "AND (q.priority<2 OR NOT EXISTS(SELECT 1 FROM (SELECT base_ref,created_at,segment FROM"
                           + " queued_sources WHERE state='failed' UNION ALL SELECT"
                           + " base_ref,created_at,segment FROM queued_sources WHERE"
                           + " state='pending' AND next_attempt>"
@@ -216,9 +232,9 @@ public final class OrganizerStore {
                           + " e.account_id=s.account_id AND e.talker=s.talker AND"
                           + " (earlier.created_at<q.created_at OR (earlier.created_at=q.created_at"
                           + " AND (e.msg_id<s.msg_id OR (e.msg_id=s.msg_id AND"
-                          + " earlier.segment<q.segment))))) "
+                          + " earlier.segment<q.segment)))))) "
                       : "")
-                  + "ORDER BY q.created_at "
+                  + "ORDER BY q.priority,q.created_at "
                   + (oldestFirst ? "ASC" : "DESC")
                   + ",s.msg_id "
                   + (oldestFirst ? "ASC" : "DESC")
@@ -226,6 +242,7 @@ public final class OrganizerStore {
               new String[] {Long.toString(now), Long.toString(floor)})) {
         while (c.moveToNext()) {
           JSONObject source = new JSONObject(c.getString(0));
+          int priority=c.getInt(1);
           if (!new ConversationPolicy(store).allowsAiSource(source)) {
             db.execSQL(
                 "UPDATE queued_sources SET state='excluded' WHERE base_ref=? AND state='pending'",
@@ -233,10 +250,12 @@ public final class OrganizerStore {
             continue;
           }
           if (selectedRoom == null) {
+            selectedPriority=priority;
             selectedAccount = source.getString("account_id");
             selectedRoom = source.getString("talker");
             latest = source.getLong("created_at");
           }
+          if(priority!=selectedPriority)continue;
           if (!selectedAccount.equals(source.getString("account_id"))
               || !selectedRoom.equals(source.getString("talker"))
               || Math.abs(latest - source.getLong("created_at")) > 30L * 60000L) continue;
@@ -279,7 +298,7 @@ public final class OrganizerStore {
             new String[] {MemoryStore.reference(sources.getJSONObject(i))});
       }
       db.setTransactionSuccessful();
-      return new JSONObject().put("id", id).put("sources", sources);
+      return new JSONObject().put("id", id).put("sources", sources).put("priority",selectedPriority);
     } finally {
       db.endTransaction();
     }
@@ -1017,6 +1036,7 @@ public final class OrganizerStore {
       ContentValues handled = new ContentValues();
       handled.put("state", "handled");
       db.update("ai_reviews", handled, "ref=?", new String[] {ref});
+      RuntimeActions.ownerConfirmed(store, id, revision);
       db.setTransactionSuccessful();
       return id;
     } finally {

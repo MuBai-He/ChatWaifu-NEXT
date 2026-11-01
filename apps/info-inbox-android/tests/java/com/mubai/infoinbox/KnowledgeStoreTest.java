@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 
 import android.app.Application;
 import android.content.Context;
+import android.database.Cursor;
 import java.util.UUID;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -47,6 +48,72 @@ public class KnowledgeStoreTest {
     context.getSharedPreferences("runtime-processing", Context.MODE_PRIVATE).edit()
         .putString("https://fixture.invalid", "runtime")
         .putBoolean("message_connection", timely).commit();
+  }
+
+  @Test
+  public void blockedDeliverySurvivesReopenAndRevocationWithdrawsOnlyItsNotice() throws Exception {
+    java.net.ServerSocket server=new java.net.ServerSocket(0,20,java.net.InetAddress.getByName("127.0.0.1"));
+    java.util.concurrent.atomic.AtomicReference<JSONObject> response=new java.util.concurrent.atomic.AtomicReference<>();
+    java.util.concurrent.atomic.AtomicReference<Throwable> failure=new java.util.concurrent.atomic.AtomicReference<>();
+    java.util.concurrent.atomic.AtomicReference<JSONArray> validIds=new java.util.concurrent.atomic.AtomicReference<>(new JSONArray().put(2).put(3).put(4));
+    Thread endpoint=new Thread(()->{
+      while(!server.isClosed())try(java.net.Socket socket=server.accept()) {
+        java.io.InputStream input=socket.getInputStream();
+        java.io.ByteArrayOutputStream headers=new java.io.ByteArrayOutputStream();
+        String text="";
+        while(!text.endsWith("\r\n\r\n")) {int value=input.read();if(value<0)throw new java.io.EOFException();headers.write(value);text=headers.toString("UTF-8");}
+        int length=0;
+        for(String line:text.split("\r\n"))if(line.toLowerCase(java.util.Locale.ROOT).startsWith("content-length:"))length=Integer.parseInt(line.substring(line.indexOf(':')+1).trim());
+        input.readNBytes(length);
+        JSONObject body=text.startsWith("GET ")?response.get():text.contains("/validate ")
+            ?new JSONObject().put("valid_sequences",validIds.get()):new JSONObject();
+        byte[] bytes=body.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        socket.getOutputStream().write(("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\nContent-Length: "+bytes.length+"\r\n\r\n").getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+        socket.getOutputStream().write(bytes);socket.getOutputStream().flush();
+      } catch(Exception error) {if(!server.isClosed())failure.set(error);}
+    });
+    endpoint.setDaemon(true);endpoint.start();
+    try {
+      String base="http://127.0.0.1:"+server.getLocalPort();
+      context.getSharedPreferences("backend",Context.MODE_PRIVATE).edit().clear()
+          .putString("base",base).putString("owner_session",UUID.randomUUID().toString()).commit();
+      BackendSettings backend=new BackendSettings(context);
+      RuntimeBackendClient client=backend.client();store=new KnowledgeStore(memory,base);
+      android.app.NotificationManager manager=context.getSystemService(android.app.NotificationManager.class);
+      org.robolectric.Shadows.shadowOf((Application)context).grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS);
+      org.robolectric.Shadows.shadowOf(manager).setNotificationsEnabled(false);
+      store.putMeta("activity_cursor","1");
+      JSONObject ordinary=new JSONObject().put("sequence",2).put("kind","action.todo").put("state","verified")
+          .put("created_at",java.time.Instant.now().toString()).put("summary","合成待办已核验");
+      JSONObject page=new JSONObject().put("context_epoch","owner:0").put("delivery_validation_supported",true)
+          .put("next_cursor",2).put("items",new JSONArray().put(ordinary));
+      response.set(page);RuntimeProcessing.notifyChanges(context,store,client,backend);
+      assertEquals("2",store.meta("activity_cursor",""));
+      assertEquals(1,new JSONArray(store.meta("activity_pending_summaries","[]")).length());
+      assertEquals(0,manager.getActiveNotifications().length);
+      memory.close();memory=new MemoryStore(context,name);store=new KnowledgeStore(memory,base);
+      org.robolectric.Shadows.shadowOf(manager).setNotificationsEnabled(true);
+      response.set(new JSONObject(page.toString()).put("items",new JSONArray()));
+      RuntimeProcessing.notifyChanges(context,store,client,backend);
+      assertEquals(0,new JSONArray(store.meta("activity_pending_summaries","[]")).length());
+      assertEquals(1,manager.getActiveNotifications().length);
+      JSONObject important=new JSONObject(ordinary.toString()).put("sequence",3).put("kind","action.event");
+      response.set(new JSONObject(page.toString()).put("next_cursor",3).put("items",new JSONArray().put(important)));
+      org.robolectric.Shadows.shadowOf(manager).setNotificationsEnabled(false);
+      RuntimeProcessing.notifyChanges(context,store,client,backend);
+      assertEquals("2",store.meta("activity_cursor",""));
+      org.robolectric.Shadows.shadowOf(manager).setNotificationsEnabled(true);
+      RuntimeProcessing.notifyChanges(context,store,client,backend);
+      assertEquals("3",store.meta("activity_cursor",""));assertEquals(2,manager.getActiveNotifications().length);
+      validIds.set(new JSONArray().put(2).put(4));
+      store.putMeta("activity_pending_summaries",new JSONArray().put(new JSONObject(ordinary.toString()).put("sequence",4)).toString());
+      response.set(new JSONObject(page.toString()).put("next_cursor",3).put("items",new JSONArray()).put("context_epoch","owner:0"));
+      RuntimeProcessing.notifyChanges(context,store,client,backend);
+      assertEquals(1,manager.getActiveNotifications().length);
+      assertEquals(2,manager.getActiveNotifications()[0].getNotification().extras.getLong("activity_sequence"));
+      assertEquals(1,new JSONArray(store.meta("activity_pending_summaries","[]")).length());
+      assertNull(failure.get());
+    } finally {server.close();endpoint.join(5000);}
   }
 
   @Test
@@ -189,7 +256,7 @@ public class KnowledgeStoreTest {
     memory.close();
     memory = new MemoryStore(context, name);
     store = new KnowledgeStore(memory, "https://fixture.invalid");
-    assertEquals(6, memory.getReadableDatabase().getVersion());
+    assertEquals(7, memory.getReadableDatabase().getVersion());
     assertEquals("已有的长期记忆", memory.list().getJSONObject(0).getString("title"));
     assertEquals(0, store.mutations().length());
   }
@@ -230,6 +297,114 @@ public class KnowledgeStoreTest {
         .put("created_at", 1791800000000L)
         .put("is_send", 0)
         .put("conversation_title", "合成会话");
+  }
+
+  @org.junit.Test
+  public void partialOwnershipStopsOnlyPreparedOrRuntimeSources() throws Exception {
+    String base="https://fixture.invalid";
+    context.getSharedPreferences("backend",Context.MODE_PRIVATE).edit()
+        .putString("base",base).putString("owner_session",UUID.randomUUID().toString()).commit();
+    JSONObject runtime=source("已交接").put("type",1).put("talker","runtime-room").put("msg_id",41);
+    JSONObject preparing=source("正在交接").put("type",1).put("talker","preparing-room").put("msg_id",42);
+    JSONObject nativeSource=source("尚未交接").put("type",1).put("talker","native-room").put("msg_id",43);
+    String runtimeRoom=store.registerRoom(runtime), preparingRoom=store.registerRoom(preparing);
+    String nativeRoom=store.registerRoom(nativeSource);
+    BackendSettings backend=new BackendSettings(context);
+    RuntimeProcessing.rememberOwnership(context,store,backend,new JSONArray()
+        .put(new JSONObject().put("room_id",runtimeRoom).put("state","runtime").put("epoch",2))
+        .put(new JSONObject().put("room_id",preparingRoom).put("state","preparing").put("epoch",3)));
+    assertFalse(RuntimeProcessing.owns(context));
+    assertEquals("2",store.meta("processing_epoch:"+runtimeRoom,"0"));
+    assertEquals("3",store.meta("processing_epoch:"+preparingRoom,"0"));
+    OrganizerStore organizer=new OrganizerStore(memory);
+    organizer.enqueue(new JSONArray().put(runtime).put(preparing).put(nativeSource));
+    JSONObject batch=organizer.claim(System.currentTimeMillis(),0,false);
+    assertNotNull(batch);
+    assertEquals(1,batch.getJSONArray("sources").length());
+    assertEquals("native-room",batch.getJSONArray("sources").getJSONObject(0).getString("talker"));
+    RuntimeProcessing.rememberOwnership(context,store,backend,new JSONArray()
+        .put(new JSONObject().put("room_id",preparingRoom).put("state","runtime").put("epoch",3))
+        .put(new JSONObject().put("room_id",nativeRoom).put("state","runtime").put("epoch",4)));
+    assertTrue(RuntimeProcessing.owns(context));
+    assertNull(organizer.claim(System.currentTimeMillis(),0,false));
+  }
+
+  @org.junit.Test
+  public void prepareAll137SourcesPreservesScopeWithinTheProtocolBatchLimit() throws Exception {
+    String session=UUID.randomUUID().toString();
+    context.getSharedPreferences("backend",Context.MODE_PRIVATE).edit()
+        .putString("base","https://fixture.invalid").putString("owner_session",session).commit();
+    JSONArray rooms=new JSONArray();
+    for(int i=0;i<137;i++)rooms.put("source-room-"+i);
+    JSONArray requests=RuntimeProcessing.prepareRequests(new BackendSettings(context),store,rooms);
+    assertEquals(2,requests.length());
+    java.util.Set<String> seen=new java.util.HashSet<>();
+    for(int i=0;i<requests.length();i++) {
+      JSONObject request=requests.getJSONObject(i);JSONArray batch=request.getJSONArray("room_ids");
+      assertTrue(batch.length()>0&&batch.length()<=100);
+      assertEquals(session,request.getString("session_id"));
+      assertEquals(store.device(),request.getString("device_id"));
+      assertEquals(batch.length(),request.getJSONObject("watermarks").length());
+      for(int n=0;n<batch.length();n++)assertTrue(seen.add(batch.getString(n)));
+    }
+    assertEquals(137,seen.size());
+    for(int i=0;i<rooms.length();i++)assertTrue(seen.contains(rooms.getString(i)));
+  }
+
+  @org.junit.Test
+  public void delayedLiveCaptureKeepsItsOriginalTimeAndNeverBecomesBackfill() throws Exception {
+    long original=1500000000000L;
+    JSONObject message=source("延迟同步的新指令").put("created_at",original)
+        .put("_capture_mode","live").put("_captured_at",System.currentTimeMillis()-3600000);
+    store.intake(new JSONArray().put(message));
+    JSONObject record=store.mutations().getJSONObject(0).getJSONObject("record");
+    assertEquals(original,record.getLong("occurred_at"));
+    assertEquals("live",record.getJSONObject("origin").getString("capture_mode"));
+    assertEquals(message.getLong("_captured_at"),record.getJSONObject("origin").getLong("captured_at"));
+  }
+
+  @org.junit.Test
+  public void delayedCurrentInputPrecedesFailedHistoryWithoutChangingMessageTime() throws Exception {
+    long now=System.currentTimeMillis(), original=1500000000000L;
+    JSONObject history=source("历史积压").put("type",1).put("msg_id",71).put("_capture_mode","historical");
+    JSONObject fresh=source("延迟到达的当前输入").put("type",1).put("msg_id",72)
+        .put("created_at",original).put("_capture_mode","delayed");
+    OrganizerStore organizer=new OrganizerStore(memory);
+    organizer.enqueue(new JSONArray().put(history).put(fresh));
+    memory.getWritableDatabase().execSQL("UPDATE queued_sources SET state='failed' WHERE base_ref=?",
+        new Object[] {MemoryStore.reference(history)});
+    JSONObject batch=organizer.claim(now,now-7L*86400000L,true);
+    assertNotNull(batch);
+    assertEquals(0,batch.getInt("priority"));
+    assertEquals(1,batch.getJSONArray("sources").length());
+    assertEquals(original,batch.getJSONArray("sources").getJSONObject(0).getLong("created_at"));
+    assertEquals("延迟到达的当前输入",batch.getJSONArray("sources").getJSONObject(0).getString("content"));
+  }
+
+  @org.junit.Test
+  public void explicitConflictRebaseKeepsOriginalAndUsesNewOperationAndVersion() throws Exception {
+    RuntimeActions.enqueue(store,"/v1/personal-assistant/work-items/fixture",
+        new JSONObject().put("action","edit").put("expected_revision",2)
+            .put("changes",new JSONObject().put("title","本机修改")),"修改事项");
+    JSONObject original=RuntimeActions.list(store).getJSONObject(0);
+    String operation=original.getString("operation");
+    store.db.execSQL("UPDATE runtime_actions SET state='conflict' WHERE space=? AND operation=?",
+        new Object[]{store.space,operation});
+    RuntimeActions.rebase(store,operation,7);
+    JSONArray active=RuntimeActions.list(store);
+    assertEquals(1,active.length());
+    JSONObject current=active.getJSONObject(0),payload=current.getJSONObject("payload");
+    assertNotEquals(operation,current.getString("operation"));
+    assertEquals(operation,payload.getString("_replaces_operation"));
+    assertEquals(7,payload.getInt("expected_revision"));
+    assertEquals("本机修改",payload.getJSONObject("changes").getString("title"));
+    try(Cursor row=store.db.rawQuery("SELECT state,payload FROM runtime_actions WHERE space=? AND operation=?",
+        new String[]{store.space,operation})) {
+      assertTrue(row.moveToFirst());assertEquals("superseded",row.getString(0));
+      assertEquals(2,new JSONObject(row.getString(1)).getInt("expected_revision"));
+    }
+    assertThrows(IllegalStateException.class,()->RuntimeActions.rebase(store,operation,8));
+    assertEquals(1,RuntimeActions.list(store).length());
   }
 
   private JSONObject received(JSONObject draft, int revision) throws Exception {
