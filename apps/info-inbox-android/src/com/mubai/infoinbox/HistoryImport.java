@@ -16,10 +16,24 @@ public final class HistoryImport {
     return prefs(context).getBoolean("requested", false);
   }
 
+  static long epoch(Context context) {
+    return prefs(context).getLong("epoch", 0);
+  }
+
+  public static boolean oldestFirst(Context context) {
+    return prefs(context).getBoolean("oldest_first", false);
+  }
+
   public static synchronized void request(Context context) {
+    request(context, oldestFirst(context));
+  }
+
+  public static synchronized void request(Context context, boolean oldestFirst) {
     prefs(context)
         .edit()
         .putBoolean("requested", true)
+        .putBoolean("oldest_first", oldestFirst)
+        .putLong("epoch", epoch(context) + (requested(context) ? 0 : 1))
         .putString("state", "running")
         .putString("message", "准备全量处理，原有进度会继续使用")
         .commit();
@@ -28,6 +42,7 @@ public final class HistoryImport {
   public static synchronized void pause(Context context, String message) {
     prefs(context)
         .edit()
+        .putLong("epoch", epoch(context) + 1)
         .putBoolean("requested", false)
         .putString("state", "paused")
         .putString("message", message)
@@ -57,10 +72,43 @@ public final class HistoryImport {
     }
   }
 
+  static synchronized void phase(Context context, String phase, String message) {
+    if (!requested(context)) return;
+    prefs(context)
+        .edit()
+        .putString("phase", phase)
+        .putString("message", message)
+        .remove("last_error_code")
+        .apply();
+  }
+
+  static synchronized void failure(Context context, Exception failure) {
+    if (!requested(context)) return;
+    String phase = prefs(context).getString("phase", "");
+    String message =
+        phase.equals("collection")
+            ? "历史读取暂未完成，进度保留，稍后重试"
+            : phase.equals("intake") ? "资料入队暂未完成，进度保留，稍后重试" : "本轮整理未完成，进度保留，稍后重试";
+    prefs(context)
+        .edit()
+        .putString(
+            "last_error_code",
+            failure instanceof RootGateway.RootFailure
+                ? ((RootGateway.RootFailure) failure).code
+                : failure.getClass().getSimpleName())
+        .putString("message", message)
+        .commit();
+  }
+
   static synchronized void progress(Context context, JSONObject stats, JSONObject knowledge) {
     if (!requested(context)) return;
     String message =
-        "AI 已整理 "
+        (oldestFirst(context) ? "按历史顺序 · " : "新消息优先 · ")
+            + "同时整理 "
+            + stats.optInt("active_runs")
+            + " 个会话（最多 "
+            + OrganizerStore.MAX_CONCURRENCY
+            + " 个） · AI 已整理 "
             + stats.optInt("done")
             + " 段，待整理 "
             + stats.optInt("pending")

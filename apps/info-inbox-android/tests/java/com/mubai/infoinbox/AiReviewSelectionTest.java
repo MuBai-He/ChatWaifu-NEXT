@@ -53,4 +53,22 @@ public class AiReviewSelectionTest {
         () -> selection.replaceVisible(new JSONArray().put(new JSONObject())));
     assertEquals(1, selection.count());
   }
+
+  @Test
+  public void capturedSelectionRemainsStableUntilCopiedByWorker() throws Exception {
+    AiReviewSelection selection = new AiReviewSelection();
+    JSONObject original = item("original");
+    selection.replaceVisible(AiReviewSelection.prepare(new JSONArray().put(original)));
+    selection.all(true);
+    AiReviewSelection.Snapshot captured = selection.capture();
+    original.put("title", "外部修改");
+    selection.replaceVisible(new JSONArray().put(item("next")));
+    selection.all(true);
+    JSONArray first = captured.copy();
+    assertEquals("original", first.getJSONObject(0).getString("review_ref"));
+    assertEquals("同名建议", first.getJSONObject(0).getString("title"));
+    first.getJSONObject(0).put("title", "调用者修改");
+    assertEquals("同名建议", captured.copy().getJSONObject(0).getString("title"));
+    assertEquals("next", selection.snapshot().getJSONObject(0).getString("review_ref"));
+  }
 }

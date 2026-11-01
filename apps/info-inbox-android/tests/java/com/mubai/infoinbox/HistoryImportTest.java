@@ -52,4 +52,23 @@ public class HistoryImportTest {
     HistoryImport.request(context);
     assertTrue(HistoryImport.requested(context));
   }
+
+  @Test
+  public void currentPhaseClearsOldConnectionWarningAndKeepsHistoryOrder() {
+    Context context = RuntimeEnvironment.getApplication();
+    HistoryImport.request(context, true);
+    HistoryImport.phase(context, "analysis", "正在按历史顺序整理");
+    HistoryImport.failure(context, new java.net.SocketTimeoutException());
+    assertFalse(HistoryImport.status(context).contains("连接"));
+    HistoryImport.phase(context, "analysis", "正在继续整理");
+    assertEquals("正在继续整理", HistoryImport.status(context));
+    assertTrue(HistoryImport.oldestFirst(context));
+    long beforePause = HistoryImport.epoch(context);
+    HistoryImport.request(context, true);
+    assertEquals(beforePause, HistoryImport.epoch(context));
+    HistoryImport.pause(context, "暂时暂停");
+    HistoryImport.phase(context, "analysis", "迟到状态");
+    assertEquals("暂时暂停", HistoryImport.status(context));
+    assertTrue(HistoryImport.epoch(context) > beforePause);
+  }
 }
