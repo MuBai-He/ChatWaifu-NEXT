@@ -45,6 +45,7 @@ async def project_reminder_in(c: aiosqlite.Connection, work: WorkItem) -> JsonOb
     current = [ReminderOccurrence.model_validate_json(row[0]) for row in rows]
     active = (
         work.target_id is None
+        and work.reminder_policy != "none"
         and work.remind_at is not None
         and work.state
         not in {

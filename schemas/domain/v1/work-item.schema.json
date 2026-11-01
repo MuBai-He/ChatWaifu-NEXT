@@ -379,6 +379,15 @@
       "default": null,
       "title": "Reminder Offset Seconds"
     },
+    "reminder_policy": {
+      "default": "inherit",
+      "enum": [
+        "inherit",
+        "none"
+      ],
+      "title": "Reminder Policy",
+      "type": "string"
+    },
     "reminder_rule": {
       "default": "absolute",
       "enum": [

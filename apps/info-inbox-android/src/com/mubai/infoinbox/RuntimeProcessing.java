@@ -113,6 +113,35 @@ public final class RuntimeProcessing {
     return requests;
   }
 
+  private static boolean sameNativeVersion(JSONObject a,JSONObject b) {
+    return a.optString("content").equals(b.optString("content"))
+        &&a.optLong("created_at")==b.optLong("created_at")&&a.optInt("type",1)==b.optInt("type",1)
+        &&a.optInt("is_send")==b.optInt("is_send")&&a.optString("talker").equals(b.optString("talker"));
+  }
+
+  static JSONObject completedSourcesPage(KnowledgeStore store,String room,String after) throws Exception {
+    String account,talker;
+    try(Cursor mapping=store.db.rawQuery("SELECT account_id,talker FROM knowledge_rooms WHERE space=? AND room_id=?",new String[]{store.space,room})) {
+      if(!mapping.moveToFirst())return null;
+      account=mapping.getString(0);talker=mapping.getString(1);
+    }
+    JSONArray sources=new JSONArray();String next=after;
+    try(Cursor rows=store.db.rawQuery("SELECT s.base_ref,q.source_json,s.content FROM source_snapshots s INDEXED BY source_snapshot_scope"
+        + " CROSS JOIN queued_sources q INDEXED BY queue_version_states"
+        + " WHERE s.account_id=? AND s.talker=? AND s.base_ref>? AND q.base_ref=s.base_ref"
+        + " AND q.revision=s.revision AND q.segment=0 AND q.state='done'"
+        + " AND NOT EXISTS(SELECT 1 FROM queued_sources other WHERE other.base_ref=q.base_ref"
+        + " AND other.revision=q.revision AND other.state!='done') ORDER BY s.base_ref LIMIT 100",new String[]{account,talker,after})) {
+      while(rows.moveToNext()) {
+        next=rows.getString(0);
+        JSONObject original=new JSONObject(rows.getString(1)).put("content",rows.getString(2));
+        for(String key:new String[]{"_base_ref","_revision","segment","segments_estimate","quote_truncated","previous_segment_context"})original.remove(key);
+        sources.put(original);
+      }
+    }
+    return new JSONObject().put("sources",sources).put("after",next).put("complete",sources.length()<100);
+  }
+
   static void synchronize(Context context, KnowledgeStore store, RuntimeBackendClient client,
       BackendSettings backend) throws Exception {
     JSONObject status = client.request("/v1/personal-information/processing?session_id=" + backend.session(), null);
@@ -133,8 +162,13 @@ public final class RuntimeProcessing {
       states = client.request("/v1/personal-information/processing?session_id=" + backend.session(), null).getJSONArray("items");
       rememberOwnership(context,store,backend,states);
     }
-    for (int i=0;i<states.length();i++) {
+    int nextRoom=Integer.parseInt(store.meta("handoff_next_room","0"));
+    for (int step=0;step<states.length();step++) {
+      int i=(nextRoom+step)%states.length();
       JSONObject state = states.getJSONObject(i);
+      try(Cursor known=store.db.rawQuery("SELECT 1 FROM knowledge_rooms WHERE space=? AND room_id=?",new String[]{store.space,state.getString("room_id")})) {
+        if(!known.moveToFirst())continue;
+      }
       boolean runtime=state.getString("state").equals("runtime");
       boolean mine=state.getString("device_id").equals(store.device());
       if(runtime&&(mine||store.meta("joined:"+state.getString("room_id"),"").equals(Integer.toString(state.getInt("epoch"))))) {
@@ -147,28 +181,54 @@ public final class RuntimeProcessing {
       store.db.execSQL("UPDATE queued_sources SET state='pending',run_id=NULL WHERE state='leased' AND run_id IN (SELECT id FROM analysis_runs WHERE state='running' AND lease_until<=?)",new Object[]{System.currentTimeMillis()});
       store.db.execSQL("UPDATE analysis_runs SET state='expired' WHERE state='running' AND lease_until<=?",new Object[]{System.currentTimeMillis()});
       JSONArray one = new JSONArray().put(state.getString("room_id"));
-      String after="";
+      String cursorKey="handoff_done:"+state.getString("room_id")+":"+state.getInt("epoch");
+      String after=store.meta(cursorKey,"");
       boolean complete=false;
       while (!complete) {
         JSONObject snapshot=request(backend,store,one,"prepare",state.getInt("epoch"));
         JSONArray done=new JSONArray();
-        int read=0;
-        try (Cursor c=store.db.rawQuery("SELECT ref,source_json FROM queued_sources WHERE state='done' AND ref>? ORDER BY ref LIMIT 100",new String[]{after})) {
-          while(c.moveToNext()) {
-            after=c.getString(0);read++;
-            JSONObject source=new JSONObject(c.getString(1));
-            if (!KnowledgeWire.room(source).equals(state.getString("room_id"))) continue;
-            JSONArray refs=store.sourceRefs(source);
-            if(refs.length()==0) return; // Wait for the original versions to be acknowledged.
-            for(int r=0;r<refs.length();r++) {
-              JSONObject ref=refs.getJSONObject(r);
-              done.put(new JSONObject().put("kind","knowledge").put("reference",ref.getString("record_id")).put("revision",ref.getInt("revision")));
+        JSONObject page=completedSourcesPage(store,state.getString("room_id"),after);
+        if(page==null)return;
+        JSONArray sources=page.getJSONArray("sources");
+        after=page.getString("after");complete=page.getBoolean("complete");
+        JSONArray missing=new JSONArray();boolean waiting=false;
+        for(int row=0;row<sources.length();row++) {
+          JSONObject original=sources.getJSONObject(row),known=null;
+          try(Cursor local=store.db.rawQuery("SELECT source_json,ids FROM knowledge_sources WHERE space=? AND account_id=? AND msg_id=?",
+              new String[]{store.space,original.getString("account_id"),original.getString("msg_id")})) {
+            if(local.moveToFirst()) {
+              known=new JSONObject(local.getString(0));
+              if(!sameNativeVersion(original,known))continue; // A newer source was never covered by the old analysis.
+              JSONArray ids=new JSONArray(local.getString(1));
+              for(int part=0;part<ids.length();part++) {
+                String id=ids.getString(part);
+                try(Cursor unsent=store.db.rawQuery("SELECT 1 FROM knowledge_outbox WHERE space=? AND id=?",new String[]{store.space,id})) {
+                  if(unsent.moveToFirst())waiting=true;
+                }
+                JSONObject shadow=store.shadow(id);
+                if(shadow==null||shadow.getLong("revision")==0||!shadow.isNull("conflict_id"))waiting=true;
+              }
             }
           }
+          if(known==null) {missing.put(original);waiting=true;continue;}
+          if(waiting)continue;
+          JSONArray refs=store.sourceRefs(original);
+          for(int r=0;r<refs.length();r++) {
+            JSONObject ref=refs.getJSONObject(r);
+            done.put(new JSONObject().put("kind","knowledge").put("reference",ref.getString("record_id")).put("revision",ref.getInt("revision")));
+          }
         }
-        complete=read<100;
+        if(missing.length()>0) {
+          store.intake(missing);
+          for(int row=0;row<missing.length();row++) {
+            JSONObject source=missing.getJSONObject(row);
+            store.db.execSQL("INSERT OR IGNORE INTO knowledge_priority VALUES(?,?,?)",new Object[]{store.space,source.getString("account_id"),source.getLong("msg_id")});
+          }
+        }
+        if(waiting) {store.putMeta("handoff_waiting","source_sync");store.putMeta("handoff_next_room",Integer.toString((i+1)%states.length()));return;}
         snapshot.put("completed_sources",done);
         client.request("/v1/personal-information/processing",snapshot);
+        store.putMeta(cursorKey,after);
       }
       JSONArray pending=new JSONArray();
       try(Cursor c=store.db.rawQuery("SELECT ref,item_json FROM ai_reviews WHERE state='pending' ORDER BY ref",null)) {

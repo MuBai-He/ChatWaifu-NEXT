@@ -51,6 +51,48 @@ public class KnowledgeStoreTest {
   }
 
   @Test
+  public void completedHandoffPagesContainOnlyTheirRoomAndPreserveCursor() throws Exception {
+    JSONObject first=source("已完成资料").put("type",1).put("talker","handoff-target");
+    String room=store.registerRoom(first);
+    JSONArray all=new JSONArray();
+    for(int i=0;i<400;i++)all.put(source("已完成资料 "+i).put("type",1).put("msg_id",1000+i).put("talker",i<150?"handoff-target":"handoff-other"));
+    String longText="长".repeat(6501);
+    JSONObject longSource=source(longText).put("type",1).put("msg_id",999).put("talker","handoff-target");
+    all.put(longSource);
+    OrganizerStore organizer=new OrganizerStore(memory);organizer.enqueue(all);
+    memory.getWritableDatabase().execSQL("UPDATE queued_sources SET state='done'");
+    memory.getWritableDatabase().execSQL("UPDATE queued_sources SET state='pending' WHERE segment=2 AND base_ref=?",new Object[]{MemoryStore.reference(longSource)});
+    java.util.Set<Long> seen=new java.util.HashSet<>();String after="";int pages=0;
+    while(true) {
+      JSONObject page=RuntimeProcessing.completedSourcesPage(store,room,after);
+      assertNotNull(page);pages++;
+      JSONArray sources=page.getJSONArray("sources");
+      assertTrue(sources.length()<=100);
+      for(int i=0;i<sources.length();i++) {
+        JSONObject item=sources.getJSONObject(i);
+        assertEquals("handoff-target",item.getString("talker"));
+        assertTrue(seen.add(item.getLong("msg_id")));
+      }
+      after=page.getString("after");
+      if(page.getBoolean("complete"))break;
+      assertTrue(pages<4);
+    }
+    assertEquals(2,pages);assertEquals(150,seen.size());
+    memory.getWritableDatabase().execSQL("UPDATE queued_sources SET state='done' WHERE base_ref=?",new Object[]{MemoryStore.reference(longSource)});
+    after="";boolean foundLong=false;
+    do {
+      JSONObject page=RuntimeProcessing.completedSourcesPage(store,room,after);assertNotNull(page);
+      JSONArray sources=page.getJSONArray("sources");
+      for(int i=0;i<sources.length();i++)if(sources.getJSONObject(i).getLong("msg_id")==999) {
+        foundLong=true;assertEquals(longText,sources.getJSONObject(i).getString("content"));
+      }
+      after=page.getString("after");if(page.getBoolean("complete"))break;
+    }while(true);
+    assertTrue(foundLong);
+    assertNull(RuntimeProcessing.completedSourcesPage(store,"unknown-room",""));
+  }
+
+  @Test
   public void blockedDeliverySurvivesReopenAndRevocationWithdrawsOnlyItsNotice() throws Exception {
     java.net.ServerSocket server=new java.net.ServerSocket(0,20,java.net.InetAddress.getByName("127.0.0.1"));
     java.util.concurrent.atomic.AtomicReference<JSONObject> response=new java.util.concurrent.atomic.AtomicReference<>();
@@ -256,7 +298,7 @@ public class KnowledgeStoreTest {
     memory.close();
     memory = new MemoryStore(context, name);
     store = new KnowledgeStore(memory, "https://fixture.invalid");
-    assertEquals(7, memory.getReadableDatabase().getVersion());
+    assertEquals(8, memory.getReadableDatabase().getVersion());
     assertEquals("已有的长期记忆", memory.list().getJSONObject(0).getString("title"));
     assertEquals(0, store.mutations().length());
   }

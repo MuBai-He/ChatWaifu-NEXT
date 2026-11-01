@@ -115,6 +115,7 @@ from chatwaifu_protocol.harness import (
     KnowledgeExcerpt,
     Observation,
     ProcessingRequest,
+    ReminderDefaults,
     ReminderOccurrence,
     StandingIntent,
     StandingIntentInput,
@@ -174,6 +175,7 @@ class ProtocolCatalog(ProtocolModel):
     evidence_ref: EvidenceRef
     execution_context: ExecutionContext
     knowledge_excerpt: KnowledgeExcerpt
+    reminder_defaults: ReminderDefaults
     standing_intent: StandingIntent
     standing_intent_input: StandingIntentInput
     standing_intent_update: StandingIntentUpdate
@@ -320,6 +322,7 @@ class ProtocolCatalog(ProtocolModel):
 SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
     "evidence-ref": EvidenceRef,
     "execution-context": ExecutionContext,
+    "reminder-defaults": ReminderDefaults,
     "standing-intent": StandingIntent,
     "standing-intent-input": StandingIntentInput,
     "standing-intent-update": StandingIntentUpdate,

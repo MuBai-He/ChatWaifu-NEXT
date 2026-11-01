@@ -1,0 +1,45 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/reminder-defaults.schema.json",
+  "description": "Owner-selected rules for future work in this intent's scope.",
+  "properties": {
+    "event_offset_seconds": {
+      "anyOf": [
+        {
+          "maximum": 2678400,
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Event Offset Seconds"
+    },
+    "primary_device_id": {
+      "format": "uuid",
+      "title": "Primary Device Id",
+      "type": "string"
+    },
+    "todo_offset_seconds": {
+      "anyOf": [
+        {
+          "maximum": 2678400,
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Todo Offset Seconds"
+    }
+  },
+  "required": [
+    "primary_device_id"
+  ],
+  "title": "ReminderDefaults",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

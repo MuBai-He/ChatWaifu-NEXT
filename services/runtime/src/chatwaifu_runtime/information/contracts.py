@@ -5,6 +5,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from chatwaifu_protocol.harness import EvidenceRef
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 MessageRef = Annotated[str, Field(pattern=r"^wechat:[0-9a-f]{64}(?::[0-9a-f]{64}:[0-9]+)?$")]
@@ -225,3 +226,36 @@ class AnalyzeInformationResponse(BaseModel):
     model_owner: Literal["chatwaifu_runtime"] = "chatwaifu_runtime"
     model_role: Literal["memory_extraction"] = "memory_extraction"
     requires_confirmation: Literal[True] = True
+
+
+class UnderstandingQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    question: str = Field(min_length=1, max_length=500)
+
+
+class RuntimeInformationSuggestion(InformationSuggestion):
+    reminder_policy: Literal["inherit", "none"] = "inherit"
+    context_refs: list[EvidenceRef] = Field(
+        default_factory=lambda: list[EvidenceRef](), max_length=10
+    )
+
+    @model_validator(mode="after")
+    def validate_reminder_choice(self) -> "RuntimeInformationSuggestion":
+        if self.reminder_policy == "none" and (
+            self.remind_at is not None or self.reminder_offset_seconds is not None
+        ):
+            raise ValueError("declined_reminder_has_time")
+        return self
+
+
+class RuntimeUnderstandingResult(BaseModel):
+    """Internal Runtime profile; legacy 1.1/1.2 suggestion responses stay unchanged."""
+
+    model_config = ConfigDict(extra="forbid")
+    schema_version: Literal["1.0"] = "1.0"
+    items: list[RuntimeInformationSuggestion] = Field(
+        default_factory=lambda: list[RuntimeInformationSuggestion](), max_length=12
+    )
+    queries: list[UnderstandingQuery] = Field(
+        default_factory=lambda: list[UnderstandingQuery](), max_length=3
+    )

@@ -189,3 +189,47 @@ it("offers a bounded retry for failed understanding instead of sync-conflict cho
     ),
   );
 });
+
+it("saves scoped reminder defaults only with a selected device and write permission", async () => {
+  setup();
+  const device = "9b632f82-642f-48d7-9ee6-31bdcecc4f42";
+  client.getHarnessSources.mockResolvedValue({
+    rooms: [{ room_id: "source-room", label: "合成来源" }],
+    skills: [{ skill_id: "work.manage", name: "管理事项" }],
+    resources: [],
+    calendar_ids: [],
+    tasklist_ids: [],
+    devices: [{ device_id: device, label: "测试手机" }],
+  });
+  client.createStandingIntent.mockResolvedValue({});
+  render(<AgentHarnessPanel sessionId="session" />);
+  await screen.findByText("管理事项");
+  fireEvent.change(screen.getByLabelText("希望宁宁持续负责什么"), {
+    target: { value: "负责这些事项" },
+  });
+  fireEvent.click(screen.getByLabelText("合成来源"));
+  fireEvent.click(screen.getByLabelText("管理事项"));
+  fireEvent.change(screen.getByLabelText("新日程提前多少分钟"), {
+    target: { value: "5" },
+  });
+  const save = screen.getByRole("button", { name: "保存委托" });
+  expect((save as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.change(screen.getByLabelText("主提醒设备"), {
+    target: { value: device },
+  });
+  expect((save as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(screen.getByLabelText(/允许在所选日历和待办列表中/));
+  fireEvent.click(save);
+  await waitFor(() =>
+    expect(client.createStandingIntent).toHaveBeenCalledOnce(),
+  );
+  expect(client.createStandingIntent.mock.calls[0][0]).toMatchObject({
+    room_ids: ["source-room"],
+    allow_writes: true,
+    reminder_defaults: {
+      event_offset_seconds: 300,
+      todo_offset_seconds: null,
+      primary_device_id: device,
+    },
+  });
+});

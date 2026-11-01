@@ -73,7 +73,22 @@ class IntentSchedule(ProtocolModel):
         return self
 
 
+class ReminderDefaults(ProtocolModel):
+    """Owner-selected rules for future work in this intent's scope."""
+
+    event_offset_seconds: int | None = Field(default=None, ge=0, le=2678400)
+    todo_offset_seconds: int | None = Field(default=None, ge=0, le=2678400)
+    primary_device_id: UUID
+
+    @model_validator(mode="after")
+    def has_rule(self) -> Self:
+        if self.event_offset_seconds is None and self.todo_offset_seconds is None:
+            raise ValueError("empty_reminder_defaults")
+        return self
+
+
 class StandingIntentInput(ProtocolModel):
+    reminder_defaults: ReminderDefaults | None = None
     session_id: UUID
     goal: str = Field(min_length=1, max_length=2000)
     room_ids: list[str] = Field(default_factory=list[str], max_length=32)
@@ -175,6 +190,7 @@ class WorkItem(ProtocolModel):
     clear_due: bool = False
     primary_device_id: UUID | None = None
     reminder_rule: Literal["absolute", "relative"] = "absolute"
+    reminder_policy: Literal["inherit", "none"] = "inherit"
     reminder_offset_seconds: int | None = Field(default=None, ge=0, le=2678400)
     due_at: AwareDatetime | None = None
     start_date: date | None = None

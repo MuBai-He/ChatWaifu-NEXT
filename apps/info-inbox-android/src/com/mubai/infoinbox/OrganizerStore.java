@@ -34,6 +34,7 @@ public final class OrganizerStore {
             + " NULL DEFAULT 0,created_at INTEGER NOT NULL,priority INTEGER NOT NULL DEFAULT 2)");
     db.execSQL("CREATE INDEX queue_ready ON queued_sources(state,next_attempt,created_at)");
     db.execSQL("CREATE INDEX queue_priority_ready ON queued_sources(state,priority,created_at)");
+    ensureQueueScopeIndex(db);
     db.execSQL(
         "CREATE TABLE analysis_runs(id TEXT PRIMARY KEY,state TEXT NOT NULL,lease_until INTEGER NOT"
             + " NULL,input_json TEXT NOT NULL,error_code TEXT,created_at INTEGER NOT NULL)");
@@ -55,6 +56,11 @@ public final class OrganizerStore {
         "CREATE TABLE delivery_history(id TEXT PRIMARY KEY,work_id TEXT NOT NULL,revision INTEGER"
             + " NOT NULL,due_at INTEGER NOT NULL,state TEXT NOT NULL,updated_at INTEGER NOT NULL)");
     db.execSQL("CREATE TABLE organizer_meta(key TEXT PRIMARY KEY,value TEXT NOT NULL)");
+  }
+
+  static void ensureQueueScopeIndex(SQLiteDatabase db) {
+    db.execSQL("CREATE INDEX IF NOT EXISTS queue_version_states ON queued_sources(base_ref,revision,state,segment)");
+    db.execSQL("CREATE INDEX IF NOT EXISTS source_snapshot_scope ON source_snapshots(account_id,talker,base_ref)");
   }
 
   static void ensureQueuePriority(SQLiteDatabase db) {
