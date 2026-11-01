@@ -332,7 +332,6 @@ class RuntimeSkillRouter:
                 candidate.skill.source != "builtin"
                 or companion_id is None
                 or companion_id in selected_ids
-                or len(selected) >= bounded_limit
             ):
                 continue
             for skill in definitions:
@@ -354,6 +353,26 @@ class RuntimeSkillRouter:
                     if companion is None:
                         continue
                     size = companion.schema_bytes + len(companion.description.encode("utf-8"))
+                    # Keep the evidence reader together with search. Newly added
+                    # domain tools must not crowd out an established read workflow.
+                    while len(selected) >= bounded_limit or size > bounded_budget - consumed:
+                        removable = next(
+                            (
+                                item
+                                for item in reversed(selected)
+                                if item.identity != candidate.identity
+                                and not item.contextual
+                                and item.identity not in _BUILTIN_COMPANIONS
+                            ),
+                            None,
+                        )
+                        if removable is None:
+                            break
+                        selected.remove(removable)
+                        selected_ids.discard(removable.identity)
+                        consumed -= removable.schema_bytes + len(
+                            removable.description.encode("utf-8")
+                        )
                     if (
                         companion.identity not in selected_ids
                         and len(selected) < bounded_limit

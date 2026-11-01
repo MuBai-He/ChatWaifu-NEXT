@@ -103,6 +103,23 @@ from chatwaifu_protocol.conversation import ConversationInterruption
 from chatwaifu_protocol.diagnostics import InteractionTraceDetail, InteractionTracePage
 from chatwaifu_protocol.errors import StructuredError
 from chatwaifu_protocol.events import EgressBlockedPayload, EgressReceiptPayload, EventModel
+from chatwaifu_protocol.harness import (
+    ActionProposal,
+    ActivityEntry,
+    ActivityReceipt,
+    EvidenceRef,
+    ExecutionContext,
+    IntentAction,
+    KnowledgeExcerpt,
+    Observation,
+    ProcessingRequest,
+    ReminderOccurrence,
+    StandingIntent,
+    StandingIntentInput,
+    StandingIntentUpdate,
+    WorkItem,
+    WorkItemAction,
+)
 from chatwaifu_protocol.media import AudioFrameHeader, VideoFrameHeader
 from chatwaifu_protocol.memory import (
     MemoryChannelAttribution,
@@ -152,6 +169,21 @@ from chatwaifu_protocol.sticker_library import (
 class ProtocolCatalog(ProtocolModel):
     """Schema-only catalog used to generate a single conflict-free TypeScript module."""
 
+    evidence_ref: EvidenceRef
+    execution_context: ExecutionContext
+    knowledge_excerpt: KnowledgeExcerpt
+    standing_intent: StandingIntent
+    standing_intent_input: StandingIntentInput
+    standing_intent_update: StandingIntentUpdate
+    intent_action: IntentAction
+    observation: Observation
+    processing_request: ProcessingRequest
+    reminder_occurrence: ReminderOccurrence
+    work_item: WorkItem
+    work_item_action: WorkItemAction
+    action_proposal: ActionProposal
+    activity_receipt: ActivityReceipt
+    activity_entry: ActivityEntry
     agent_development_policy: AgentDevelopmentPolicy
     candidate_feature: CandidateFeature
     candidate_create: CandidateCreate
@@ -282,6 +314,18 @@ class ProtocolCatalog(ProtocolModel):
 
 
 SCHEMAS: dict[str, type[BaseModel] | TypeAdapter[Any]] = {
+    "evidence-ref": EvidenceRef,
+    "execution-context": ExecutionContext,
+    "standing-intent": StandingIntent,
+    "standing-intent-input": StandingIntentInput,
+    "standing-intent-update": StandingIntentUpdate,
+    "work-item": WorkItem,
+    "observation": Observation,
+    "processing-request": ProcessingRequest,
+    "reminder-occurrence": ReminderOccurrence,
+    "action-proposal": ActionProposal,
+    "activity-receipt": ActivityReceipt,
+    "activity-entry": ActivityEntry,
     "agent-development-policy": AgentDevelopmentPolicy,
     "candidate-feature": CandidateFeature,
     "candidate-create": CandidateCreate,

@@ -98,12 +98,26 @@ public final class ReminderScheduler {
                     rule.getInt("revision"),
                     rule.getLong("due_at"),
                     now);
+            } else if(state.equals("posted")) {
+              for(android.service.notification.StatusBarNotification shown:notifications.getActiveNotifications())if(rule.getString("work_id").equals(shown.getTag())) {
+                JSONObject item=store.work(rule.getString("work_id"));
+                if(item!=null)notifications.notify(rule.getString("work_id"),1,notification(context,item,rule));
+              }
             } else if (state.matches("cancelled|dismissed|missed|blocked")) {
               notifications.cancel(rule.getString("work_id"), 1);
             }
           }
         }
       }
+    }
+  }
+
+  public static void onAlarm(Context context, String id, int revision, long due) throws Exception {
+    synchronized (LOCK) {
+      deliver(context, id, revision, due);
+      // A device may coalesce or throttle same-UID idle alarms. One wake drains
+      // every currently due durable rule; beginDelivery keeps repeats idempotent.
+      reconcile(context);
     }
   }
 
@@ -118,6 +132,7 @@ public final class ReminderScheduler {
             .getSystemService(NotificationManager.class)
             .notify(id, 1, notification(context, item, rule));
         store.finishDelivery(id, revision, due, now);
+        memory.scheduleKnowledge();
       }
     }
   }
@@ -187,6 +202,7 @@ public final class ReminderScheduler {
       try (MemoryStore memory = new MemoryStore(context)) {
         if (!new OrganizerStore(memory)
             .acknowledge(id, revision, due, action, System.currentTimeMillis())) return;
+        memory.scheduleKnowledge();
       }
       context.getSystemService(NotificationManager.class).cancel(id, 1);
       reconcile(context);

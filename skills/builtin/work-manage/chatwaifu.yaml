@@ -1,0 +1,31 @@
+schema_version: "1.0"
+instructions: SKILL.md
+definition:
+  skill_id: work.manage
+  version: 1.0.0
+  name: 保存事项与手机提醒
+  description: 在宁宁统一事项中保存待办、日程和精确提醒，投递到主手机；不修改 Google 账户。
+  capabilities:
+    - name: execute
+      description: 记录事项。后台自动使用当前任务事项；主人直接交办时提供标题、类型和明确的提醒时刻。缺少时间不得猜测。
+      input_schema:
+        type: object
+        properties:
+          title: {type: string, minLength: 1, maxLength: 200}
+          kind: {type: string, enum: [todo, event]}
+          details: {type: string, maxLength: 1200}
+          due_date: {type: string, format: date}
+          due_at: {type: string, format: date-time}
+          starts_at: {type: string, format: date-time}
+          ends_at: {type: string, format: date-time}
+          remind_at: {type: string, format: date-time}
+        additionalProperties: false
+      output_schema: {type: object}
+      side_effect: write
+      required_permissions: [work.manage]
+      confirmation_required: true
+      timeout_seconds: 30
+  interruptible: true
+  background_allowed: false
+  execution_modes: [interactive, explicit_task, unattended]
+adapter: {kind: builtin, handler: work_manage}

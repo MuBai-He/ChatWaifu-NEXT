@@ -98,6 +98,8 @@ without a client ID it reports `unconfigured` and makes no Google requests:
 ```toml
 [personal_assistant]
 enabled = true
+# Optional: use an existing local HTTP proxy for OAuth, Calendar and Tasks.
+# google_proxy_url = "http://127.0.0.1:7890"
 ```
 
 The Desktop OAuth client is configured server-side with `google_client_id` and optional
@@ -105,6 +107,13 @@ The Desktop OAuth client is configured server-side with `google_client_id` and o
 are `CHATWAIFU_PERSONAL_ASSISTANT__GOOGLE_CLIENT_ID` and
 `CHATWAIFU_PERSONAL_ASSISTANT__GOOGLE_CLIENT_SECRET`. Never put secrets in Vite variables.
 The desktop provides authorization, calendar selection and read-only query controls.
+
+Google clients ignore ambient proxy variables. If direct Google connections time out,
+configure `google_proxy_url` or `CHATWAIFU_PERSONAL_ASSISTANT__GOOGLE_PROXY_URL` with an
+existing loopback HTTP/HTTPS proxy origin, without credentials, path, query or fragment.
+This affects OAuth token exchange, Calendar and Tasks; TLS verification and redirect
+restrictions remain enabled. Validate reachability before restarting the Runtime, then
+start a fresh OAuth flow. Do not replay a failed authorization code.
 
 Authenticated `GET /v1/personal-assistant/status` reports the state and whether this
 connection admits authorization. `ready` means configured, not connected or accepted.

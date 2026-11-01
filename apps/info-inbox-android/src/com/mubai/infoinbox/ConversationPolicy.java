@@ -10,9 +10,15 @@ public final class ConversationPolicy {
   // Serialize policy commits with the start of uploads, never with response/model waiting.
   static final Object SEND_LOCK = new Object();
   private final MemoryStore memory;
+  private final java.util.Map<String, Boolean> readCache;
 
   public ConversationPolicy(MemoryStore memory) {
+    this(memory, false);
+  }
+
+  ConversationPolicy(MemoryStore memory, boolean cacheReadSnapshot) {
     this.memory = memory;
+    readCache = cacheReadSnapshot ? new java.util.HashMap<>() : null;
   }
 
   static void createTable(SQLiteDatabase db) {
@@ -30,6 +36,46 @@ public final class ConversationPolicy {
                 new String[] {source.optString("account_id"), source.optString("talker")})) {
       return c.moveToFirst();
     }
+  }
+
+  public boolean allowsAiSource(JSONObject source) throws Exception {
+    String identity =
+        source.getString("account_id")
+            + "\0"
+            + source.getString("talker")
+            + "\0"
+            + source.getLong("msg_id")
+            + "\0"
+            + source.optString("_knowledge_id", "");
+    if (readCache != null && readCache.containsKey(identity)) return readCache.get(identity);
+    boolean allowed = readSourceAllowance(source);
+    if (readCache != null) readCache.put(identity, allowed);
+    return allowed;
+  }
+
+  private boolean readSourceAllowance(JSONObject source) throws Exception {
+    if (excluded(source)) return false;
+    // Build only the locator; serializing the entire evidence tree here blocks large lists.
+    JSONObject base =
+        new JSONObject()
+            .put("account_id", source.getString("account_id"))
+            .put("talker", source.getString("talker"))
+            .put("msg_id", source.getLong("msg_id"))
+            .put("_knowledge_id", source.optString("_knowledge_id", ""));
+    String prefix = MemoryStore.reference(base) + ":part:%";
+    SQLiteDatabase db = memory.getReadableDatabase();
+    try (Cursor c =
+        db.rawQuery(
+            "SELECT 1 FROM knowledge_outbox WHERE id LIKE ? AND action='forget' LIMIT 1",
+            new String[] {prefix})) {
+      if (c.moveToFirst()) return false;
+    }
+    try (Cursor c =
+        db.rawQuery(
+            "SELECT payload FROM knowledge_shadow WHERE id LIKE ?", new String[] {prefix})) {
+      while (c.moveToNext()) if (new JSONObject(c.getString(0)).optBoolean("deleted")) return false;
+    }
+    return true;
   }
 
   public JSONArray list() throws Exception {
@@ -76,7 +122,7 @@ public final class ConversationPolicy {
     }
     synchronized (SEND_LOCK) {
       SQLiteDatabase db = memory.getWritableDatabase();
-      db.beginTransaction();
+      db.beginTransactionNonExclusive();
       try {
         for (JSONObject room : unique.values()) {
           apply(db, room, exclude);
@@ -132,11 +178,11 @@ public final class ConversationPolicy {
   public boolean allowsProposal(JSONObject item) throws Exception {
     if (item.optBoolean("manual")) return true;
     JSONObject source = item.getJSONObject("source");
-    if (excluded(source)) return false;
+    if (!allowsAiSource(source)) return false;
     JSONArray evidence = source.optJSONArray("evidence");
     if (evidence != null)
       for (int i = 0; i < evidence.length(); i++)
-        if (excluded(evidence.getJSONObject(i))) return false;
+        if (!allowsAiSource(evidence.getJSONObject(i))) return false;
     return true;
   }
 

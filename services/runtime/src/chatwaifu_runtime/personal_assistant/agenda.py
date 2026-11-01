@@ -95,41 +95,61 @@ class AgendaService:
         request_id: UUID,
         title: str,
         *,
+        start_date: date | None = None,
+        end_date: date | None = None,
         start: datetime | None = None,
         end: datetime | None = None,
         due_date: date | None = None,
         due_at: datetime | None = None,
         notes: str | None = None,
+        location: str | None = None,
+        destination: WriteDestination | None = None,
     ) -> dict[str, Any]:
         if not title.strip() or len(title) > 200:
             raise AssistantAccessError("invalid_title")
         destinations = await self.destinations(session_id)
-        destination = next((item for item in destinations if item.kind == kind), None)
+        destination = destination or next(
+            (item for item in destinations if item.kind == kind), None
+        )
         if destination is None:
             raise AssistantAccessError("write_destination_required")
         await self._validate(session_id, destination)
         if destination.provider == "google":
             assert self._accounts is not None and destination.account_id is not None
             if kind == "calendar":
-                if (
-                    start is None
-                    or end is None
-                    or start.utcoffset() is None
-                    or end.utcoffset() is None
-                    or end <= start
-                    or end - start > timedelta(days=31)
-                ):
-                    raise AssistantAccessError("invalid_event_window")
+                if start_date is not None:
+                    if end_date is None or not timedelta(0) < end_date - start_date <= timedelta(
+                        days=31
+                    ):
+                        raise AssistantAccessError("invalid_event_window")
+                    first, last = start_date, end_date
+                else:
+                    if (
+                        start is None
+                        or end is None
+                        or not timedelta(0) < end - start <= timedelta(days=31)
+                    ):
+                        raise AssistantAccessError("invalid_event_window")
+                    first, last = start, end
                 event = await self._accounts.create_event(
                     session_id,
                     destination.account_id,
                     destination.collection_id,
                     request_id.hex,
                     title,
-                    start,
-                    end,
+                    first,
+                    last,
+                    location=location,
+                    notes=notes,
                 )
-                return {"state": "saved", "provider": "google", "item": asdict(event)}
+                return {
+                    "state": "saved",
+                    "provider": "google",
+                    "verified": True,
+                    "account_id": destination.account_id,
+                    "collection_id": destination.collection_id,
+                    "item": asdict(event),
+                }
             if due_at is not None:
                 raise AssistantAccessError("google_tasks_date_only_choose_apple_or_schedule_alarm")
             task = await self._accounts.create_task(
@@ -140,7 +160,16 @@ class AgendaService:
                 notes,
                 due_date,
             )
-            return {"state": "saved", "provider": "google", "item": asdict(task)}
+            return {
+                "state": "saved",
+                "provider": "google",
+                "verified": True,
+                "account_id": destination.account_id,
+                "collection_id": destination.collection_id,
+                "item": asdict(task),
+            }
+        if start_date is not None:
+            raise AssistantAccessError("apple_all_day_not_supported")
         assert self._tasks is not None and destination.device_id is not None
         if kind == "calendar":
             if (

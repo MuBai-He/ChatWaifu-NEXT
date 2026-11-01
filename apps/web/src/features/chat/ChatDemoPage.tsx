@@ -1,3 +1,4 @@
+import { HarnessActivityNotice } from "./HarnessActivityNotice";
 import { isRemoteRuntime } from "./runtimeEndpoint";
 import { useEffect, useRef, useState } from "react";
 import { BrandMark } from "../../components/BrandMark";
@@ -140,6 +141,7 @@ export function ChatDemoPage({ mediaOwner = true }: ChatDemoPageProps) {
       className={"vn-shell" + (minimalInterface ? " vn-shell-minimal" : "")}
     >
       <SkillConfirmationPrompt sessionId={sessionId} />
+      <HarnessActivityNotice sessionId={sessionId} />
       <section className="vn-stage" aria-label="Conversation">
         <div className="vn-sky" aria-hidden="true">
           <i className="vn-moon" />

@@ -1,4 +1,10 @@
 import {
+  evidenceRefSchema,
+  intentSchema,
+  workSchema,
+  activitySchema,
+} from "../../parsers/harness";
+import {
   capabilityPageSchema,
   capabilityDetailSchema,
   agentTaskSchema,
@@ -205,6 +211,10 @@ export {
  * Registry of all root model schemas that back public parsers.
  */
 export const protocolModelSchemas = {
+  EvidenceRef: evidenceRefSchema,
+  StandingIntent: intentSchema,
+  WorkItem: workSchema,
+  ActivityEntry: activitySchema,
   CapabilityPage: capabilityPageSchema,
   CapabilityDetail: capabilityDetailSchema,
   AgentTask: agentTaskSchema,
@@ -323,6 +333,10 @@ export const parserRootRegistry: Record<
   string,
   keyof typeof protocolModelSchemas
 > = {
+  parseEvidenceRef: "EvidenceRef",
+  parseStandingIntent: "StandingIntent",
+  parseWorkItem: "WorkItem",
+  parseActivityEntry: "ActivityEntry",
   parseCapabilityPage: "CapabilityPage",
   parseCapabilityDetail: "CapabilityDetail",
   parseAgentTask: "AgentTask",

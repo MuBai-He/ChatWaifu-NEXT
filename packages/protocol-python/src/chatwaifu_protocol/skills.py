@@ -48,6 +48,9 @@ class SkillDefinition(ProtocolModel):
     capabilities: list[SkillCapability] = Field(default_factory=list[SkillCapability])
     interruptible: bool = True
     background_allowed: bool = False
+    execution_modes: list[Literal["interactive", "explicit_task", "unattended"]] = Field(
+        default_factory=lambda: ["interactive", "explicit_task"]
+    )
     source: Literal["builtin", "plugin", "mcp_connection"] = "builtin"
     plugin_id: str | None = None
     mcp_connection_id: UUID | None = None

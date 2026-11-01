@@ -15,6 +15,7 @@ import org.json.JSONObject;
 
 /** Durable queue, proposals, work revisions and delivery state share one transaction boundary. */
 public final class OrganizerStore {
+  public static final int MAX_CONCURRENCY = 4;
   private final MemoryStore store;
 
   public OrganizerStore(MemoryStore store) {
@@ -76,7 +77,7 @@ public final class OrganizerStore {
   public int enqueue(JSONArray messages) throws Exception {
     SQLiteDatabase db = store.getWritableDatabase();
     int added = 0;
-    db.beginTransaction();
+    db.beginTransactionNonExclusive();
     try {
       for (int i = 0; i < messages.length(); i++) {
         JSONObject source = messages.getJSONObject(i);
@@ -124,6 +125,7 @@ public final class OrganizerStore {
               .put("content", text.substring(from, to))
               .put("_source_ref", ref)
               .put("_segment_prefix", text.substring(Math.max(0, from - 200), from))
+              .put("_sender_key", MessagePresentation.senderKey(source))
               .put("_base_ref", base)
               .put("_revision", revision)
               .put("segment", part + 1)
@@ -170,8 +172,12 @@ public final class OrganizerStore {
   }
 
   public JSONObject claim(long now, long floor) throws Exception {
+    return claim(now, floor, false);
+  }
+
+  public JSONObject claim(long now, long floor, boolean oldestFirst) throws Exception {
     SQLiteDatabase db = store.getWritableDatabase();
-    db.beginTransaction();
+    db.beginTransactionNonExclusive();
     try {
       db.execSQL(
           "UPDATE queued_sources SET state='pending',run_id=NULL WHERE state='leased' AND run_id IN"
@@ -183,25 +189,59 @@ public final class OrganizerStore {
           new Object[] {now});
       try (Cursor c =
           db.rawQuery(
-              "SELECT id FROM analysis_runs WHERE state='running' AND lease_until>? LIMIT 1",
+              "SELECT count(*) FROM analysis_runs WHERE state='running' AND lease_until>?",
               new String[] {Long.toString(now)})) {
-        if (c.moveToFirst()) return null;
+        if (c.moveToFirst() && c.getInt(0) >= MAX_CONCURRENCY) return null;
       }
       JSONArray sources = new JSONArray();
       int size = 0;
+      String selectedAccount = null, selectedRoom = null;
+      long latest = 0;
       try (Cursor c =
           db.rawQuery(
               "SELECT q.source_json FROM queued_sources q JOIN source_snapshots s ON"
                   + " s.base_ref=q.base_ref AND s.revision=q.revision WHERE q.state='pending' AND"
                   + " NOT EXISTS(SELECT 1 FROM conversation_exclusions e WHERE"
                   + " e.account_id=s.account_id AND e.talker=s.talker) AND q.next_attempt<=? AND"
-                  + " q.created_at>=? ORDER BY q.created_at DESC,s.msg_id DESC,q.base_ref,q.segment"
-                  + " LIMIT 30",
+                  + " q.created_at>=? AND (s.account_id,s.talker) NOT IN (SELECT"
+                  + " a.account_id,a.talker FROM queued_sources active JOIN source_snapshots a ON"
+                  + " a.base_ref=active.base_ref WHERE active.state='leased') "
+                  + (oldestFirst
+                      ? "AND NOT EXISTS(SELECT 1 FROM (SELECT base_ref,created_at,segment FROM"
+                          + " queued_sources WHERE state='failed' UNION ALL SELECT"
+                          + " base_ref,created_at,segment FROM queued_sources WHERE"
+                          + " state='pending' AND next_attempt>"
+                          + now
+                          + ") earlier JOIN source_snapshots e ON e.base_ref=earlier.base_ref WHERE"
+                          + " e.account_id=s.account_id AND e.talker=s.talker AND"
+                          + " (earlier.created_at<q.created_at OR (earlier.created_at=q.created_at"
+                          + " AND (e.msg_id<s.msg_id OR (e.msg_id=s.msg_id AND"
+                          + " earlier.segment<q.segment))))) "
+                      : "")
+                  + "ORDER BY q.created_at "
+                  + (oldestFirst ? "ASC" : "DESC")
+                  + ",s.msg_id "
+                  + (oldestFirst ? "ASC" : "DESC")
+                  + ",q.base_ref,q.segment LIMIT 30",
               new String[] {Long.toString(now), Long.toString(floor)})) {
         while (c.moveToNext()) {
           JSONObject source = new JSONObject(c.getString(0));
+          if (!new ConversationPolicy(store).allowsAiSource(source)) {
+            db.execSQL(
+                "UPDATE queued_sources SET state='excluded' WHERE base_ref=? AND state='pending'",
+                new Object[] {source.optString("_base_ref")});
+            continue;
+          }
+          if (selectedRoom == null) {
+            selectedAccount = source.getString("account_id");
+            selectedRoom = source.getString("talker");
+            latest = source.getLong("created_at");
+          }
+          if (!selectedAccount.equals(source.getString("account_id"))
+              || !selectedRoom.equals(source.getString("talker"))
+              || Math.abs(latest - source.getLong("created_at")) > 30L * 60000L) continue;
           int length = source.optString("content", "").length();
-          if (size + length > 16000 && sources.length() > 0) break;
+          if (sources.length() >= 12 || (size + length > 12000 && sources.length() > 0)) break;
           sources.put(source);
           size += length;
         }
@@ -245,10 +285,345 @@ public final class OrganizerStore {
     }
   }
 
+  public void yieldToEarlierSources(JSONObject batch, JSONArray earlier, long now)
+      throws Exception {
+    SQLiteDatabase db = store.getWritableDatabase();
+    db.beginTransactionNonExclusive();
+    try {
+      enqueue(earlier);
+      fail(batch.getString("id"), now, true);
+      db.execSQL(
+          "UPDATE analysis_runs SET error_code='history_prefill' WHERE id=?",
+          new Object[] {batch.getString("id")});
+      db.setTransactionSuccessful();
+    } finally {
+      db.endTransaction();
+    }
+  }
+
+  /** Reuse versioned queue snapshots for context; only new eligible messages take a lease. */
+  public void expandContext(JSONObject batch, JSONArray nearby, long now, long floor)
+      throws Exception {
+    SQLiteDatabase db = store.getWritableDatabase();
+    db.beginTransactionNonExclusive();
+    try {
+      requireActiveBatch(batch, now);
+      JSONArray anchors = batch.getJSONArray("sources");
+      JSONObject first = anchors.getJSONObject(0);
+      Map<String, JSONObject> selected = new LinkedHashMap<>();
+      int size = 0;
+      for (int i = 0; i < anchors.length(); i++) {
+        JSONObject source =
+            new JSONObject(anchors.getJSONObject(i).toString()).put("_context_only", false);
+        selected.put(MemoryStore.reference(source), source);
+        size += source.optString("content").length();
+      }
+      boolean incomplete = nearby.length() >= 40;
+      ConversationPolicy policy = new ConversationPolicy(store);
+      for (int i = 0; i < nearby.length(); i++) {
+        JSONObject raw = nearby.getJSONObject(i);
+        if (!first.getString("account_id").equals(raw.getString("account_id"))
+            || !first.getString("talker").equals(raw.getString("talker"))
+            || !policy.allowsAiSource(raw)) continue;
+        String base = MemoryStore.reference(raw);
+        boolean legacy = false;
+        try (Cursor c =
+            db.rawQuery(
+                "SELECT 1 FROM ai_processed p WHERE account_id=? AND msg_id=? AND NOT EXISTS(SELECT"
+                    + " 1 FROM source_snapshots WHERE base_ref=?)",
+                new String[] {raw.getString("account_id"), raw.getString("msg_id"), base})) {
+          legacy = c.moveToFirst();
+        }
+        enqueue(new JSONArray().put(raw));
+        if (legacy)
+          db.execSQL(
+              "UPDATE queued_sources SET state='done' WHERE base_ref=? AND state='pending'",
+              new Object[] {base});
+        try (Cursor c =
+            db.rawQuery(
+                "SELECT q.source_json,q.state,q.next_attempt FROM queued_sources q JOIN"
+                    + " source_snapshots s ON s.base_ref=q.base_ref AND s.revision=q.revision WHERE"
+                    + " q.base_ref=? ORDER BY q.segment",
+                new String[] {base})) {
+          while (c.moveToNext()) {
+            JSONObject source = new JSONObject(c.getString(0));
+            String ref = MemoryStore.reference(source);
+            if (selected.containsKey(ref)) continue;
+            if (c.getString(1).equals("leased")) {
+              incomplete = true;
+              continue;
+            }
+            int length = source.optString("content").length();
+            if (selected.size() >= 30 || size + length > 16000) {
+              incomplete = true;
+              continue;
+            }
+            boolean contextOnly =
+                !c.getString(1).equals("pending")
+                    || c.getLong(2) > now
+                    || source.getLong("created_at") < floor;
+            source.put("_context_only", contextOnly);
+            if (!contextOnly) {
+              ContentValues lease = new ContentValues();
+              lease.put("state", "leased");
+              lease.put("run_id", batch.getString("id"));
+              if (db.update(
+                      "queued_sources", lease, "ref=? AND state='pending'", new String[] {ref})
+                  != 1) throw new IllegalStateException("上下文消息已被其他整理占用");
+            }
+            selected.put(ref, source);
+            size += length;
+          }
+        }
+      }
+      List<JSONObject> ordered = new ArrayList<>(selected.values());
+      ordered.sort(
+          (a, b) -> {
+            int time = Long.compare(a.optLong("created_at"), b.optLong("created_at"));
+            if (time != 0) return time;
+            int message = Long.compare(a.optLong("msg_id"), b.optLong("msg_id"));
+            return message != 0
+                ? message
+                : Integer.compare(a.optInt("segment"), b.optInt("segment"));
+          });
+      JSONArray sources = new JSONArray();
+      for (JSONObject source : ordered) sources.put(source.put("_context_incomplete", incomplete));
+      batch.put("sources", sources);
+      db.execSQL(
+          "UPDATE analysis_runs SET input_json=? WHERE id=?",
+          new Object[] {sources.toString(), batch.getString("id")});
+      db.setTransactionSuccessful();
+    } finally {
+      db.endTransaction();
+    }
+  }
+
+  /** Bounded earlier knowledge; pending summaries remain explicitly unconfirmed. */
+  public JSONArray analysisContext(JSONObject batch) throws Exception {
+    JSONArray sources = batch.getJSONArray("sources"), result = new JSONArray();
+    JSONObject anchor = sources.getJSONObject(0);
+    long before = Long.MAX_VALUE;
+    for (int i = 0; i < sources.length(); i++)
+      if (!sources.getJSONObject(i).optBoolean("_context_only"))
+        before = Math.min(before, sources.getJSONObject(i).getLong("created_at"));
+    String[] scope = {
+      contextPattern("account_id", anchor.getString("account_id")),
+      contextPattern("talker", anchor.getString("talker"))
+    };
+    Set<String> proof = new HashSet<>();
+    for (int i = 0; i < sources.length(); i++) proof.add(contextKey(sources.getJSONObject(i)));
+    ConversationPolicy contextPolicy = new ConversationPolicy(store, true);
+    int chars = 0;
+    Set<String> seen = new HashSet<>();
+    for (boolean confirmed : new boolean[] {true, false}) {
+      String query =
+          confirmed
+              ? "SELECT ref,title,kind,quote,source_json FROM memories WHERE source_json LIKE ?"
+                  + " ESCAPE '\\' AND source_json LIKE ? ESCAPE '\\' ORDER BY updated_at DESC"
+                  + " LIMIT 100"
+              : "SELECT ref,item_json FROM ai_reviews WHERE state='pending' AND item_json LIKE ?"
+                  + " ESCAPE '\\' AND item_json LIKE ? ESCAPE '\\' ORDER BY created_at DESC LIMIT"
+                  + " 100";
+      Cursor selected = null;
+      String jsonColumn = confirmed ? "source_json" : "item_json",
+          path = confirmed ? "$" : "$.source";
+      String chronological =
+          "SELECT "
+              + (confirmed
+                  ? "ref,title,kind,quote,source_json FROM memories WHERE "
+                  : "ref,item_json FROM ai_reviews WHERE state='pending' AND ")
+              + "json_extract("
+              + jsonColumn
+              + ",'"
+              + path
+              + ".account_id')=? AND json_extract("
+              + jsonColumn
+              + ",'"
+              + path
+              + ".talker')=? AND CAST(json_extract("
+              + jsonColumn
+              + ",'"
+              + path
+              + ".created_at') AS INTEGER)<? ORDER BY CAST(json_extract("
+              + jsonColumn
+              + ",'"
+              + path
+              + ".created_at') AS INTEGER) DESC LIMIT 100";
+      try {
+        selected =
+            store
+                .getReadableDatabase()
+                .rawQuery(
+                    chronological,
+                    new String[] {
+                      anchor.getString("account_id"),
+                      anchor.getString("talker"),
+                      Long.toString(before)
+                    });
+        selected.getCount();
+      } catch (android.database.sqlite.SQLiteException unsupported) {
+        if (selected != null) selected.close();
+        selected = store.getReadableDatabase().rawQuery(query, scope);
+      }
+      try (Cursor c = selected) {
+        while (c.moveToNext() && result.length() < (confirmed ? 6 : 10)) {
+          JSONObject source, item;
+          String summary, kind, snapshot;
+          if (confirmed) {
+            source = new JSONObject(c.getString(4));
+            kind = c.getString(2);
+            summary = c.getString(1) + "：" + c.getString(3);
+            snapshot = contextMemorySnapshot(c);
+          } else {
+            snapshot = c.getString(1);
+            item = new JSONObject(snapshot);
+            source = item.getJSONObject("source");
+            kind = item.optString("kind", "memory");
+            summary =
+                item.optString("title") + "：" + item.optString("details", item.optString("reason"));
+          }
+          if (seen.contains(c.getString(0)) || !sameContextRoom(anchor, source)) continue;
+          JSONArray evidence = source.optJSONArray("evidence");
+          if (evidence == null) evidence = new JSONArray().put(source);
+          long observed = source.optLong("created_at");
+          boolean eligible = true;
+          ConversationPolicy policy = contextPolicy;
+          for (int j = 0; j < evidence.length(); j++) {
+            JSONObject part = evidence.getJSONObject(j);
+            observed = Math.max(observed, part.optLong("created_at"));
+            if (!sameContextRoom(anchor, part) || !policy.allowsAiSource(part)) {
+              eligible = false;
+              break;
+            }
+          }
+          if (!eligible || observed <= 0 || observed >= before || !policy.allowsAiSource(source))
+            continue;
+          try {
+            verifySourceRevisions(source);
+          } catch (IllegalStateException changed) {
+            continue;
+          }
+          if (summary.length() > 1200) {
+            int end = 1200;
+            if (Character.isHighSurrogate(summary.charAt(end - 1))) end--;
+            summary = summary.substring(0, end);
+          }
+          Set<String> expanded = new HashSet<>(proof);
+          JSONArray lineage = contextEvidence(source);
+          for (int j = 0; j < lineage.length(); j++)
+            expanded.add(contextKey(lineage.getJSONObject(j)));
+          if (expanded.size() > 30 || chars + summary.length() > 6000) {
+            for (int j = 0; j < sources.length(); j++)
+              sources.getJSONObject(j).put("_context_incomplete", true);
+            continue;
+          }
+          proof = expanded;
+          if (!kind.matches("todo|event|memory|decision|reference"))
+            kind = kind.equals("决定") ? "decision" : kind.equals("资料") ? "reference" : "memory";
+          result.put(
+              new JSONObject()
+                  .put("id", c.getString(0))
+                  .put("kind", kind)
+                  .put("summary", summary)
+                  .put("state", confirmed ? "confirmed" : "pending_review")
+                  .put("source_time_ms", observed)
+                  .put("account_id", anchor.getString("account_id"))
+                  .put("talker", anchor.getString("talker"))
+                  .put("_context_type", "knowledge")
+                  .put("_context_source", source)
+                  .put("_context_hash", AnalysisContract.hash(snapshot)));
+          seen.add(c.getString(0));
+          chars += summary.length();
+        }
+      }
+    }
+    batch.put("prior_knowledge", result);
+    return result;
+  }
+
+  static String contextKey(JSONObject source) throws Exception {
+    return AnalysisContract.hash(
+            source.getString("account_id")
+                + "\0"
+                + source.getString("talker")
+                + "\0"
+                + source.getLong("msg_id"))
+        + ":"
+        + source.optInt("segment", 1);
+  }
+
+  static JSONArray contextEvidence(JSONObject source) throws Exception {
+    JSONArray rows = source.optJSONArray("evidence"), result = new JSONArray();
+    if (rows == null) rows = new JSONArray().put(source);
+    for (int i = 0; i < rows.length(); i++) {
+      JSONObject raw = rows.getJSONObject(i), locator = new JSONObject();
+      for (String key :
+          new String[] {
+            "account_id",
+            "talker",
+            "msg_id",
+            "created_at",
+            "is_send",
+            "type",
+            "_base_ref",
+            "_revision",
+            "_source_ref",
+            "segment",
+            "conversation_title",
+            "sender_name"
+          }) if (raw.has(key)) locator.put(key, raw.get(key));
+      result.put(locator.put("_historical_knowledge", true).put("_supporting_evidence", false));
+    }
+    return result;
+  }
+
+  private static String contextPattern(String key, String value) {
+    String token = "\"" + key + "\":" + JSONObject.quote(value);
+    return "%" + token.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+  }
+
+  private static String contextMemorySnapshot(Cursor c) {
+    return c.getString(1) + "\0" + c.getString(2) + "\0" + c.getString(3) + "\0" + c.getString(4);
+  }
+
+  private static boolean sameContextRoom(JSONObject a, JSONObject b) {
+    return a.optString("account_id").equals(b.optString("account_id"))
+        && a.optString("talker").equals(b.optString("talker"));
+  }
+
+  private void requireContext(JSONObject batch) throws Exception {
+    JSONArray context = batch.optJSONArray("prior_knowledge");
+    if (context == null) return;
+    ConversationPolicy policy = new ConversationPolicy(store);
+    for (int i = 0; i < context.length(); i++) {
+      JSONObject item = context.getJSONObject(i);
+      boolean confirmed = item.getString("state").equals("confirmed");
+      String query =
+          confirmed
+              ? "SELECT ref,title,kind,quote,source_json FROM memories WHERE ref=?"
+              : "SELECT ref,item_json FROM ai_reviews WHERE ref=? AND state='pending'";
+      try (Cursor c =
+          store.getReadableDatabase().rawQuery(query, new String[] {item.getString("id")})) {
+        if (!c.moveToFirst()
+            || !AnalysisContract.hash(confirmed ? contextMemorySnapshot(c) : c.getString(1))
+                .equals(item.getString("_context_hash")))
+          throw new IllegalStateException("参考记忆已变化，等待重新整理");
+      }
+      JSONObject source = item.getJSONObject("_context_source");
+      if (!policy.allowsAiSource(source)) throw new IllegalStateException("参考资料已排除或遗忘，结果未提交");
+      JSONArray evidence = source.optJSONArray("evidence");
+      if (evidence != null)
+        for (int j = 0; j < evidence.length(); j++)
+          if (!policy.allowsAiSource(evidence.getJSONObject(j)))
+            throw new IllegalStateException("参考资料已排除或遗忘，结果未提交");
+      verifySourceRevisions(source);
+    }
+  }
+
   /** Call once at application process startup, before any worker can claim a batch. */
   public void recoverInterruptedRuns() {
     SQLiteDatabase db = store.getWritableDatabase();
-    db.beginTransaction();
+    db.beginTransactionNonExclusive();
     try {
       db.execSQL(
           "UPDATE queued_sources SET state='pending',run_id=NULL,next_attempt=0 WHERE"
@@ -265,7 +640,7 @@ public final class OrganizerStore {
 
   public void finish(JSONObject batch, JSONObject response, long now) throws Exception {
     SQLiteDatabase db = store.getWritableDatabase();
-    db.beginTransaction();
+    db.beginTransactionNonExclusive();
     try {
       String id = batch.getString("id");
       requireActiveBatch(batch, now);
@@ -300,7 +675,10 @@ public final class OrganizerStore {
           boolean included = false;
           for (int k = 0; k < processed.length(); k++)
             included |= evidence.getString(j).equals(processed.getString(k));
-          if (!included) throw new IllegalArgumentException("建议引用了尚未处理的资料");
+          if (!included
+              && (!allowed.containsKey(evidence.getString(j))
+                  || !allowed.get(evidence.getString(j)).optBoolean("_context_only")))
+            throw new IllegalArgumentException("建议引用了尚未处理的资料");
         }
         v.put("ref", item.getString("review_ref"));
         v.put("title", item.getString("title"));
@@ -335,8 +713,12 @@ public final class OrganizerStore {
   }
 
   public void fail(String id, long now, boolean interrupted) {
+    fail(id, now, interrupted, "analysis_failed");
+  }
+
+  public void fail(String id, long now, boolean interrupted, String failureCode) {
     SQLiteDatabase db = store.getWritableDatabase();
-    db.beginTransaction();
+    db.beginTransactionNonExclusive();
     try {
       db.execSQL(
           "UPDATE queued_sources SET state=CASE WHEN retries>=4 AND ?=0 THEN 'failed' ELSE"
@@ -348,7 +730,7 @@ public final class OrganizerStore {
       db.execSQL(
           "UPDATE analysis_runs SET state='failed',lease_until=0,input_json='[]',error_code=? WHERE"
               + " id=? AND state='running'",
-          new Object[] {interrupted ? "cancelled" : "analysis_failed", id});
+          new Object[] {interrupted && !failureCode.equals("storage_busy") ? "cancelled" : failureCode, id});
       db.setTransactionSuccessful();
     } finally {
       db.endTransaction();
@@ -370,6 +752,20 @@ public final class OrganizerStore {
             .getReadableDatabase()
             .rawQuery("SELECT state,count(*) FROM queued_sources GROUP BY state", null)) {
       while (c.moveToNext()) out.put(c.getString(0), c.getInt(1));
+    }
+    try (Cursor c =
+        store
+            .getReadableDatabase()
+            .rawQuery(
+                "SELECT count(*) FROM analysis_runs WHERE state='running' AND lease_until>?",
+                new String[] {Long.toString(System.currentTimeMillis())})) {
+      c.moveToFirst();
+      out.put("active_runs", c.getInt(0));
+    }
+    try (Cursor c = store.getReadableDatabase().rawQuery(
+        "SELECT error_code FROM analysis_runs WHERE state='failed' AND error_code NOT IN "
+            + "('cancelled','history_prefill','process_restarted') ORDER BY created_at DESC LIMIT 1", null)) {
+      if (c.moveToFirst()) out.put("last_failure_code", c.getString(0));
     }
     return out;
   }
@@ -536,7 +932,7 @@ public final class OrganizerStore {
   public String confirm(JSONObject proposal, JSONObject edited, Long remindAt, long now)
       throws Exception {
     SQLiteDatabase db = store.getWritableDatabase();
-    db.beginTransaction();
+    db.beginTransactionNonExclusive();
     try {
       String ref = proposal.getString("review_ref");
       String reviewState;
@@ -629,8 +1025,15 @@ public final class OrganizerStore {
   }
 
   public void confirmMemory(JSONObject proposal, String title, String kind) throws Exception {
+    confirmMemory(proposal, title, kind, null);
+  }
+
+  public void confirmMemory(JSONObject proposal, String title, String kind, String summary)
+      throws Exception {
+    if (summary != null && (summary.trim().isEmpty() || summary.length() > 1200))
+      throw new IllegalArgumentException("请输入 1–1200 字的完整结论");
     SQLiteDatabase db = store.getWritableDatabase();
-    db.beginTransaction();
+    db.beginTransactionNonExclusive();
     try {
       try (Cursor c =
           db.rawQuery(
@@ -642,11 +1045,14 @@ public final class OrganizerStore {
       }
       new ConversationPolicy(store).requireProposal(proposal);
       verifySourceRevisions(proposal.getJSONObject("source"));
-      store.save(proposal.getJSONObject("source"), title, kind);
+      JSONObject source = new JSONObject(proposal.getJSONObject("source").toString());
+      if (summary != null) source.put("_information_summary", summary.trim());
+      store.save(source, title, kind);
       db.setTransactionSuccessful();
     } finally {
       db.endTransaction();
     }
+    store.scheduleKnowledge();
   }
 
   public JSONObject manual(JSONObject source, String kind, String title) throws Exception {
@@ -697,7 +1103,7 @@ public final class OrganizerStore {
     if (!state.matches("open|waiting|blocked|completed|cancelled"))
       throw new IllegalArgumentException();
     SQLiteDatabase db = store.getWritableDatabase();
-    db.beginTransaction();
+    db.beginTransactionNonExclusive();
     try {
       JSONObject item = work(id);
       if (item == null || item.getInt("revision") != expectedRevision)
@@ -788,19 +1194,20 @@ public final class OrganizerStore {
       if (!c.moveToFirst() || !c.getString(0).equals("running") || c.getLong(1) <= now)
         throw new IllegalStateException("整理批次已失效，结果未提交");
     }
+    requireContext(batch);
     ConversationPolicy policy = new ConversationPolicy(store);
     JSONArray sources = batch.getJSONArray("sources");
     for (int i = 0; i < sources.length(); i++) {
       JSONObject source = sources.getJSONObject(i);
-      if (policy.excluded(source)) throw new IllegalStateException("该会话已排除 AI 整理");
+      if (!policy.allowsAiSource(source)) throw new IllegalStateException("该资料已排除或遗忘，整理已停止");
       try (Cursor c =
           db.rawQuery(
               "SELECT q.state,q.run_id,q.revision,s.revision FROM queued_sources q "
                   + "JOIN source_snapshots s ON s.base_ref=q.base_ref WHERE q.ref=?",
               new String[] {MemoryStore.reference(source)})) {
         if (!c.moveToFirst()
-            || !c.getString(0).equals("leased")
-            || !id.equals(c.getString(1))
+            || (!source.optBoolean("_context_only")
+                && (!c.getString(0).equals("leased") || !id.equals(c.getString(1))))
             || !c.getString(2).equals(c.getString(3)))
           throw new IllegalStateException("原消息已变化，整理批次已失效");
       }
@@ -845,11 +1252,15 @@ public final class OrganizerStore {
           "UPDATE reminders SET state='cancelled',updated_at=? WHERE work_id=?",
           new Object[] {now, id});
     } else {
+      String previousState=null;
+      try(Cursor previous=db.rawQuery("SELECT due_at,state FROM reminders WHERE work_id=?",new String[]{id})) {
+        if(previous.moveToFirst()&&previous.getLong(0)==due&&previous.getString(1).matches("posted|dismissed|posting|uncertain"))previousState=previous.getString(1);
+      }
       ContentValues v = new ContentValues();
       v.put("work_id", id);
       v.put("revision", revision);
       v.put("due_at", due);
-      v.put("state", "scheduled");
+      v.put("state",previousState==null ? "scheduled" : previousState);
       v.put("updated_at", now);
       db.insertWithOnConflict("reminders", null, v, SQLiteDatabase.CONFLICT_REPLACE);
     }
@@ -858,7 +1269,7 @@ public final class OrganizerStore {
   public boolean beginDelivery(String id, int revision, long due, long now, boolean permitted)
       throws Exception {
     SQLiteDatabase db = store.getWritableDatabase();
-    db.beginTransaction();
+    db.beginTransactionNonExclusive();
     try {
       JSONObject item = work(id), rule = reminder(id);
       if (item == null
@@ -890,7 +1301,7 @@ public final class OrganizerStore {
 
   public void finishDelivery(String id, int revision, long due, long now) throws Exception {
     SQLiteDatabase db = store.getWritableDatabase();
-    db.beginTransaction();
+    db.beginTransactionNonExclusive();
     try {
       db.execSQL(
           "UPDATE reminders SET state='posted',updated_at=? WHERE work_id=? AND revision=? AND"
@@ -907,7 +1318,7 @@ public final class OrganizerStore {
 
   public void uncertainDelivery(String id, int revision, long due, long now) throws Exception {
     SQLiteDatabase db = store.getWritableDatabase();
-    db.beginTransaction();
+    db.beginTransactionNonExclusive();
     try {
       db.execSQL(
           "UPDATE reminders SET state='uncertain',updated_at=? WHERE work_id=? AND revision=? AND"
@@ -927,7 +1338,7 @@ public final class OrganizerStore {
       throws Exception {
     if (!action.matches("dismiss|snooze|complete")) throw new IllegalArgumentException();
     SQLiteDatabase db = store.getWritableDatabase();
-    db.beginTransaction();
+    db.beginTransactionNonExclusive();
     try {
       JSONObject rule = reminder(id), item = work(id);
       if (rule == null

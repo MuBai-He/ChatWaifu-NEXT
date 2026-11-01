@@ -10,10 +10,28 @@ import org.json.JSONObject;
 
 /** Calls Ningning Runtime APIs; no provider endpoint, model or provider key is sent. */
 public final class RuntimeBackendClient {
-  private final BackendSettings settings;
+  static final class AnalysisFailure extends IllegalStateException {
+    final String code;
+    AnalysisFailure(String code) {
+      super(AnalysisEngine.failureMessage(code));
+      this.code = code;
+    }
+  }
+  static final class StateConflict extends IllegalStateException {
+    StateConflict() { super("资料或版本已变化，需要重新核对"); }
+  }
+  static final class AnalysisBusy extends IllegalStateException {
+    AnalysisBusy() {
+      super("其他会话正在整理，稍后继续");
+    }
+  }
 
-  RuntimeBackendClient(BackendSettings settings) {
+  private final BackendSettings settings;
+  private final String boundBase,boundCredential;
+
+  RuntimeBackendClient(BackendSettings settings) throws Exception {
     this.settings = settings;
+    boundBase=settings.base();boundCredential=settings.credential();
   }
 
   JSONObject request(String path, JSONObject body) throws Exception {
@@ -21,15 +39,20 @@ public final class RuntimeBackendClient {
   }
 
   JSONObject request(String path, JSONObject body, AnalysisSendGate gate) throws Exception {
+    if(!boundBase.equals(settings.base())||!boundCredential.equals(settings.credential()))throw new IllegalStateException("连接已变化，请重新同步");
     HttpURLConnection connection =
         (HttpURLConnection)
-            new URL(BackendSettings.normalize(settings.base()) + path).openConnection();
+            new URL(BackendSettings.normalize(boundBase) + path).openConnection();
     connection.setConnectTimeout(15000);
-    connection.setReadTimeout(90000);
+    connection.setReadTimeout(path.equals("/v1/personal-information/analyze") ? 180000 : 90000);
     connection.setInstanceFollowRedirects(false);
-    connection.setRequestProperty("Authorization", "Bearer " + settings.credential());
+    connection.setRequestProperty("Authorization", "Bearer " + boundCredential);
     connection.setRequestProperty("Accept", "application/json");
-    long deadline = System.nanoTime() + 120_000_000_000L;
+    long deadline =
+        System.nanoTime()
+            + (path.equals("/v1/personal-information/analyze")
+                ? 210_000_000_000L
+                : 120_000_000_000L);
     try {
       if (body != null) {
         connection.setRequestMethod("POST");
@@ -43,9 +66,40 @@ public final class RuntimeBackendClient {
             });
       }
       int code = connection.getResponseCode();
+      if (code == 409) throw new StateConflict();
       if (code == 404) throw new IllegalStateException("宁宁的信息接入功能尚未就绪，资料继续保存在本机");
       if (code == 401 || code == 403) throw new IllegalStateException("宁宁后端拒绝连接，请检查连接凭据");
-      if (code == 503) throw new IllegalStateException("宁宁的整理服务暂不可用，请稍后重试");
+      if (path.equals("/v1/personal-information/analyze") && code == 502) {
+        String detail = "";
+        try (InputStream error = connection.getErrorStream()) {
+          if (error != null) {
+            byte[] bytes = new byte[8192];
+            int length = error.read(bytes);
+            if (length > 0) detail = new JSONObject(new String(bytes, 0, length,
+                StandardCharsets.UTF_8)).optString("detail");
+          }
+        } catch (org.json.JSONException invalidBody) {
+          // A gateway HTML body is not a model-format failure.
+        }
+        throw new AnalysisFailure(detail.equals("information_model_output_invalid")
+            ? "model_output_invalid" : "backend_unavailable");
+      }
+      if (path.equals("/v1/personal-information/analyze") && code == 422)
+        throw new AnalysisFailure("analysis_request_invalid");
+      if (code == 503) {
+        try (InputStream error = connection.getErrorStream()) {
+          if (error != null) {
+            byte[] bytes = new byte[8192];
+            int length = error.read(bytes);
+            if (length > 0
+                && new String(bytes, 0, length, StandardCharsets.UTF_8)
+                    .contains("information_analysis_busy")) throw new AnalysisBusy();
+          }
+        }
+        if (path.equals("/v1/personal-information/analyze"))
+          throw new AnalysisFailure("model_unavailable");
+        throw new IllegalStateException("宁宁的整理服务暂不可用，请稍后重试");
+      }
       if (code < 200 || code >= 300)
         throw new IllegalStateException("宁宁后端返回 HTTP " + code + "，资料和进度已保留");
       try (InputStream in = connection.getInputStream();
@@ -58,11 +112,18 @@ public final class RuntimeBackendClient {
             throw new IllegalStateException("宁宁后端响应超时或过大");
           data.write(buffer, 0, n);
         }
+        if(!boundBase.equals(settings.base())||!boundCredential.equals(settings.credential()))throw new IllegalStateException("连接已变化，旧响应已忽略");
         return new JSONObject(data.toString("UTF-8"));
       }
     } finally {
       connection.disconnect();
     }
+  }
+
+  private static java.util.Set<String> referenceSet(JSONArray refs) throws Exception {
+    java.util.Set<String> result = new java.util.HashSet<>();
+    for (int i = 0; i < refs.length(); i++) result.add(refs.getString(i));
+    return result;
   }
 
   public String connect() throws Exception {
@@ -110,7 +171,7 @@ public final class RuntimeBackendClient {
     AnalysisPayload payload = AnalysisPayload.prepare(sources, known, context, timezone);
     JSONObject body =
         new JSONObject(payload.input.toString())
-            .put("schema_version", "1.1")
+            .put("schema_version", "1.2")
             .put("session_id", settings.session())
             .put("request_id", requestId);
     JSONObject result = request("/v1/personal-information/analyze", body, gate);
@@ -121,7 +182,7 @@ public final class RuntimeBackendClient {
     JSONArray refs = result.getJSONArray("processed_refs");
     java.util.Set<String> received = new java.util.HashSet<>();
     for (int i = 0; i < refs.length(); i++) received.add(refs.getString(i));
-    if (received.size() != refs.length() || !received.equals(payload.allowed.keySet()))
+    if (received.size() != refs.length() || !received.equals(referenceSet(payload.references())))
       throw new IllegalStateException("宁宁返回的处理进度不匹配");
     return payload.validate(result.getJSONArray("items"));
   }

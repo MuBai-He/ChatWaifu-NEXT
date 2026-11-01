@@ -1,0 +1,515 @@
+{
+  "$defs": {
+    "EvidenceRef": {
+      "properties": {
+        "kind": {
+          "enum": [
+            "event",
+            "knowledge"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Reference",
+          "type": "string"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "reference"
+      ],
+      "title": "EvidenceRef",
+      "type": "object"
+    },
+    "JsonObject": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/work-item.schema.json",
+  "properties": {
+    "acceptance": {
+      "default": "pending",
+      "enum": [
+        "pending",
+        "human",
+        "policy"
+      ],
+      "title": "Acceptance",
+      "type": "string"
+    },
+    "action_scope": {
+      "default": "single",
+      "enum": [
+        "single",
+        "series",
+        "following"
+      ],
+      "title": "Action Scope",
+      "type": "string"
+    },
+    "bindings": {
+      "items": {
+        "$ref": "#/$defs/JsonObject"
+      },
+      "maxItems": 16,
+      "title": "Bindings",
+      "type": "array"
+    },
+    "clear_due": {
+      "default": false,
+      "title": "Clear Due",
+      "type": "boolean"
+    },
+    "details": {
+      "default": "",
+      "maxLength": 64000,
+      "title": "Details",
+      "type": "string"
+    },
+    "due_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Due At"
+    },
+    "due_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Due Date"
+    },
+    "end_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "End Date"
+    },
+    "ends_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Ends At"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/EvidenceRef"
+      },
+      "maxItems": 30,
+      "minItems": 1,
+      "title": "Evidence",
+      "type": "array"
+    },
+    "expected_revision": {
+      "default": 0,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "ingestion_mode": {
+      "default": "historical",
+      "enum": [
+        "live",
+        "historical",
+        "delayed"
+      ],
+      "title": "Ingestion Mode",
+      "type": "string"
+    },
+    "involvement": {
+      "default": "unclear",
+      "enum": [
+        "self",
+        "other",
+        "unclear"
+      ],
+      "title": "Involvement",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "todo",
+        "event",
+        "memory",
+        "reference",
+        "decision"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "legacy_record_id": {
+      "anyOf": [
+        {
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Legacy Record Id"
+    },
+    "legacy_review": {
+      "default": false,
+      "title": "Legacy Review",
+      "type": "boolean"
+    },
+    "memory_identity": {
+      "$ref": "#/$defs/JsonObject"
+    },
+    "migration_target": {
+      "$ref": "#/$defs/JsonObject"
+    },
+    "operation": {
+      "default": "create",
+      "enum": [
+        "create",
+        "update",
+        "complete",
+        "cancel"
+      ],
+      "title": "Operation",
+      "type": "string"
+    },
+    "owner": {
+      "default": "local",
+      "title": "Owner",
+      "type": "string"
+    },
+    "previous_ends_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Previous Ends At"
+    },
+    "previous_starts_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Previous Starts At"
+    },
+    "primary_device_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Primary Device Id"
+    },
+    "provider_updated_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Provider Updated At"
+    },
+    "reconciled_task_revision": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reconciled Task Revision"
+    },
+    "remind_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Remind At"
+    },
+    "reminder_offset_seconds": {
+      "anyOf": [
+        {
+          "maximum": 2678400,
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reminder Offset Seconds"
+    },
+    "reminder_rule": {
+      "default": "absolute",
+      "enum": [
+        "absolute",
+        "relative"
+      ],
+      "title": "Reminder Rule",
+      "type": "string"
+    },
+    "requested_fields": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 16,
+      "title": "Requested Fields",
+      "type": "array"
+    },
+    "revision": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "room_id": {
+      "title": "Room Id",
+      "type": "string"
+    },
+    "source_room_ids": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 100,
+      "title": "Source Room Ids",
+      "type": "array"
+    },
+    "start_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Start Date"
+    },
+    "starts_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Starts At"
+    },
+    "state": {
+      "enum": [
+        "proposed",
+        "open",
+        "waiting",
+        "blocked",
+        "completed",
+        "cancelled",
+        "rejected"
+      ],
+      "title": "State",
+      "type": "string"
+    },
+    "target_applied_revision": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Target Applied Revision"
+    },
+    "target_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Target Id"
+    },
+    "task_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Task Id"
+    },
+    "temporal_reason": {
+      "default": "",
+      "maxLength": 200,
+      "title": "Temporal Reason",
+      "type": "string"
+    },
+    "temporal_status": {
+      "default": "current",
+      "enum": [
+        "current",
+        "historical",
+        "uncertain"
+      ],
+      "title": "Temporal Status",
+      "type": "string"
+    },
+    "timezone": {
+      "default": "Asia/Shanghai",
+      "title": "Timezone",
+      "type": "string"
+    },
+    "title": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "waiting_reason": {
+      "anyOf": [
+        {
+          "maxLength": 1200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Waiting Reason"
+    },
+    "work_item_id": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Work Item Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "work_item_id",
+    "room_id",
+    "kind",
+    "title",
+    "state",
+    "evidence",
+    "updated_at"
+  ],
+  "title": "WorkItem",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

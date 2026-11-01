@@ -57,7 +57,7 @@ qq_account_operations:
     - Broad related Python regression passed 798 cases before final shared-conversation and discovery refinements; final QQ/settings chain passed 23, shared/group/cancellation/catalog suite passed 121 with two routing failures subsequently repaired and all 35 routing/account/catalog cases passed. Web 457 and protocol 127 passed; changed-code Ruff/strict types, architecture and Web lint/build passed. Global protocol lint retains one existing no-control-regex finding in an unchanged parser.
 
 schema_version: "1.0"
-updated_at: "2026-10-25"
+updated_at: "2026-10-31"
 current_phase: "integration-and-release-validation"
 delivery_alignment:
   status: main_primary_checkout_and_server_product_aligned_verified
@@ -1065,6 +1065,46 @@ knowledge_settings_navigation:
     - An optional operator web_client_dir provides the root/login/settings/knowledge Web documents under the existing Runtime listener, without allowing unauthenticated API, MCP or private-data access. The host directory is omitted from public configuration.
     - Live same-origin navigation from settings to the graph and back passed. The map loaded 200 real nodes; the accessible relation list remains available. Existing model/channel configuration and migration hashes were preserved; Runtime restarted and the socket TLS proxy reactivated, while model/indexing workers and the LAN Web service retained their processes.
 personal_information_knowledge:
+  context_extraction:
+    status: server_published_android_0_5_7_installed_targeted_model_verified
+    date: "2026-10-29"
+    evidence_document: "docs/knowledge-settings.md"
+    evidence:
+      - Information protocol 1.2 preserves 1.1 callers and carries one-conversation windows, speaker identities and citable read-only context; progress excludes that context and each suggestion requires fresh evidence and a complete conclusion.
+      - Android stores and reviews full conclusions separately from raw evidence without a migration; source versions, policy fences and failure recovery are retained. Confirmed sync waits for context sources, preserves existing citations and does not mistake a deferred projection for deletion. Web source cards preview dialogue text.
+      - Server knowledge-context-20261029 is active; 15 served files and the public index match, schema 48 is unchanged, and eight config files, seven control tables, six unrelated service processes and 21 containers are preserved. Production-compatible Linux API 20, browser 8, strict types/lint and architecture pass.
+      - Original-signature Android 0.5.7 / code 18 installed over authorized wireless ADB with schema 5 unchanged; native 74, Release build and lint pass. Four single-repeat synthetic cases through the actual extraction role cover date correction, cancellation, attribution and ambiguity; no proposals were committed. Existing confirmed content and old proposals are not automatically rewritten.
+  historical_processing:
+    status: server_published_android_0_5_9_installed_chronological_intent_running
+    date: "2026-10-30"
+    evidence_document: "docs/knowledge-settings.md"
+    evidence:
+      - The pending connection message was a sync read timeout with a stale stage label; owner credentials and session remained present. Existing KnowledgeJob now syncs independently of extraction and stage updates clear obsolete warnings.
+      - Native and Runtime cap processing at four batches, with one active batch per room. Completion-driven bounded scheduling replaces the single lease and per-success minute gap. Historical order checks unqueued older archive input and respects earlier retry barriers; the UI supports switching back to recent-first.
+      - Optional protocol 1.2 prior_knowledge distinguishes confirmed memory from pending review, rejects other rooms and future background, and preserves source lineage within the existing 30-source budget. Changed snapshots, exclusion, forgetting and cancellation remain fenced; proposals still require confirmation.
+      - Native 86 and production-compatible Linux API 24 pass, along with Ruff, strict Pyright, architecture, Release build and lint. One actual-role synthetic background correction passed in 7.46 seconds without committing data; this is targeted evidence, not a general quality guarantee.
+      - Release knowledge-pipeline-20261030 is active with schema 48, eight config files, seven control tables and 21 containers preserved. Original-signature Android 0.5.9 / code 20 readback matches; app schema 5 and three connection settings are unchanged. Baseline confirmed rows remain identical while concurrent review additions are retained.
+      - The existing full-history intent was switched through the handset UI to oldest-remaining order. A final three-room sample matched each room's earliest unprocessed source, and processing/sync counters advanced. Temporary screen timeout was restored to 60 seconds.
+  native_card_interaction:
+    status: android_0_5_8_installed_handset_layout_and_targeted_frames_verified
+    date: "2026-10-29"
+    evidence_document: "docs/knowledge-settings.md"
+    evidence:
+      - Official Things, Linear Inbox and Todoist examples informed title-first hierarchy, compact metadata and separated source actions, retaining the existing palette and components. Normal and 1.3 font scale were inspected on the owner handset.
+      - Selection reuses card views and stable geometry; reads, parsing, polling and batch snapshots use the existing worker. Per-read source checks are reused, while commit policy and version fences stay fresh; stale read callbacks cannot repaint another page.
+      - Native 78, Release build and lint pass without a new validation project. Targeted 100-row-page longest-frame samples were 2443.1 ms before, 54.3 ms on final long press and 33.2 ms on cancel; these are not sustained-frame-rate claims.
+      - Original-signature 0.5.8 / code 19 installed and APK readback matched. Six business tables and three connection configurations were identical; quick_check ok and schema 5 unchanged. Font scale 1.0 and stay-awake 0 restored; no real suggestions or confirmed records were committed, ignored or forgotten.
+  interaction_refresh:
+    status: web_published_native_release_installed_handset_layout_and_read_flow_verified
+    date: "2026-10-29"
+    evidence_document: "docs/knowledge-settings.md"
+    evidence:
+      - Content-first Web and Android navigation, continuous native review, source-preserving Web details, local memory search and server-filtered collection paging implemented without a schema migration.
+      - Existing suites cover browser interactions, native review and batch semantics, source policy and scoped cursor pagination. Owner handset received the original-signature Release update on 2026-10-29; all 20 pre-launch app-data hashes were preserved and MainActivity resumed successfully. Real-data continuous submission and background reminder acceptance remain unverified.
+      - Android 0.5.5 original-signature Release installed after real handset layout correction: bottom review actions, keyboard resizing, multiline fields, compact toolbars and 1.3 font-scale batch buttons verified. Confirmed records, work, reminders, exclusions and change history match the private pre-update snapshot; 13 related native tests and Release lint/build pass.
+      - Knowledge Web revision 3 is published in knowledge-ui-20261029 with the prior complete public assets retained; all 15 build files and the public HTTPS index match. Existing browser 8 and production-compatible Linux knowledge 18 pass. Three backend files changed without migration; eight configuration files, seven control tables, six unrelated service processes and 21 containers were preserved.
+      - Handset embedded records, reading and editing, exact source snapshots, Escape focus restoration and the save action above the soft keyboard are verified. Short details and reduced viewport actions use a separate scrolling body and fixed footer. Real records were not submitted or forgotten during acceptance; desktop binaries were not repackaged.
+      - Original-signature Android 0.5.6 / code 17 is installed. Native back reuses the Web unsaved guard and native sync preserves the loaded page and draft; both were checked with an unsubmitted temporary title. Existing native 16, Release build and lint pass; consistent SQLite snapshots preserve memories, exclusions, source states, work, reminders and changes with schema 5 unchanged.
   status: merged_main_server_aligned_ci_and_prior_owner_device_verified
   adr: "0084"
   evidence:
@@ -1073,3 +1113,45 @@ personal_information_knowledge:
     - Android 0.5.4 is independently buildable under apps/info-inbox-android. The owner handset upgrade and category/multiselect screens were verified on 2026-10-15 with existing confirmed data and exclusions preserved.
     - Latest-main integration preserves PR 81 password login, settings navigation and artifact isolation. All 14 PR 82 CI checks passed at 2809f0b; PR 82 merged as 6543f28 on 2026-10-25. Local Runtime, Web/browser and Android evidence remains scoped in docs/operations/personal-knowledge-main-integration.md.
     - The 2026-10-25 server alignment deploys the merged product baseline with matching migration SQL and preserved owner configuration/data. It does not repeat handset acceptance or a real-model indexing evaluation; see docs/operations/framework-alignment-2026-10-25.md.
+
+unified_owner_agent_harness:
+  status: source_integrated_with_open_flow_gaps_production_rollout_pending
+  adr: "0085"
+  proposal: "docs/plans/unified-agent-harness-proposal-2026-10-31.md"
+  evidence: "docs/operations/unified-agent-harness-validation-2026-10-31.md"
+  storage_migration: 49
+  android_schema: 6
+  runtime_owns_extraction: true
+  production_runtime_owns_extraction: false
+  open_delivery_gaps:
+    audited_on: "2026-11-01"
+    total: 30
+    source_logic: 13
+    product_entry: 3
+    rollout_configuration: 4
+    monitoring: 1
+    acceptance_data: 9
+    release_blockers: 11
+    note: "Delivery work items, not thirty independent code defects; see the original-plan audit at the end of the shared validation record."
+  default_standing_intent_shadow: true
+  task_state_machine: existing_AgentTaskService
+  temporal_review_fix:
+    date: "2026-11-01"
+    android_release: "0.6.3 / code 24"
+    production: "targeted v48 information patch only; full harness rollout remains pending"
+    behavior: "Historical and uncertain proposals stay separate from current work; original times, confirmed decisions and overdue work are preserved."
+  inbox_review_reliability:
+    date: "2026-11-01"
+    behavior: "Page-local section snapshots; bounded format repair and redacted failure reasons; all 28 previously failed source versions recovered to done."
+    android_tests: 99
+    information_api_tests: 39
+  native_storage_contention:
+    date: "2026-11-01"
+    android: "0.6.3 / code 24; schema 6 preserved"
+    behavior: "Reference-counted shared WAL pool, read-only previews and one notification after atomic batch commit; storage_busy preserves retry budget."
+    unit_tests_passed: 103
+    native_storage_assertions_passed: 8
+  remaining_gates:
+    - The prior 8/9 action freeze is retained. A reproducible knowledge-epoch RuntimeError now has bounded typed context refresh, fresh authority checks and no successful-write replay; 64 targeted tests and a live forced-update probe pass. A fresh three-repeat action freeze scores 9/9 with actual provider readback. Latest full regression passes 4189 with 46 platform skips; Android passes 94, and Pyright reports zero errors across 617 files. Remaining rollout gates are recorded separately.
+    - Google OAuth, dedicated Calendar/Tasks, real provider operations and real-WeChat automatic reschedule/offline delivery verified. Native cold outbox/conflict and the original Release timely connection with 600 remote records plus 601 local sources now pass in deep idle under the owner-approved Xiaomi unrestricted/autostart profile. The old filtered-bridge repair remains historical; a fresh combined real-WeChat release trial and controlled full Runtime rollout are still separate gates.
+    - Controlled rollout of the full unified Runtime; live v48 proxy repair and Android 0.6.0 upgrade do not satisfy this gate.

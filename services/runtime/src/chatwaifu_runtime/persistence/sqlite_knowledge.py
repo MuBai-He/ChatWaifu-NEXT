@@ -1,7 +1,8 @@
-"Canonical knowledge revisions, CAS receipts and indexing leases in SQLite."
+"""Canonical knowledge revisions, CAS receipts and indexing leases in SQLite."""
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import time
@@ -23,6 +24,12 @@ from chatwaifu_runtime.knowledge.contracts import (
 )
 from chatwaifu_runtime.knowledge.errors import KnowledgeAccessError, KnowledgeConflict
 from chatwaifu_runtime.persistence.database import Database
+from chatwaifu_runtime.persistence.harness_reminders import accept_download_in, native_receipt_in
+from chatwaifu_runtime.persistence.sqlite_harness import (
+    forget_source_in,
+    observe_in,
+    project_work_in,
+)
 
 
 def now_ms() -> int:
@@ -89,9 +96,8 @@ class SQLiteKnowledgeRepository:
     ) -> None:
         await c.execute(
             (
-                "INSERT INTO "
-                "knowledge_changes(owner,kind,object_id,payload,created_at) "
-                "VALUES(?,?,?,?,?)"
+                "INSERT INTO knowledge_changes(owner,kind,object_id,payload,create"
+                "d_at) VALUES(?,?,?,?,?)"
             ),
             (owner, kind, key, encode(payload), now_ms()),
         )
@@ -121,6 +127,66 @@ class SQLiteKnowledgeRepository:
             (owner, operation, digest, encode(receipt)),
         )
 
+    async def exact_memories(self, owner: str, text: str) -> list[Record]:
+        rows = await self.db.fetchall(
+            (
+                "SELECT payload FROM knowledge_re"
+                "cords WHERE owner=? AND kind='me"
+                "mory' AND deleted=0 AND json_ext"
+                "ract(payload,'$.text')=? AND coa"
+                "lesce(json_extract(payload,'$.or"
+                "igin.source_type'),'')!='formal_"
+                "memory' LIMIT 100"
+            ),
+            (owner, text.strip()),
+        )
+        return [Record.model_validate_json(row[0]) for row in rows]
+
+    async def memory_identity(self, owner: str, predicate: str) -> list[Record]:
+        rows = await self.db.fetchall(
+            (
+                "SELECT payload FROM knowledge_records WHERE owner=? AND"
+                " deleted=0 AND kind='memory' AND json_extract(payload,'"
+                "$.origin.subject_policy')='owner_statement' AND json_ex"
+                "tract(payload,'$.origin.memory_identity.predicate')=? L"
+                "IMIT 100"
+            ),
+            (owner, predicate),
+        )
+        return [
+            record
+            for row in rows
+            if await self.eligible(
+                owner,
+                Citation(
+                    record_id=(record := Record.model_validate_json(str(row[0]))).record_id,
+                    revision=record.revision,
+                ),
+            )
+        ]
+
+    async def source_window(self, owner: str, room_id: str, at: int) -> list[Record]:
+        rows = await self.db.fetchall(
+            (
+                "SELECT payload FROM knowledge_records WHERE owner=? AND "
+                "room_id=? AND kind='source' AND deleted=0 ORDER BY "
+                "abs(json_extract(payload,'$.occurred_at')-?) LIMIT 30"
+            ),
+            (owner, room_id, at),
+        )
+        result: list[Record] = []
+        for row in rows:
+            record = Record.model_validate_json(str(row[0]))
+            if await self.eligible(
+                owner, Citation(record_id=record.record_id, revision=record.revision)
+            ):
+                result.append(record)
+        return result
+
+    async def apply_mutation(self, owner: str, mutation: Mutation) -> JsonObject:
+        async with self.db.transaction() as c:
+            return await self._mutate(c, owner, mutation, trusted=True)
+
     async def push(self, owner: str, body: PushRequest) -> JsonObject:
         receipts: list[JsonObject] = []
         async with self.db.transaction() as c:
@@ -138,6 +204,11 @@ class SQLiteKnowledgeRepository:
                 ),
                 (str(body.device_id), owner, now_ms()),
             )
+            if body.device_label:
+                await c.execute(
+                    "UPDATE knowledge_devices SET label=? WHERE owner=? AND device_id=?",
+                    (body.device_label, owner, str(body.device_id)),
+                )
             # Clients must reconcile changed exclusions before transmitting source content.
             if int(state["policy_epoch"]) != body.policy_epoch:
                 for op in (*body.policies, *body.mutations):
@@ -163,7 +234,58 @@ class SQLiteKnowledgeRepository:
                     == "formal_memory"
                 ):
                     raise KnowledgeConflict("formal_memory_use_memory_controls")
-                receipts.append(await self._mutate(c, owner, mutation))
+                receipts.append(await self._mutate(c, owner, mutation, device=body.device_id))
+            if body.mutations:
+                for mutation, receipt in zip(
+                    body.mutations, receipts[len(body.policies) :], strict=True
+                ):
+                    if receipt.get("status") != "accepted":
+                        continue
+                    source_row = await one(
+                        c,
+                        "SELECT payload FROM knowledge_records WHERE owner=? AND record_id=?",
+                        (owner, mutation.record.record_id),
+                    )
+                    if source_row is None:
+                        continue
+                    record = Record.model_validate_json(str(source_row[0]))
+                    processing = await one(
+                        c,
+                        (
+                            "SELECT device_id,epoch,state FROM harness_processing WHERE "
+                            "owner=? AND room_id=?"
+                        ),
+                        (owner, record.room_id),
+                    )
+                    if processing and processing[2] == "runtime":
+                        if (
+                            body.schema_version == "1.1"
+                            and int(processing[1]) != body.processing_epoch
+                        ):
+                            raise KnowledgeConflict("processing_epoch_changed")
+                        epoch_row = await self.ensure_owner_in(c, owner)
+                        declared = (
+                            record.origin.get("capture_mode")
+                            if body.schema_version == "1.1"
+                            else None
+                        )
+                        mode = (
+                            declared
+                            if isinstance(declared, str)
+                            and declared in {"live", "historical", "delayed"}
+                            else body.ingestion_mode
+                            if body.schema_version == "1.1"
+                            else "delayed"
+                        )
+                        await observe_in(
+                            c,
+                            owner,
+                            record,
+                            str(mode),
+                            int(epoch_row["policy_epoch"]),
+                            precise_capture=isinstance(declared, str)
+                            and declared in {"live", "historical", "delayed"},
+                        )
             state = await self.ensure_owner_in(c, owner)
             cursor = await one(
                 c, "SELECT coalesce(max(sequence),0) FROM knowledge_changes WHERE owner=?", (owner,)
@@ -203,7 +325,8 @@ class SQLiteKnowledgeRepository:
                 (
                     "INSERT INTO knowledge_policies VALUES(?,?,?,?,?) ON "
                     "CONFLICT(owner,room_id) DO UPDATE SET "
-                    "revision=excluded.revision,excluded=excluded.excluded,label=excluded.label"
+                    "revision=excluded.revision,excluded=excluded.excluded,label=exclu"
+                    "ded.label"
                 ),
                 (owner, policy.room_id, revision, int(policy.excluded), policy.label),
             )
@@ -268,9 +391,8 @@ class SQLiteKnowledgeRepository:
         )
         await c.execute(
             (
-                "INSERT INTO "
-                "knowledge_jobs(job_id,owner,record_id,revision,policy_epoch,action,historical,created_at)"
-                " VALUES(?,?,?,?,?,?,?,?)"
+                "INSERT INTO knowledge_jobs(job_id,owner,record_id,revision,policy"
+                "_epoch,action,historical,created_at) VALUES(?,?,?,?,?,?,?,?)"
             ),
             (
                 str(uuid4()),
@@ -284,13 +406,32 @@ class SQLiteKnowledgeRepository:
             ),
         )
 
-    async def _mutate(self, c: aiosqlite.Connection, owner: str, mutation: Mutation) -> JsonObject:
+    async def _mutate(
+        self,
+        c: aiosqlite.Connection,
+        owner: str,
+        mutation: Mutation,
+        *,
+        trusted: bool = False,
+        device: UUID | None = None,
+        cascade_forget: bool = True,
+    ) -> JsonObject:
         operation = str(mutation.operation_id)
         digest = hashlib.sha256(encode(mutation.model_dump(mode="json")).encode()).hexdigest()
         cached = await self._receipt(c, owner, operation, digest)
         if cached is not None:
             return cached
         draft = mutation.record
+        if not trusted and "_trusted_adapter" in draft.origin:
+            draft = draft.model_copy(
+                update={
+                    "origin": {
+                        key: value
+                        for key, value in draft.origin.items()
+                        if key != "_trusted_adapter"
+                    }
+                }
+            )
         row = await one(
             c,
             "SELECT * FROM knowledge_records WHERE owner=? AND record_id=?",
@@ -299,15 +440,70 @@ class SQLiteKnowledgeRepository:
         current = Record.model_validate_json(str(row["payload"])) if row else None
         revision = current.revision if current else 0
         result: JsonObject = {"operation_id": operation, "record_id": draft.record_id}
-        if revision != mutation.expected_revision or (
-            current and current.deleted and mutation.action != "forget"
+        if current is not None and current.deleted and mutation.action != "forget":
+            result.update(
+                {
+                    "status": "conflict",
+                    "conflict_id": str(
+                        uuid5(NAMESPACE_URL, f"forgotten:{owner}:{draft.record_id}")
+                    ),
+                    "current": current.model_dump(mode="json"),
+                    "record": current.model_dump(mode="json"),
+                    "revision": current.revision,
+                    "discarded": "forgotten_source",
+                    "content_changed": False,
+                }
+            )
+            await self._save_receipt(c, owner, operation, digest, result)
+            return result
+        if (
+            current is not None
+            and mutation.action == "upsert"
+            and mutation.expected_revision == revision
+            and device is not None
+            and isinstance(draft.origin.get("device_reminder"), dict)
+        ):
+            unchanged = current.model_dump(
+                exclude={"origin", "revision", "deleted", "updated_at"}
+            ) == draft.model_dump(exclude={"origin"}) and current.origin.get(
+                "involvement"
+            ) == draft.origin.get("involvement")
+            if unchanged:
+                await native_receipt_in(
+                    c, owner, device, cast(JsonObject, draft.origin["device_reminder"])
+                )
+                result.update(
+                    {
+                        "status": "accepted",
+                        "record": current.model_dump(mode="json"),
+                        "revision": current.revision,
+                        "content_changed": False,
+                    }
+                )
+                await self._save_receipt(c, owner, operation, digest, result)
+                return result
+        if current is not None and not trusted and "due_date" not in draft.model_fields_set:
+            draft = draft.model_copy(update={"due_date": current.due_date})
+        external_edit = (
+            current is not None
+            and not trusted
+            and current.origin.get("external_bound") is True
+            and mutation.action != "forget"
+            and any(
+                getattr(current, key) != getattr(draft, key)
+                for key in ("title", "text", "state", "due_date", "due_at", "starts_at", "ends_at")
+            )
+        )
+        if (
+            external_edit
+            or revision != mutation.expected_revision
+            or (current and current.deleted and mutation.action != "forget")
         ):
             conflict_id = str(uuid4())
             await c.execute(
                 (
-                    "INSERT INTO "
-                    "knowledge_conflicts(conflict_id,owner,record_id,proposed,current_revision,created_at)"
-                    " VALUES(?,?,?,?,?,?)"
+                    "INSERT INTO knowledge_conflicts(conflict_id,owner,record_id,propo"
+                    "sed,current_revision,created_at) VALUES(?,?,?,?,?,?)"
                 ),
                 (
                     conflict_id,
@@ -368,13 +564,54 @@ class SQLiteKnowledgeRepository:
                         "sender_name": "",
                     }
                 )
-                await self._scrub_forgotten(c, owner, record)
+                await self._scrub_forgotten(c, owner, record, cascade=cascade_forget)
+            if not trusted and record.kind != "source":
+                prior = current
+                origin = {
+                    **record.origin,
+                    "acceptance": "human",
+                    "subject_policy": "reported_legacy",
+                }
+                if device is not None:
+                    origin["accepted_by_device"] = str(device)
+                if prior is not None and prior.origin.get("source_type") == "agent_harness":
+                    for key in (
+                        "source_type",
+                        "work_item_id",
+                        "work_revision",
+                        "external_bound",
+                        "start_date",
+                        "end_date",
+                        "reminder_occurrence",
+                    ):
+                        if key in prior.origin:
+                            origin[key] = prior.origin[key]
+                elif origin.get("source_type") == "agent_harness":
+                    raise KnowledgeConflict("runtime_provenance_is_server_owned")
+                record = record.model_copy(update={"origin": origin})
+            projected = await project_work_in(c, owner, record, trusted=trusted, device=device)
+            if projected is not None:
+                record = record.model_copy(
+                    update={
+                        "origin": {
+                            **record.origin,
+                            "work_item_id": projected.work_item_id,
+                            "work_revision": projected.revision,
+                            "acceptance": "human",
+                            "subject_policy": "owner_confirmed"
+                            if projected.involvement == "self"
+                            else "reported_legacy",
+                        }
+                    }
+                )
             payload = record.model_dump_json()
             await c.execute(
                 (
                     "INSERT INTO knowledge_records VALUES(?,?,?,?,?,?,?,?,?) ON "
                     "CONFLICT(owner,record_id) DO UPDATE SET "
-                    "revision=excluded.revision,deleted=excluded.deleted,confirmed=excluded.confirmed,payload=excluded.payload,updated_at=excluded.updated_at"
+                    "revision=excluded.revision,deleted=excluded.deleted,confirmed=exc"
+                    "luded.confirmed,payload=excluded.payload,updated_at=excluded.upda"
+                    "ted_at"
                 ),
                 (
                     owner,
@@ -447,7 +684,7 @@ class SQLiteKnowledgeRepository:
                 for dependent in dependents:
                     await self._job(c, owner, str(dependent[0]), int(dependent[1]), "remove", False)
             await c.execute(
-                ("UPDATE knowledge_owners SET graph_revision=graph_revision+1 WHERE owner=?"),
+                "UPDATE knowledge_owners SET graph_revision=graph_revision+1 WHERE owner=?",
                 (owner,),
             )
             result.update(
@@ -460,7 +697,43 @@ class SQLiteKnowledgeRepository:
         await self._save_receipt(c, owner, operation, digest, result)
         return result
 
-    async def _scrub_forgotten(self, c: aiosqlite.Connection, owner: str, record: Record) -> None:
+    async def _scrub_forgotten(
+        self, c: aiosqlite.Connection, owner: str, record: Record, *, cascade: bool = True
+    ) -> None:
+        if cascade:
+            descendants = await c.execute_fetchall(
+                (
+                    "WITH RECURSIVE lineage(id) AS (SELECT ? UNION SELECT r."
+                    "record_id FROM knowledge_records r,json_each(r.payload,"
+                    "'$.source_refs') s JOIN lineage l ON json_extract(s.val"
+                    "ue,'$.record_id')=l.id WHERE r.owner=? AND r.deleted=0)"
+                    " SELECT r.payload FROM knowledge_records r JOIN lineage"
+                    " l ON l.id=r.record_id WHERE r.owner=? AND r.record_id<"
+                    ">? AND r.deleted=0"
+                ),
+                (record.record_id, owner, owner, record.record_id),
+            )
+            for descendant in descendants:
+                child = Record.model_validate_json(str(descendant[0]))
+                draft = RecordDraft.model_validate(
+                    child.model_dump(exclude={"revision", "deleted", "updated_at"})
+                )
+                await self._mutate(
+                    c,
+                    owner,
+                    Mutation(
+                        operation_id=uuid5(
+                            NAMESPACE_URL,
+                            f"forget:{record.record_id}:v{record.revision}:{child.record_id}",
+                        ),
+                        expected_revision=child.revision,
+                        action="forget",
+                        record=draft,
+                    ),
+                    trusted=True,
+                    cascade_forget=False,
+                )
+        await forget_source_in(c, owner, record.record_id)
         versions = await c.execute_fetchall(
             ("SELECT revision,payload FROM knowledge_versions WHERE owner=? AND record_id=?"),
             (owner, record.record_id),
@@ -528,7 +801,7 @@ class SQLiteKnowledgeRepository:
                 if key in receipt:
                     receipt[key] = record.model_dump(mode="json")
             await c.execute(
-                ("UPDATE knowledge_receipts SET receipt=? WHERE owner=? AND operation_id=?"),
+                "UPDATE knowledge_receipts SET receipt=? WHERE owner=? AND operation_id=?",
                 (encode(receipt), owner, row[0]),
             )
         await c.execute(
@@ -539,8 +812,8 @@ class SQLiteKnowledgeRepository:
             (
                 "UPDATE knowledge_relations SET "
                 "status='forgotten',description='',revision=revision+1 WHERE "
-                "owner=? AND EXISTS (SELECT 1 FROM json_each(source_refs) j WHERE"
-                " json_extract(j.value,'$.record_id')=?)"
+                "owner=? AND EXISTS (SELECT 1 FROM json_each(source_refs) j WHERE "
+                "json_extract(j.value,'$.record_id')=?)"
             ),
             (owner, record.record_id),
         )
@@ -633,10 +906,13 @@ class SQLiteKnowledgeRepository:
                 raise KnowledgeConflict("invalid_ack_cursor")
             await c.execute(
                 (
-                    "INSERT INTO knowledge_devices VALUES(?,?,?,?) ON "
+                    "INSERT INTO knowledge_device"
+                    "s(device_id,owner,acknowledg"
+                    "ed,last_seen) VALUES(?,?,?,?"
+                    ") ON "
                     "CONFLICT(device_id) DO UPDATE SET "
-                    "acknowledged=max(acknowledged,excluded.acknowledged),last_seen=excluded.last_seen"
-                    " WHERE knowledge_devices.owner=excluded.owner"
+                    "acknowledged=max(acknowledged,excluded.acknowledged),last_seen=ex"
+                    "cluded.last_seen WHERE knowledge_devices.owner=excluded.owner"
                 ),
                 (device, owner, cursor, now_ms()),
             )
@@ -647,13 +923,15 @@ class SQLiteKnowledgeRepository:
                     "SELECT revision FROM knowledge_records WHERE owner=? AND record_id=?",
                     (owner, ref.record_id),
                 )
+                await accept_download_in(c, owner, device, ref.record_id, ref.revision)
                 if item is None or ref.revision > int(item[0]):
                     raise KnowledgeConflict("invalid_applied_revision")
                 await c.execute(
                     (
                         "INSERT INTO knowledge_record_acks VALUES(?,?,?,?,?) ON "
                         "CONFLICT(owner,device_id,record_id) DO UPDATE SET "
-                        "revision=max(revision,excluded.revision),applied_at=excluded.applied_at"
+                        "revision=max(revision,excluded.revision),applied_at=excluded.appl"
+                        "ied_at"
                     ),
                     (owner, device, ref.record_id, ref.revision, now_ms()),
                 )
@@ -661,8 +939,8 @@ class SQLiteKnowledgeRepository:
     async def record_ack(self, owner: str, record_id: str, revision: int) -> JsonObject:
         row = await self.db.fetchone(
             (
-                "SELECT count(*),max(applied_at) FROM knowledge_record_acks WHERE"
-                " owner=? AND record_id=? AND revision>=?"
+                "SELECT count(*),max(applied_at) FROM knowledge_record_acks WHERE "
+                "owner=? AND record_id=? AND revision>=?"
             ),
             (owner, record_id, revision),
         )
@@ -748,9 +1026,9 @@ class SQLiteKnowledgeRepository:
         )
         indexed = await self.db.fetchone(
             (
-                "SELECT count(DISTINCT r.record_id) FROM knowledge_records r JOIN"
-                " knowledge_jobs j ON j.owner=r.owner AND j.record_id=r.record_id"
-                " AND j.revision=r.revision LEFT JOIN knowledge_policies p ON "
+                "SELECT count(DISTINCT r.record_id) FROM knowledge_records r JOIN "
+                "knowledge_jobs j ON j.owner=r.owner AND j.record_id=r.record_id "
+                "AND j.revision=r.revision LEFT JOIN knowledge_policies p ON "
                 "p.owner=r.owner AND p.room_id=r.room_id WHERE r.owner=? AND "
                 "r.deleted=0 AND coalesce(p.excluded,0)=0 AND j.action='index' "
                 "AND j.state='done' AND j.job_id=(SELECT recent.job_id FROM "
@@ -791,20 +1069,36 @@ class SQLiteKnowledgeRepository:
             for r in rows
         ]
 
-    async def records(
-        self, owner: str, *, query: str = "", kind: str | None = None, limit: int = 100
-    ) -> list[Record]:
+    async def _record_rows(
+        self,
+        owner: str,
+        *,
+        query: str = "",
+        kind: str | None = None,
+        limit: int = 100,
+        collection: bool = False,
+        before: tuple[int, str] | None = None,
+    ) -> list[aiosqlite.Row]:
         args: list[object] = [owner]
         sql = (
             "SELECT r.payload FROM knowledge_records r LEFT JOIN "
             "knowledge_policies p ON p.owner=r.owner AND p.room_id=r.room_id "
             "WHERE r.owner=? AND r.deleted=0 AND coalesce(p.excluded,0)=0"
         )
+        if collection:
+            sql += " AND r.kind IN ('memory','reference','todo','event')"
+        if before is not None:
+            sql += " AND (r.updated_at < ? OR (r.updated_at = ? AND r.record_id < ?))"
+            args.extend([before[0], before[0], before[1]])
         if kind:
             sql += " AND r.kind=?"
             args.append(kind)
         if query.strip():
             tokens = self.lexical(query).split()[:30]
+            if any(word in query.casefold() for word in ("偏好", "喜好", "preference")):
+                # A recall question need not repeat the original "我喜欢…" assertion.
+                # Expand only lexical candidates; confirmation and source policy still filter them.
+                tokens = ["喜欢", "偏好", "喜好", "preference", "preferences", *tokens][:30]
             match = " OR ".join('"' + token.replace('"', '""') + '"' for token in tokens)
             if not match:
                 return []
@@ -813,9 +1107,14 @@ class SQLiteKnowledgeRepository:
                 "knowledge_fts MATCH ? AND owner=?)"
             )
             args.extend([match, owner])
-        sql += " ORDER BY r.updated_at DESC LIMIT ?"
+        sql += " ORDER BY r.updated_at DESC, r.record_id DESC LIMIT ?"
         args.append(min(500, limit))
-        rows = await self.db.fetchall(sql, args)
+        return await self.db.fetchall(sql, args)
+
+    async def records(
+        self, owner: str, *, query: str = "", kind: str | None = None, limit: int = 100
+    ) -> list[Record]:
+        rows = await self._record_rows(owner, query=query, kind=kind, limit=limit)
         result: list[Record] = []
         for row in rows:
             record = Record.model_validate_json(str(row[0]))
@@ -824,6 +1123,84 @@ class SQLiteKnowledgeRepository:
             ):
                 result.append(record)
         return result
+
+    async def records_page(
+        self,
+        owner: str,
+        *,
+        query: str,
+        kind: str | None,
+        limit: int,
+        collection: bool,
+        cursor: str | None,
+    ) -> tuple[list[Record], str | None, int]:
+        epoch = await self.epoch(owner)
+        scope = hashlib.sha256(encode([owner, query, kind, collection]).encode()).hexdigest()
+        before = None
+        if cursor:
+            try:
+                decoded: object = json.loads(base64.urlsafe_b64decode(cursor.encode()).decode())
+                if not isinstance(decoded, list):
+                    raise ValueError("invalid_records_cursor")
+                value = cast(list[object], decoded)
+                if (
+                    len(value) != 4
+                    or type(value[0]) is not int
+                    or not isinstance(value[1], str)
+                    or value[2] != scope
+                    or type(value[3]) is not int
+                ):
+                    raise ValueError("invalid_records_cursor")
+                if value[3] != epoch:
+                    raise KnowledgeConflict("records_policy_changed")
+                before = (value[0], value[1])
+            except KnowledgeConflict:
+                raise
+            except (ValueError, UnicodeError, TypeError) as error:
+                raise ValueError("invalid_records_cursor") from error
+        rows = await self._record_rows(
+            owner, query=query, kind=kind, collection=collection, before=before, limit=500
+        )
+        result: list[Record] = []
+        boundary = None
+        more = False
+        for row in rows:
+            record = Record.model_validate_json(str(row[0]))
+            if await self.eligible(
+                owner, Citation(record_id=record.record_id, revision=record.revision)
+            ):
+                if len(result) == limit:
+                    more = True
+                    break
+                result.append(record)
+            boundary = (record.updated_at, record.record_id)
+        else:
+            more = len(rows) == 500
+        if await self.epoch(owner) != epoch:
+            raise KnowledgeConflict("records_policy_changed")
+        next_cursor = (
+            base64.urlsafe_b64encode(encode([*boundary, scope, epoch]).encode()).decode()
+            if more and boundary
+            else None
+        )
+        return result, next_cursor, epoch
+
+    async def source_rooms(self, owner: str) -> list[JsonObject]:
+        allowed = set(await self.allowed_rooms(owner))
+        rows = await self.db.fetchall(
+            (
+                "SELECT r.room_id,coalesce(p.label,'') FROM knowledge_records r "
+                "LEFT JOIN knowledge_policies p ON p.owner=r.owner AND "
+                "p.room_id=r.room_id WHERE r.owner=? AND r.kind='source' AND "
+                "r.deleted=0 GROUP BY r.room_id LIMIT 1000"
+            ),
+            (owner,),
+        )
+        return [
+            {"room_id": str(r[0]), "label": str(r[1]) or "微信会话 " + str(index + 1)}
+            for index, r in enumerate(rows)
+            if str(r[0]) in allowed
+        ]
 
     async def allowed_rooms(self, owner: str) -> list[str]:
         rows = await self.db.fetchall(
@@ -980,7 +1357,7 @@ class SQLiteKnowledgeRepository:
         async with self.db.transaction() as c:
             row = await one(
                 c,
-                ("SELECT payload FROM knowledge_records WHERE owner='local' AND record_id=?"),
+                "SELECT payload FROM knowledge_records WHERE owner='local' AND record_id=?",
                 ("formal:" + str(memory_id),),
             )
             if not row:
@@ -1002,9 +1379,9 @@ class SQLiteKnowledgeRepository:
             )
 
     async def apply_mutation_in(
-        self, c: aiosqlite.Connection, owner: str, mutation: Mutation
+        self, c: aiosqlite.Connection, owner: str, mutation: Mutation, *, trusted: bool = False
     ) -> JsonObject:
-        return await self._mutate(c, owner, mutation)
+        return await self._mutate(c, owner, mutation, trusted=trusted)
 
     async def receipt_in(
         self, c: aiosqlite.Connection, owner: str, operation: str, digest: str
@@ -1024,13 +1401,12 @@ class SQLiteKnowledgeRepository:
             (
                 "SELECT 1 FROM knowledge_relations e JOIN "
                 "json_each(e.source_refs) ref JOIN knowledge_records r ON "
-                "r.owner=e.owner AND "
-                "r.record_id=json_extract(ref.value,'$.record_id') AND "
-                "r.revision=json_extract(ref.value,'$.revision') LEFT JOIN "
-                "knowledge_policies p ON p.owner=r.owner AND p.room_id=r.room_id "
-                "WHERE e.owner='local' AND e.status='confirmed' AND "
-                "r.kind='memory' AND r.confirmed=1 AND r.deleted=0 AND "
-                "coalesce(p.excluded,0)=0 AND "
+                "r.owner=e.owner AND r.record_id=json_extract(ref.value,'$.record_"
+                "id') AND r.revision=json_extract(ref.value,'$.revision') LEFT "
+                "JOIN knowledge_policies p ON p.owner=r.owner AND "
+                "p.room_id=r.room_id WHERE e.owner='local' AND "
+                "e.status='confirmed' AND r.kind='memory' AND r.confirmed=1 AND "
+                "r.deleted=0 AND coalesce(p.excluded,0)=0 AND "
                 "json_extract(r.payload,'$.origin.source_type')='formal_memory' "
                 "AND json_extract(r.payload,'$.origin.namespace') IN ("
             )

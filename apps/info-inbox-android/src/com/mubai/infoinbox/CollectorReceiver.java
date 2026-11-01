@@ -15,8 +15,9 @@ public final class CollectorReceiver extends BroadcastReceiver {
               .edit()
               .putLong("dirty_at", System.currentTimeMillis())
               .commit();
-      KnowledgeJob.enqueue(context);
-      AnalysisJob.enqueueIntake(context, durable ? 30000L : 0L);
+      if (!RuntimeMessageService.requestSync(context)) KnowledgeJob.enqueue(context);
+      if (!RuntimeProcessing.owns(context))
+        AnalysisJob.enqueueIntake(context, durable ? 30000L : 0L);
     }
   }
 }

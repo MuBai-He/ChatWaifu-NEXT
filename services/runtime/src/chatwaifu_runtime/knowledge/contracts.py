@@ -1,5 +1,6 @@
 """Versioned contracts shared by mobile sync, knowledge UI and index adapters."""
 
+from datetime import date
 from typing import Annotated, Literal, Self
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -31,6 +32,7 @@ class RecordDraft(Contract):
     state: Literal["active", "open", "waiting", "blocked", "completed", "cancelled"] = "active"
     confirmed: bool = False
     occurred_at: int = Field(ge=0)
+    due_date: date | None = None
     due_at: int | None = Field(default=None, ge=0)
     starts_at: int | None = Field(default=None, ge=0)
     ends_at: int | None = Field(default=None, ge=0)
@@ -81,7 +83,10 @@ class PolicyMutation(Contract):
 
 
 class PushRequest(Contract):
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
+    device_label: str = Field(default="", max_length=120)
+    ingestion_mode: Literal["live", "historical", "delayed"] = "historical"
+    processing_epoch: int = Field(default=0, ge=0)
     session_id: UUID
     device_id: UUID
     policy_epoch: int = Field(ge=0)

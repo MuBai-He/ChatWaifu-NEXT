@@ -52,3 +52,44 @@
 .settings-shell .agent-settings button + button {
   margin: 8px 0 0 8px;
 }
+
+.agent-harness-panel {
+  border-top: 1px solid var(--border-color, #aaa5);
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+.agent-harness-panel fieldset {
+  display: grid;
+  gap: 0.5rem;
+  margin-block: 0.75rem;
+}
+.agent-harness-panel li {
+  margin-block: 0.75rem;
+  overflow-wrap: anywhere;
+}
+.agent-harness-panel textarea {
+  width: 100%;
+  min-height: 5rem;
+}
+.agent-harness-panel button {
+  min-height: 2.75rem;
+  margin: 0.25rem;
+}
+
+.harness-activity-notice {
+  position: fixed;
+  z-index: 70;
+  right: 1rem;
+  bottom: 1rem;
+  width: min(28rem, calc(100vw - 2rem));
+  padding: 1rem;
+  border: 1px solid var(--border-color, #ffffff30);
+  border-radius: 1rem;
+  background: var(--panel-bg, #202738);
+  color: var(--text-primary, #fff);
+  box-shadow: 0 8px 32px #0003;
+  white-space: pre-wrap;
+}
+.harness-activity-notice button {
+  margin-top: 0.5rem;
+}

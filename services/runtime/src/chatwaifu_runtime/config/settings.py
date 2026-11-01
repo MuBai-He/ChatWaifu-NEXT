@@ -308,6 +308,7 @@ class PersonalAssistantConfig(BaseModel):
     google_client_id: str = ""
     google_client_secret: SecretStr | None = None
     google_oauth_https_origin: str | None = None
+    google_proxy_url: str | None = None
     device_allow_direct_loopback: bool = False
 
     @model_validator(mode="after")
@@ -326,6 +327,28 @@ class PersonalAssistantConfig(BaseModel):
                 or parsed.port == 0
             ):
                 raise ValueError("Google OAuth origin must be an exact HTTPS origin without path")
+        if self.google_proxy_url is not None:
+            try:
+                proxy = urlsplit(self.google_proxy_url)
+                hostname = proxy.hostname or ""
+                try:
+                    loopback = ipaddress.ip_address(hostname).is_loopback
+                except ValueError:
+                    loopback = hostname.lower().rstrip(".") == "localhost"
+                valid = (
+                    proxy.scheme in {"http", "https"}
+                    and loopback
+                    and proxy.username is None
+                    and proxy.password is None
+                    and (proxy.port is None or 1 <= proxy.port <= 65535)
+                    and proxy.path in {"", "/"}
+                    and not proxy.query
+                    and not proxy.fragment
+                )
+            except ValueError:
+                valid = False
+            if not valid:
+                raise ValueError("Google proxy must be a loopback HTTP origin without credentials")
         return self
 
 

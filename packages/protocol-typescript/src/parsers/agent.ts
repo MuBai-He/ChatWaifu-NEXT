@@ -77,6 +77,21 @@ export const taskAuthorizationSchema = z
     allow_writes: z.boolean().default(false),
     capability_fingerprints: z.record(z.string(), z.string()).default({}),
     expires_at: date,
+    scheduled_for: date.nullish(),
+    intent_id: id.nullish(),
+    intent_revision: z.number().int().positive().nullish(),
+    tasklist_ids: z.array(z.string()).max(32).nullish(),
+    source_room_ids: z.array(z.string()).max(32).optional(),
+    evidence_refs: z
+      .array(
+        z.object({
+          kind: z.enum(["event", "knowledge"]),
+          reference: z.string().min(1).max(256),
+          revision: z.number().int().positive(),
+        }),
+      )
+      .max(30)
+      .optional(),
   })
   .strict();
 export const taskChannelBindingSchema = z
@@ -106,6 +121,24 @@ export const agentTaskSchema = z
     session_id: id,
     scope: z.string(),
     goal: z.string(),
+    character_id: z.string().nullish(),
+    work_item_id: z.string().nullish(),
+    wait_condition: z
+      .object({
+        kind: z.enum([
+          "input",
+          "source",
+          "time",
+          "authorization",
+          "device",
+          "outcome",
+          "task",
+        ]),
+        room_ids: z.array(z.string()).max(32).default([]),
+        sender_id: z.string().nullish(),
+        reference: z.string().nullish(),
+      })
+      .nullish(),
     completion_criteria: z.array(z.string()),
     authorization: taskAuthorizationSchema,
     channel_binding: taskChannelBindingSchema.nullish(),

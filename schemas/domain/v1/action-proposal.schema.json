@@ -1,0 +1,176 @@
+{
+  "$defs": {
+    "EvidenceRef": {
+      "properties": {
+        "kind": {
+          "enum": [
+            "event",
+            "knowledge"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Reference",
+          "type": "string"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "reference"
+      ],
+      "title": "EvidenceRef",
+      "type": "object"
+    },
+    "JsonObject": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/action-proposal.schema.json",
+  "properties": {
+    "action_id": {
+      "format": "uuid",
+      "title": "Action Id",
+      "type": "string"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/EvidenceRef"
+      },
+      "maxItems": 30,
+      "title": "Evidence",
+      "type": "array"
+    },
+    "expected_target_revision": {
+      "minimum": 0,
+      "title": "Expected Target Revision",
+      "type": "integer"
+    },
+    "intent_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Intent Id"
+    },
+    "intent_revision": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Intent Revision"
+    },
+    "requested_changes": {
+      "$ref": "#/$defs/JsonObject"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "target": {
+      "$ref": "#/$defs/JsonObject"
+    },
+    "target_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Target Id"
+    },
+    "task_id": {
+      "format": "uuid",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "verification_requirements": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Verification Requirements",
+      "type": "array"
+    },
+    "work_item_id": {
+      "title": "Work Item Id",
+      "type": "string"
+    },
+    "work_revision": {
+      "minimum": 1,
+      "title": "Work Revision",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "action_id",
+    "task_id",
+    "work_item_id",
+    "work_revision",
+    "expected_target_revision",
+    "evidence",
+    "requested_changes",
+    "target",
+    "verification_requirements"
+  ],
+  "title": "ActionProposal",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

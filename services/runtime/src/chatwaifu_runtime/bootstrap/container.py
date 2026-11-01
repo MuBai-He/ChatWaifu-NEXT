@@ -26,16 +26,25 @@ from chatwaifu_protocol.agent import (
 from chatwaifu_protocol.base import JsonObject
 from chatwaifu_protocol.channel_settings import ChannelRuntimePolicy
 from chatwaifu_protocol.channels import ChannelInboundTextMessage
+from chatwaifu_protocol.harness import EvidenceRef, KnowledgeExcerpt
+from chatwaifu_protocol.memory import MemoryRecordDraft
 from pydantic import SecretStr
 
 from chatwaifu_runtime import __version__
 from chatwaifu_runtime.agent.artifacts import ArtifactService
 from chatwaifu_runtime.agent.behavior import BehaviorDecisionService
+from chatwaifu_runtime.agent.calendar_observer import CalendarObserver
 from chatwaifu_runtime.agent.capabilities import CapabilityCatalog
 from chatwaifu_runtime.agent.development import CandidateDevelopmentService
+from chatwaifu_runtime.agent.harness import AgentHarnessService
+from chatwaifu_runtime.agent.harness_skills import HarnessSkills
+from chatwaifu_runtime.agent.local_work import LocalWorkSkills
+from chatwaifu_runtime.agent.review import HarnessReviewService
+from chatwaifu_runtime.agent.task_ports import TaskContextChanged
 from chatwaifu_runtime.agent.task_skills import TaskSkills
 from chatwaifu_runtime.agent.tasks import AgentTaskService
 from chatwaifu_runtime.agent.tool_calling import AgentTurnOrchestrator
+from chatwaifu_runtime.agent.work_matcher import WorkMatcher
 from chatwaifu_runtime.agent.workspace import WorkspaceSkills
 from chatwaifu_runtime.api.guard import WebSocketTicketStore
 from chatwaifu_runtime.audio.store import AudioAssetStore
@@ -111,6 +120,7 @@ from chatwaifu_runtime.persistence.sqlite_experience_reset import SQLiteExperien
 from chatwaifu_runtime.persistence.sqlite_external_channels import (
     SQLiteExternalChannelRepository,
 )
+from chatwaifu_runtime.persistence.sqlite_harness import SQLiteHarnessRepository
 from chatwaifu_runtime.persistence.sqlite_interaction_diagnostics import (
     SQLiteInteractionDiagnosticsReader,
 )
@@ -124,10 +134,12 @@ from chatwaifu_runtime.persistence.sqlite_runtime_skills import SQLiteRuntimeSki
 from chatwaifu_runtime.persistence.sqlite_spoken_memory import SQLiteSpokenMemoryRepository
 from chatwaifu_runtime.persistence.sqlite_sticker_library import SqliteStickerLibraryRepository
 from chatwaifu_runtime.persistence.sqlite_sticker_usage import SQLiteStickerUsageRepository
+from chatwaifu_runtime.personal_assistant.action_recovery import AgendaActionRecovery
 from chatwaifu_runtime.personal_assistant.agenda_skill import (
     AgendaManageSkill,
     GoogleTasksReadSkill,
 )
+from chatwaifu_runtime.personal_assistant.google_calendar import CalendarEvent
 from chatwaifu_runtime.personal_assistant.integration import PersonalAssistantIntegration
 from chatwaifu_runtime.personal_assistant.organizer_skill import OrganizerSkill
 from chatwaifu_runtime.personal_assistant.skill import CalendarReadSkill
@@ -158,7 +170,10 @@ from chatwaifu_runtime.realtime.service import VoiceMediaService
 from chatwaifu_runtime.realtime.stt import build_stt_backend
 from chatwaifu_runtime.runtime_skills.adapters import GenerationSkillContext
 from chatwaifu_runtime.runtime_skills.agent_router import RuntimeSkillRouter
-from chatwaifu_runtime.runtime_skills.execution_context import authorized_task
+from chatwaifu_runtime.runtime_skills.execution_context import (
+    authorized_generation,
+    authorized_task,
+)
 from chatwaifu_runtime.runtime_skills.sandbox import RuntimeSandboxLauncher, SandboxPlanner
 from chatwaifu_runtime.runtime_skills.service import RuntimeSkillService
 from chatwaifu_runtime.security.password import RuntimePasswordAuth
@@ -190,6 +205,7 @@ class RuntimeLifecycleError(ExceptionGroup):
 class RuntimeContainer:
     def __init__(self, settings: Settings, *, source_answer_frames: bool = False) -> None:
         self.settings = settings
+        self.boot_id = uuid4()
         self.capability_token = (
             settings.security.capability_token.get_secret_value()
             if settings.security.capability_token
@@ -376,6 +392,9 @@ class RuntimeContainer:
             model_factory=self._agent_model,
             context_builder=self._agent_task_context,
         )
+        recovery = AgendaActionRecovery(self.personal_assistant)
+        self.agent_tasks.operation_metadata = recovery.prepare
+        self.agent_tasks.operation_recoverer = recovery.recover
         self.runtime_skills.task_permission_policy = self.agent_tasks.authorize
         self.agent_development = CandidateDevelopmentService(
             SQLiteDevelopmentRepository(self.database),
@@ -522,6 +541,54 @@ class RuntimeContainer:
         )
         self.external_channels.response_decider = self._qq_response_decision
         self.agent_tasks.wake_decider = self._task_wake_decision
+        self.harness = AgentHarnessService(
+            SQLiteHarnessRepository(self.database),
+            self.knowledge,
+            self.information,
+            self.agent_tasks,
+            self.sessions,
+            self.behavior_decisions,
+        )
+        cast(
+            SQLiteHarnessRepository, self.harness.repository
+        ).on_record = self.harness.activity_changed.set
+        self.harness.context_epoch = lambda: self.memory.knowledge_epoch
+        self.harness.context_changed = self._harness_context_changed
+        self.memory.knowledge_forget = self.forget_external_memory
+        self.memory.knowledge_conflict = self.external_memory_conflict
+        self.memory.knowledge_supersede = self.supersede_external_memory
+        self.harness.identify_memory = self.memory.identify_external_fact
+        self.harness.grade_memory = self.grade_external_memory
+        self.harness_review = HarnessReviewService(self.harness, self.memory)
+        self.harness.resources = self.harness_sources
+        self.agent_tasks.operation_identity = self.harness.action_identity
+        self.agent_tasks.operation_observer = self.harness.operation_completed
+        self.agent_tasks.completion_observer = self.harness.task_completed
+        self.agent_tasks.authority_validator = self.harness.validate_task
+        self.agent_tasks.operation_validator = self.harness.validate_operation
+        self.agent_tasks.operation_preparer = self.harness.prepare_operation
+        self.agent_tasks.completion_validator = self.harness.validate_completion
+        calendar_observer = CalendarObserver(self.harness, self.personal_assistant)
+        self.harness.external_reconciler = calendar_observer.reconcile
+        if self.personal_assistant.accounts is not None:
+            self.personal_assistant.accounts.on_synced = calendar_observer.synced
+        local_work = LocalWorkSkills(self.harness)
+        self.runtime_skills.register_session_builtin("work_manage", local_work.manage)
+        self.personal_assistant.effect_observer = local_work.observe_agenda
+        self.runtime_skills.register_session_builtin(
+            "work_match", WorkMatcher(self.harness, self.personal_assistant)
+        )
+        harness_skills = HarnessSkills(self.harness, self.harness_review)
+        harness_skills.review_query = self.harness_review.list
+        self.runtime_skills.register_session_builtin("agent_assist_query", harness_skills.query)
+        self.runtime_skills.register_session_builtin("agent_assist_manage", harness_skills.manage)
+        self.knowledge.on_change = self.harness.notify
+        self.knowledge.on_invalidate = self.memory.invalidate_knowledge
+        self._task_context_epochs: dict[UUID, int] = {}
+        self.agent_tasks.context_fence = self._task_context_current
+        self.agent_tasks.context_release = self._release_task_context
+        self.information.processing_owned = self._processing_owned
+        self.memory.knowledge_recall = self._knowledge_context
         self.group_autonomy = GroupAutonomyService(
             SQLiteBehaviorRepository(self.database), self.behavior_decisions, self.characters
         )
@@ -647,8 +714,11 @@ class RuntimeContainer:
             session_allowed=self._desktop_proactive_session_allowed,
         )
         self.ambient.model_decider = self._ambient_decision
-        self.agent_tasks.result_publisher = self.channel_files.publish_task_result
+        self.agent_tasks.result_publisher = self._publish_agent_result
         self.personal_assistant.task_calendar_scope = self._task_calendar_scope
+        self.personal_assistant.task_list_scope = self._task_list_scope
+        if self.personal_assistant.accounts is not None:
+            self.personal_assistant.accounts.event_write_policy = self._task_event_policy
         self.agent_tasks.capability_gap_handler = self._task_capability_gap
         cloud_bridge_factory: Callable[[UUID], Awaitable[CloudRealtimeMediaBridge]] | None = None
         self.cloud_realtime_backend: CloudRealtimeBackend | None = None
@@ -981,6 +1051,235 @@ class RuntimeContainer:
             frozenset({source_ref}),
         )
 
+    def _harness_context_changed(self, before: int, producer: UUID | None) -> None:
+        current = self.memory.knowledge_epoch
+        self.memory.invalidate_knowledge()
+        if current != before:
+            return
+        if producer is not None and self._task_context_epochs.get(producer) == before:
+            self._task_context_epochs[producer] = self.memory.knowledge_epoch
+        context = authorized_generation.get()
+        if context and context.task_id is None and context.generation_id:
+            self.memory.accept_own_knowledge_update(
+                context.generation_id, before, self.memory.knowledge_epoch
+            )
+
+    def _release_task_context(self, identifier: UUID) -> None:
+        self._task_context_epochs.pop(identifier, None)
+
+    async def external_memory_conflict(self, session_id: UUID, draft: MemoryRecordDraft) -> bool:
+        if (
+            draft.subject_id != "user"
+            or draft.predicate is None
+            or draft.kind not in {"semantic.fact", "semantic.preference"}
+            or not (
+                draft.namespace == "user/local/global" or draft.namespace.endswith("/user/local")
+            )
+        ):
+            return False
+        try:
+            owner = await self.harness.owner(session_id)
+        except PermissionError:
+            return False
+        identity = {"predicate": draft.predicate, "value": draft.value}
+        key = "identity-value:" + json.dumps(identity, sort_keys=True, ensure_ascii=False)
+        if await self.harness.repository.suppressed(
+            owner, key
+        ) or await self.harness.repository.suppressed(owner, "identity:" + draft.predicate):
+            return True
+        for record in await self.knowledge.repository.memory_identity(owner, draft.predicate):
+            stored = record.origin.get("memory_identity")
+            if isinstance(stored, dict) and stored.get("value") != draft.value:
+                return True
+        return False
+
+    async def supersede_external_memory(
+        self, session_id: UUID, proposal_id: UUID, draft: MemoryRecordDraft
+    ) -> None:
+        from uuid import uuid5
+
+        from chatwaifu_protocol.harness import WorkItemAction
+
+        if (
+            draft.subject_id != "user"
+            or draft.predicate is None
+            or draft.kind not in {"semantic.fact", "semantic.preference"}
+        ):
+            return
+        try:
+            owner = await self.harness.owner(session_id)
+        except PermissionError:
+            return
+        for record in await self.knowledge.repository.memory_identity(owner, draft.predicate):
+            identity = record.origin.get("memory_identity")
+            if not isinstance(identity, dict) or identity.get("value") == draft.value:
+                continue
+            identifier = record.origin.get("work_item_id")
+            work = (
+                await self.harness.repository.work_item(identifier)
+                if isinstance(identifier, str)
+                else None
+            )
+            if work is not None:
+                await self.harness.act_work(
+                    work.work_item_id,
+                    WorkItemAction(
+                        session_id=session_id,
+                        operation_id=uuid5(proposal_id, "supersede:" + record.record_id),
+                        expected_revision=work.revision,
+                        action="reject",
+                    ),
+                )
+                await self.harness.repository.record(
+                    owner,
+                    "memory",
+                    str(proposal_id),
+                    "human_corrected",
+                    "主人已确认替代旧信息。",
+                    details={
+                        "replaces_knowledge_record": record.record_id,
+                        "proposal_id": str(proposal_id),
+                    },
+                )
+
+    async def forget_external_memory(self, session_id: UUID, event_id: UUID, text: str) -> int:
+        from uuid import uuid5
+
+        from chatwaifu_protocol.harness import WorkItemAction
+
+        from chatwaifu_runtime.knowledge.contracts import Mutation, RecordDraft
+
+        try:
+            owner = await self.harness.owner(session_id)
+        except PermissionError:
+            return 0
+        count = 0
+        for record in await self.knowledge.repository.exact_memories(owner, text):
+            identity = await self.memory.grade_external_fact(session_id, record.text)
+            await self.harness.repository.suppress(owner, record.text, "forgotten")
+            if identity is not None:
+                await self.harness.repository.suppress(
+                    owner, "identity:" + str(identity["predicate"]), "forgotten"
+                )
+            identifier = record.origin.get("work_item_id")
+            work = (
+                await self.harness.repository.work_item(identifier)
+                if isinstance(identifier, str)
+                else None
+            )
+            if work is not None:
+                await self.harness.act_work(
+                    work.work_item_id,
+                    WorkItemAction(
+                        session_id=session_id,
+                        operation_id=uuid5(event_id, "forget:" + record.record_id),
+                        expected_revision=work.revision,
+                        action="reject",
+                    ),
+                )
+            else:
+                draft = RecordDraft.model_validate(
+                    record.model_dump(exclude={"revision", "deleted", "updated_at"})
+                )
+                await self.knowledge.repository.apply_mutation(
+                    owner,
+                    Mutation(
+                        operation_id=uuid5(event_id, "forget:" + record.record_id),
+                        expected_revision=record.revision,
+                        action="forget",
+                        record=draft,
+                    ),
+                )
+                if self.knowledge.on_invalidate:
+                    self.knowledge.on_invalidate()
+            count += 1
+        return count
+
+    async def grade_external_memory(self, session_id: UUID, text: str) -> JsonObject | None:
+        identity = await self.memory.grade_external_fact(session_id, text)
+        if identity is None:
+            return None
+        owner = await self.harness.owner(session_id)
+        related = await self.knowledge.repository.memory_identity(owner, str(identity["predicate"]))
+        for record in related:
+            existing = record.origin.get("memory_identity")
+            if isinstance(existing, dict) and existing.get("value") != identity["value"]:
+                return None
+        return identity
+
+    async def harness_sources(self, session_id: UUID) -> JsonObject:
+        owner = await self.harness.owner(session_id)
+        resources: list[JsonObject] = []
+        accounts = self.personal_assistant.accounts
+        if accounts:
+            for account in await accounts.status(str(session_id)):
+                if account.status != "connected":
+                    continue
+                label = account.display_label or "Google"
+                if account.calendar_write:
+                    for selected in await accounts.calendars(str(session_id), account.account_id):
+                        calendar = selected.calendar
+                        if selected.selected and calendar.access_role in {"owner", "writer"}:
+                            resources.append(
+                                {
+                                    "id": f"{account.account_id}/{calendar.id}",
+                                    "label": f"{label} · {calendar.title}",
+                                    "kind": "calendar",
+                                }
+                            )
+                if account.tasks_write:
+                    for selected in await accounts.tasklists(str(session_id), account.account_id):
+                        if selected.selected:
+                            resources.append(
+                                {
+                                    "id": f"{account.account_id}/{selected.tasklist.id}",
+                                    "label": f"{label} · {selected.tasklist.title}",
+                                    "kind": "reminder",
+                                }
+                            )
+        return cast(
+            JsonObject,
+            {
+                "rooms": await self.knowledge.repository.source_rooms(owner),
+                "skills": [
+                    {"skill_id": s.skill_id, "name": s.name}
+                    for s in self.runtime_skills.list()
+                    if s.enabled and "unattended" in s.execution_modes
+                ],
+                "calendar_ids": [r["id"] for r in resources if r["kind"] == "calendar"],
+                "tasklist_ids": [r["id"] for r in resources if r["kind"] == "reminder"],
+                "resources": resources,
+                "devices": await self.harness.repository.devices(owner),
+            },
+        )
+
+    async def _task_event_policy(self, event: CalendarEvent) -> None:
+        identifier = authorized_task.get()
+        if identifier is None:
+            return
+        task = await self.agent_tasks.repository.get(identifier)
+        if task is None or task.authorization.intent_id is None:
+            return
+        if (
+            event.end is None
+            or (event.end.timestamp is not None and event.end.timestamp <= datetime.now(UTC))
+            or (event.end.day is not None and event.end.day <= datetime.now(UTC).date())
+        ):
+            raise PermissionError("historical_calendar_action")
+
+    async def _task_list_scope(self) -> frozenset[str] | None:
+        task_id = authorized_task.get()
+        if task_id is None:
+            return None
+        task = await self.agent_tasks.repository.get(task_id)
+        if task is None:
+            raise PermissionError("task no longer current")
+        return (
+            frozenset(task.authorization.tasklist_ids)
+            if task.authorization.tasklist_ids is not None
+            else None
+        )
+
     async def _task_calendar_scope(self) -> frozenset[str] | None:
         task_id = authorized_task.get()
         if task_id is None:
@@ -1082,6 +1381,80 @@ class RuntimeContainer:
         await self.channel_voice.on_plan_terminal(plan)
         await self.channel_files.on_terminal(plan)
 
+    async def _publish_agent_result(self, task: AgentTask) -> UUID | None:
+        self.harness.notify()
+        return await self.channel_files.publish_task_result(task)
+
+    async def _processing_owned(self, rooms: set[str]) -> bool:
+        return any(
+            str(row["room_id"]) in rooms and row["state"] == "runtime"
+            for row in await self.harness.repository.processing("local")
+        )
+
+    async def _knowledge_context(
+        self, session_id: UUID, query: str, budget: int
+    ) -> list[KnowledgeExcerpt]:
+        if not self.knowledge.enabled or budget <= 0:
+            return []
+        owner = await self.knowledge.owner(session_id)
+        rows = await self.knowledge.repository.records(owner, query=query, limit=12)
+        result: list[KnowledgeExcerpt] = []
+        for record in rows:
+            if (
+                not record.confirmed
+                or record.kind == "source"
+                or record.origin.get("source_type") == "formal_memory"
+            ):
+                continue
+            text = (
+                json.dumps(
+                    {
+                        "summary": record.title,
+                        "evidence_or_assertion": record.text,
+                        "acceptance": record.origin.get("acceptance", "human"),
+                        "source_type": record.origin.get("source_type", "legacy_import"),
+                    },
+                    ensure_ascii=False,
+                )
+                if record.kind == "memory"
+                else record.text or record.title
+            )
+            if record.kind in {"todo", "event"}:
+                text = json.dumps(
+                    {
+                        "description": text,
+                        "state": record.state,
+                        "timezone": record.timezone,
+                        "starts_at": record.starts_at,
+                        "ends_at": record.ends_at,
+                        "due_at": record.due_at,
+                    },
+                    ensure_ascii=False,
+                )
+            cost = max(1, len(text))
+            if cost > budget or len(text) > 2400:
+                continue
+            budget -= cost
+            result.append(
+                KnowledgeExcerpt(
+                    evidence=EvidenceRef(
+                        kind="knowledge", reference=record.record_id, revision=record.revision
+                    ),
+                    text=text[:2400],
+                    confirmed=record.confirmed,
+                    subject=str(record.origin.get("subject_policy") or "reported_legacy"),
+                    occurred_at=record.occurred_at,
+                )
+            )
+        return result
+
+    def _task_context_current(self, task: AgentTask) -> None:
+        if (
+            task.task_id in self._task_context_epochs
+            and self._task_context_epochs[task.task_id] != self.memory.knowledge_epoch
+        ):
+            raise TaskContextChanged("knowledge_context_changed")
+
     async def _agent_task_context(self, task: AgentTask) -> tuple[str, str]:
         session = await self.sessions.get_session(task.session_id)
         if session is None:
@@ -1092,9 +1465,20 @@ class RuntimeContainer:
         packet = await self.memory.retrieve_context(
             task.session_id, uuid4(), session.character_id, task.goal
         )
-        return profile.system_prompt, json.dumps(
-            packet.model_dump(mode="json"), ensure_ascii=False
-        )[:8000]
+        if packet.knowledge_evidence:
+            self._task_context_epochs[task.task_id] = packet.knowledge_epoch
+        else:
+            self._task_context_epochs.pop(task.task_id, None)
+        work = (
+            await self.harness.repository.work_item(task.work_item_id)
+            if task.work_item_id
+            else None
+        )
+        context = {
+            "memory": packet.model_dump(mode="json"),
+            "current_work": json.loads(self.harness.work_context(work)) if work else None,
+        }
+        return profile.system_prompt, json.dumps(context, ensure_ascii=False)
 
     async def start(self) -> None:
         async with self._lifecycle_lock:
@@ -1128,6 +1512,7 @@ class RuntimeContainer:
                 await self.runtime_skills.start()
                 await self.agent_development.start()
                 await self.agent_tasks.start()
+                await self.harness.start()
                 self.sticker_library.start()
                 await self.photo_semantic.sync_epoch()
                 self.photo_semantic.start()
@@ -1204,6 +1589,7 @@ class RuntimeContainer:
         steps = [
             _CleanupStep("personal_assistant", lambda: self.personal_assistant.close()),
             _CleanupStep("ambient", lambda: self.ambient.stop()),
+            _CleanupStep("agent_harness", lambda: self.harness.stop()),
             _CleanupStep("agent_tasks", lambda: self.agent_tasks.stop()),
             _CleanupStep("agent_development", lambda: self.agent_development.stop()),
             _CleanupStep("group_autonomy", lambda: self.group_autonomy.stop()),

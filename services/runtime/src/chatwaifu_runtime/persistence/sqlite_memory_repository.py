@@ -27,15 +27,12 @@ from chatwaifu_runtime.memory.repository import (
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.sessions.identity import TrustedConversationIdentity
 
-_RECORD_SELECT = """
-SELECT record.*,
-       COALESCE(
-           (SELECT json_group_array(source_event_id)
-            FROM memory_sources WHERE memory_id = record.memory_id),
-           '[]'
-       ) AS source_event_ids_json
-FROM memory_records AS record
-"""
+_RECORD_SELECT = (
+    "\nSELECT record.*,\n       COALESCE(\n           (SELECT "
+    "json_group_array(source_event_id)\n            FROM memory_sources WHERE memory_id = "
+    "record.memory_id),\n           '[]'\n       ) AS source_event_ids_json\nFROM "
+    "memory_records AS record\n"
+)
 _ASCII_WORD = re.compile(r"[a-z0-9_]{2,}")
 _CJK_RUN = re.compile(r"[\u3400-\u9fff]+")
 _MAX_SHARED_JOKE_EVIDENCE_AGE_SECONDS = 1800.0
@@ -65,19 +62,18 @@ class SQLiteMemoryRepository(MemoryRepository):
 
     async def event_evidence(self, event_id: UUID) -> MemoryEventEvidence | None:
         row = await self._database.fetchone(
-            """
-            SELECT event.event_id, event.event_type, event.session_id,
-                   event.occurred_at, event.envelope_json,
-                   turn.source_context_json,
-                   session.participant_id, session.scene_id, session.audience_json,
-                   session.user_scope, session.state_scope
-            FROM events AS event
-            JOIN sessions AS session ON session.session_id=event.session_id
-            LEFT JOIN turns AS turn
-              ON turn.session_id = event.session_id
-             AND turn.turn_id = json_extract(event.envelope_json, '$.turn_id')
-            WHERE event.event_id = ?
-            """,
+            (
+                "\n            SELECT event.event_id, event.event_type, event.session_id,\n  "
+                "                 event.occurred_at, event.envelope_json,\n                  "
+                " turn.source_context_json,\n                   session.participant_id, "
+                "session.scene_id, session.audience_json,\n                   "
+                "session.user_scope, session.state_scope\n            FROM events AS event\n "
+                "           JOIN sessions AS session ON session.session_id=event.session_id\n"
+                "            LEFT JOIN turns AS turn\n              ON turn.session_id = "
+                "event.session_id\n             AND turn.turn_id = "
+                "json_extract(event.envelope_json, '$.turn_id')\n            WHERE "
+                "event.event_id = ?\n            "
+            ),
             (str(event_id),),
         )
         if row is None:
@@ -117,15 +113,15 @@ class SQLiteMemoryRepository(MemoryRepository):
         self, user_turn_event_id: UUID
     ) -> PrecedingAssistantEvidence | None:
         user_row = await self._database.fetchone(
-            """
-            SELECT event.session_id, event.sequence, event.occurred_at, event.event_type,
-                   turn.source_context_json AS turn_source_context_json
-            FROM events AS event
-            LEFT JOIN turns AS turn
-              ON turn.session_id = event.session_id
-             AND turn.turn_id = json_extract(event.envelope_json, '$.turn_id')
-            WHERE event.event_id = ?
-            """,
+            (
+                "\n            SELECT event.session_id, event.sequence, event.occurred_at, "
+                "event.event_type,\n                   turn.source_context_json AS "
+                "turn_source_context_json\n            FROM events AS event\n            "
+                "LEFT JOIN turns AS turn\n              ON turn.session_id = "
+                "event.session_id\n             AND turn.turn_id = "
+                "json_extract(event.envelope_json, '$.turn_id')\n            WHERE "
+                "event.event_id = ?\n            "
+            ),
             (str(user_turn_event_id),),
         )
         if user_row is None or str(user_row["event_type"]) != "user.turn_committed":
@@ -135,40 +131,29 @@ class SQLiteMemoryRepository(MemoryRepository):
         user_occurred_at = datetime.fromisoformat(str(user_row["occurred_at"]))
 
         asst_row = await self._database.fetchone(
-            """
-            SELECT
-                asst.event_id,
-                asst.session_id,
-                asst.event_type,
-                asst.sequence,
-                asst.occurred_at,
-                asst.payload_json,
-                asst.envelope_json,
-                gen.output_text AS generation_output_text,
-                gen.state AS generation_state,
-                turn.source_context_json AS turn_source_context_json
-            FROM events AS asst
-            LEFT JOIN generations AS gen
-              ON gen.generation_id = json_extract(asst.envelope_json, '$.generation_id')
-            LEFT JOIN turns AS turn
-              ON turn.session_id = asst.session_id
-             AND turn.turn_id = json_extract(asst.envelope_json, '$.turn_id')
-            WHERE asst.session_id = ?
-              AND asst.sequence < ?
-              AND asst.event_type IN (
-                  'assistant.spoken_text_committed',
-                  'channel.delivery_plan_completed'
-              )
-              AND NOT EXISTS (
-                  SELECT 1 FROM events AS interv
-                  WHERE interv.session_id = asst.session_id
-                    AND interv.sequence > asst.sequence
-                    AND interv.sequence < ?
-                    AND interv.event_type = 'user.turn_committed'
-              )
-            ORDER BY asst.sequence DESC
-            LIMIT 1
-            """,
+            (
+                "\n            SELECT\n                asst.event_id,\n                "
+                "asst.session_id,\n                asst.event_type,\n                "
+                "asst.sequence,\n                asst.occurred_at,\n                "
+                "asst.payload_json,\n                asst.envelope_json,\n                "
+                "gen.output_text AS generation_output_text,\n                gen.state AS "
+                "generation_state,\n                turn.source_context_json AS "
+                "turn_source_context_json\n            FROM events AS asst\n            LEFT "
+                "JOIN generations AS gen\n              ON gen.generation_id = "
+                "json_extract(asst.envelope_json, '$.generation_id')\n            LEFT JOIN "
+                "turns AS turn\n              ON turn.session_id = asst.session_id\n         "
+                "    AND turn.turn_id = json_extract(asst.envelope_json, '$.turn_id')\n      "
+                "      WHERE asst.session_id = ?\n              AND asst.sequence < ?\n      "
+                "        AND asst.event_type IN (\n                  "
+                "'assistant.spoken_text_committed',\n                  "
+                "'channel.delivery_plan_completed'\n              )\n              AND NOT "
+                "EXISTS (\n                  SELECT 1 FROM events AS interv\n                "
+                "  WHERE interv.session_id = asst.session_id\n                    AND "
+                "interv.sequence > asst.sequence\n                    AND interv.sequence < "
+                "?\n                    AND interv.event_type = 'user.turn_committed'\n      "
+                "        )\n            ORDER BY asst.sequence DESC\n            LIMIT 1\n   "
+                "         "
+            ),
             (session_id, user_seq, user_seq),
         )
         if asst_row is None:
@@ -313,21 +298,24 @@ class SQLiteMemoryRepository(MemoryRepository):
         async with self._database.transaction() as connection:
             if supersede_target is not None:
                 await connection.execute(
-                    """
-                    UPDATE memory_records SET state = 'superseded', updated_at = ?
-                    WHERE memory_id = ? AND state = 'active'
-                    """,
+                    (
+                        "\n                    UPDATE memory_records SET state = "
+                        "'superseded', updated_at = ?\n                    WHERE memory_id = "
+                        "? AND state = 'active'\n                    "
+                    ),
                     (record.created_at.isoformat(), str(supersede_target)),
                 )
             await connection.execute(
-                """
-                INSERT INTO memory_records(
-                    memory_id, namespace, kind, subject_id, predicate, value_json,
-                    text, normalized_text, search_terms, observed_at, valid_from,
-                    valid_to, confidence, importance, sensitivity, state,
-                    supersedes, pinned, created_at, updated_at, origin_proposal_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
+                (
+                    "\n                INSERT INTO memory_records(\n                    "
+                    "memory_id, namespace, kind, subject_id, predicate, value_json,\n        "
+                    "            text, normalized_text, search_terms, observed_at, "
+                    "valid_from,\n                    valid_to, confidence, importance, "
+                    "sensitivity, state,\n                    supersedes, pinned, "
+                    "created_at, updated_at, origin_proposal_id\n                ) VALUES "
+                    "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n       "
+                    "         "
+                ),
                 (
                     str(record.memory_id),
                     record.namespace,
@@ -354,12 +342,13 @@ class SQLiteMemoryRepository(MemoryRepository):
             )
             for source in sources:
                 await connection.execute(
-                    """
-                    INSERT INTO memory_sources(
-                        source_id, memory_id, source_event_id, session_id,
-                        turn_id, source_kind, created_at, channel_attribution_json
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
+                    (
+                        "\n                    INSERT INTO memory_sources(\n                 "
+                        "       source_id, memory_id, source_event_id, session_id,\n         "
+                        "               turn_id, source_kind, created_at, "
+                        "channel_attribution_json\n                    ) VALUES (?, ?, ?, ?, "
+                        "?, ?, ?, ?)\n                    "
+                    ),
                     (
                         str(source.source_id),
                         str(source.memory_id),
@@ -381,13 +370,14 @@ class SQLiteMemoryRepository(MemoryRepository):
     ) -> None:
         for source in sources:
             cursor = await connection.execute(
-                """
-                SELECT 1 FROM events e JOIN sessions s ON s.session_id = e.session_id
-                JOIN memory_scope_resets r ON
-                    (r.character_id = s.character_id AND r.user_scope = s.user_scope)
-                    OR r.character_id = '__all__'
-                WHERE e.event_id = ? AND e.occurred_at <= r.reset_at LIMIT 1
-                """,
+                (
+                    "\n                SELECT 1 FROM events e JOIN sessions s ON "
+                    "s.session_id = e.session_id\n                JOIN memory_scope_resets r "
+                    "ON\n                    (r.character_id = s.character_id AND "
+                    "r.user_scope = s.user_scope)\n                    OR r.character_id = "
+                    "'__all__'\n                WHERE e.event_id = ? AND e.occurred_at <= "
+                    "r.reset_at LIMIT 1\n                "
+                ),
                 (str(source.source_event_id),),
             )
             stale = await cursor.fetchone()
@@ -408,13 +398,14 @@ class SQLiteMemoryRepository(MemoryRepository):
         async with self._database.transaction() as connection:
             await self._assert_current_sources(connection, sources)
             await connection.execute(
-                """
-                INSERT OR IGNORE INTO memory_proposals(
-                    proposal_id, operation, candidate_json, target_memory_id,
-                    evidence_event_ids_json, confidence, rationale, status,
-                    created_at, decided_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
+                (
+                    "\n                INSERT OR IGNORE INTO memory_proposals(\n             "
+                    "       proposal_id, operation, candidate_json, target_memory_id,\n      "
+                    "              evidence_event_ids_json, confidence, rationale, status,\n "
+                    "                   created_at, decided_at, "
+                    "decision_basis,policy_version\n                ) VALUES (?, ?, ?, ?, ?, "
+                    "?, ?, ?, ?, ?, ?, ?)\n                "
+                ),
                 (
                     str(proposal.proposal_id),
                     proposal.operation,
@@ -426,6 +417,8 @@ class SQLiteMemoryRepository(MemoryRepository):
                     proposal.status,
                     proposal.created_at.isoformat(),
                     proposal.decided_at.isoformat() if proposal.decided_at else None,
+                    proposal.decision_basis,
+                    proposal.policy_version,
                 ),
             )
             rec_cur = await connection.execute(
@@ -438,21 +431,24 @@ class SQLiteMemoryRepository(MemoryRepository):
             if not rec_exists:
                 if supersede_target is not None:
                     await connection.execute(
-                        """
-                        UPDATE memory_records SET state = 'superseded', updated_at = ?
-                        WHERE memory_id = ? AND state = 'active'
-                        """,
+                        (
+                            "\n                        UPDATE memory_records SET state = "
+                            "'superseded', updated_at = ?\n                        WHERE "
+                            "memory_id = ? AND state = 'active'\n                        "
+                        ),
                         (record.created_at.isoformat(), str(supersede_target)),
                     )
                 await connection.execute(
-                    """
-                    INSERT INTO memory_records(
-                        memory_id, namespace, kind, subject_id, predicate, value_json,
-                        text, normalized_text, search_terms, observed_at, valid_from,
-                        valid_to, confidence, importance, sensitivity, state,
-                        supersedes, pinned, created_at, updated_at, origin_proposal_id
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
+                    (
+                        "\n                    INSERT INTO memory_records(\n                 "
+                        "       memory_id, namespace, kind, subject_id, predicate, "
+                        "value_json,\n                        text, normalized_text, "
+                        "search_terms, observed_at, valid_from,\n                        "
+                        "valid_to, confidence, importance, sensitivity, state,\n             "
+                        "           supersedes, pinned, created_at, updated_at, "
+                        "origin_proposal_id\n                    ) VALUES (?, ?, ?, ?, ?, ?, "
+                        "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n                    "
+                    ),
                     (
                         str(record.memory_id),
                         record.namespace,
@@ -479,12 +475,14 @@ class SQLiteMemoryRepository(MemoryRepository):
                 )
                 for source in sources:
                     await connection.execute(
-                        """
-                        INSERT OR IGNORE INTO memory_sources(
-                            source_id, memory_id, source_event_id, session_id,
-                            turn_id, source_kind, created_at, channel_attribution_json
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
+                        (
+                            "\n                        INSERT OR IGNORE INTO "
+                            "memory_sources(\n                            source_id, "
+                            "memory_id, source_event_id, session_id,\n                       "
+                            "     turn_id, source_kind, created_at, "
+                            "channel_attribution_json\n                        ) VALUES (?, "
+                            "?, ?, ?, ?, ?, ?, ?)\n                        "
+                        ),
                         (
                             str(source.source_id),
                             str(source.memory_id),
@@ -504,11 +502,11 @@ class SQLiteMemoryRepository(MemoryRepository):
     async def tombstone(self, memory_id: UUID, changed_at: datetime) -> bool:
         async with self._database.transaction() as connection:
             cursor = await connection.execute(
-                """
-                UPDATE memory_records
-                SET state = 'tombstoned', updated_at = ?, tombstoned_at = ?
-                WHERE memory_id = ? AND state = 'active'
-                """,
+                (
+                    "\n                UPDATE memory_records\n                SET state = "
+                    "'tombstoned', updated_at = ?, tombstoned_at = ?\n                WHERE "
+                    "memory_id = ? AND state = 'active'\n                "
+                ),
                 (changed_at.isoformat(), changed_at.isoformat(), str(memory_id)),
             )
             changed = cursor.rowcount > 0
@@ -520,23 +518,24 @@ class SQLiteMemoryRepository(MemoryRepository):
     ) -> MemoryRecord | None:
         async with self._database.transaction() as connection:
             await connection.execute(
-                """
-                UPDATE memory_records SET pinned = ?, updated_at = ?
-                WHERE memory_id = ? AND state = 'active'
-                """,
+                (
+                    "\n                UPDATE memory_records SET pinned = ?, updated_at = ?\n"
+                    "                WHERE memory_id = ? AND state = 'active'\n              "
+                    "  "
+                ),
                 (int(pinned), changed_at.isoformat(), str(memory_id)),
             )
         return await self.get(memory_id)
 
     async def save_proposal(self, proposal: MemoryProposal) -> None:
         await self._execute_write(
-            """
-            INSERT OR IGNORE INTO memory_proposals(
-                proposal_id, operation, candidate_json, target_memory_id,
-                evidence_event_ids_json, confidence, rationale, status,
-                created_at, decided_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
+            (
+                "\n            INSERT OR IGNORE INTO memory_proposals(\n                "
+                "proposal_id, operation, candidate_json, target_memory_id,\n                "
+                "evidence_event_ids_json, confidence, rationale, status,\n                "
+                "created_at, decided_at, decision_basis,policy_version\n            ) VALUES "
+                "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n            "
+            ),
             (
                 str(proposal.proposal_id),
                 proposal.operation,
@@ -548,6 +547,8 @@ class SQLiteMemoryRepository(MemoryRepository):
                 proposal.status,
                 proposal.created_at.isoformat(),
                 proposal.decided_at.isoformat() if proposal.decided_at else None,
+                proposal.decision_basis,
+                proposal.policy_version,
             ),
         )
 
@@ -560,10 +561,12 @@ class SQLiteMemoryRepository(MemoryRepository):
     async def decide_proposal(self, proposal_id: UUID, status: str, decided_at: datetime) -> bool:
         async with self._database.transaction() as connection:
             cursor = await connection.execute(
-                """
-                UPDATE memory_proposals SET status = ?, decided_at = ?
-                WHERE proposal_id = ? AND status = 'pending'
-                """,
+                (
+                    "\n                UPDATE memory_proposals SET status = ?"
+                    ", decided_at = ?,decision_basis='human',policy_version="
+                    "NULL\n                WHERE proposal_id = ? AND status ="
+                    " 'pending'\n                "
+                ),
                 (status, decided_at.isoformat(), str(proposal_id)),
             )
             updated = cursor.rowcount > 0
@@ -584,10 +587,12 @@ class SQLiteMemoryRepository(MemoryRepository):
         async with self._database.transaction() as connection:
             await self._assert_current_sources(connection, sources)
             cursor = await connection.execute(
-                """
-                UPDATE memory_proposals SET status = 'accepted', decided_at = ?
-                WHERE proposal_id = ? AND status = 'pending'
-                """,
+                (
+                    "\n                UPDATE memory_proposals SET status = '"
+                    "accepted', decided_at = ?,decision_basis='human',policy"
+                    "_version=NULL\n                WHERE proposal_id = ? AND"
+                    " status = 'pending'\n                "
+                ),
                 (decided_at.isoformat(), str(proposal_id)),
             )
             updated = cursor.rowcount > 0
@@ -596,21 +601,24 @@ class SQLiteMemoryRepository(MemoryRepository):
                 return False
             if supersede_target is not None:
                 await connection.execute(
-                    """
-                    UPDATE memory_records SET state = 'superseded', updated_at = ?
-                    WHERE memory_id = ? AND state = 'active'
-                    """,
+                    (
+                        "\n                    UPDATE memory_records SET state = "
+                        "'superseded', updated_at = ?\n                    WHERE memory_id = "
+                        "? AND state = 'active'\n                    "
+                    ),
                     (record.created_at.isoformat(), str(supersede_target)),
                 )
             await connection.execute(
-                """
-                INSERT INTO memory_records(
-                    memory_id, namespace, kind, subject_id, predicate, value_json,
-                    text, normalized_text, search_terms, observed_at, valid_from,
-                    valid_to, confidence, importance, sensitivity, state,
-                    supersedes, pinned, created_at, updated_at, origin_proposal_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
+                (
+                    "\n                INSERT INTO memory_records(\n                    "
+                    "memory_id, namespace, kind, subject_id, predicate, value_json,\n        "
+                    "            text, normalized_text, search_terms, observed_at, "
+                    "valid_from,\n                    valid_to, confidence, importance, "
+                    "sensitivity, state,\n                    supersedes, pinned, "
+                    "created_at, updated_at, origin_proposal_id\n                ) VALUES "
+                    "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n       "
+                    "         "
+                ),
                 (
                     str(record.memory_id),
                     record.namespace,
@@ -637,12 +645,13 @@ class SQLiteMemoryRepository(MemoryRepository):
             )
             for source in sources:
                 await connection.execute(
-                    """
-                    INSERT INTO memory_sources(
-                        source_id, memory_id, source_event_id, session_id,
-                        turn_id, source_kind, created_at, channel_attribution_json
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
+                    (
+                        "\n                    INSERT INTO memory_sources(\n                 "
+                        "       source_id, memory_id, source_event_id, session_id,\n         "
+                        "               turn_id, source_kind, created_at, "
+                        "channel_attribution_json\n                    ) VALUES (?, ?, ?, ?, "
+                        "?, ?, ?, ?)\n                    "
+                    ),
                     (
                         str(source.source_id),
                         str(source.memory_id),
@@ -811,12 +820,12 @@ class SQLiteMemoryRepository(MemoryRepository):
 
         async with self._database.transaction() as connection:
             await connection.execute(
-                """
-                DELETE FROM memory_proposals
-                WHERE target_memory_id IN (
-                    SELECT memory_id FROM memory_records WHERE namespace = ?
-                ) OR json_extract(candidate_json, '$.namespace') = ?
-                """,
+                (
+                    "\n                DELETE FROM memory_proposals\n                WHERE "
+                    "target_memory_id IN (\n                    SELECT memory_id FROM "
+                    "memory_records WHERE namespace = ?\n                ) OR "
+                    "json_extract(candidate_json, '$.namespace') = ?\n                "
+                ),
                 (namespace, namespace),
             )
             cursor = await connection.execute(
@@ -899,6 +908,8 @@ def _proposal_from_row(row: dict[str, object]) -> MemoryProposal:
             "evidence_event_ids": json.loads(str(row["evidence_event_ids_json"])),
             "confidence": row["confidence"],
             "rationale": row["rationale"],
+            "decision_basis": row.get("decision_basis"),
+            "policy_version": row.get("policy_version"),
             "status": row["status"],
             "created_at": row["created_at"],
             "decided_at": row.get("decided_at"),

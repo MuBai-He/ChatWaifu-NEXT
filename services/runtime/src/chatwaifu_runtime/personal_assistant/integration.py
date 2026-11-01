@@ -5,6 +5,8 @@ from collections.abc import Awaitable, Callable
 from contextlib import suppress
 from typing import Literal
 
+from chatwaifu_protocol.base import JsonObject
+
 from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.persistence.async_secret_store import AsyncSecretStore
 from chatwaifu_runtime.persistence.atomic_secret_store import AtomicSecretStore
@@ -35,7 +37,9 @@ class PersonalAssistantIntegration:
         self._tasks_adapter: GoogleTasksAdapter | None = None
         self._maintenance: asyncio.Task[None] | None = None
         self.agenda: AgendaService | None = None
+        self.effect_observer: Callable[[str, JsonObject, JsonObject], Awaitable[None]] | None = None
         self.task_calendar_scope: Callable[[], Awaitable[frozenset[str] | None]] | None = None
+        self.task_list_scope: Callable[[], Awaitable[frozenset[str] | None]] | None = None
         if not config.enabled:
             return
         self.agenda = AgendaService(repository, None, self.tasks)
@@ -46,8 +50,8 @@ class PersonalAssistantIntegration:
             config.google_client_id.strip(),
             config.google_client_secret.get_secret_value() if config.google_client_secret else None,
         )
-        self._adapter = GoogleCalendarAdapter()
-        self._tasks_adapter = GoogleTasksAdapter()
+        self._adapter = GoogleCalendarAdapter(proxy_url=config.google_proxy_url)
+        self._tasks_adapter = GoogleTasksAdapter(proxy_url=config.google_proxy_url)
         self.accounts = GoogleAccountService(
             repository,
             AsyncSecretStore(

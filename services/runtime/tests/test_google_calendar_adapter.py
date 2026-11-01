@@ -13,6 +13,47 @@ from chatwaifu_runtime.personal_assistant.google_calendar import (
 from chatwaifu_runtime.personal_assistant.google_tasks import GoogleTasksAdapter
 
 
+@pytest.mark.parametrize("kind", ["oauth", "tasks"])
+async def test_explicit_proxy_routes_google_requests_without_ambient_proxy(
+    kind: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    targets: list[bytes] = []
+
+    async def proxy(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        try:
+            headers = await asyncio.wait_for(reader.readuntil(b"\r\n\r\n"), timeout=2)
+            targets.append(headers.split(b"\r\n", 1)[0])
+            writer.write(b"HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n")
+            await writer.drain()
+        finally:
+            writer.close()
+            await writer.wait_closed()
+
+    monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:1")
+    async with await asyncio.start_server(proxy, "127.0.0.1", 0) as server:
+        port = server.sockets[0].getsockname()[1]
+        url = f"http://127.0.0.1:{port}"
+        calendar = GoogleCalendarAdapter(proxy_url=url)
+        tasks = GoogleTasksAdapter(proxy_url=url)
+        try:
+            with pytest.raises(GoogleCalendarError, match="transport_error"):
+                if kind == "oauth":
+                    await calendar.exchange_code(
+                        client_id="synthetic-client",
+                        client_secret=None,
+                        code="synthetic-code",
+                        verifier="synthetic-verifier",
+                        redirect_uri="http://127.0.0.1:12345/oauth/google",
+                    )
+                else:
+                    await tasks.lists("synthetic-token")
+            host = "oauth2.googleapis.com" if kind == "oauth" else "tasks.googleapis.com"
+            assert targets == [f"CONNECT {host}:443 HTTP/1.1".encode()]
+        finally:
+            await calendar.close()
+            await tasks.close()
+
+
 async def test_expired_delta_discards_partial_pages_and_returns_full_snapshot() -> None:
     requests: list[httpx.Request] = []
 
@@ -304,6 +345,8 @@ async def test_google_tasks_pages_date_only_and_stale_write() -> None:
 
     def handle(request: httpx.Request) -> httpx.Response:
         requests.append(request)
+        if request.method == "GET" and request.url.path.endswith("/deleted"):
+            return httpx.Response(200, json={"id": "deleted", "deleted": True})
         if request.method == "PATCH":
             return httpx.Response(412)
         if request.method == "DELETE":
@@ -336,5 +379,155 @@ async def test_google_tasks_pages_date_only_and_stale_write() -> None:
             await adapter.update("token", "a/b", "task", {"title": "更新"}, '"t1"')
         assert requests[3].headers["If-Match"] == '"t1"'
         await adapter.delete("token", "a/b", "task", '"t1"')
+        with pytest.raises(GoogleCalendarError, match="item_not_found"):
+            await adapter.get("token", "a/b", "deleted")
+    finally:
+        await adapter.close()
+
+
+@pytest.mark.parametrize("quote_escapes", [0, 1, 2, 3])
+async def test_single_instance_write_is_conditional_and_does_not_change_its_sibling(
+    quote_escapes: int,
+) -> None:
+    from copy import deepcopy
+    from typing import cast
+    from unittest.mock import AsyncMock
+
+    from chatwaifu_runtime.personal_assistant.accounts import (
+        GoogleAccountService,
+        GoogleClient,
+        SecretStore,
+    )
+    from chatwaifu_runtime.personal_assistant.repository import (
+        AssistantAccessError,
+        AssistantRepository,
+    )
+
+    store = {
+        identifier: {
+            "id": identifier,
+            "status": "confirmed",
+            "summary": "周会",
+            "etag": '"v1"',
+            "recurringEventId": "series",
+            "originalStartTime": {
+                "dateTime": "2026-11-03T09:00:00+08:00"
+                if identifier == "one"
+                else "2026-11-10T09:00:00+08:00"
+            },
+            "start": {
+                "dateTime": "2026-11-03T09:00:00+08:00"
+                if identifier == "one"
+                else "2026-11-10T09:00:00+08:00"
+            },
+            "end": {
+                "dateTime": "2026-11-03T10:00:00+08:00"
+                if identifier == "one"
+                else "2026-11-10T10:00:00+08:00"
+            },
+        }
+        for identifier in ["one", "two"]
+    }
+    sibling = deepcopy(store["two"])
+    writes: list[str] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        import json
+
+        identifier = request.url.path.rsplit("/", 1)[-1]
+        if request.method == "PATCH":
+            assert request.headers["If-Match"] == '"v1"'
+            writes.append(identifier)
+            store[identifier].update(json.loads(request.content))
+            store[identifier]["etag"] = '"v2"'
+        return httpx.Response(200, json=store[identifier])
+
+    adapter = GoogleCalendarAdapter(transport=httpx.MockTransport(handle))
+    repository = AsyncMock(spec=AssistantRepository)
+    repository.session_owner.return_value = "local"
+    service = GoogleAccountService(
+        cast(AssistantRepository, repository),
+        cast(SecretStore, AsyncMock()),
+        adapter,
+        GoogleClient("synthetic-client"),
+    )
+    service._writable_calendar = AsyncMock()  # pyright: ignore[reportPrivateUsage]
+    service._access = AsyncMock(return_value="synthetic-access")  # pyright: ignore[reportPrivateUsage]
+    try:
+        updated = await service.update_event(
+            "session",
+            "account",
+            "calendar",
+            "one",
+            '"v1"'.replace('"', "\\" * quote_escapes + '"'),
+            {
+                "summary": "单次改期",
+                "start": {"dateTime": "2026-11-03T11:00:00+08:00"},
+                "end": {"dateTime": "2026-11-03T12:00:00+08:00"},
+            },
+        )
+        assert updated.id == "one" and updated.original_start is not None
+        assert store["two"] == sibling and writes == ["one"]
+        with pytest.raises(AssistantAccessError, match="calendar_version_changed"):
+            await service.update_event(
+                "session",
+                "account",
+                "calendar",
+                "one",
+                '"v1"'.replace('"', "\\" * quote_escapes + '"'),
+                {"summary": "过时修改"},
+            )
+        assert writes == ["one"]
+    finally:
+        await adapter.close()
+
+
+async def test_all_day_creation_roundtrips_exclusive_dates_without_inventing_a_clock() -> None:
+    from typing import cast
+    from unittest.mock import AsyncMock
+
+    from chatwaifu_runtime.personal_assistant.accounts import (
+        GoogleAccountService,
+        GoogleClient,
+        SecretStore,
+    )
+    from chatwaifu_runtime.personal_assistant.repository import AssistantRepository
+
+    body: dict[str, object] = {}
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        import json
+
+        if request.method == "POST":
+            body.update(json.loads(request.content))
+        return httpx.Response(200, json={**body, "status": "confirmed", "etag": "v1"})
+
+    adapter = GoogleCalendarAdapter(transport=httpx.MockTransport(handle))
+    repo = AsyncMock(spec=AssistantRepository)
+    repo.session_owner.return_value = "local"
+    service = GoogleAccountService(
+        cast(AssistantRepository, repo),
+        cast(SecretStore, AsyncMock()),
+        adapter,
+        GoogleClient("synthetic-client"),
+    )
+    service._writable_calendar = AsyncMock()  # pyright: ignore[reportPrivateUsage]
+    service._access = AsyncMock(return_value="synthetic-access")  # pyright: ignore[reportPrivateUsage]
+    try:
+        event = await service.create_event(
+            "session",
+            "account",
+            "calendar",
+            "synthetic",
+            "休假",
+            date(2026, 11, 3),
+            date(2026, 11, 5),
+        )
+        assert body["start"] == {"date": "2026-11-03"} and body["end"] == {"date": "2026-11-05"}
+        assert (
+            event.start is not None
+            and event.start.day == date(2026, 11, 3)
+            and event.start.timestamp is None
+        )
     finally:
         await adapter.close()

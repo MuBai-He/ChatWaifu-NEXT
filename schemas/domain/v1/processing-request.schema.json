@@ -1,0 +1,144 @@
+{
+  "$defs": {
+    "EvidenceRef": {
+      "properties": {
+        "kind": {
+          "enum": [
+            "event",
+            "knowledge"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Reference",
+          "type": "string"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "reference"
+      ],
+      "title": "EvidenceRef",
+      "type": "object"
+    },
+    "JsonObject": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/processing-request.schema.json",
+  "properties": {
+    "action": {
+      "enum": [
+        "prepare",
+        "activate"
+      ],
+      "title": "Action",
+      "type": "string"
+    },
+    "completed_sources": {
+      "items": {
+        "$ref": "#/$defs/EvidenceRef"
+      },
+      "maxItems": 10000,
+      "title": "Completed Sources",
+      "type": "array"
+    },
+    "device_id": {
+      "format": "uuid",
+      "title": "Device Id",
+      "type": "string"
+    },
+    "drained": {
+      "default": false,
+      "title": "Drained",
+      "type": "boolean"
+    },
+    "expected_epoch": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Expected Epoch",
+      "type": "integer"
+    },
+    "pending_reviews": {
+      "items": {
+        "$ref": "#/$defs/JsonObject"
+      },
+      "maxItems": 100,
+      "title": "Pending Reviews",
+      "type": "array"
+    },
+    "room_ids": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 100,
+      "minItems": 1,
+      "title": "Room Ids",
+      "type": "array"
+    },
+    "session_id": {
+      "format": "uuid",
+      "title": "Session Id",
+      "type": "string"
+    },
+    "watermarks": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Watermarks",
+      "type": "object"
+    }
+  },
+  "required": [
+    "session_id",
+    "device_id",
+    "room_ids",
+    "action"
+  ],
+  "title": "ProcessingRequest",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

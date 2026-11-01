@@ -14,6 +14,7 @@ import * as publicProtocol from "../src/index";
 import * as coreParsers from "../src/parsers/protocol";
 import * as groupParsers from "../src/parsers/channelGroups";
 import * as proactiveParsers from "../src/parsers/channelProactive";
+import * as harnessParsers from "../src/parsers/harness";
 import * as settingsParsers from "../src/parsers/channelSettings";
 import {
   channelDeliveryAcknowledgementSchema,
@@ -36,6 +37,7 @@ const parserModule = {
   ...proactiveParsers,
   ...groupParsers,
   ...settingsParsers,
+  ...harnessParsers,
 };
 
 // Compile-time type-level equivalence assertions

@@ -58,6 +58,7 @@ public final class FlowInstrumentation extends Instrumentation {
         .put("kind", kind)
         .put("importance", "high")
         .put("reason", "合成输入中的明确约定")
+        .put("details", "本人已明确约定事项，按合成消息中的时间核对，尚未确认完成。")
         .put("involvement", "self")
         .put("source_refs", new JSONArray().put(MemoryStore.reference(source)));
   }
@@ -126,7 +127,11 @@ public final class FlowInstrumentation extends Instrumentation {
     context = getTargetContext();
     boolean passed = false;
     try {
-      if (arguments != null && "true".equals(arguments.getString("exclusions_status"))) {
+      if (arguments != null && "true".equals(arguments.getString("storage_only"))) {
+        long elapsed = storageChecks();
+        output.putString("result", "passed: " + checks + " storage assertions; atomic_100_save_ms=" + elapsed);
+        passed = true;
+      } else if (arguments != null && "true".equals(arguments.getString("exclusions_status"))) {
         try (MemoryStore live = new MemoryStore(context)) {
           ConversationPolicy policy = new ConversationPolicy(live);
           RootGateway root = new RootGateway(context);
@@ -134,7 +139,10 @@ public final class FlowInstrumentation extends Instrumentation {
           for (int i = 0; i < pending.length(); i++)
             check(
                 !policy.excluded(pending.getJSONObject(i)), "live intake excludes selected rooms");
-          JSONArray prior = root.contextBefore(pending);
+          JSONArray prior =
+              pending.length() == 0
+                  ? new JSONArray()
+                  : root.contextAround(new JSONArray().put(pending.getJSONObject(0)), live);
           for (int i = 0; i < prior.length(); i++)
             check(!policy.excluded(prior.getJSONObject(i)), "live context excludes selected rooms");
           JSONArray rooms = root.policyConversations("");
@@ -202,6 +210,51 @@ public final class FlowInstrumentation extends Instrumentation {
       context.deleteDatabase("migration_fixture.db");
     }
     finish(passed ? -1 : 0, output);
+  }
+
+  /** Platform SQLite/WAL check, isolated from the live information database. */
+  private long storageChecks() throws Exception {
+    OrganizerStore store = fresh();
+    JSONArray selected = new JSONArray();
+    for (int i = 0; i < 100; i++)
+      selected.put(stage(store, 2000 + i, "storage-fixture-" + i, "memory", "create", null, null));
+    java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+    CountDownLatch held = new CountDownLatch(1), release = new CountDownLatch(1);
+    java.util.concurrent.Future<?> writer = pool.submit(() -> {
+      try (MemoryStore peer = new MemoryStore(context, NAME)) {
+        SQLiteDatabase db = peer.getWritableDatabase();
+        db.beginTransactionNonExclusive();
+        try { held.countDown(); release.await(); db.setTransactionSuccessful(); }
+        finally { db.endTransaction(); }
+      } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+    });
+    try {
+      check(held.await(5, TimeUnit.SECONDS), "native writer begins");
+      java.util.concurrent.Future<JSONArray> preview = pool.submit(
+          () -> AiReviewBatch.preview(memory, selected, "Asia/Shanghai"));
+      check(preview.get(5, TimeUnit.SECONDS).length() == 100, "preview reads while native writer held");
+    } finally {
+      release.countDown(); writer.get(5, TimeUnit.SECONDS); pool.shutdownNow();
+    }
+    check(memory.getWritableDatabase().isOpen(), "sibling close preserves active native owner");
+    JSONArray prepared = AiReviewBatch.preview(memory, selected, "Asia/Shanghai");
+    memory.getWritableDatabase().execSQL("CREATE TRIGGER reject_last BEFORE INSERT ON memories "
+        + "WHEN NEW.title='storage-fixture-99' BEGIN SELECT RAISE(ABORT,'storage_fixture'); END");
+    boolean rejected = false;
+    try { AiReviewBatch.confirm(memory, prepared, System.currentTimeMillis()); }
+    catch (android.database.sqlite.SQLiteException expected) { rejected = true; }
+    check(rejected && memory.list().length() == 0, "last-item error rolls back all native writes");
+    check(memory.suggestions().length() == 100, "native rollback preserves all pending decisions");
+    memory.getWritableDatabase().execSQL("DROP TRIGGER reject_last");
+    long start = android.os.SystemClock.elapsedRealtime();
+    check(AiReviewBatch.confirm(memory, prepared, System.currentTimeMillis()) == 100, "native batch committed");
+    long elapsed = android.os.SystemClock.elapsedRealtime() - start;
+    check(memory.list().length() == 100 && memory.suggestions().length() == 0, "native batch saved exactly once");
+    boolean duplicate = false;
+    try { AiReviewBatch.confirm(memory, prepared, System.currentTimeMillis()); }
+    catch (IllegalStateException expected) { duplicate = true; }
+    check(duplicate && memory.list().length() == 100, "duplicate native confirmation rejected");
+    return elapsed;
   }
 
   private void migration() throws Exception {

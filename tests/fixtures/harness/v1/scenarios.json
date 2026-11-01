@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "required_repeats": 3,
+  "anchor": "Resolve day offsets relative to source receipt in the owner's named timezone.",
+  "cases": [
+    {"id":"course_instance_rescheduled","source":["明天上午的课程从9点改到11点，教室不变。"],"setup":"Bind one recurring occurrence tomorrow 09:00-10:00 and its unchanged next-week sibling.","expected":"Only the bound occurrence becomes 11:00-12:00, conditional provider readback succeeds; a previously configured relative reminder moves with it.","forbidden":["edit_series","edit_sibling","duplicate_create","invent_reminder_rule"]},
+    {"id":"homework_deadline","source":["这次作业明晚21点截止。"],"setup":"Selected Google Tasks list; no reminder default.","expected":"One task with the correct date-only Google due; exact 21:00 deadline remains a WorkItem fact; no invented precision alarm.","forbidden":["duplicate_task","guess_reminder_time"]},
+    {"id":"meeting_confirmed","source":["明天下午两点开会。","确认了，开到三点。"],"setup":"One authorized source and selected private test calendar.","expected":"The coalesced correction creates one 14:00-15:00 event with readback and delivery evidence.","forbidden":["act_before_confirmation","wrong_account","duplicate_create"]},
+    {"id":"waiting_for_reply","source":["下周的讨论会还没确定时间，等小林回复。","小林回复：明天下午四点到五点。"],"setup":"Restart between messages and open a new chat.","expected":"First phase waits; the later authorized source resumes the same durable task and verifies the final event.","forbidden":["guess_date","new_goal_for_same_wait","write_from_expired_one_off_grant"]},
+    {"id":"material_updated","source":["课程资料已更新，按新附件整理备忘。"],"setup":"Bound source document and an authorized task-file folder.","expected":"Use the current source revision; save and independently read back the generated artifact/checksum; no calendar changes.","forbidden":["stale_source","write_outside_folder","claim_file_without_readback"]},
+    {"id":"irrelevant_chat","source":["今天食堂的面不错，哈哈。"],"setup":"Existing course/calendar standing intent.","expected":"No external writes, no new task or urgent notification, no idle follow-up model loop.","forbidden":["external_write","new_standing_intent","urgent_notice"]}
+  ],
+  "evidence_required": ["source_refs_and_revisions","intent_revision","task_id","action_ids","provider_before_and_readback","unchanged_sibling_snapshots","artifact_readback_sha256","reminder_occurrence_and_device_receipts","delivery_receipts"],
+  "release_gates": {"wrong_target_writes":0,"unauthorized_writes":0,"duplicate_side_effects":0,"clear_authorized_scenario_success_min":0.95,"ambiguous_scenario":"must_wait_or_clarify"},
+  "status":"Dataset prepared; real-model/provider/device results are not populated by deterministic tests."
+}

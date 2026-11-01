@@ -14,7 +14,7 @@ public final class ReminderReceiver extends BroadcastReceiver {
                 String id = intent.getStringExtra("work_id");
                 if (id == null) return;
                 if ("com.mubai.infoinbox.REMIND".equals(intent.getAction())) {
-                  ReminderScheduler.deliver(
+                  ReminderScheduler.onAlarm(
                       context,
                       id,
                       intent.getIntExtra("revision", -1),
@@ -27,8 +27,9 @@ public final class ReminderReceiver extends BroadcastReceiver {
                       intent.getLongExtra("due_at", -1),
                       intent.getStringExtra("choice"));
                 }
-              } catch (Exception ignored) {
-                /* Durable rule remains inspectable; never log private titles. */
+              } catch (Exception error) {
+                android.util.Log.w("InboxReminder",
+                    "operation_failed type=" + error.getClass().getSimpleName());
               } finally {
                 result.finish();
               }

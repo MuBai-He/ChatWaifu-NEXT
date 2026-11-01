@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Protocol
@@ -36,6 +37,18 @@ from chatwaifu_runtime.personal_assistant.repository import (
     CalendarSelection,
     TaskListSelection,
 )
+from chatwaifu_runtime.personal_assistant.verification import (
+    matching_provider_etag,
+    verify_calendar,
+)
+
+
+def _provider_etag(current: str | None, supplied: str, conflict: str) -> str:
+    """Preserve the exact version while tolerating bounded JSON quote over-escaping."""
+    matched = matching_provider_etag(current, supplied)
+    if matched is not None:
+        return matched
+    raise AssistantAccessError(conflict)
 
 
 class SecretStore(Protocol):
@@ -86,6 +99,10 @@ class GoogleAccountService:
         self._client = client
         self._tasks = tasks_adapter
         self._lock = asyncio.Lock()
+        self.on_synced: (
+            Callable[[str, str, str, tuple[CalendarEvent, ...]], Awaitable[None]] | None
+        ) = None
+        self.event_write_policy: Callable[[CalendarEvent], Awaitable[None]] | None = None
 
     async def connect_authorized(self, session_id: str, tokens: OAuthTokens) -> AccountStatus:
         owner = await self._repository.session_owner(session_id)
@@ -179,14 +196,18 @@ class GoogleAccountService:
         calendar_id: str,
         event_id: str,
         title: str,
-        start: datetime,
-        end: datetime,
+        start: datetime | date,
+        end: datetime | date,
+        *,
+        location: str | None = None,
+        notes: str | None = None,
     ) -> CalendarEvent:
         if (
             not title.strip()
             or len(title) > 200
-            or start.utcoffset() is None
-            or end.utcoffset() is None
+            or type(start) is not type(end)
+            or (isinstance(start, datetime) and start.utcoffset() is None)
+            or (isinstance(end, datetime) and end.utcoffset() is None)
             or end <= start
         ):
             raise AssistantAccessError("invalid_event")
@@ -194,16 +215,52 @@ class GoogleAccountService:
         async with self._lock:
             await self._writable_calendar(owner, account_id, calendar_id)
             token = await self._access(account_id, WRITE_SCOPE)
-            return await self._adapter.create_event(
+            created = await self._adapter.create_event(
                 token,
                 calendar_id,
                 event_id,
                 {
                     "summary": title.strip(),
-                    "start": {"dateTime": start.isoformat()},
-                    "end": {"dateTime": end.isoformat()},
+                    **({"location": location} if location is not None else {}),
+                    **({"description": notes} if notes is not None else {}),
+                    "start": {
+                        "dateTime" if isinstance(start, datetime) else "date": start.isoformat()
+                    },
+                    "end": {"dateTime" if isinstance(end, datetime) else "date": end.isoformat()},
                 },
             )
+
+            actual = await self._adapter.get_event(token, calendar_id, created.id)
+            verify_calendar(
+                actual,
+                event_id,
+                {
+                    "summary": title.strip(),
+                    **({"location": location} if location is not None else {}),
+                    **({"description": notes} if notes is not None else {}),
+                    "start": {
+                        "dateTime" if isinstance(start, datetime) else "date": start.isoformat()
+                    },
+                    "end": {"dateTime" if isinstance(end, datetime) else "date": end.isoformat()},
+                },
+            )
+            return actual
+
+    async def inspect_event(
+        self, session_id: str, account_id: str, calendar_id: str, event_id: str
+    ) -> CalendarEvent:
+        owner = await self._repository.session_owner(session_id)
+        async with self._lock:
+            ticket = await self._repository.begin_sync(owner, account_id, calendar_id)
+            token = await self._access(account_id, READ_SCOPE)
+            actual = await self._adapter.get_event(token, calendar_id, event_id)
+            current = await self._repository.begin_sync(owner, account_id, calendar_id)
+            if (
+                current.account_revision != ticket.account_revision
+                or current.calendar_revision != ticket.calendar_revision
+            ):
+                raise AssistantAccessError("calendar_source_changed")
+            return actual
 
     async def update_event(
         self,
@@ -219,9 +276,19 @@ class GoogleAccountService:
             await self._writable_calendar(owner, account_id, calendar_id)
             token = await self._access(account_id, WRITE_SCOPE)
             current = await self._adapter.get_event(token, calendar_id, event_id)
-            if current.recurrence or current.recurring_event_id or current.event_type != "default":
+            if self.event_write_policy is not None:
+                await self.event_write_policy(current)
+            if (
+                current.recurrence
+                or current.event_type != "default"
+                or (current.recurring_event_id and current.original_start is None)
+            ):
                 raise AssistantAccessError("complex_event_edit_not_supported")
-            return await self._adapter.update_event(token, calendar_id, event_id, changes, etag)
+            etag = _provider_etag(current.etag, etag, "calendar_version_changed")
+            await self._adapter.update_event(token, calendar_id, event_id, changes, etag)
+            actual = await self._adapter.get_event(token, calendar_id, event_id)
+            verify_calendar(actual, event_id, changes, current)
+            return actual
 
     async def delete_event(
         self, session_id: str, account_id: str, calendar_id: str, event_id: str, etag: str
@@ -231,9 +298,26 @@ class GoogleAccountService:
             await self._writable_calendar(owner, account_id, calendar_id)
             token = await self._access(account_id, WRITE_SCOPE)
             current = await self._adapter.get_event(token, calendar_id, event_id)
-            if current.recurrence or current.recurring_event_id or current.event_type != "default":
+            if current.status == "cancelled":
+                return
+            if self.event_write_policy is not None:
+                await self.event_write_policy(current)
+            if (
+                current.recurrence
+                or current.event_type != "default"
+                or (current.recurring_event_id and current.original_start is None)
+            ):
                 raise AssistantAccessError("complex_event_edit_not_supported")
+            etag = _provider_etag(current.etag, etag, "calendar_version_changed")
             await self._adapter.delete_event(token, calendar_id, event_id, etag)
+            try:
+                actual = await self._adapter.get_event(token, calendar_id, event_id)
+            except GoogleCalendarError as error:
+                if error.code != "item_not_found":
+                    raise
+            else:
+                if actual.status != "cancelled":
+                    raise GoogleCalendarError("calendar_delete_unverified", retryable=True)
 
     async def _writable_calendar(self, owner: str, account_id: str, calendar_id: str) -> None:
         selection = await self._repository.calendars(owner, account_id)
@@ -267,7 +351,20 @@ class GoogleAccountService:
         async with self._lock:
             await self._selected_tasklist(owner, account_id, list_id)
             token = await self._access(account_id, TASKS_SCOPE)
-            return await self._task_adapter().tasks(token, list_id)
+            values = await self._task_adapter().tasks(token, list_id)
+            await self._selected_tasklist(owner, account_id, list_id)
+            return values
+
+    async def inspect_task(
+        self, session_id: str, account_id: str, list_id: str, task_id: str
+    ) -> GoogleTask:
+        owner = await self._repository.session_owner(session_id)
+        async with self._lock:
+            await self._selected_tasklist(owner, account_id, list_id)
+            token = await self._access(account_id, TASKS_SCOPE)
+            actual = await self._task_adapter().get(token, list_id, task_id)
+            await self._selected_tasklist(owner, account_id, list_id)
+            return actual
 
     async def create_task(
         self,
@@ -284,7 +381,17 @@ class GoogleAccountService:
         async with self._lock:
             await self._selected_tasklist(owner, account_id, list_id)
             token = await self._access(account_id, TASKS_SCOPE)
-            return await self._task_adapter().create(token, list_id, title.strip(), notes, due)
+            created = await self._task_adapter().create(token, list_id, title.strip(), notes, due)
+            actual = await self._task_adapter().get(token, list_id, created.id)
+            if (
+                actual.id != created.id
+                or actual.title != title.strip()
+                or actual.due != due
+                or (actual.notes or "") != (notes or "")
+                or actual.status != "needsAction"
+            ):
+                raise GoogleCalendarError("task_verification_failed", retryable=True)
+            return actual
 
     async def update_task(
         self,
@@ -299,7 +406,25 @@ class GoogleAccountService:
         async with self._lock:
             await self._selected_tasklist(owner, account_id, list_id)
             token = await self._access(account_id, TASKS_SCOPE)
-            return await self._task_adapter().update(token, list_id, task_id, changes, etag)
+            current = await self._task_adapter().get(token, list_id, task_id)
+            if current.id != task_id:
+                raise AssistantAccessError("task_version_changed")
+            etag = _provider_etag(current.etag, etag, "task_version_changed")
+            await self._task_adapter().update(token, list_id, task_id, changes, etag)
+            actual = await self._task_adapter().get(token, list_id, task_id)
+            if (
+                actual.id != task_id
+                or (
+                    "due" in changes
+                    and (actual.due.isoformat() if actual.due else None)
+                    != (str(changes["due"])[:10] if changes["due"] else None)
+                )
+                or ("notes" in changes and (actual.notes or "") != (changes["notes"] or ""))
+                or ("title" in changes and actual.title != changes["title"])
+                or ("status" in changes and actual.status != changes["status"])
+            ):
+                raise GoogleCalendarError("task_verification_failed", retryable=True)
+            return actual
 
     async def delete_task(
         self, session_id: str, account_id: str, list_id: str, task_id: str, etag: str
@@ -308,7 +433,23 @@ class GoogleAccountService:
         async with self._lock:
             await self._selected_tasklist(owner, account_id, list_id)
             token = await self._access(account_id, TASKS_SCOPE)
+            try:
+                current = await self._task_adapter().get(token, list_id, task_id)
+            except GoogleCalendarError as error:
+                if error.code == "item_not_found":
+                    return
+                raise
+            if current.id != task_id:
+                raise AssistantAccessError("task_version_changed")
+            etag = _provider_etag(current.etag, etag, "task_version_changed")
             await self._task_adapter().delete(token, list_id, task_id, etag)
+            try:
+                await self._task_adapter().get(token, list_id, task_id)
+            except GoogleCalendarError as error:
+                if error.code != "item_not_found":
+                    raise
+            else:
+                raise GoogleCalendarError("task_delete_unverified", retryable=True)
 
     def _task_adapter(self) -> GoogleTasksAdapter:
         if self._tasks is None:
@@ -371,7 +512,10 @@ class GoogleAccountService:
             ticket = await self._repository.begin_sync(owner, account_id, calendar_id)
             access = await self._access(account_id)
             batch = await self._adapter.sync_events(access, calendar_id, ticket.sync_token)
-            return await self._repository.apply_sync(owner, ticket, batch)
+            applied = await self._repository.apply_sync(owner, ticket, batch)
+        if applied and self.on_synced is not None:
+            await self.on_synced(session_id, account_id, calendar_id, batch.events)
+        return applied
 
     async def disconnect(self, session_id: str, account_id: str) -> bool:
         owner = await self._repository.session_owner(session_id)

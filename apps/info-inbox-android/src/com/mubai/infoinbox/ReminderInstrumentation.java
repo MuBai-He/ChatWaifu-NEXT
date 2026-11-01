@@ -13,6 +13,9 @@ import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Bundle;
 import android.service.notification.StatusBarNotification;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -33,10 +36,12 @@ public final class ReminderInstrumentation extends Instrumentation {
   private final List<String> ids = new ArrayList<>();
   private final List<String> refs = new ArrayList<>();
   private int checks;
+  private boolean offlineRequested;
 
   @Override
   public void onCreate(Bundle args) {
     super.onCreate(args);
+    offlineRequested = args != null && "true".equals(args.getString("offline"));
     start();
   }
 
@@ -169,6 +174,14 @@ public final class ReminderInstrumentation extends Instrumentation {
       } finally {
         db.endTransaction();
       }
+      if (journal.contains("sync_enabled_before")) {
+        SharedPreferences.Editor restore =
+            context.getSharedPreferences("knowledge", Context.MODE_PRIVATE).edit();
+        if (journal.getBoolean("sync_was_set", false))
+          restore.putBoolean("enabled", journal.getBoolean("sync_enabled_before", false));
+        else restore.remove("enabled");
+        if (!restore.commit()) throw new IllegalStateException("fixture sync restore");
+      }
       if (!journal.edit().clear().commit()) throw new IllegalStateException("fixture cleanup");
     }
   }
@@ -187,6 +200,7 @@ public final class ReminderInstrumentation extends Instrumentation {
 
   @Override
   public void onStart() {
+    waitForIdleSync();
     Bundle output = new Bundle();
     boolean passed = false;
     String before = null;
@@ -196,16 +210,48 @@ public final class ReminderInstrumentation extends Instrumentation {
     store = new OrganizerStore(memory);
     try {
       cleanup();
+      SharedPreferences sync = context.getSharedPreferences("knowledge", Context.MODE_PRIVATE);
+      if (!journal.edit()
+          .putBoolean("sync_was_set", sync.contains("enabled"))
+          .putBoolean("sync_enabled_before", sync.getBoolean("enabled", false))
+          .commit()) throw new IllegalStateException("fixture sync journal");
+      if (!sync.edit().putBoolean("enabled", false).commit())
+        throw new IllegalStateException("fixture sync pause");
       before = retainedBusinessFingerprint();
       check(ReminderScheduler.notificationsAllowed(context), "notification permission");
       check(ReminderScheduler.preciseAllowed(context), "exact alarm permission");
-      long due = System.currentTimeMillis() + 15000L;
+      if (offlineRequested) {
+        HttpURLConnection probe =
+            (HttpURLConnection) new URL(new BackendSettings(context).base()
+                + "/v1/runtime/health").openConnection();
+        probe.setConnectTimeout(3000);
+        probe.setReadTimeout(3000);
+        try {
+          probe.getResponseCode();
+          throw new AssertionError("backend remained reachable during offline test");
+        } catch (IOException expected) {
+          check(true, "backend unreachable from application UID");
+          output.putBoolean("offline_backend_unreachable", true);
+        } finally {
+          probe.disconnect();
+        }
+      }
+      long due = System.currentTimeMillis() + 30000L;
       String account = "reminder-fixture-" + UUID.randomUUID();
       String dismiss = stage(1, due, account);
       String snooze = stage(2, due, account);
       String complete = stage(3, due, account);
       String cancelled = stage(4, due, account);
       ReminderScheduler.changeState(context, memory, store.work(cancelled), "cancelled");
+      // Instrumentation does not clear the force-stop flag used by the host before installation.
+      // Enter through the normal launcher once; a deliberately force-stopped app cannot wake.
+      context.startActivity(
+          new Intent(context, OrganizerActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+      await(
+          () -> (context.getPackageManager().getApplicationInfo(context.getPackageName(), 0).flags
+                  & android.content.pm.ApplicationInfo.FLAG_STOPPED) == 0,
+          5,
+          "application launched after installation");
       check(System.currentTimeMillis() < due, "scheduled before deadline");
       check(
           active(dismiss) == null && active(snooze) == null && active(complete) == null,
@@ -270,9 +316,20 @@ public final class ReminderInstrumentation extends Instrumentation {
       output.putLong("latest_notification_delay_ms", latest);
       output.putBoolean("notifications", true);
       output.putBoolean("precise_reminders", true);
+      output.putBoolean("offline_backend_unreachable", offlineRequested);
       passed = true;
     } catch (Throwable error) {
       output.putString("failure", error.getClass().getSimpleName() + ": " + error.getMessage());
+      try {
+        JSONArray states = new JSONArray();
+        for (String id : ids) states.put(new JSONObject()
+            .put("id", id)
+            .put("rule", store.reminder(id))
+            .put("notification_active", active(id) != null));
+        output.putString("synthetic_delivery_states", states.toString());
+      } catch (Exception unavailable) {
+        output.putString("diagnostic_error_type", unavailable.getClass().getSimpleName());
+      }
     } finally {
       try {
         cleanup();

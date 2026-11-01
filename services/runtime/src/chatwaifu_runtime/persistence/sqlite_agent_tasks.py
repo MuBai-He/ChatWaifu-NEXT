@@ -7,6 +7,7 @@ from uuid import UUID
 from chatwaifu_protocol.agent import AgentEvent, AgentTask, AgentTaskPage
 from chatwaifu_protocol.base import JsonObject
 
+from chatwaifu_runtime.agent.action_claims import ActionAlreadyClaimed
 from chatwaifu_runtime.persistence.database import Database
 
 
@@ -110,6 +111,83 @@ class SQLiteAgentTaskRepository:
 
     async def begin_step(self, task_id: UUID, key: str, record: JsonObject) -> bool:
         async with self._database.transaction() as connection:
+            action = record.get("action_id")
+            if (
+                isinstance(action, str)
+                and record.get("skill_id") == "agenda.manage"
+                and record.get("side_effect") != "read"
+            ):
+                claims = list(
+                    await connection.execute_fetchall(
+                        "SELECT task_id,step_key FROM harness_action_claims WHERE action_id=?",
+                        (action,),
+                    )
+                )
+                if claims and (claims[0][0] != str(task_id) or claims[0][1] != key):
+                    prior = list(
+                        await connection.execute_fetchall(
+                            (
+                                "SELECT payload_json FROM agent_task_steps WHERE task_id=? AN"
+                                "D step_key=?"
+                            ),
+                            (claims[0][0], claims[0][1]),
+                        )
+                    )
+                    payload: JsonObject = json.loads(prior[0][0]) if prior else {}
+                    if (
+                        payload.get("state") == "settled"
+                        and payload.get("ok") is False
+                        and payload.get("effect_possible") is False
+                    ):
+                        await connection.execute(
+                            (
+                                "UPDATE harness_action_claims SET task_id=?,step_key=? WHERE "
+                                "action_id=?"
+                            ),
+                            (str(task_id), key, action),
+                        )
+                    else:
+                        raise ActionAlreadyClaimed(UUID(claims[0][0]))
+                else:
+                    await connection.execute(
+                        "INSERT OR IGNORE INTO harness_action_claims VALUES(?,?,?)",
+                        (action, str(task_id), key),
+                    )
+
+            metadata = record.get("verification")
+            root = metadata.get("logical_work_id") if isinstance(metadata, dict) else None
+            if isinstance(root, str) and record.get("side_effect") != "read":
+                previous = list(
+                    await connection.execute_fetchall(
+                        "SELECT task_id,step_key FROM harness_work_claims WHERE work_item_id=?",
+                        (root,),
+                    )
+                )
+                if previous and (previous[0][0] != str(task_id) or previous[0][1] != key):
+                    settled = list(
+                        await connection.execute_fetchall(
+                            (
+                                "SELECT payload_json FROM agent_t"
+                                "ask_steps WHERE task_id=? AND st"
+                                "ep_key=?"
+                            ),
+                            (previous[0][0], previous[0][1]),
+                        )
+                    )
+                    facts: JsonObject = json.loads(settled[0][0]) if settled else {}
+                    if facts.get("state") != "settled":
+                        raise ActionAlreadyClaimed(UUID(previous[0][0]))
+                await connection.execute(
+                    (
+                        "INSERT INTO harness_work_claims "
+                        "VALUES(?,?,?) ON CONFLICT(work_i"
+                        "tem_id) DO UPDATE SET task_id=ex"
+                        "cluded.task_id,step_key=excluded"
+                        ".step_key"
+                    ),
+                    (root, str(task_id), key),
+                )
+
             result = await connection.execute(
                 "INSERT OR IGNORE INTO agent_task_steps(task_id,step_key,payload_json) "
                 "VALUES(?,?,?)",
@@ -119,6 +197,13 @@ class SQLiteAgentTaskRepository:
 
     async def finish_step(self, task_id: UUID, key: str, record: JsonObject) -> None:
         async with self._database.transaction() as connection:
+            rows = await connection.execute_fetchall(
+                "SELECT payload_json FROM agent_tasks WHERE task_id=?", (str(task_id),)
+            )
+            current = list(rows)
+            if current and json.loads(current[0][0]).get("blocked_reason") == "source_forgotten":
+                record = {k: v for k, v in record.items() if k != "snapshot"}
+                record["redacted"] = True
             await connection.execute(
                 "UPDATE agent_task_steps SET payload_json=? WHERE task_id=? AND step_key=?",
                 (json.dumps(record, ensure_ascii=False, allow_nan=False), str(task_id), key),

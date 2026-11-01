@@ -1,0 +1,29 @@
+schema_version: "1.0"
+instructions: SKILL.md
+definition:
+  skill_id: work.match
+  version: 1.0.0
+  name: 核对并关联日历事项
+  description: 按已知标题、原定时间和供应商身份核对唯一日程，关联到当前事项；不会修改外部日历。
+  capabilities:
+    - name: execute
+      description: 从日历查询结果提供真实标识和 etag。后台只能关联当前任务；主人直接操作可指定 work_item_id。
+      input_schema:
+        type: object
+        properties:
+          work_item_id: {type: string, maxLength: 200}
+          account_id: {type: string, format: uuid}
+          calendar_id: {type: string, minLength: 1, maxLength: 2048}
+          event_id: {type: string, minLength: 1, maxLength: 2048}
+          etag: {type: string, minLength: 1, maxLength: 256}
+        required: [account_id, calendar_id, event_id, etag]
+        additionalProperties: false
+      output_schema: {type: object}
+      side_effect: write
+      required_permissions: [work.match]
+      confirmation_required: true
+      timeout_seconds: 180
+  interruptible: true
+  background_allowed: false
+  execution_modes: [interactive, explicit_task, unattended]
+adapter: {kind: builtin, handler: work_match}

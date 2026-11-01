@@ -1,14 +1,22 @@
 """Completion checks against actual journal evidence, separate from task narration."""
 
 import json
+from dataclasses import dataclass
 from typing import Literal
 
 from chatwaifu_protocol.agent import AgentTask
 from chatwaifu_protocol.base import JsonObject
+from chatwaifu_protocol.harness import WaitCondition
 from pydantic import BaseModel, ConfigDict, Field
 
 from chatwaifu_runtime.agent.structured import structured_result
 from chatwaifu_runtime.providers.contracts import LlmProvider
+
+
+@dataclass(frozen=True)
+class CompletionGate:
+    reason: str
+    wait_condition: WaitCondition | None = None
 
 
 class CompletionDecision(BaseModel):
@@ -16,7 +24,7 @@ class CompletionDecision(BaseModel):
     complete: bool
     evidence_keys: list[str] = Field(max_length=100)
     remaining_work: str = Field(max_length=1000)
-    blocked_on: Literal["input", "authorization", "capability"] | None = None
+    blocked_on: Literal["input", "authorization", "capability", "device"] | None = None
 
 
 async def verify_completion(
@@ -27,6 +35,17 @@ async def verify_completion(
         return CompletionDecision(
             complete=False, evidence_keys=[], remaining_work="Operation outcome needs verification"
         )
+    for step in settled:
+        if (
+            step.get("skill_id") == "agenda.manage"
+            and _result_data(step).get("provider") == "google"
+            and _result_data(step).get("verified") is not True
+        ):
+            return CompletionDecision(
+                complete=False,
+                evidence_keys=[],
+                remaining_work="Read back the provider object and verify the requested change",
+            )
     for index, step in enumerate(steps):
         if (
             step.get("skill_id") != "workspace.files"
@@ -53,7 +72,10 @@ async def verify_completion(
         {
             "goal": task.goal,
             "criteria": task.completion_criteria,
-            "operations": settled[-20:],
+            "operations": [
+                {key: value for key, value in step.items() if key != "verification"}
+                for step in settled[-20:]
+            ],
             "answer": answer,
         },
         ensure_ascii=False,

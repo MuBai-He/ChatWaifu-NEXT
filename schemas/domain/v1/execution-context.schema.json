@@ -1,0 +1,210 @@
+{
+  "$defs": {
+    "EvidenceRef": {
+      "properties": {
+        "kind": {
+          "enum": [
+            "event",
+            "knowledge"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Reference",
+          "type": "string"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "reference"
+      ],
+      "title": "EvidenceRef",
+      "type": "object"
+    },
+    "ExecutionBudget": {
+      "properties": {
+        "max_active_seconds": {
+          "minimum": 0,
+          "title": "Max Active Seconds",
+          "type": "number"
+        },
+        "max_tool_calls": {
+          "minimum": 0,
+          "title": "Max Tool Calls",
+          "type": "integer"
+        },
+        "remaining_active_seconds": {
+          "minimum": 0,
+          "title": "Remaining Active Seconds",
+          "type": "number"
+        },
+        "remaining_tool_calls": {
+          "minimum": 0,
+          "title": "Remaining Tool Calls",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_tool_calls",
+        "remaining_tool_calls",
+        "max_active_seconds",
+        "remaining_active_seconds"
+      ],
+      "title": "ExecutionBudget",
+      "type": "object"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/execution-context.schema.json",
+  "properties": {
+    "audience": {
+      "default": "owner",
+      "enum": [
+        "owner",
+        "shared"
+      ],
+      "title": "Audience",
+      "type": "string"
+    },
+    "authority_revision": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Authority Revision"
+    },
+    "budget": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ExecutionBudget"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "character_id": {
+      "title": "Character Id",
+      "type": "string"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/EvidenceRef"
+      },
+      "maxItems": 30,
+      "title": "Evidence",
+      "type": "array"
+    },
+    "execution_id": {
+      "format": "uuid",
+      "title": "Execution Id",
+      "type": "string"
+    },
+    "generation_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Generation Id"
+    },
+    "intent_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Intent Id"
+    },
+    "intent_revision": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Intent Revision"
+    },
+    "mode": {
+      "enum": [
+        "interactive",
+        "observe",
+        "act",
+        "consolidate"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "owner": {
+      "title": "Owner",
+      "type": "string"
+    },
+    "session_id": {
+      "format": "uuid",
+      "title": "Session Id",
+      "type": "string"
+    },
+    "task_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Task Id"
+    },
+    "turn_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Turn Id"
+    }
+  },
+  "required": [
+    "owner",
+    "character_id",
+    "mode",
+    "session_id"
+  ],
+  "title": "ExecutionContext",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

@@ -30,6 +30,7 @@ from chatwaifu_protocol.events import (
     UserTurnCommittedEvent,
     UserTurnCommittedPayload,
 )
+from chatwaifu_protocol.harness import ExecutionContext
 from chatwaifu_protocol.memory import MemoryContextPacket
 from chatwaifu_protocol.session import GenerationState, SessionSnapshot, SessionState
 
@@ -1500,6 +1501,13 @@ class ConversationService:
             events,
         )
 
+    def _ensure_generation_context(
+        self, accepted: GenerationAccepted, memory: MemoryContextPacket
+    ) -> None:
+        self._ensure_current(accepted)
+        if memory.knowledge_evidence:
+            self._memory.ensure_context_current(memory, accepted.generation_id)
+
     async def _run_generation(
         self,
         accepted: GenerationAccepted,
@@ -1589,7 +1597,7 @@ class ConversationService:
                         generation_id=accepted.generation_id,
                         attach_image=options.image_loader is None,
                     )
-            self._ensure_current(accepted)
+            self._ensure_generation_context(accepted, memory_context)
             compilation = await self._prompt_compiler.compile(
                 character=character,
                 kernel=character_context.snapshot,
@@ -1614,9 +1622,9 @@ class ConversationService:
             )
             loaded_images: tuple[LlmInputImage, ...] = ()
             if options.image_loader is not None:
-                self._ensure_current(accepted)
+                self._ensure_generation_context(accepted, memory_context)
                 raw_loaded = await options.image_loader()
-                self._ensure_current(accepted)
+                self._ensure_generation_context(accepted, memory_context)
                 if isinstance(raw_loaded, tuple):
                     loaded_images = raw_loaded
                 else:
@@ -1679,9 +1687,9 @@ class ConversationService:
                 )
                 await self._check_generation_guard(accepted, options)
             if options.quoted_message_loader is not None:
-                self._ensure_current(accepted)
+                self._ensure_generation_context(accepted, memory_context)
                 quoted = await options.quoted_message_loader()
-                self._ensure_current(accepted)
+                self._ensure_generation_context(accepted, memory_context)
                 if quoted is not None and quoted.role == "assistant":
                     prepared_quote = await self._repository.prepare_history(
                         accepted.generation_id,
@@ -1693,7 +1701,7 @@ class ConversationService:
                             ),
                         ),
                     )
-                    self._ensure_current(accepted)
+                    self._ensure_generation_context(accepted, memory_context)
                     if (
                         not prepared_quote
                         or prepared_quote[0].text == REDACTED_ASSISTANT_PLACEHOLDER
@@ -1741,7 +1749,7 @@ class ConversationService:
                     sources = await self._source_context.load_source_context(
                         accepted.session_id, tuple(eligible)
                     )
-                self._ensure_current(accepted)
+                self._ensure_generation_context(accepted, memory_context)
                 if sources.receipts or sources.truncated:
                     logger.info(
                         "conversation.source_context_loaded generation=%s receipts=%d "
@@ -1769,7 +1777,18 @@ class ConversationService:
                 request,
                 session_id=accepted.session_id,
                 turn_id=accepted.turn_id,
-                ensure_current=lambda: self._ensure_current(accepted),
+                ensure_current=lambda: self._ensure_generation_context(accepted, memory_context),
+                execution_context=ExecutionContext(
+                    owner=character_context.snapshot.user_scope,
+                    character_id=character.character_id,
+                    mode="interactive",
+                    audience="owner"
+                    if character_context.snapshot.user_scope == "local"
+                    else "shared",
+                    session_id=accepted.session_id,
+                    turn_id=accepted.turn_id,
+                    generation_id=accepted.generation_id,
+                ),
                 allow_tools=trigger == "user" and options.allow_tools,
                 llm=snapshot.chat_provider,
                 tools=snapshot.visible_tools,
@@ -1777,7 +1796,7 @@ class ConversationService:
                 source_answer_turn=answer_turn,
                 allowed_skill_ids=options.allowed_skill_ids,
             ):
-                self._ensure_current(accepted)
+                self._ensure_generation_context(accepted, memory_context)
                 output += delta
                 await self._emit_generic(
                     accepted, "assistant.text_delta", {"text": delta}, ephemeral=True
@@ -1788,7 +1807,7 @@ class ConversationService:
             if segmenter is not None:
                 for segment in segmenter.flush():
                     await deliver_segment(segment)
-            self._ensure_current(accepted)
+            self._ensure_generation_context(accepted, memory_context)
             await self._complete(
                 accepted,
                 output,

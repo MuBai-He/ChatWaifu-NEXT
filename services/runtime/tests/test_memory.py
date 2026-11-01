@@ -47,21 +47,14 @@ class _ExtractionModels:
         del system, user
         assert role == "memory_extraction"
         self.calls += 1
-        return """
-        {
-          "memories": [{
-            "kind": "procedural.preference",
-            "subject_id": "user",
-            "predicate": "interaction.language",
-            "value": "zh",
-            "text": "用户希望以后使用中文聊天",
-            "confidence": 0.92,
-            "importance": 0.78,
-            "sensitivity": "private",
-            "rationale": "长期交互偏好"
-          }]
-        }
-        """
+        return (
+            '\n        {\n          "memories": [{\n            "kind": '
+            '"procedural.preference",\n            "subject_id": "user",\n            '
+            '"predicate": "interaction.language",\n            "value": "zh",\n            '
+            '"text": "用户希望以后使用中文聊天",\n            "confidence": 0.92,\n          '
+            '  "importance": 0.78,\n            "sensitivity": "private",\n            '
+            '"rationale": "长期交互偏好"\n          }]\n        }\n        '
+        )
 
 
 class _BlockingMemoryInference:
@@ -110,25 +103,25 @@ async def test_model_extraction_is_schema_validated_and_skips_sensitive_egress()
     assert models.calls == 1
 
 
-def test_implicit_memory_requires_review_and_preserves_sources(client: TestClient) -> None:
+def test_grounded_owner_preference_is_policy_accepted_and_preserves_sources(
+    client: TestClient,
+) -> None:
     http = cast(RuntimeHttpClient, client)
     session_id = _create_session(http)
 
     _submit_and_wait(http, session_id, "我喜欢蓝色")
 
-    assert cast(dict[str, object], http.get("/v1/memory").json())["count"] == 0
-    pending = _proposals(http, "pending")
-    assert len(pending) == 1
-    proposal = pending[0]
+    assert cast(dict[str, object], http.get("/v1/memory").json())["count"] == 1
+    assert _proposals(http, "pending") == []
+    accepted = _proposals(http, "accepted")
+    assert len(accepted) == 1
+    proposal = accepted[0]
+    assert proposal["decision_basis"] == "policy"
+    assert proposal["policy_version"] == "1.0"
     candidate = cast(dict[str, object], proposal["candidate"])
     assert candidate["kind"] == "semantic.preference"
     assert candidate["predicate"] == "preference.like.蓝色"
 
-    accepted = http.post(
-        f"/v1/sessions/{session_id}/memory/proposals/{proposal['proposal_id']}/decision",
-        json={"decision": "accept"},
-    )
-    assert accepted.status_code == 200
     active = _memory_items(http)
     assert len(active) == 1
     assert active[0]["text"] == "我喜欢蓝色"

@@ -1,0 +1,32 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/evidence-ref.schema.json",
+  "properties": {
+    "kind": {
+      "enum": [
+        "event",
+        "knowledge"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "reference": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Reference",
+      "type": "string"
+    },
+    "revision": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "kind",
+    "reference"
+  ],
+  "title": "EvidenceRef",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

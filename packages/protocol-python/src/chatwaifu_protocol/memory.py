@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import AwareDatetime, Field, model_validator
 
 from chatwaifu_protocol.base import JsonValue, PrivacyLevel, ProtocolModel
+from chatwaifu_protocol.harness import KnowledgeExcerpt
 
 type MemoryKind = Literal[
     "core",
@@ -72,6 +73,8 @@ class MemoryRecord(MemoryRecordDraft):
 
 
 class MemoryProposal(ProtocolModel):
+    decision_basis: Literal["human", "policy", "explicit_command"] | None = None
+    policy_version: str | None = None
     proposal_id: UUID
     operation: MemoryOperation
     candidate: MemoryRecordDraft | None = None
@@ -130,6 +133,10 @@ class MemorySource(ProtocolModel):
 
 
 class MemoryContextPacket(ProtocolModel):
+    knowledge_epoch: int = Field(default=0, ge=0)
+    knowledge_evidence: list[KnowledgeExcerpt] = Field(
+        default_factory=list[KnowledgeExcerpt], max_length=12
+    )
     pinned_facts: list[MemoryExcerpt] = Field(default_factory=list[MemoryExcerpt])
     recent_episodes: list[MemoryExcerpt] = Field(default_factory=list[MemoryExcerpt])
     relevant_memories: list[MemoryExcerpt] = Field(default_factory=list[MemoryExcerpt])

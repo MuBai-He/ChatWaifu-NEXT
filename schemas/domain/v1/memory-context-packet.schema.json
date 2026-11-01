@@ -1,5 +1,75 @@
 {
   "$defs": {
+    "EvidenceRef": {
+      "properties": {
+        "kind": {
+          "enum": [
+            "event",
+            "knowledge"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Reference",
+          "type": "string"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "reference"
+      ],
+      "title": "EvidenceRef",
+      "type": "object"
+    },
+    "KnowledgeExcerpt": {
+      "properties": {
+        "confirmed": {
+          "title": "Confirmed",
+          "type": "boolean"
+        },
+        "evidence": {
+          "$ref": "#/$defs/EvidenceRef"
+        },
+        "occurred_at": {
+          "title": "Occurred At",
+          "type": "integer"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject"
+        },
+        "text": {
+          "maxLength": 2400,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence",
+        "text",
+        "confirmed",
+        "occurred_at"
+      ],
+      "title": "KnowledgeExcerpt",
+      "type": "object"
+    },
     "MemoryChannelAttribution": {
       "description": "Immutable, provider-neutral attribution for one memory source.\n\nStable provider-scoped keys preserve where an observation came from after\nthe originating transcript falls out of the recent-history window. Display\nlabels are optional untrusted presentation data and never identity or\ninstructions.",
       "properties": {
@@ -208,6 +278,20 @@
   },
   "$id": "https://chatwaifu.local/schemas/domain/v1/memory-context-packet.schema.json",
   "properties": {
+    "knowledge_epoch": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Knowledge Epoch",
+      "type": "integer"
+    },
+    "knowledge_evidence": {
+      "items": {
+        "$ref": "#/$defs/KnowledgeExcerpt"
+      },
+      "maxItems": 12,
+      "title": "Knowledge Evidence",
+      "type": "array"
+    },
     "open_commitments": {
       "items": {
         "$ref": "#/$defs/MemoryExcerpt"

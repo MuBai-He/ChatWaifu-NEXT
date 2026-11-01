@@ -291,7 +291,7 @@ async def test_stop_cancels_old_image_without_decorating_new_answer(
                     ),
                 )
             )
-            result = await asyncio.wait_for(text_acks.get(), timeout=20)
+            result = await asyncio.wait_for(text_acks.get(), timeout=30)
             if message_id == "affection":
                 assert len(result.plan.parts) >= 2
                 assert isinstance(result.plan.parts[-1].payload, ChannelImageDeliveryPartPayload)

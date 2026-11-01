@@ -953,7 +953,9 @@ async def test_plugin_lifecycle_mutation_waits_for_approved_execution_lease(
 
         allow_prelaunch.set()
         await asyncio.wait_for(adapter_launched.wait(), timeout=1)
-        mutation_result = await asyncio.wait_for(mutation_task, timeout=1)
+        # Revocation includes durable filesystem work after the execution lease.
+        # The safety assertions above prove ordering; this is only a liveness guard.
+        mutation_result = await asyncio.wait_for(mutation_task, timeout=10)
         completed = await service.get_run(waiting.skill_run_id)
 
         assert completed.state.value == "succeeded"

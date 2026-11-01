@@ -112,6 +112,7 @@ definition:
       timeout_seconds: 10
   interruptible: true
   background_allowed: false
+  execution_modes: [interactive, explicit_task, unattended]
 adapter:
   kind: builtin
   handler: agent_task_create

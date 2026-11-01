@@ -25,15 +25,19 @@ from chatwaifu_protocol.agent import (
     TaskReconciliation,
 )
 from chatwaifu_protocol.base import JsonObject, SideEffect
-from chatwaifu_protocol.skills import SkillInvocation, SkillRunSnapshot, SkillRunState
+from chatwaifu_protocol.harness import ExecutionBudget, ExecutionContext, WaitCondition
+from chatwaifu_protocol.skills import SkillInvocation, SkillResult, SkillRunSnapshot, SkillRunState
 
+from chatwaifu_runtime.agent.action_claims import ActionAlreadyClaimed
 from chatwaifu_runtime.agent.capabilities import CapabilityCatalog
-from chatwaifu_runtime.agent.task_ports import AgentTaskRepository
+from chatwaifu_runtime.agent.task_ports import AgentTaskRepository, TaskContextChanged
 from chatwaifu_runtime.agent.tool_calling import AgentTurnOrchestrator
-from chatwaifu_runtime.agent.verification import verify_completion
-from chatwaifu_runtime.providers.contracts import LlmProvider, LlmRequest
+from chatwaifu_runtime.agent.verification import CompletionGate, verify_completion
+from chatwaifu_runtime.providers.admission import work_class
+from chatwaifu_runtime.providers.contracts import LlmProvider, LlmRequest, LlmToolCallProtocolError
 from chatwaifu_runtime.runtime_skills.agent_router import RuntimeSkillRouter
 from chatwaifu_runtime.runtime_skills.audit import checkpoint_payload
+from chatwaifu_runtime.runtime_skills.execution_context import operation_scope
 from chatwaifu_runtime.runtime_skills.execution_plan import ExecutionPlan
 from chatwaifu_runtime.runtime_skills.service import RuntimeSkillService
 from chatwaifu_runtime.sessions.service import SessionService
@@ -73,6 +77,27 @@ class AgentTaskService:
         self.llm = llm
         self.model_factory = model_factory
         self.context_builder = context_builder
+        self.context_release: Callable[[UUID], None] | None = None
+        self.context_fence: Callable[[AgentTask], None] | None = None
+        self._context_tasks: dict[UUID, AgentTask] = {}
+        self.operation_observer: Callable[[AgentTask, JsonObject], Awaitable[None]] | None = None
+        self.operation_identity: (
+            Callable[[AgentTask, SkillInvocation, JsonObject, UUID], Awaitable[UUID]] | None
+        ) = None
+        self.operation_metadata: (
+            Callable[[AgentTask, SkillInvocation, UUID], Awaitable[JsonObject]] | None
+        ) = None
+        self.operation_recoverer: (
+            Callable[[AgentTask, JsonObject], Awaitable[JsonObject | None]] | None
+        ) = None
+        self.completion_validator: (
+            Callable[[AgentTask, list[JsonObject]], Awaitable[CompletionGate | None]] | None
+        ) = None
+        self.operation_validator: Callable[[AgentTask, JsonObject], Awaitable[None]] | None = None
+        self.operation_preparer: (
+            Callable[[AgentTask, SkillInvocation], Awaitable[SkillInvocation]] | None
+        ) = None
+        self.authority_validator: Callable[[AgentTask], Awaitable[None]] | None = None
         self._workers: dict[UUID, asyncio.Task[None]] = {}
         self._execution_slots = asyncio.Semaphore(4)
         self._revoked: set[UUID] = set()
@@ -87,6 +112,7 @@ class AgentTaskService:
         self.capability_gap_handler: Callable[[AgentTask, str], Awaitable[UUID | None]] | None = (
             None
         )
+        self.completion_observer: Callable[[AgentTask], Awaitable[None]] | None = None
         self.result_publisher: Callable[[AgentTask], Awaitable[UUID | None]] | None = None
 
     async def start(self) -> None:
@@ -95,6 +121,9 @@ class AgentTaskService:
         while True:
             page = await self.repository.page(None, cursor)
             for task in page.items:
+                if task.state is AgentTaskState.CANCELLED:
+                    await self.recover_uncertain(task.task_id, audit_only=True)
+                    continue
                 if task.state in {AgentTaskState.SUCCEEDED, AgentTaskState.FAILED}:
                     await self._publish_result(task)
                     continue
@@ -112,6 +141,8 @@ class AgentTaskService:
                     s.get("state") != "settled" and s.get("side_effect") != "read" for s in steps
                 )
                 if uncertain:
+                    if await self.recover_uncertain(task.task_id):
+                        continue
                     await self.update_checkpoint(
                         task.task_id,
                         state=AgentTaskState.WAITING_INPUT,
@@ -138,6 +169,100 @@ class AgentTaskService:
         for event in await self.repository.pending_events():
             await self._consume_event(event)
 
+    async def recover_uncertain(self, task_id: UUID, *, audit_only: bool = False) -> bool:
+        if self.operation_recoverer is None:
+            return False
+        task = await self.repository.get(task_id)
+        if task is None:
+            return False
+        try:
+            if self.authority_validator is not None and not audit_only:
+                await self.authority_validator(task)
+            if task.blocked_reason == "source_forgotten":
+                return False
+            steps = await self.repository.steps(task_id)
+            uncertain = [
+                step
+                for step in steps
+                if step.get("side_effect") != "read"
+                and (
+                    step.get("state") != "settled"
+                    or (not step.get("ok") and step.get("effect_possible") is True)
+                )
+            ]
+            if not uncertain:
+                return False
+            for step in uncertain:
+                receipt = await self.operation_recoverer(task, step)
+                if receipt is None:
+                    return False
+                if receipt.get("execution_state") == "not_started":
+                    await self.repository.finish_step(
+                        task_id,
+                        str(step["step_key"]),
+                        {
+                            **step,
+                            "state": "settled",
+                            "ok": False,
+                            "effect_possible": False,
+                            "execution_state": "not_started",
+                            "verification_state": "not_applicable",
+                            "recovery_evidence": receipt,
+                        },
+                    )
+                    continue
+                metadata = step.get("verification")
+                if (
+                    receipt.get("write_acknowledgement_recovered") is False
+                    and isinstance(metadata, dict)
+                    and metadata.get("action") == "create"
+                    and metadata.get("kind") == "reminder"
+                ):
+                    await self.repository.finish_step(
+                        task_id,
+                        str(step["step_key"]),
+                        {
+                            **step,
+                            "state": "unknown",
+                            "ok": False,
+                            "execution_state": "outcome_unknown",
+                            "verification_state": "candidate_observed",
+                            "snapshot": {"result": {"data": receipt}},
+                            "recovery_reason": "task_create_identity_requires_owner_review",
+                        },
+                    )
+                    return False
+                recovered = cast(
+                    JsonObject,
+                    {
+                        **step,
+                        "state": "settled",
+                        "ok": True,
+                        "reconciled": True,
+                        "audit_only": audit_only,
+                        "snapshot": {"result": {"data": receipt}},
+                        "verification_source": "provider_readback",
+                        "execution_state": "outcome_unknown"
+                        if receipt.get("write_acknowledgement_recovered") is False
+                        else "verified",
+                        "verification_state": "verified",
+                    },
+                )
+                await self.repository.finish_step(task_id, str(step["step_key"]), recovered)
+                if self.operation_observer is not None:
+                    await self.operation_observer(task, recovered)
+            if audit_only:
+                return True
+            await self.update_checkpoint(task_id, state=AgentTaskState.QUEUED, blocked_reason=None)
+            self._revoked.discard(task_id)
+            self._launch(task_id)
+            return True
+        except asyncio.CancelledError:
+            raise
+        except Exception as error:
+            _LOGGER.info("agent.recovery_pending type=%s", type(error).__name__)
+            return False
+
     async def stop(self) -> None:
         self._closing = True
         workers = (*self._workers.values(), *self._wakes.values())
@@ -151,10 +276,19 @@ class AgentTaskService:
         *,
         channel_binding: TaskChannelBinding | None = None,
         wake_at: datetime | None = None,
+        task_id: UUID | None = None,
+        work_item_id: str | None = None,
+        initial_wait: WaitCondition | None = None,
     ) -> AgentTask:
         session = await self.sessions.get_session(request.session_id)
         if session is None:
             raise KeyError("session not found")
+        if task_id is not None:
+            existing = await self.repository.get(task_id)
+            if existing is not None:
+                if existing.scope != session.user_scope:
+                    raise PermissionError("task identity conflict")
+                return existing
         # Group execution requires a live route authorization adapter. Never
         # promote a group speaker to owner merely because a task was created.
         if channel_binding is not None and (
@@ -201,7 +335,9 @@ class AgentTaskService:
                 ] = await self.skills.execution_subject(skill.skill_id, capability.name)
         now = datetime.now(UTC)
         task = AgentTask(
-            task_id=uuid4(),
+            task_id=task_id or uuid4(),
+            character_id=session.character_id,
+            work_item_id=work_item_id,
             session_id=request.session_id,
             scope=session.user_scope,
             goal=request.goal,
@@ -210,7 +346,10 @@ class AgentTaskService:
                 update={"capability_fingerprints": fingerprints}
             ),
             channel_binding=channel_binding,
-            state=AgentTaskState.WAITING_EVENT if wake_at else AgentTaskState.QUEUED,
+            state=AgentTaskState.WAITING_EVENT
+            if wake_at or initial_wait
+            else AgentTaskState.QUEUED,
+            wait_condition=initial_wait,
             wake_at=wake_at,
             max_tool_calls=request.max_tool_calls,
             max_active_seconds=request.max_active_seconds,
@@ -220,7 +359,7 @@ class AgentTaskService:
         await self.repository.create(task)
         if wake_at:
             self._schedule_wake(task)
-        else:
+        elif initial_wait is None:
             self._launch(task.task_id)
         return task
 
@@ -238,6 +377,7 @@ class AgentTaskService:
                 raise ValueError("task revision conflict")
             if task.state in _TERMINAL:
                 raise ValueError("task is terminal")
+            future_wake: datetime | None = None
             if body.action in {"resume", "defer"}:
                 steps = await self.repository.steps(task_id)
                 if any(
@@ -247,6 +387,10 @@ class AgentTaskService:
                 if body.action == "resume" and task_id in self._workers:
                     raise ValueError("task is already running")
                 state = AgentTaskState.QUEUED
+                scheduled = task.authorization.scheduled_for
+                future_wake = scheduled if scheduled and scheduled > datetime.now(UTC) else None
+                if body.action == "resume" and future_wake is not None:
+                    state = AgentTaskState.WAITING_EVENT
                 if body.action == "defer":
                     if body.wake_at is None or not (
                         datetime.now(UTC) < body.wake_at < task.authorization.expires_at
@@ -265,7 +409,13 @@ class AgentTaskService:
                     "revision": task.revision + 1,
                     "updated_at": datetime.now(UTC),
                     "continuation": body.input_text or task.continuation,
-                    "wake_at": body.wake_at if body.action == "defer" else None,
+                    "wake_at": body.wake_at
+                    if body.action == "defer"
+                    else future_wake
+                    if body.action == "resume"
+                    else task.wake_at
+                    if body.action == "pause"
+                    else None,
                 }
             )
             if not await self.repository.save(changed, task.revision):
@@ -274,16 +424,31 @@ class AgentTaskService:
         if body.action != "resume" and worker is not None:
             worker.cancel()
             await asyncio.gather(worker, return_exceptions=True)
-        if body.action == "resume":
+        if body.action == "resume" and changed.state is AgentTaskState.QUEUED:
             self._deferred.discard(task_id)
             self._launch(task_id)
         wake = self._wakes.pop(task_id, None)
         if wake is not None:
             wake.cancel()
             await asyncio.gather(wake, return_exceptions=True)
-        if body.action == "defer":
+        if changed.state is AgentTaskState.WAITING_EVENT:
             self._schedule_wake(changed)
+        if body.action in {"pause", "cancel"}:
+            await self.recover_uncertain(task_id, audit_only=True)
         return await self.get(task_id, session_id)
+
+    def mark_deferred(self, task_id: UUID) -> None:
+        self._deferred.add(task_id)
+
+    async def wait_for_device(self, task_id: UUID, reference: str, reason: str) -> AgentTask:
+        task = await self.update_checkpoint(
+            task_id,
+            state=AgentTaskState.WAITING_EVENT,
+            wait_condition=WaitCondition(kind="device", reference=reference),
+            blocked_reason=reason,
+        )
+        self._deferred.add(task_id)
+        return task
 
     async def defer(self, task_id: UUID, seconds: int, reason: str) -> AgentTask:
         self.ensure_current(task_id)
@@ -511,6 +676,13 @@ class AgentTaskService:
             or task.authorization.expires_at <= datetime.now(UTC)
         ):
             raise PermissionError("task authorization no longer current")
+        if self.authority_validator is not None:
+            await self.authority_validator(task)
+        if (
+            self.operation_validator is not None
+            and plan.capability.side_effect is not SideEffect.READ
+        ):
+            await self.operation_validator(task, arguments or {})
         if task.channel_binding is not None and (
             self.scene_authorizer is None or not await self.scene_authorizer(task.channel_binding)
         ):
@@ -548,6 +720,9 @@ class AgentTaskService:
             task = await self.repository.get(task_id)
             if task is None:
                 raise KeyError("task not found")
+            if task.blocked_reason == "source_forgotten":
+                for key in ("goal", "result_text", "continuation", "blocked_reason"):
+                    changes.pop(key, None)
             if "state" in changes and (
                 task.state in _TERMINAL
                 or (task_id in self._revoked and task.state is AgentTaskState.PAUSED)
@@ -580,7 +755,34 @@ class AgentTaskService:
         finally:
             self._workers.pop(task_id, None)
 
+    async def complete_delivery(self, task_id: UUID) -> bool:
+        task = await self.repository.get(task_id)
+        if (
+            task is None
+            or task.state != AgentTaskState.WAITING_EVENT
+            or task.wait_condition is None
+            or task.wait_condition.kind != "device"
+            or self.completion_validator is None
+        ):
+            return False
+        if self.authority_validator is not None:
+            await self.authority_validator(task)
+        if await self.completion_validator(task, await self.repository.steps(task_id)) is not None:
+            return False
+        completed = await self.update_checkpoint(
+            task_id,
+            state=AgentTaskState.SUCCEEDED,
+            blocked_reason=None,
+            wait_condition=None,
+            result_text=(task.result_text or "事项已保存并核对。")
+            + "\n提醒计划已由主设备确认接收。",
+        )
+        await self._publish_result(completed)
+        return True
+
     async def _publish_result(self, task: AgentTask) -> None:
+        if self.completion_observer is not None:
+            await self.completion_observer(task)
         if self.result_publisher is not None and task.channel_binding is not None:
             try:
                 delivery_id = await self.result_publisher(task)
@@ -595,6 +797,8 @@ class AgentTaskService:
                 await self.update_checkpoint(task.task_id, delivery_id=delivery_id)
 
     def ensure_current(self, task_id: UUID) -> None:
+        if self.context_fence is not None and task_id in self._context_tasks:
+            self.context_fence(self._context_tasks[task_id])
         if self._closing or task_id in self._revoked:
             raise asyncio.CancelledError("task execution revoked")
         if task_id in self._deferred:
@@ -602,6 +806,7 @@ class AgentTaskService:
 
     async def _run(self, task_id: UUID) -> None:
         started = time.monotonic()
+        model_token = work_class.set("background")
         gateway: _TaskGateway | None = None
         try:
             task = await self.update_checkpoint(
@@ -622,113 +827,262 @@ class AgentTaskService:
                 RuntimeSkillRouter(self.skills.list),
                 catalog=self.catalog,
             )
-            persona, memory = await self.context_builder(task) if self.context_builder else ("", "")
             output = ""
             feedback = ""
+            reverify_only = False
             async with asyncio.timeout(remaining) as deadline:
                 gateway.deadline = deadline
                 for repair in range(4):
-                    task = await self.repository.get(task_id)
-                    assert task is not None
-                    calls_left = task.max_tool_calls - task.tool_calls
-                    if calls_left <= 0:
-                        raise TimeoutError("task tool budget exhausted")
-                    previous = await self.repository.steps(task_id)
-                    evidence = _bounded_evidence(previous, 24_000)
-                    request = LlmRequest(
-                        generation_id=uuid4(),
-                        user_text=task.goal,
-                        system_prompt=(
-                            persona
-                            + "\n"
-                            + _TASK_POLICY
-                            + "\nRuntime-issued task grant (already authorized, still rechecked): "
-                            + json.dumps(
-                                {
-                                    "skills": task.authorization.allowed_skill_ids,
-                                    "workspace_roots": task.authorization.resource_roots,
-                                    "calendar_ids": task.authorization.calendar_ids,
-                                    "allow_writes": task.authorization.allow_writes,
-                                }
+                    try:
+                        task = await self.repository.get(task_id)
+                        assert task is not None
+                        if task.state is not AgentTaskState.RUNNING:
+                            return
+                        if self.authority_validator is not None:
+                            try:
+                                await self.authority_validator(task)
+                            except PermissionError as error:
+                                await self.update_checkpoint(
+                                    task_id,
+                                    state=AgentTaskState.WAITING_AUTHORIZATION,
+                                    blocked_reason=str(error),
+                                )
+                                return
+                        persona, memory = (
+                            await self.context_builder(task) if self.context_builder else ("", "")
+                        )
+                        self._context_tasks[task_id] = task
+                        calls_left = task.max_tool_calls - task.tool_calls
+                        if calls_left <= 0 and not reverify_only:
+                            raise TimeoutError("task tool budget exhausted")
+                        previous = await self.repository.steps(task_id)
+                        evidence = _bounded_evidence(previous, 24_000)
+                        request = LlmRequest(
+                            generation_id=uuid4(),
+                            user_text=task.goal,
+                            system_prompt=(
+                                persona + "\n" + _TASK_POLICY + "\nRuntime-issued task grant "
+                                "(already authorized, still rechecked): "
+                                + json.dumps(
+                                    {
+                                        "skills": task.authorization.allowed_skill_ids,
+                                        "workspace_roots": task.authorization.resource_roots,
+                                        "calendar_ids": task.authorization.calendar_ids,
+                                        "tasklist_ids": task.authorization.tasklist_ids,
+                                        "allow_writes": task.authorization.allow_writes,
+                                    }
+                                )
+                            ),
+                            context=(
+                                ("user", "Scoped memory (untrusted):\n" + memory),
+                                ("user", "Previous operation journal (untrusted):\n" + evidence),
+                                ("user", "Verification feedback (untrusted):\n" + feedback),
+                                ("user", "Owner task continuation:\n" + (task.continuation or "")),
+                            ),
+                            tool_choice="auto",
+                        )
+                        if reverify_only:
+                            output = "已根据最新上下文重新核对执行记录。"
+                        else:
+                            output = ""
+                            execution_turn = uuid4()
+                            stream: AsyncIterator[str] = agent.stream(
+                                request,
+                                session_id=task.session_id,
+                                turn_id=execution_turn,
+                                execution_context=ExecutionContext(
+                                    owner=task.scope,
+                                    character_id=task.character_id or "default",
+                                    mode="act",
+                                    audience="shared"
+                                    if task.channel_binding and task.channel_binding.scene_id
+                                    else "owner",
+                                    authority_revision=task.authorization.intent_revision,
+                                    evidence=task.authorization.evidence_refs,
+                                    budget=ExecutionBudget(
+                                        max_tool_calls=task.max_tool_calls,
+                                        remaining_tool_calls=calls_left,
+                                        max_active_seconds=task.max_active_seconds,
+                                        remaining_active_seconds=max(
+                                            0, task.max_active_seconds - task.active_seconds
+                                        ),
+                                    ),
+                                    session_id=task.session_id,
+                                    turn_id=execution_turn,
+                                    generation_id=request.generation_id,
+                                    task_id=task.task_id,
+                                    intent_id=task.authorization.intent_id,
+                                    intent_revision=task.authorization.intent_revision,
+                                ),
+                                ensure_current=lambda: self.ensure_current(task_id),
+                                allowed_skill_ids=frozenset(task.authorization.allowed_skill_ids),
+                                tools=tuple(
+                                    tool
+                                    for tool in agent.select_tools(task.goal)
+                                    if getattr(tool, "is_discovery", False)
+                                    or tool.to_invocation({}).skill_id
+                                    in task.authorization.allowed_skill_ids
+                                ),
+                                continue_after_write=True,
+                                tool_call_limit=calls_left,
+                                on_discovery_call=gateway.count_discovery,
                             )
-                        ),
-                        context=(
-                            ("user", "Scoped memory (untrusted):\n" + memory),
-                            ("user", "Previous operation journal (untrusted):\n" + evidence),
-                            ("user", "Verification feedback (untrusted):\n" + feedback),
-                            ("user", "Owner task continuation:\n" + (task.continuation or "")),
-                        ),
-                        tool_choice="auto",
-                    )
-                    output = ""
-                    stream: AsyncIterator[str] = agent.stream(
-                        request,
-                        session_id=task.session_id,
-                        turn_id=uuid4(),
-                        ensure_current=lambda: self.ensure_current(task_id),
-                        allowed_skill_ids=frozenset(task.authorization.allowed_skill_ids),
-                        tools=tuple(
-                            tool
-                            for tool in agent.select_tools(task.goal)
-                            if getattr(tool, "is_discovery", False)
-                            or tool.to_invocation({}).skill_id
-                            in task.authorization.allowed_skill_ids
-                        ),
-                        continue_after_write=True,
-                        tool_call_limit=calls_left,
-                        on_discovery_call=gateway.count_discovery,
-                    )
-                    async for delta in stream:
-                        output += delta
-                        if len(output) > 16000:
-                            raise ValueError("task answer exceeds bound")
-                    steps = await self.repository.steps(task_id)
-                    decision = await verify_completion(llm, task, steps, output)
-                    self.ensure_current(task_id)
-                    if decision.complete or decision.blocked_on is not None:
-                        candidate_id = task.candidate_id
+                            try:
+                                async for delta in stream:
+                                    output += delta
+                                    if len(output) > 16000:
+                                        raise ValueError("task answer exceeds bound")
+                            except LlmToolCallProtocolError as error:
+                                current = await self.repository.get(task_id)
+                                journal = await self.repository.steps(task_id)
+                                if (
+                                    current is None
+                                    or any(
+                                        step.get("side_effect") != "read"
+                                        and (
+                                            step.get("state") != "settled"
+                                            or (
+                                                not step.get("ok")
+                                                and step.get("effect_possible") is True
+                                            )
+                                        )
+                                        for step in journal
+                                    )
+                                ):
+                                    raise
+                                self.ensure_current(task_id)
+                                # An exhausted protocol repair closes this tool phase. Verify
+                                # existing facts before bounded replanning; an uncertain effect
+                                # never reaches this fallback or gets silently repeated.
+                                _LOGGER.info(
+                                    "agent.task_protocol_fallback code=%s remaining=%d",
+                                    error.code,
+                                    current.max_tool_calls - current.tool_calls,
+                                )
+                                output = (
+                                    "工具调用已结束，执行记录已保存，正在独立核对目标是否完成。"
+                                )
+                        reverify_only = False
+                        steps = await self.repository.steps(task_id)
+                        decision = await verify_completion(llm, task, steps, output)
+                        self.ensure_current(task_id)
+                        gate = None
                         if (
-                            decision.blocked_on == "capability"
-                            and candidate_id is None
-                            and self.capability_gap_handler is not None
-                        ):
-                            candidate_id = await self.capability_gap_handler(
-                                task, decision.remaining_work
-                            )
+                            decision.complete or decision.blocked_on == "device"
+                        ) and self.completion_validator is not None:
+                            gate = await self.completion_validator(task, steps)
                             self.ensure_current(task_id)
-                        state = (
-                            AgentTaskState.SUCCEEDED
-                            if decision.complete
-                            else (
-                                AgentTaskState.WAITING_AUTHORIZATION
-                                if decision.blocked_on == "authorization"
-                                else AgentTaskState.WAITING_INPUT
+                            if gate:
+                                decision = decision.model_copy(
+                                    update={
+                                        "complete": False,
+                                        "remaining_work": gate.reason,
+                                        "blocked_on": "device"
+                                        if gate.wait_condition
+                                        and gate.wait_condition.kind == "device"
+                                        else "input"
+                                        if gate.wait_condition
+                                        else None,
+                                    }
+                                )
+                        if decision.complete or decision.blocked_on is not None:
+                            candidate_id = task.candidate_id
+                            if (
+                                decision.blocked_on == "capability"
+                                and candidate_id is None
+                                and self.capability_gap_handler is not None
+                            ):
+                                candidate_id = await self.capability_gap_handler(
+                                    task, decision.remaining_work
+                                )
+                                self.ensure_current(task_id)
+                            state = (
+                                AgentTaskState.SUCCEEDED
+                                if decision.complete
+                                else (
+                                    AgentTaskState.WAITING_AUTHORIZATION
+                                    if decision.blocked_on == "authorization"
+                                    else AgentTaskState.WAITING_EVENT
+                                    if decision.blocked_on == "device"
+                                    else AgentTaskState.WAITING_INPUT
+                                )
                             )
+                            await self.update_checkpoint(
+                                task_id,
+                                state=state,
+                                result_text=output,
+                                blocked_reason=None
+                                if decision.complete
+                                else decision.remaining_work,
+                                candidate_id=candidate_id,
+                                wait_condition=gate.wait_condition
+                                if gate and gate.wait_condition
+                                else WaitCondition(
+                                    kind="source"
+                                    if task.authorization.source_room_ids
+                                    else "input",
+                                    room_ids=task.authorization.source_room_ids,
+                                )
+                                if decision.blocked_on == "input"
+                                else None,
+                            )
+                            return
+                        if any(step.get("state") != "settled" for step in steps):
+                            await self.update_checkpoint(
+                                task_id,
+                                state=AgentTaskState.WAITING_INPUT,
+                                result_text=output,
+                                blocked_reason="operation_outcome_unknown",
+                            )
+                            return
+                        feedback = decision.remaining_work
+                        if repair == 3:
+                            await self.update_checkpoint(
+                                task_id,
+                                state=AgentTaskState.PAUSED,
+                                result_text=output,
+                                blocked_reason="verification_retry_budget: " + feedback,
+                            )
+                    except TaskContextChanged:
+                        # Drop the old packet before any further reasoning. A refresh
+                        # never grants authority or permits an uncertain effect replay.
+                        self._context_tasks.pop(task_id, None)
+                        if self.context_release is not None:
+                            self.context_release(task_id)
+                        self.ensure_current(task_id)
+                        current = await self.repository.get(task_id)
+                        if current is None or current.state is not AgentTaskState.RUNNING:
+                            return
+                        journal = await self.repository.steps(task_id)
+                        uncertain = any(
+                            step.get("side_effect") != "read"
+                            and (
+                                step.get("state") != "settled"
+                                or (not step.get("ok") and step.get("effect_possible") is True)
+                            )
+                            for step in journal
                         )
-                        await self.update_checkpoint(
-                            task_id,
-                            state=state,
-                            result_text=output,
-                            blocked_reason=None if decision.complete else decision.remaining_work,
-                            candidate_id=candidate_id,
+                        if uncertain:
+                            await self.update_checkpoint(
+                                task_id,
+                                state=AgentTaskState.WAITING_INPUT,
+                                blocked_reason="operation_outcome_unknown",
+                            )
+                            return
+                        reverify_only = any(
+                            step.get("side_effect") != "read" and step.get("ok") is True
+                            for step in journal
                         )
-                        return
-                    if any(step.get("state") != "settled" for step in steps):
-                        await self.update_checkpoint(
-                            task_id,
-                            state=AgentTaskState.WAITING_INPUT,
-                            result_text=output,
-                            blocked_reason="operation_outcome_unknown",
+                        _LOGGER.info(
+                            "agent.task_context_refresh task=%s attempt=%d", task_id, repair + 1
                         )
-                        return
-                    feedback = decision.remaining_work
-                    if repair == 3:
-                        await self.update_checkpoint(
-                            task_id,
-                            state=AgentTaskState.PAUSED,
-                            result_text=output,
-                            blocked_reason="verification_retry_budget: " + feedback,
+                        feedback = (
+                            "Knowledge changed. Use the newly loaded context and existing journal; "
+                            "do not repeat successful or uncertain writes."
                         )
+                        if repair == 3:
+                            await self.defer(task_id, 30, "knowledge_context_refresh_pending")
+                            return
         except TaskDeferred:
             pass
         except TimeoutError:
@@ -746,10 +1100,39 @@ class AgentTaskService:
                 )
             raise
         except Exception as error:
+            origin = error.__traceback__
+            while origin is not None and origin.tb_next is not None:
+                origin = origin.tb_next
+            _LOGGER.warning(
+                "agent.task_failed type=%s origin=%s:%s task=%s",
+                type(error).__name__,
+                origin.tb_frame.f_code.co_name if origin is not None else "unknown",
+                origin.tb_lineno if origin is not None else 0,
+                task_id,
+            )
+            uncertain = any(
+                step.get("side_effect") != "read"
+                and (
+                    step.get("state") != "settled"
+                    or (not step.get("ok") and step.get("effect_possible") is True)
+                )
+                for step in await self.repository.steps(task_id)
+            )
             await self.update_checkpoint(
-                task_id, state=AgentTaskState.FAILED, blocked_reason=type(error).__name__
+                task_id,
+                state=AgentTaskState.WAITING_INPUT if uncertain else AgentTaskState.FAILED,
+                blocked_reason="operation_outcome_unknown" if uncertain else type(error).__name__,
+                **(
+                    {"result_text": "推理中断，仍需核对已发起的操作: " + type(error).__name__}
+                    if uncertain
+                    else {}
+                ),
             )
         finally:
+            self._context_tasks.pop(task_id, None)
+            if self.context_release is not None:
+                self.context_release(task_id)
+            work_class.reset(model_token)
             current = await self.repository.get(task_id)
             if current is not None:
                 await self.update_checkpoint(
@@ -776,6 +1159,7 @@ class AgentTaskService:
                 AgentTaskState.FAILED,
                 AgentTaskState.WAITING_INPUT,
                 AgentTaskState.WAITING_AUTHORIZATION,
+                AgentTaskState.WAITING_EVENT,
             }:
                 await self._publish_result(current)
             self._workers.pop(task_id, None)
@@ -786,7 +1170,10 @@ class AgentTaskService:
 def _bounded_evidence(steps: list[JsonObject], limit: int) -> str:
     selected: list[JsonObject] = []
     for step in reversed(steps[-12:]):
-        candidate = [step, *selected]
+        candidate = [
+            {key: value for key, value in step.items() if key != "verification"},
+            *selected,
+        ]
         if len(json.dumps(candidate, ensure_ascii=False).encode()) > limit:
             break
         selected = candidate
@@ -833,6 +1220,17 @@ class _TaskGateway:
             f"{invocation.skill_id}/{invocation.capability}",
             allowed_skill_ids=frozenset(task.authorization.allowed_skill_ids),
         )
+        if detail.descriptor.side_effect is not SideEffect.READ:
+            if self.service.operation_preparer is not None:
+                prepared = await self.service.operation_preparer(task, invocation)
+                if (prepared.skill_id, prepared.capability) != (
+                    invocation.skill_id,
+                    invocation.capability,
+                ):
+                    raise PermissionError("operation preparation changed capability")
+                invocation = prepared
+            if self.service.operation_validator is not None:
+                await self.service.operation_validator(task, invocation.arguments)
         steps = await self.service.repository.steps(task.task_id)
         if detail.descriptor.side_effect is not SideEffect.READ and any(
             s.get("state") != "settled" and s.get("side_effect") != "read" for s in steps
@@ -880,9 +1278,86 @@ class _TaskGateway:
             # Secrets and freeform input are not checkpointed. The invocation
             # digest binds retries; result evidence is sanitized by the skill.
             "arguments_digest": digest,
+            "work_item_id": task.work_item_id,
+            "intent_revision": task.authorization.intent_revision,
+            "evidence_refs": [
+                ref.model_dump(mode="json") for ref in task.authorization.evidence_refs
+            ],
             "ok": False,
         }
-        if not await self.service.repository.begin_step(task.task_id, key, record):
+        operation = uuid5(task.task_id, key)
+        metadata = (
+            await self.service.operation_metadata(task, invocation, operation)
+            if self.service.operation_metadata
+            else {}
+        )
+        if self.service.operation_identity is not None:
+            actual = await self.service.operation_identity(task, invocation, metadata, operation)
+            if metadata.get("item_id") == operation.hex:
+                metadata["item_id"] = actual.hex
+            operation = actual
+        record["action_id"] = str(operation)
+        record["verification"] = metadata
+        try:
+            began = await self.service.repository.begin_step(task.task_id, key, record)
+        except ActionAlreadyClaimed as prior:
+            shared = next(
+                (
+                    step
+                    for step in await self.service.repository.steps(prior.task_id)
+                    if step.get("action_id") == str(operation)
+                    and step.get("arguments_digest") == digest
+                    and step.get("state") == "settled"
+                    and step.get("ok") is True
+                ),
+                None,
+            )
+            if shared is not None and self.service.operation_recoverer is not None:
+                receipt = await self.service.operation_recoverer(task, shared)
+                if receipt is not None:
+                    now = datetime.now(UTC)
+                    snapshot = SkillRunSnapshot(
+                        skill_run_id=uuid5(task.task_id, "shared:" + key),
+                        skill_id=invocation.skill_id,
+                        skill_version=detail.descriptor.skill_version,
+                        capability=invocation.capability,
+                        session_id=task.session_id,
+                        state=SkillRunState.SUCCEEDED,
+                        result=SkillResult(
+                            status="verified_existing_effect",
+                            data=receipt,
+                            provenance=[f"task:{prior.task_id}:{shared.get('step_key')}"],
+                        ),
+                        created_at=now,
+                        updated_at=now,
+                        completed_at=now,
+                    )
+                    record.update(
+                        {
+                            "side_effect": "read",
+                            "state": "settled",
+                            "ok": True,
+                            "reconciled": True,
+                            "reused_from": str(prior.task_id),
+                            "verification_source": "provider_readback",
+                            "snapshot": snapshot.model_dump(mode="json"),
+                        }
+                    )
+                    await self.service.repository.begin_step(task.task_id, key, record)
+                    await self.service.repository.finish_step(task.task_id, key, record)
+                    if self.service.operation_observer is not None:
+                        await self.service.operation_observer(task, record)
+                    self.cached[snapshot.skill_run_id] = snapshot
+                    return snapshot
+            await self.service.update_checkpoint(
+                task.task_id,
+                state=AgentTaskState.WAITING_EVENT,
+                wait_condition=WaitCondition(kind="task", reference=str(prior.task_id)),
+                blocked_reason="waiting_for_existing_action",
+            )
+            self.service.mark_deferred(task.task_id)
+            raise TaskDeferred() from None
+        if not began:
             old = next(s for s in steps if s.get("step_key") == key)
             if (
                 old.get("state") == "settled"
@@ -895,18 +1370,19 @@ class _TaskGateway:
                 return snapshot
             raise PermissionError("operation already attempted; inspect its recorded outcome")
         try:
-            created = await self.service.skills.invoke(
-                session_id,
-                invocation,
-                principal=principal,
-                turn_id=turn_id,
-                generation_id=generation_id,
-                origin=origin,
-                provider_tool_call_id=provider_tool_call_id,
-                allow_confirmation=allow_confirmation,
-                require_cloud_readonly=require_cloud_readonly,
-                task_id=task.task_id,
-            )
+            with operation_scope(operation):
+                created = await self.service.skills.invoke(
+                    session_id,
+                    invocation,
+                    principal=principal,
+                    turn_id=turn_id,
+                    generation_id=generation_id,
+                    origin=origin,
+                    provider_tool_call_id=provider_tool_call_id,
+                    allow_confirmation=allow_confirmation,
+                    require_cloud_readonly=require_cloud_readonly,
+                    task_id=task.task_id,
+                )
         except (PermissionError, ValueError, KeyError) as error:
             await self.service.repository.finish_step(
                 task.task_id,
@@ -953,7 +1429,6 @@ class _TaskGateway:
         if record["side_effect"] != "read" and terminal.state is not SkillRunState.SUCCEEDED:
             code = terminal.error.code if terminal.error else "operation_interrupted"
             known_no_effect = {
-                "permission_denied",
                 "confirmation_rejected",
                 "invalid_arguments",
                 "invalid_document",
@@ -963,6 +1438,8 @@ class _TaskGateway:
                 "dependency_missing",
                 "calendar_not_configured",
                 "assistant_disabled",
+                "task_scope_denied",
+                "work_match_needs_review",
             }
             if code not in known_no_effect:
                 record["state"] = "unknown"
@@ -986,6 +1463,8 @@ class _TaskGateway:
             raise ValueError("task result exceeds durable evidence bound")
         record["snapshot"] = snapshot
         await self.service.repository.finish_step(self.task.task_id, key, record)
+        if self.service.operation_observer is not None:
+            await self.service.operation_observer(self.task, record)
         current = await self.service.repository.get(self.task.task_id)
         if current is not None and current.state is AgentTaskState.WAITING_AUTHORIZATION:
             await self.service.update_checkpoint(self.task.task_id, state=AgentTaskState.RUNNING)

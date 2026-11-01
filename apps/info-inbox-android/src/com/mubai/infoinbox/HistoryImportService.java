@@ -47,12 +47,16 @@ public final class HistoryImportService extends Service {
   }
 
   public static void start(Context context) {
+    start(context, HistoryImport.oldestFirst(context));
+  }
+
+  public static void start(Context context, boolean oldestFirst) {
     if (!new BackendSettings(context).ready() || !AnalysisRouting.ready(context))
       throw new IllegalStateException("请先连接宁宁后端");
     try (MemoryStore memory = new MemoryStore(context)) {
       new OrganizerStore(memory).retryFailed();
     }
-    HistoryImport.request(context);
+    HistoryImport.request(context, oldestFirst);
     AnalysisJob.schedule(context, new ApiSettings(context).automatic());
     AnalysisJob.enqueueIntake(context, 1000L);
     KnowledgeJob.enqueue(context);
@@ -160,11 +164,28 @@ public final class HistoryImportService extends Service {
           }
           phase("intake", "正在将已采集历史加入整理队列");
           int intake = AnalysisEngine.intake(this, true);
-          phase("knowledge", "正在同步知识库，本机原文与进度保留");
-          KnowledgeSync.run(this, true);
-          if (!HistoryImport.requested(this)) break;
-          phase("analysis", "正在生成 AI 建议，完成后更新进度");
-          AnalysisEngine.run(this, true);
+          // Existing sync Job is an independent lane; its retry never stalls extraction.
+          KnowledgeJob.enqueue(this);
+          phase(
+              "analysis",
+              HistoryImport.oldestFirst(this)
+                  ? "正在按历史顺序整理；" + syncState()
+                  : "正在整理信息；" + syncState());
+          if(RuntimeProcessing.owns(this)) {
+            phase("runtime", "宁宁后端正在整理，手机继续同步资料");
+            KnowledgeSync.run(this);
+            try(MemoryStore runtimeMemory=new MemoryStore(this)){
+              OrganizerStore runtimeOrganizer=new OrganizerStore(runtimeMemory);
+              KnowledgeStore runtimeKnowledge=new KnowledgeStore(runtimeMemory,new BackendSettings(this).base());
+              JSONObject runtimeStats=runtimeOrganizer.queueStats();
+              int remaining=new RootGateway(this).knowledgeCandidates(runtimeMemory,runtimeKnowledge.space,true).length();
+              HistoryImport.progress(this,runtimeStats,new JSONObject(runtimeKnowledge.meta("status","{}")));
+              if(HistoryImport.drained(intake,runtimeStats,remaining,runtimeKnowledge.mutations().length())){HistoryImport.complete(this);break;}
+            }
+            synchronized(networkSignal){networkSignal.wait(2000);}
+            continue;
+          }
+          int processed = AnalysisEngine.runWave(this, true);
           if (!HistoryImport.requested(this)) break;
           try (MemoryStore memory = new MemoryStore(this)) {
             OrganizerStore organizer = new OrganizerStore(memory);
@@ -173,11 +194,13 @@ public final class HistoryImportService extends Service {
             int remaining =
                 new RootGateway(this).knowledgeCandidates(memory, knowledge.space, true).length();
             HistoryImport.progress(this, stats, new JSONObject(knowledge.meta("status", "{}")));
-            if (stats.optInt("failed") > 0) {
+            if (processed == 0 && stats.optInt("leased") == 0 && stats.optInt("failed") > 0) {
               HistoryImport.pause(this, "有整理批次未完成，点击继续会重试失败批次");
               break;
             }
-            if (knowledge.conflictCount() > 0) {
+            if (stats.optInt("pending") == 0
+                && stats.optInt("leased") == 0
+                && knowledge.conflictCount() > 0) {
               HistoryImport.pause(this, "存在双端修改冲突，请在知识地图核对后继续");
               break;
             }
@@ -188,22 +211,18 @@ public final class HistoryImportService extends Service {
           }
           publish();
           errors = 0;
+          if (processed == 0 && intake == 0)
+            synchronized (networkSignal) {
+              networkSignal.wait(5000);
+            }
         } catch (Exception failure) {
           if (Thread.currentThread().isInterrupted() || failure instanceof InterruptedException)
             throw failure;
           if (++errors >= 5) {
-            HistoryImport.pause(this, "连接或 Root 读取暂未完成，进度已保存，点击继续重试");
+            HistoryImport.pause(this, "历史整理连续未完成，进度已保存，点击继续重试");
             break;
           }
-          getSharedPreferences("history-import", MODE_PRIVATE)
-              .edit()
-              .putString(
-                  "last_error_code",
-                  failure instanceof RootGateway.RootFailure
-                      ? ((RootGateway.RootFailure) failure).code
-                      : failure.getClass().getSimpleName())
-              .putString("message", "连接暂未完成，已保存进度，稍后自动重试")
-              .commit();
+          HistoryImport.failure(this, failure);
           publish();
           synchronized (networkSignal) {
             networkSignal.wait(60000L * errors);
@@ -225,16 +244,19 @@ public final class HistoryImportService extends Service {
     }
   }
 
+  private String syncState() {
+    return getSharedPreferences("knowledge", MODE_PRIVATE).getString("error", "").isEmpty()
+        ? "知识库独立同步"
+        : "知识库同步重试中，AI 整理继续";
+  }
+
   private void publish() {
     getSystemService(NotificationManager.class).notify(NOTICE, notification());
   }
 
   private void phase(String phase, String message) {
     if (!HistoryImport.requested(this)) return;
-    android.content.SharedPreferences.Editor edit =
-        getSharedPreferences("history-import", MODE_PRIVATE).edit().putString("phase", phase);
-    if (phase.equals("collection")) edit.putString("message", message);
-    edit.apply();
+    HistoryImport.phase(this, phase, message);
     publish();
   }
 

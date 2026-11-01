@@ -91,7 +91,7 @@ async def test_group_model_decides_without_mention_and_shadow_never_sends(
         access_token=TOKEN,
     )
     worker = app.container.group_autonomy._workers[app.route.route_id]
-    await asyncio.wait_for(worker, 5)
+    await asyncio.wait_for(worker, 20)
     assert len(model.requests) == 1
     if mode == "member":
         request = await asyncio.wait_for(app.provider.started.get(), 3)

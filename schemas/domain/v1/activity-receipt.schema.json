@@ -1,0 +1,34 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/activity-receipt.schema.json",
+  "properties": {
+    "device_id": {
+      "format": "uuid",
+      "title": "Device Id",
+      "type": "string"
+    },
+    "session_id": {
+      "format": "uuid",
+      "title": "Session Id",
+      "type": "string"
+    },
+    "state": {
+      "enum": [
+        "accepted",
+        "presented",
+        "blocked",
+        "opened",
+        "unknown"
+      ],
+      "title": "State",
+      "type": "string"
+    }
+  },
+  "required": [
+    "session_id",
+    "device_id",
+    "state"
+  ],
+  "title": "ActivityReceipt",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

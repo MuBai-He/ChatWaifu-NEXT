@@ -86,6 +86,8 @@ async def acknowledge(request: Request, response: Response, body: Acknowledgemen
         await app.repository.acknowledge(
             await app.owner(body.session_id), str(body.device_id), body.cursor, body.applied
         )
+        if app.on_change is not None:
+            app.on_change()
         return {"acknowledged": True}
     except KnowledgeAccessError:
         raise HTTPException(403, "private_owner_required") from None
@@ -152,25 +154,42 @@ async def graph(
 
 @router.get("/records")
 async def records(
-    request: Request, response: Response, session_id: UUID, q: str = "", kind: str | None = None
+    request: Request,
+    response: Response,
+    session_id: UUID,
+    q: str = "",
+    kind: str | None = None,
+    collection: bool = False,
+    limit: int = Query(default=100, ge=1, le=100),
+    cursor: str | None = Query(default=None, max_length=2048),
 ) -> JsonObject:
     app = service(request, response)
     try:
+        owner = await app.owner(session_id)
+        if collection or cursor:
+            items, next_cursor, epoch = await app.repository.records_page(
+                owner, query=q, kind=kind, collection=collection, limit=limit, cursor=cursor
+            )
+        else:
+            items = await app.repository.records(owner, query=q, kind=kind, limit=limit)
+            next_cursor, epoch = None, await app.repository.epoch(owner)
         return {
             "items": [
                 {
                     **r.model_dump(mode="json"),
-                    "sync": await app.repository.record_ack(
-                        await app.owner(session_id), r.record_id, r.revision
-                    ),
+                    "sync": await app.repository.record_ack(owner, r.record_id, r.revision),
                 }
-                for r in await app.repository.records(
-                    await app.owner(session_id), query=q, kind=kind
-                )
-            ]
+                for r in items
+            ],
+            "next_cursor": next_cursor,
+            "policy_epoch": epoch,
         }
     except KnowledgeAccessError:
         raise HTTPException(403, "private_owner_required") from None
+    except KnowledgeConflict as error:
+        raise HTTPException(409, str(error)) from None
+    except ValueError:
+        raise HTTPException(400, "invalid_records_cursor") from None
 
 
 @router.get("/records/{record_id}")
@@ -313,18 +332,23 @@ class ConflictResolution(Contract):
 async def resolve_conflict(
     request: Request, response: Response, conflict_id: str, body: ConflictResolution
 ) -> JsonObject:
-    app = service(request, response)
+    service(request, response)
     try:
-        return await request.app.state.container.knowledge.repository.resolve_conflict(
-            await app.owner(body.session_id),
+        from chatwaifu_runtime.agent.review import ReviewDecision
+
+        return await request.app.state.container.harness_review.decide(
+            "sync",
             conflict_id,
-            body.keep_local,
-            str(body.operation_id),
-            body.expected_revision,
+            ReviewDecision(
+                session_id=body.session_id,
+                decision="keep_local" if body.keep_local else "keep_server",
+                operation_id=body.operation_id,
+                expected_revision=body.expected_revision,
+            ),
         )
-    except KnowledgeAccessError:
+    except (KnowledgeAccessError, PermissionError):
         raise HTTPException(403, "private_owner_required") from None
-    except KnowledgeConflict as e:
+    except (KnowledgeConflict, ValueError) as e:
         raise HTTPException(409, str(e)) from None
 
 

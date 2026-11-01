@@ -15,7 +15,14 @@
           "properties": {
             "period": {
               "type": "string",
-              "enum": ["today", "tomorrow", "yesterday", "this_week", "next_week", "next_7_days"]
+              "enum": [
+                "today",
+                "tomorrow",
+                "yesterday",
+                "this_week",
+                "next_week",
+                "next_7_days"
+              ]
             },
             "start_date": {
               "type": "string",
@@ -43,7 +50,9 @@
             "windows": {
               "type": "array",
               "maxItems": 8,
-              "items": {"type": "object"}
+              "items": {
+                "type": "object"
+              }
             },
             "events": {
               "type": "array",
@@ -64,7 +73,12 @@
       }
     ],
     "interruptible": true,
-    "background_allowed": false
+    "background_allowed": false,
+    "execution_modes": [
+      "interactive",
+      "explicit_task",
+      "unattended"
+    ]
   },
   "adapter": {
     "kind": "builtin",

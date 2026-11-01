@@ -31,7 +31,13 @@ class MemoryPolicy:
             and candidate.draft.predicate is not None
             and candidate.draft.predicate.startswith("shared_joke.")
         )
-        if candidate.explicit or trusted_shared_joke or confirmed:
+        grounded_fact = (
+            candidate.grounded
+            and candidate.auto_commit
+            and candidate.draft.kind in {"semantic.fact", "semantic.preference"}
+            and candidate.draft.confidence >= 0.85
+        )
+        if candidate.explicit or trusted_shared_joke or grounded_fact or confirmed:
             return MemoryWriteDecision.COMMIT
         return MemoryWriteDecision.REVIEW
 

@@ -188,6 +188,23 @@
       "default": null,
       "title": "Decided At"
     },
+    "decision_basis": {
+      "anyOf": [
+        {
+          "enum": [
+            "human",
+            "policy",
+            "explicit_command"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Decision Basis"
+    },
     "evidence_event_ids": {
       "items": {
         "format": "uuid",
@@ -199,6 +216,18 @@
     },
     "operation": {
       "$ref": "#/$defs/MemoryOperation"
+    },
+    "policy_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Policy Version"
     },
     "proposal_id": {
       "format": "uuid",
