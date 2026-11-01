@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 import asyncio
+import collections.abc
 import json
 import logging
+import re
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Literal, cast
 from uuid import UUID, uuid4, uuid5
 
-from chatwaifu_protocol.base import PrivacyLevel
+from chatwaifu_protocol.base import JsonObject, PrivacyLevel
 from chatwaifu_protocol.events import GenericCoreEvent
+from chatwaifu_protocol.harness import KnowledgeExcerpt
 from chatwaifu_protocol.memory import (
     MemoryContextPacket,
     MemoryProposal,
@@ -27,6 +30,7 @@ from chatwaifu_runtime.memory.extractor import (
     DeterministicMemoryExtractor,
     ExplicitMemoryCommand,
     ExtractedMemoryCandidate,
+    is_first_person_statement,
     is_grounded_first_person,
     scene_statement_fragments,
 )
@@ -126,6 +130,27 @@ class MemoryService:
     ) -> None:
         self._repository = repository
         self._publisher = publisher
+        self.knowledge_forget: (
+            collections.abc.Callable[[UUID, UUID, str], collections.abc.Awaitable[int]] | None
+        ) = None
+        self.knowledge_conflict: (
+            collections.abc.Callable[[UUID, MemoryRecordDraft], collections.abc.Awaitable[bool]]
+            | None
+        ) = None
+        self.knowledge_supersede: (
+            collections.abc.Callable[
+                [UUID, UUID, MemoryRecordDraft], collections.abc.Awaitable[None]
+            ]
+            | None
+        ) = None
+        self.knowledge_epoch = 0
+        self._own_knowledge_epochs: dict[UUID, tuple[int, int]] = {}
+        self.knowledge_recall: (
+            collections.abc.Callable[
+                [UUID, str, int], collections.abc.Awaitable[list[KnowledgeExcerpt]]
+            ]
+            | None
+        ) = None
         self._extractor = DeterministicMemoryExtractor()
         self._policy = MemoryPolicy()
         self._semantic_index = semantic_index or NullSemanticMemoryIndex()
@@ -411,7 +436,12 @@ class MemoryService:
             if not decided:
                 raise RuntimeError("memory proposal was already decided concurrently")
             rejected_proposal = proposal.model_copy(
-                update={"status": "rejected", "decided_at": now}
+                update={
+                    "status": "rejected",
+                    "decided_at": now,
+                    "decision_basis": "human",
+                    "policy_version": None,
+                }
             )
             await self._emit(
                 session_id,
@@ -485,6 +515,8 @@ class MemoryService:
         if not accepted_ok:
             raise RuntimeError("memory proposal was already decided concurrently")
 
+        if self.knowledge_supersede is not None:
+            await self.knowledge_supersede(session_id, proposal.proposal_id, draft)
         try:
             await self._semantic_index.upsert(record)
         except Exception as error:
@@ -526,7 +558,14 @@ class MemoryService:
             },
             causation_id=evidence[0].event_id if evidence else None,
         )
-        return proposal.model_copy(update={"status": "accepted", "decided_at": now})
+        return proposal.model_copy(
+            update={
+                "status": "accepted",
+                "decided_at": now,
+                "decision_basis": "human",
+                "policy_version": None,
+            }
+        )
 
     async def correct(self, session_id: UUID, memory_id: UUID, text: str) -> MemoryRecord:
         current = await self._repository.get(memory_id)
@@ -640,7 +679,11 @@ class MemoryService:
         if evidence.identity is not None and evidence.identity.scene_id is not None:
             subject_id = f"participant:{evidence.identity.participant_id}"
         hits = await self._repository.search_fts(query, namespaces, limit=20, subject_id=subject_id)
-        count = 0
+        count = (
+            await self.knowledge_forget(session_id, source_event_id, query)
+            if self.knowledge_forget is not None and subject_id is None
+            else 0
+        )
         for hit in hits:
             if subject_id is not None and hit.record.subject_id != subject_id:
                 continue
@@ -652,6 +695,72 @@ class MemoryService:
             ):
                 count += 1
         return count
+
+    async def identify_external_fact(self, session_id: UUID, text: str) -> JsonObject | None:
+        namespaces = await self.namespaces_for_session(session_id)
+        candidate = self._extractor.extract(
+            text, namespace=namespaces[0], observed_at=datetime.now(UTC)
+        )
+        if (
+            candidate is None
+            or candidate.draft.kind not in {"semantic.fact", "semantic.preference"}
+            or candidate.draft.predicate is None
+        ):
+            return None
+        return {"predicate": candidate.draft.predicate, "value": candidate.draft.value}
+
+    async def grade_external_fact(self, session_id: UUID, text: str) -> JsonObject | None:
+        namespaces = await self.namespaces_for_session(session_id)
+        candidate = self._extractor.extract(
+            text, namespace=namespaces[0], observed_at=datetime.now(UTC)
+        )
+        if (
+            candidate is None
+            or candidate.draft.kind not in {"semantic.fact", "semantic.preference"}
+            or candidate.draft.predicate is None
+        ):
+            return None
+        predicate = candidate.draft.predicate
+        subject = candidate.draft.subject_id
+        if subject is None:
+            return None
+        candidate = replace(candidate, grounded=True, auto_commit=True)
+        if self._policy.decide_write(candidate) is not MemoryWriteDecision.COMMIT:
+            return None
+        for namespace in namespaces:
+            existing = await self._repository.find_identity(namespace, subject, predicate)
+            if any(record.value != candidate.draft.value for record in existing):
+                return None
+            if await self._repository.find_tombstoned_identity(namespace, subject, predicate):
+                return None
+        return {"predicate": candidate.draft.predicate, "value": candidate.draft.value}
+
+    def invalidate_knowledge(self) -> None:
+        self.knowledge_epoch += 1
+
+    def accept_own_knowledge_update(self, generation: UUID, before: int, after: int) -> None:
+        previous = self._own_knowledge_epochs.get(generation)
+        self._own_knowledge_epochs[generation] = (
+            previous[0] if previous and previous[1] == before else before,
+            after,
+        )
+        while len(self._own_knowledge_epochs) > 128:
+            self._own_knowledge_epochs.pop(next(iter(self._own_knowledge_epochs)))
+
+    def release_generation_context(self, generation: UUID) -> None:
+        self._own_knowledge_epochs.pop(generation, None)
+
+    def ensure_context_current(
+        self, packet: MemoryContextPacket, generation: UUID | None = None
+    ) -> None:
+        own = self._own_knowledge_epochs.get(generation) if generation else None
+        accepted = own == (packet.knowledge_epoch, self.knowledge_epoch)
+        if (
+            packet.knowledge_evidence
+            and packet.knowledge_epoch != self.knowledge_epoch
+            and not accepted
+        ):
+            raise RuntimeError("knowledge_context_changed")
 
     async def retrieve_context(
         self,
@@ -688,6 +797,23 @@ class MemoryService:
                     "token_budget_used": packet.token_budget_used,
                 },
             )
+        if self.knowledge_recall is not None:
+            epoch = self.knowledge_epoch
+            try:
+                async with asyncio.timeout(2):
+                    evidence = await self.knowledge_recall(
+                        session_id, query, max(0, token_budget // 3)
+                    )
+                packet = packet.model_copy(
+                    update={
+                        "knowledge_evidence": evidence if epoch == self.knowledge_epoch else [],
+                        "knowledge_epoch": epoch,
+                    }
+                )
+            except asyncio.CancelledError:
+                raise
+            except Exception as error:
+                logger.info("memory.knowledge_recall_degraded type=%s", type(error).__name__)
         return packet
 
     async def extract_spoken_candidates(
@@ -824,6 +950,25 @@ class MemoryService:
     @staticmethod
     def _is_owner_namespace(namespace: str) -> bool:
         return namespace == "user/local/global" or namespace.endswith("/user/local")
+
+    async def proposal_evidence(self, session_id: UUID, proposal_id: UUID) -> list[JsonObject]:
+        proposal = await self._repository.get_proposal(proposal_id)
+        if proposal is None or proposal.candidate is None:
+            raise KeyError("proposal_not_found")
+        await self._assert_visible(session_id, proposal.candidate.namespace)
+        result: list[JsonObject] = []
+        for identifier in proposal.evidence_event_ids:
+            item = await self._repository.event_evidence(identifier)
+            if item is not None:
+                result.append(
+                    {
+                        "reference": str(identifier),
+                        "text": item.source_text or "",
+                        "occurred_at": item.occurred_at.isoformat(),
+                        "event_type": item.event_type,
+                    }
+                )
+        return result
 
     async def list_proposals(
         self, *, status: str | None = None, session_id: UUID | None = None
@@ -968,20 +1113,6 @@ class MemoryService:
         active = self._active_projection
         if active is not None and active.task is task:
             self._active_projection = None
-
-    async def reindex_all(self) -> int:
-        records = await self._repository.list_records(limit=500)
-        rebuild = getattr(self._semantic_index, "rebuild", None)
-        if rebuild is not None:
-            return int(await rebuild(records))
-        count = 0
-        for record in records:
-            try:
-                await self._semantic_index.upsert(record)
-            except Exception:
-                continue
-            count += 1
-        return count
 
     async def _process_candidate(
         self,
@@ -1136,6 +1267,24 @@ class MemoryService:
             target = identities[0].memory_id if identities else None
 
         operation: Literal["add", "supersede"] = "supersede" if target else "add"
+        if (
+            operation == "add"
+            and evidence.event_type == "user.turn_committed"
+            and evidence.source_text
+            and evidence.identity is not None
+            and evidence.identity.memory_scope == "local"
+            and draft.text.strip() == evidence.source_text.strip()
+            and is_first_person_statement(draft.text)
+            and not re.search(r"密码|密钥|身份证|银行卡|password|secret|token", draft.text, re.I)
+        ):
+            extracted = replace(extracted, grounded=True, auto_commit=True)
+        if self.knowledge_conflict is not None and await self.knowledge_conflict(session_id, draft):
+            extracted = replace(
+                extracted,
+                requires_review=True,
+                auto_commit=False,
+                rationale="与已确认的个人知识或人工决定冲突，需要主人核对。",
+            )
         decision = self._policy.decide_write(extracted)
         status_by_decision: dict[MemoryWriteDecision, MemoryProposalStatus] = {
             MemoryWriteDecision.COMMIT: "accepted",
@@ -1153,6 +1302,12 @@ class MemoryService:
             confidence=draft.confidence,
             rationale=extracted.rationale,
             status=status,
+            decision_basis="explicit_command"
+            if extracted.explicit
+            else "policy"
+            if status == "accepted"
+            else None,
+            policy_version="1.0" if status == "accepted" and not extracted.explicit else None,
             created_at=now,
             decided_at=now if status != "pending" else None,
         )

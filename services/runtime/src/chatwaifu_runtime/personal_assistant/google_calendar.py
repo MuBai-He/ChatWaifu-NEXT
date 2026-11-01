@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from typing import Literal, cast
 from urllib.parse import quote
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -73,6 +74,9 @@ class CalendarEvent:
     recurring_event_id: str | None
     original_start: EventTime | None
     event_type: str = "default"
+    location: str | None = None
+    description: str | None = None
+    updated_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,6 +122,11 @@ class _Time(_WireModel):
         # A provider-local datetime can use its accompanying IANA time zone.
         if timestamp is not None and timestamp.tzinfo is None and not self.timeZone:
             raise GoogleCalendarError("invalid_response")
+        if timestamp is not None and timestamp.tzinfo is None:
+            try:
+                timestamp = timestamp.replace(tzinfo=ZoneInfo(self.timeZone or "UTC"))
+            except (ZoneInfoNotFoundError, ValueError):
+                raise GoogleCalendarError("invalid_response") from None
         return EventTime(day, timestamp, self.timeZone)
 
 
@@ -132,6 +141,9 @@ class _Event(_WireModel):
     recurringEventId: str | None = None
     originalStartTime: _Time | None = None
     eventType: str = "default"
+    location: str | None = None
+    description: str | None = None
+    updated: str | None = None
 
     def domain(self) -> CalendarEvent:
         # Deleted entries can contain only id + status; retain these tombstones.
@@ -148,6 +160,9 @@ class _Event(_WireModel):
             self.recurringEventId,
             self.originalStartTime.domain() if self.originalStartTime else None,
             self.eventType,
+            self.location,
+            self.description,
+            datetime.fromisoformat(self.updated) if self.updated else None,
         )
 
 
@@ -160,9 +175,15 @@ class _Page(_WireModel):
 class GoogleCalendarAdapter:
     """Own one bounded HTTP client; the application owns start/close lifecycle."""
 
-    def __init__(self, *, transport: httpx.AsyncBaseTransport | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        transport: httpx.AsyncBaseTransport | None = None,
+        proxy_url: str | None = None,
+    ) -> None:
         self._client = httpx.AsyncClient(
             transport=transport,
+            proxy=proxy_url,
             timeout=15,
             follow_redirects=False,
             trust_env=False,

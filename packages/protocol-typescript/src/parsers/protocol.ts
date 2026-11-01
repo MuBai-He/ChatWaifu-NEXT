@@ -626,6 +626,8 @@ const memoryDraftSchema = memoryRecordSchema.omit({
 
 const memoryProposalSchema = z
   .object({
+    decision_basis: z.enum(["human", "policy", "explicit_command"]).nullish(),
+    policy_version: z.string().nullish(),
     proposal_id: uuid,
     operation: z.enum([
       "add",
@@ -1427,6 +1429,9 @@ const skillDefinitionSchema = z
     capabilities: z.array(skillCapabilitySchema).default([]),
     interruptible: z.boolean().default(true),
     background_allowed: z.boolean().default(false),
+    execution_modes: z
+      .array(z.enum(["interactive", "explicit_task", "unattended"]))
+      .default(["interactive", "explicit_task"]),
   })
   .passthrough();
 

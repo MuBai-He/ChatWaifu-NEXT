@@ -515,7 +515,7 @@ async def test_restart_preserves_frozen_payload_and_client_id(tmp_path: Path) ->
         t1 = t0 + timedelta(seconds=20)
         repo_restarted = SQLiteExternalChannelRepository(database)
         recovered = await repo_restarted.recover_expired_delivery_part_leases(as_of=t1)
-        assert getattr(recovered, "recovered_count", recovered) == 1
+        assert recovered.count == 1
 
         # Check plan state via restarted repository instance
         plan_recovered = await repo_restarted.get_delivery_plan(delivery_id)

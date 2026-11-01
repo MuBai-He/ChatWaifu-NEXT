@@ -18,6 +18,7 @@ import {
   reconcileAgentOperation,
   updateTaskAuthorization,
 } from "../chat/runtime-client/agentClient";
+import { AgentHarnessPanel } from "./AgentHarnessPanel";
 import { AgentDevelopmentPanel } from "./AgentDevelopmentPanel";
 import { SkillConfirmationPrompt } from "../chat/SkillConfirmationPrompt";
 import "./agent-settings.css";
@@ -208,6 +209,7 @@ function AgentSettingsState({
       >
         刷新
       </button>
+      {sessionId && <AgentHarnessPanel key={sessionId} sessionId={sessionId} />}
       <details open>
         <summary>能力与权限</summary>
         <ul>

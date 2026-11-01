@@ -117,6 +117,14 @@ public final class KnowledgeStore {
 
   String registerRoom(JSONObject source) throws Exception {
     String room = KnowledgeWire.room(source);
+    String account = source.getString("account_id"), talker = source.getString("talker");
+    String label = MessagePresentation.conversationTitle(source);
+    try (Cursor known = db.rawQuery(
+        "SELECT account_id,talker,label FROM knowledge_rooms WHERE space=? AND room_id=?",
+        new String[] {space, room})) {
+      if (known.moveToFirst() && account.equals(known.getString(0))
+          && talker.equals(known.getString(1)) && label.equals(known.getString(2))) return room;
+    }
     boolean excluded = new ConversationPolicy(memory).excluded(source);
     db.execSQL(
         "INSERT OR IGNORE INTO"
@@ -125,22 +133,45 @@ public final class KnowledgeStore {
         new Object[] {
           space,
           room,
-          source.getString("account_id"),
-          source.getString("talker"),
-          MessagePresentation.conversationTitle(source),
+          account,
+          talker,
+          label,
           excluded ? 1 : null,
           excluded ? UUID.randomUUID().toString() : null
         });
     db.execSQL(
-        "UPDATE knowledge_rooms SET account_id=?,talker=?,label=? WHERE space=? AND room_id=?",
+        "UPDATE knowledge_rooms SET account_id=?,talker=?,label=? WHERE space=? AND room_id=?"
+            + " AND (account_id<>? OR talker<>? OR label<>?)",
         new Object[] {
-          source.getString("account_id"),
-          source.getString("talker"),
-          MessagePresentation.conversationTitle(source),
+          account,
+          talker,
+          label,
           space,
-          room
+          room,
+          account,
+          talker,
+          label
         });
     return room;
+  }
+
+  void captureLocalState() throws Exception {
+    db.beginTransactionNonExclusive();
+    try {
+      JSONArray exclusions = new ConversationPolicy(memory).list();
+      String fingerprint = AnalysisContract.hash(exclusions.toString());
+      if (!fingerprint.equals(meta("local_policy_fingerprint", ""))) {
+        for (int i = 0; i < exclusions.length(); i++) {
+          if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
+          registerRoom(exclusions.getJSONObject(i));
+        }
+        putMeta("local_policy_fingerprint", fingerprint);
+      }
+      captureConfirmed();
+      db.setTransactionSuccessful();
+    } finally {
+      db.endTransaction();
+    }
   }
 
   boolean excluded(String room) {
@@ -161,6 +192,22 @@ public final class KnowledgeStore {
     if (pending(id) != null || (old != null && !old.isNull("conflict_id"))) return;
     if (old != null && old.getString("hash").equals(hash) && action.equals("upsert")) return;
     if (old != null && new JSONObject(old.getString("payload")).optBoolean("deleted")) return;
+    if(old!=null && action.equals("upsert")){
+      JSONObject previous=new JSONObject(old.getString("payload")),origin=previous.getJSONObject("origin");
+      if(origin.optBoolean("external_bound")&& !origin.optString("work_item_id").isEmpty()){
+        boolean changed=false;for(String key:new String[]{"title","text","state","due_at","due_date","starts_at","ends_at"})if(!KnowledgeWire.canonical(previous.opt(key)).equals(KnowledgeWire.canonical(draft.opt(key))))changed=true;
+        if(changed){
+          JSONObject changes=new JSONObject().put("title",draft.getString("title")).put("details",draft.getString("text"));
+          for(String key:new String[]{"due_at","starts_at","ends_at","remind_at"})changes.put(key,draft.isNull(key)?JSONObject.NULL:java.time.Instant.ofEpochMilli(draft.getLong(key)).toString());
+          if(draft.has("due_date"))changes.put("due_date",draft.opt("due_date"));
+          String state=draft.optString("state"),command=state.equals("completed")?"complete":state.equals("cancelled")?"cancel":"edit";
+          RuntimeActions.enqueue(this,"/v1/personal-assistant/work-items/"+android.net.Uri.encode(origin.getString("work_item_id")),new JSONObject().put("expected_revision",origin.getInt("work_revision")).put("action",command).put("changes",changes),draft.getString("title"));
+          db.execSQL("UPDATE knowledge_shadow SET hash=? WHERE space=? AND id=?",new Object[]{hash,space,id});
+          return;
+        }
+      }
+    }
+
     if (old == null)
       db.execSQL(
           "INSERT INTO knowledge_shadow VALUES(?,?,0,'','{}',?,NULL)",
@@ -180,16 +227,22 @@ public final class KnowledgeStore {
   }
 
   void intake(JSONArray sources) throws Exception {
-    db.beginTransaction();
+    db.beginTransactionNonExclusive();
     try {
       for (int i = 0; i < sources.length(); i++) {
         JSONObject source = sources.getJSONObject(i);
         String room = registerRoom(source);
         if (excluded(room)) continue;
+        String captureKey="capture_started:"+room;
+        long captured=Long.parseLong(meta(captureKey,"0"));
+        if(captured==0){captured=System.currentTimeMillis();putMeta(captureKey,Long.toString(captured));}
+        long messageAt=source.getLong("created_at");
+        String mode=source.optString("_capture_mode",messageAt>=System.currentTimeMillis()-300000?"live":messageAt<captured?"historical":"delayed");
         JSONArray drafts = KnowledgeWire.sourceRecords(source), ids = new JSONArray();
         boolean deferred = false;
         for (int j = 0; j < drafts.length(); j++) {
           JSONObject draft = drafts.getJSONObject(j);
+          draft.getJSONObject("origin").put("capture_mode",mode);
           JSONObject flight = pending(draft.getString("record_id"));
           if (flight != null && !flight.getString("hash").equals(KnowledgeWire.fingerprint(draft)))
             deferred = true;
@@ -296,14 +349,46 @@ public final class KnowledgeStore {
             "INSERT OR IGNORE INTO knowledge_priority VALUES(?,?,?)",
             new Object[] {space, item.getString("account_id"), item.getLong("msg_id")});
     }
+    JSONArray previous = new JSONArray();
+    boolean hasPrevious = false;
     try (Cursor c =
         db.rawQuery(
             "SELECT payload FROM knowledge_shadow WHERE space=? AND local_id=? AND revision>0 LIMIT"
                 + " 1",
             new String[] {space, local})) {
-      if (c.moveToFirst()) return new JSONObject(c.getString(0)).getJSONArray("source_refs");
+      if (c.moveToFirst()) {
+        hasPrevious = true;
+        previous = new JSONObject(c.getString(0)).getJSONArray("source_refs");
+      }
     }
-    return sourceRefs(source);
+    if (!source.optString("_analysis_context_version").equals("1.2"))
+      return hasPrevious ? previous : sourceRefs(source);
+    // Hold the projection until every piece of the reviewed dialogue has a canonical source.
+    for (int i = 0; i < needed.length(); i++) {
+      JSONObject part = needed.getJSONObject(i);
+      if (!part.has("account_id") || !part.has("msg_id")) continue;
+      try (Cursor c =
+          db.rawQuery(
+              "SELECT ids FROM knowledge_sources WHERE space=? AND account_id=? AND msg_id=?",
+              new String[] {space, part.getString("account_id"), part.getString("msg_id")})) {
+        if (!c.moveToFirst()) return null;
+        JSONArray ids = new JSONArray(c.getString(0));
+        for (int j = 0; j < ids.length(); j++) {
+          JSONObject known = shadow(ids.getString(j));
+          if (known == null
+              || known.getLong("revision") <= 0
+              || new JSONObject(known.getString("payload")).optBoolean("deleted")) return null;
+        }
+      }
+    }
+    JSONArray current = sourceRefs(source), result = new JSONArray();
+    java.util.Set<String> seen = new java.util.HashSet<>();
+    for (JSONArray refs : new JSONArray[] {current, previous})
+      for (int i = 0; i < refs.length() && result.length() < 30; i++) {
+        JSONObject ref = refs.getJSONObject(i);
+        if (seen.add(ref.getString("record_id"))) result.put(ref);
+      }
+    return result;
   }
 
   JSONObject localRecord(String id, String kind) throws Exception {
@@ -312,6 +397,8 @@ public final class KnowledgeStore {
         if (!c.moveToFirst()) return null;
         JSONObject item = row(c), source = new JSONObject(item.getString("source_json"));
         String room = source.has("account_id") ? registerRoom(source) : "manual";
+        JSONArray refs = preservedRefs(id, source);
+        if (refs == null) return null;
         return template(
                 id,
                 KnowledgeWire.draft(
@@ -322,13 +409,15 @@ public final class KnowledgeStore {
             .put("title", item.getString("title"))
             .put("text", item.getString("quote"))
             .put("confirmed", true)
-            .put("source_refs", preservedRefs(id, source));
+            .put("source_refs", refs);
       }
     }
     JSONObject item = new OrganizerStore(memory).work(id);
     if (item == null) return null;
     JSONObject source = new JSONObject(item.getString("source_json"));
     String room = registerRoom(item);
+    JSONArray refs = preservedRefs(id, source);
+    if (refs == null) return null;
     JSONObject out =
         template(
                 id,
@@ -338,16 +427,32 @@ public final class KnowledgeStore {
             .put("state", item.getString("state"))
             .put("confirmed", true)
             .put("timezone", item.getString("timezone"))
-            .put("source_refs", preservedRefs(id, source));
+            .put("source_refs", refs);
+    out.getJSONObject("origin").put("involvement",item.optString("involvement","unclear")).put("native_work_revision",item.getInt("revision"));
     for (String key : new String[] {"due_at", "starts_at", "ends_at"}) out.put(key, item.opt(key));
+    if(!item.isNull("due_date") || Integer.parseInt(meta("processing_epoch","0"))>0)out.put("due_date",item.opt("due_date"));
     JSONObject reminder = new OrganizerStore(memory).reminder(id);
     if (reminder != null && !reminder.getString("state").matches("cancelled|dismissed"))
       out.put("remind_at", reminder.getLong("due_at"));
+    JSONObject occurrence=out.getJSONObject("origin").optJSONObject("reminder_occurrence");
+    if(occurrence!=null) {
+      boolean primary=device().equals(occurrence.optString("primary_device_id"));
+      if(!primary && (reminder==null || !reminder.optString("state").equals("scheduled"))) {
+        String occurrenceState=occurrence.optString("state");
+        out.put("remind_at",occurrenceState.matches("scheduled|accepted|presented|blocked|outcome_unknown") && !occurrence.isNull("scheduled_at") ? java.time.Instant.parse(occurrence.getString("scheduled_at")).toEpochMilli() : JSONObject.NULL);
+      } else if(reminder!=null) {
+        String localState=reminder.optString("state");
+        String state=localState.equals("posted")?"presented":localState.equals("posting")||localState.equals("uncertain")?"outcome_unknown":localState;
+        if(state.equals("scheduled") && !occurrence.isNull("scheduled_at") && reminder.getLong("due_at")!=java.time.Instant.parse(occurrence.getString("scheduled_at")).toEpochMilli())state="snoozed";
+        out.getJSONObject("origin").put("device_reminder",new JSONObject().put("occurrence_id",occurrence.getString("occurrence_id")).put("state",state).put("observed_at",reminder.getLong("updated_at")));
+        if(!primary&&localState.equals("scheduled"))out.getJSONObject("origin").put("requested_primary_device",device());
+      }
+    }
     return out;
   }
 
   void captureConfirmed() throws Exception {
-    db.beginTransaction();
+    db.beginTransactionNonExclusive();
     try {
       for (String table : new String[] {"memories", "work_items"}) {
         try (Cursor c =
@@ -377,9 +482,15 @@ public final class KnowledgeStore {
               new String[] {space})) {
         while (c.moveToNext()) {
           JSONObject value = new JSONObject(c.getString(2));
-          if (!value.optBoolean("deleted")
-              && localRecord(c.getString(1), value.getString("kind")) == null)
-            queue(strip(value), c.getString(1), "forget");
+          String table = value.getString("kind").equals("memory") ? "memories" : "work_items";
+          String key = table.equals("memories") ? "ref" : "id";
+          try (Cursor nativeRow =
+              db.rawQuery(
+                  "SELECT 1 FROM " + table + " WHERE " + key + "=?",
+                  new String[] {c.getString(1)})) {
+            if (!value.optBoolean("deleted") && !nativeRow.moveToFirst())
+              queue(strip(value), c.getString(1), "forget");
+          }
         }
       }
       db.setTransactionSuccessful();
@@ -506,6 +617,7 @@ public final class KnowledgeStore {
     JSONObject pending = pending(id);
     if (pending == null
         || !pending.getString("operation").equals(receipt.getString("operation_id"))) return;
+    if(receipt.optString("discarded").equals("forgotten_source")){db.delete("knowledge_outbox","space=? AND id=?",new String[]{space,id});applyRecord(receipt.getJSONObject("current"),true);return;}
     if (outcome.equals("accepted")) {
       JSONObject record = receipt.getJSONObject("record");
       db.execSQL(
@@ -515,6 +627,7 @@ public final class KnowledgeStore {
             record.getLong("revision"), pending.getString("hash"), record.toString(), space, id
           });
       db.delete("knowledge_outbox", "space=? AND id=?", new String[] {space, id});
+      if(record.optBoolean("deleted"))applyRecord(record,true);
     } else if (outcome.equals("conflict")) {
       db.execSQL(
           "UPDATE knowledge_shadow SET conflict_id=? WHERE space=? AND id=?",
@@ -556,7 +669,10 @@ public final class KnowledgeStore {
               record.getString("title"),
               "fact",
               record.getString("text"),
-              source.toString(),
+              (source.has("_information_summary")
+                      ? source.put("_information_summary", record.getString("text"))
+                      : source)
+                  .toString(),
               record.getLong("occurred_at"),
               System.currentTimeMillis()
             });
@@ -576,6 +692,9 @@ public final class KnowledgeStore {
       if (local.isEmpty()) local = id;
       JSONObject old = new OrganizerStore(memory).work(local);
       int revision = old == null ? 1 : old.getInt("revision") + 1;
+      JSONObject occurrence=record.getJSONObject("origin").optJSONObject("reminder_occurrence");
+      boolean anotherDevice=occurrence!=null&&!occurrence.isNull("primary_device_id")&&!device().equals(occurrence.getString("primary_device_id"));
+
       String state = record.optBoolean("deleted") ? "cancelled" : record.getString("state");
       if (state.equals("active")) state = "open";
       ContentValues v = new ContentValues();
@@ -586,6 +705,7 @@ public final class KnowledgeStore {
       v.put("details", record.getString("text"));
       v.put("revision", revision);
       v.put("timezone", record.getString("timezone"));
+      if(record.isNull("due_date"))v.putNull("due_date");else v.put("due_date",record.getString("due_date"));
       v.put("updated_at", System.currentTimeMillis());
       for (String key : new String[] {"due_at", "starts_at", "ends_at"}) {
         if (record.isNull(key)) v.putNull(key);
@@ -608,7 +728,7 @@ public final class KnowledgeStore {
           db,
           local,
           revision,
-          state.matches("completed|cancelled")
+          state.matches("completed|cancelled")||anotherDevice
               ? null
               : OrganizerStore.nullable(record, "remind_at"),
           System.currentTimeMillis());
@@ -647,7 +767,7 @@ public final class KnowledgeStore {
   }
 
   void applyPull(JSONObject batch) throws Exception {
-    db.beginTransaction();
+    db.beginTransactionNonExclusive();
     try {
       JSONArray policies = batch.getJSONArray("policies");
       for (int i = 0; i < policies.length(); i++) {
@@ -743,7 +863,7 @@ public final class KnowledgeStore {
   }
 
   void acknowledged(JSONArray applied) throws Exception {
-    db.beginTransaction();
+    db.beginTransactionNonExclusive();
     try {
       for (int i = 0; i < applied.length(); i++) {
         JSONObject ref = applied.getJSONObject(i);

@@ -15,6 +15,7 @@ import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 import java.io.ByteArrayInputStream;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -42,21 +43,16 @@ public final class KnowledgeActivity extends Activity {
               insets.getSystemWindowInsetBottom());
           return insets;
         });
-    LinearLayout actions = new LinearLayout(this);
-    Button back = new Button(this);
-    back.setText("返回收件箱");
-    NativeUi.action(back);
-    back.setOnClickListener(v -> finish());
-    actions.addView(back, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-    Button refresh = new Button(this);
-    refresh.setText("同步并刷新");
-    NativeUi.action(refresh);
-    refresh.setOnClickListener(v -> load());
-    actions.addView(
-        refresh, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+    page.setBackgroundColor(0xFFF7F7FB);
+    LinearLayout actions = NativeUi.column(this);
+    actions.setPadding(NativeUi.dp(this, 14), 0, NativeUi.dp(this, 14), NativeUi.dp(this, 8));
+    Button back = NativeUi.button(this, "返回", this::navigateBack, false);
+    Button refresh = NativeUi.button(this, "同步资料", this::load, false);
+    NativeUi.actions(this, actions, back, refresh);
     page.addView(actions);
-    status = new TextView(this);
-    status.setPadding(16, 8, 16, 8);
+    status = NativeUi.text(this, "", 13, 0xFF6B6A7F, false);
+    status.setPadding(
+        NativeUi.dp(this, 16), NativeUi.dp(this, 8), NativeUi.dp(this, 16), NativeUi.dp(this, 8));
     page.addView(status);
     web = new WebView(this);
     WebSettings settings = web.getSettings();
@@ -119,7 +115,8 @@ public final class KnowledgeActivity extends Activity {
   }
 
   private void load() {
-    status.setText("正在同步并连接知识地图…");
+    status.setVisibility(android.view.View.VISIBLE);
+    status.setText("正在同步并连接个人资料…");
     work.execute(
         () -> {
           try {
@@ -150,6 +147,8 @@ public final class KnowledgeActivity extends Activity {
                 () -> {
                   if (isFinishing() || isDestroyed()) return;
                   status.setText(message);
+                  status.setVisibility(
+                      message.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
                   CookieManager.getInstance()
                       .setCookie(
                           base + "/v1/knowledge",
@@ -160,9 +159,21 @@ public final class KnowledgeActivity extends Activity {
                               status.setText("临时连接凭证未能保存，请重试");
                               return;
                             }
+                            String current = web.getUrl();
+                            if (current != null
+                                && allowed(Uri.parse(current))
+                                && "/knowledge".equals(Uri.parse(current).getPath())
+                                && backend
+                                    .session()
+                                    .equals(Uri.parse(current).getQueryParameter("session_id"))) {
+                              if (message.isEmpty())
+                                Toast.makeText(this, "资料已同步；网页发现更新后会提示刷新", Toast.LENGTH_SHORT)
+                                    .show();
+                              return;
+                            }
                             web.loadUrl(
                                 base
-                                    + "/knowledge?embedded=1&session_id="
+                                    + "/knowledge?embedded=1&tab=records&session_id="
                                     + Uri.encode(backend.session()));
                           });
                 });
@@ -206,7 +217,21 @@ public final class KnowledgeActivity extends Activity {
 
   @Override
   public void onBackPressed() {
-    finish();
+    navigateBack();
+  }
+
+  private void navigateBack() {
+    if (web == null) {
+      finish();
+      return;
+    }
+    web.requestFocus();
+    web.evaluateJavascript(
+        "document.dispatchEvent(new KeyboardEvent('keydown',"
+            + "{key:'Escape',bubbles:true,cancelable:true}))",
+        unhandled -> {
+          if (!isFinishing() && !isDestroyed() && !"false".equals(unhandled)) finish();
+        });
   }
 
   @Override

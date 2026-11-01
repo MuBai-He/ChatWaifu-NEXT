@@ -144,6 +144,18 @@
       "title": "Enabled",
       "type": "boolean"
     },
+    "execution_modes": {
+      "items": {
+        "enum": [
+          "interactive",
+          "explicit_task",
+          "unattended"
+        ],
+        "type": "string"
+      },
+      "title": "Execution Modes",
+      "type": "array"
+    },
     "interruptible": {
       "default": true,
       "title": "Interruptible",

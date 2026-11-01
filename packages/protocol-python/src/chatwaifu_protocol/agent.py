@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import AwareDatetime, ConfigDict, Field
 
 from chatwaifu_protocol.base import JsonObject, ProtocolModel, SideEffect
+from chatwaifu_protocol.harness import EvidenceRef, WaitCondition
 
 
 class AgentVersionedModel(ProtocolModel):
@@ -70,10 +71,22 @@ class TaskAuthorization(AgentVersionedModel):
     allowed_skill_ids: list[str] = Field(default_factory=list, max_length=64)
     resource_roots: list[str] = Field(default_factory=list, max_length=16)
     calendar_ids: list[str] = Field(default_factory=list, max_length=32)
+    tasklist_ids: list[str] | None = Field(default=None, exclude_if=lambda value: value is None)
     source_ref: str = Field(min_length=1, max_length=256)
     allow_writes: bool = False
     capability_fingerprints: dict[str, str] = Field(default_factory=dict[str, str])
     expires_at: AwareDatetime
+    scheduled_for: AwareDatetime | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    intent_id: UUID | None = Field(default=None, exclude_if=lambda value: value is None)
+    intent_revision: int | None = Field(default=None, exclude_if=lambda value: value is None)
+    evidence_refs: list[EvidenceRef] = Field(
+        default_factory=list[EvidenceRef], max_length=30, exclude_if=lambda value: not value
+    )
+    source_room_ids: list[str] = Field(
+        default_factory=list[str], max_length=32, exclude_if=lambda value: not value
+    )
 
 
 class ArtifactRef(AgentVersionedModel):
@@ -131,6 +144,8 @@ class AgentTask(AgentVersionedModel):
     session_id: UUID
     scope: str
     goal: str
+    character_id: str | None = Field(default=None, exclude_if=lambda value: value is None)
+    work_item_id: str | None = Field(default=None, exclude_if=lambda value: value is None)
     completion_criteria: list[str]
     authorization: TaskAuthorization
     channel_binding: TaskChannelBinding | None = None
@@ -143,6 +158,9 @@ class AgentTask(AgentVersionedModel):
     result_text: str | None = None
     blocked_reason: str | None = None
     wake_at: AwareDatetime | None = None
+    wait_condition: WaitCondition | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     continuation: str | None = Field(default=None, max_length=8000)
     candidate_id: UUID | None = None
     delivery_id: UUID | None = None

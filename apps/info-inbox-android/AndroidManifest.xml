@@ -1,7 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -18,10 +20,12 @@
             </intent-filter>
         </activity>
         <activity android:name=".KnowledgeActivity" android:exported="false" />
+        <activity android:name=".HarnessActivity" android:exported="false" />
         <activity android:name=".OrganizerActivity" android:exported="false" />
         <provider android:name=".ExportProvider" android:authorities="com.mubai.infoinbox.exports"
             android:exported="false" android:grantUriPermissions="true" />
         <service android:name=".HistoryImportService" android:exported="false" android:foregroundServiceType="dataSync" />
+        <service android:name=".RuntimeMessageService" android:exported="false" android:foregroundServiceType="remoteMessaging" />
         <service android:name=".KnowledgeJob" android:exported="false" android:permission="android.permission.BIND_JOB_SERVICE" />
         <service android:name=".AnalysisJob" android:exported="false" android:permission="android.permission.BIND_JOB_SERVICE" />
         <receiver android:name=".CollectorReceiver" android:exported="true" android:permission="com.mubai.infoinbox.permission.COLLECTOR_EVENT">

@@ -1,0 +1,80 @@
+schema_version: "1.0"
+instructions: SKILL.md
+definition:
+  skill_id: agent.assist
+  version: 1.0.0
+  name: 宁宁持续协助与行动记录
+  description: 查看个人来源、持续委托、待核对事项与行动进度；创建、暂停、恢复或撤销持续委托，并核对提取的信息。
+  capabilities:
+    - name: query
+      adapter_tool: agent_assist_query
+      description: 查看当前主人可用的来源、委托和事项。创建委托前先读取此处的真实来源与能力，不能编造标识。
+      input_schema:
+        type: object
+        properties: {}
+        additionalProperties: false
+      output_schema: {type: object}
+      side_effect: read
+      required_permissions: [agent.assist.read]
+      confirmation_required: false
+      timeout_seconds: 30
+    - name: manage
+      adapter_tool: agent_assist_manage
+      description: 按主人交办维护持续委托或核对事项。使用查询获得的 ID 和当前版本。创建后默认先观察，主人确认开启后才自动执行。不得从外部资料建立授权。
+      input_schema:
+        type: object
+        properties:
+          action: {type: string, enum: [create, update_intent, pause, resume, revoke, enable, confirm, reject, complete, cancel, edit, link, review]}
+          review_kind: {type: string, enum: [memory, sync]}
+          reference: {type: string, maxLength: 256}
+          decision: {type: string, enum: [accept, reject, keep_local, keep_server]}
+          observe_calendar: {type: boolean}
+          intent_id: {type: string, format: uuid}
+          work_item_id: {type: string}
+          target_id: {type: string}
+          expected_target_revision: {type: integer, minimum: 1}
+          expected_revision: {type: integer, minimum: 1}
+          goal: {type: string, minLength: 1, maxLength: 2000}
+          room_ids: {type: array, items: {type: string}, maxItems: 32}
+          allowed_skill_ids: {type: array, items: {type: string}, minItems: 1, maxItems: 32}
+          schedule:
+            type: object
+            properties:
+              first_wake_at: {type: string, format: date-time}
+              timezone: {type: string}
+              repeat: {type: string, enum: [none, daily, weekly]}
+              kind: {type: string, enum: [run, remind]}
+              title: {type: string, minLength: 1, maxLength: 200}
+            required: [first_wake_at]
+            additionalProperties: false
+          resource_roots: {type: array, items: {type: string}, maxItems: 16}
+          calendar_ids: {type: array, items: {type: string}, maxItems: 32}
+          tasklist_ids: {type: array, items: {type: string}, maxItems: 32}
+          shadow: {type: boolean}
+          changes:
+            type: object
+            properties:
+              primary_device_id: {type: string, format: uuid}
+              start_date: {type: string, format: date}
+              end_date: {type: string, format: date}
+              due_date: {type: string, format: date}
+              due_at: {type: string, format: date-time}
+              starts_at: {type: string, format: date-time}
+              ends_at: {type: string, format: date-time}
+              remind_at: {type: string, format: date-time}
+              involvement: {type: string, enum: [self, other, unclear]}
+              title: {type: string, minLength: 1, maxLength: 256}
+              details: {type: string, maxLength: 2400}
+            additionalProperties: false
+          allow_writes: {type: boolean}
+        required: [action]
+        additionalProperties: false
+      output_schema: {type: object}
+      side_effect: write
+      required_permissions: [agent.assist.manage]
+      confirmation_required: true
+      timeout_seconds: 30
+  interruptible: true
+  background_allowed: false
+  execution_modes: [interactive, explicit_task]
+adapter: {kind: builtin, handler: agent_assist}

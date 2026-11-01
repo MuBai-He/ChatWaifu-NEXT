@@ -29,30 +29,32 @@ public final class KnowledgeSync {
   }
 
   public static void run(Context context, boolean fullHistory) throws Exception {
+    runCycle(context, fullHistory);
+  }
+
+  /** True means a bounded cycle committed progress and still has work to drain. */
+  static boolean runCycle(Context context, boolean fullHistory) throws Exception {
     synchronized (LOCK) {
       BackendSettings backend = new BackendSettings(context);
-      if (!enabled(context) || !backend.ready()) return;
+      if (!enabled(context) || !backend.ready()) return false;
       try (MemoryStore memory = new MemoryStore(context)) {
         KnowledgeStore store = new KnowledgeStore(memory, backend.base());
         RuntimeBackendClient client = backend.client();
         store.device();
         synchronized (ConversationPolicy.SEND_LOCK) {
-          JSONArray exclusions = new ConversationPolicy(memory).list();
-          for (int i = 0; i < exclusions.length(); i++)
-            store.registerRoom(exclusions.getJSONObject(i));
           // Capture local edits before any remote version can replace their baseline.
-          store.captureConfirmed();
+          store.captureLocalState();
         }
         for (int page = 0; page < 5; page++) {
           if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
           JSONObject pull = pullPage(context, client, backend, store);
           if (!pull.getBoolean("more")) break;
           if (page == 4)
-            return; // Catch up fully before attempting a write against a stale baseline.
+            return true; // Catch up before writing against a stale baseline.
         }
         JSONArray policies = store.policies();
         if (policies.length() > 0) push(client, backend, store, new JSONArray(), policies);
-        if (store.policies().length() > 0) return;
+        if (store.policies().length() > 0) return true;
         boolean history =
             wifi(context)
                 && (fullHistory
@@ -62,6 +64,7 @@ public final class KnowledgeSync {
         JSONArray sources =
             new RootGateway(context).knowledgeCandidates(memory, store.space, history);
         synchronized (ConversationPolicy.SEND_LOCK) {
+          if(HistoryImport.requested(context))for(int i=0;i<sources.length();i++)if(sources.getJSONObject(i).getLong("created_at")<System.currentTimeMillis()-300000)sources.getJSONObject(i).put("_capture_mode","historical");
           store.intake(sources);
         }
         for (int batch = 0; batch < 3; batch++) {
@@ -73,7 +76,9 @@ public final class KnowledgeSync {
           if (mutations.length() == 0) break;
           push(client, backend, store, mutations, new JSONArray());
         }
-        pullPage(context, client, backend, store);
+        boolean more = pullPage(context, client, backend, store).getBoolean("more");
+        JSONObject capabilities=client.request("/v1/personal-information/status",null);
+        if(capabilities.optBoolean("runtime_processing_supported"))RuntimeProcessing.synchronize(context,store,client,backend);
         JSONObject status =
             client.request("/v1/knowledge/status?session_id=" + backend.session(), null);
         store.putMeta("status", status.toString());
@@ -83,6 +88,7 @@ public final class KnowledgeSync {
             .edit()
             .remove("error")
             .apply();
+        return more || store.mutations(history).length() > 0;
       }
     }
   }
@@ -99,6 +105,8 @@ public final class KnowledgeSync {
                 + "&after="
                 + store.meta("cursor", "0"),
             null);
+    android.util.Log.i("InboxKnowledge", "pull_received changes="
+        + pull.getJSONArray("changes").length());
     synchronized (ReminderScheduler.LOCK) {
       synchronized (ConversationPolicy.SEND_LOCK) {
         store.captureConfirmed();
@@ -106,6 +114,7 @@ public final class KnowledgeSync {
       }
       ReminderScheduler.reconcile(context);
     }
+    android.util.Log.i("InboxKnowledge", "pull_applied");
     JSONArray applied = store.applied();
     client.request(
         "/v1/personal-information/sync/ack",
@@ -115,10 +124,11 @@ public final class KnowledgeSync {
             .put("cursor", pull.getLong("cursor"))
             .put("applied", applied));
     store.acknowledged(applied);
+    android.util.Log.i("InboxKnowledge", "pull_acknowledged");
     return pull;
   }
 
-  private static void push(
+  static void push(
       RuntimeBackendClient client,
       BackendSettings backend,
       KnowledgeStore store,
@@ -132,6 +142,7 @@ public final class KnowledgeSync {
             .put("policy_epoch", store.epoch())
             .put("mutations", mutations)
             .put("policies", policies);
+    if(Integer.parseInt(store.meta("processing_epoch","0"))>0) body.put("device_label",android.os.Build.MANUFACTURER+" "+android.os.Build.MODEL).put("schema_version","1.1").put("processing_epoch",Integer.parseInt(store.meta("processing_epoch","0"))).put("ingestion_mode","live");
     JSONObject response =
         client.request(
             "/v1/personal-information/sync/push",
@@ -154,7 +165,7 @@ public final class KnowledgeSync {
                 write.run();
               }
             });
-    store.db.beginTransaction();
+    store.db.beginTransactionNonExclusive();
     try {
       JSONArray receipts = response.getJSONArray("receipts");
       for (int i = 0; i < receipts.length(); i++) store.receiveReceipt(receipts.getJSONObject(i));

@@ -1,0 +1,122 @@
+{
+  "$id": "https://chatwaifu.local/schemas/domain/v1/reminder-occurrence.schema.json",
+  "properties": {
+    "accepted_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Accepted At"
+    },
+    "accepted_work_revision": {
+      "default": 0,
+      "title": "Accepted Work Revision",
+      "type": "integer"
+    },
+    "acknowledged_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Acknowledged At"
+    },
+    "content_fingerprint": {
+      "default": "",
+      "title": "Content Fingerprint",
+      "type": "string"
+    },
+    "occurrence_id": {
+      "format": "uuid",
+      "title": "Occurrence Id",
+      "type": "string"
+    },
+    "owner": {
+      "title": "Owner",
+      "type": "string"
+    },
+    "presented_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Presented At"
+    },
+    "primary_device_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Primary Device Id"
+    },
+    "scheduled_at": {
+      "format": "date-time",
+      "title": "Scheduled At",
+      "type": "string"
+    },
+    "state": {
+      "enum": [
+        "scheduled",
+        "waiting_device",
+        "accepted",
+        "presented",
+        "dismissed",
+        "snoozed",
+        "completed",
+        "cancelled",
+        "blocked",
+        "outcome_unknown"
+      ],
+      "title": "State",
+      "type": "string"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "work_item_id": {
+      "title": "Work Item Id",
+      "type": "string"
+    },
+    "work_revision": {
+      "title": "Work Revision",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "occurrence_id",
+    "owner",
+    "work_item_id",
+    "work_revision",
+    "scheduled_at",
+    "state",
+    "updated_at"
+  ],
+  "title": "ReminderOccurrence",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

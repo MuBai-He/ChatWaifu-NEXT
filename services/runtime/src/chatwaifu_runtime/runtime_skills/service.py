@@ -60,6 +60,7 @@ from chatwaifu_runtime.runtime_skills.audit import (
 )
 from chatwaifu_runtime.runtime_skills.errors import SkillExecutionError
 from chatwaifu_runtime.runtime_skills.execution_context import (
+    authorized_action,
     authorized_generation,
     authorized_task,
 )
@@ -1123,6 +1124,7 @@ class RuntimeSkillService:
             self._task_authorized_runs.get(run_id),
         )
         context_token = authorized_generation.set(context)
+        action_token = authorized_action.set(authorized_action.get() or run_id)
         try:
             task_id = self._task_authorized_runs.get(run_id)
             if task_id is not None:
@@ -1352,6 +1354,7 @@ class RuntimeSkillService:
         finally:
             authorized_task.reset(task_token)
             authorized_generation.reset(context_token)
+            authorized_action.reset(action_token)
 
     async def _invoke_mcp_connection_tool(
         self,

@@ -381,6 +381,34 @@ public final class RootGateway {
   }
 
   public JSONArray pendingSources(MemoryStore store, long floor) throws Exception {
+    return pendingSources(store, floor, false);
+  }
+
+  public JSONArray pendingSources(MemoryStore store, long floor, boolean oldestFirst)
+      throws Exception {
+    return pendingSources(store, floor, oldestFirst, null);
+  }
+
+  public JSONArray earlierPendingSources(MemoryStore store, JSONObject anchor) throws Exception {
+    return pendingSources(store, 0, true, anchor);
+  }
+
+  private JSONArray pendingSources(
+      MemoryStore store, long floor, boolean oldestFirst, JSONObject anchor) throws Exception {
+    String earlier =
+        anchor == null
+            ? ""
+            : " AND m.account_id="
+                + SourceRules.sqlQuote(anchor.getString("account_id"))
+                + " AND m.talker="
+                + SourceRules.sqlQuote(anchor.getString("talker"))
+                + " AND (m.created_at<"
+                + anchor.getLong("created_at")
+                + " OR (m.created_at="
+                + anchor.getLong("created_at")
+                + " AND m.msg_id<"
+                + anchor.getLong("msg_id")
+                + "))";
     store.getWritableDatabase();
     String state =
         "file:" + context.getDatabasePath("information.db").getAbsolutePath() + "?mode=ro";
@@ -395,45 +423,53 @@ public final class RootGateway {
             + " c.username=m.talker LEFT JOIN appstate.source_snapshots s ON"
             + " s.account_id=m.account_id AND s.msg_id=m.msg_id WHERE m.type=1 AND m.created_at>="
             + floor
+            + earlier
             + " AND NOT EXISTS(SELECT 1 FROM appstate.conversation_exclusions e WHERE"
             + " e.account_id=m.account_id AND e.talker=m.talker)"
             + " AND ((s.base_ref IS NULL AND NOT EXISTS(SELECT 1 FROM appstate.ai_processed p WHERE"
             + " p.account_id=m.account_id AND p.msg_id=m.msg_id)) OR (s.base_ref IS NOT NULL AND"
-            + " coalesce(m.content,'') IS NOT s.content)) ORDER BY m.created_at DESC,m.msg_id DESC"
-            + " LIMIT 20;");
+            + " coalesce(m.content,'') IS NOT s.content)) ORDER BY m.created_at "
+            + (oldestFirst ? "ASC" : "DESC")
+            + ",m.msg_id "
+            + (oldestFirst ? "ASC" : "DESC")
+            + " LIMIT "
+            + (floor == 0 ? 100 : 20)
+            + ";");
   }
 
-  public JSONArray contextBefore(JSONArray sources) throws Exception {
-    java.util.LinkedHashMap<String, JSONObject> rooms = new java.util.LinkedHashMap<>();
+  public JSONArray contextAround(JSONArray sources, MemoryStore memory) throws Exception {
+    if (sources.length() == 0) return new JSONArray();
+    JSONObject source = sources.getJSONObject(0);
+    long earliest = Long.MAX_VALUE, latest = 0;
     for (int i = 0; i < sources.length(); i++) {
-      JSONObject source = sources.getJSONObject(i);
-      String id = source.getString("account_id") + ":" + source.getString("talker");
-      JSONObject earlier = rooms.get(id);
-      if (earlier == null || source.getLong("created_at") < earlier.getLong("created_at"))
-        rooms.put(id, source);
+      JSONObject part = sources.getJSONObject(i);
+      earliest = Math.min(earliest, part.getLong("created_at"));
+      latest = Math.max(latest, part.getLong("created_at"));
     }
-    StringBuilder filter = new StringBuilder();
-    int count = 0;
-    for (JSONObject source : rooms.values()) {
-      if (count++ >= 8) break;
-      if (filter.length() > 0) filter.append(" OR ");
-      filter
-          .append("(m.account_id=")
-          .append(SourceRules.sqlQuote(source.getString("account_id")))
-          .append(" AND m.talker=")
-          .append(SourceRules.sqlQuote(source.getString("talker")))
-          .append(" AND m.created_at<")
-          .append(source.getLong("created_at"))
-          .append(")");
-    }
-    if (filter.length() == 0) return new JSONArray();
+    long midpoint = earliest + (latest - earliest) / 2;
+    String full = fields().replace("substr(m.content,1,20000)", "m.content");
     return query(
-        "SELECT "
-            + fields().replace("substr(m.content,1,20000)", "substr(m.content,1,1000)")
+        attachAppState(memory)
+            + "SELECT "
+            + full
             + " FROM messages m LEFT JOIN contacts c ON c.account_id=m.account_id AND"
-            + " c.username=m.talker WHERE m.type=1 AND ("
-            + filter
-            + ") ORDER BY m.created_at DESC LIMIT 8;");
+            + " c.username=m.talker WHERE m.type=1 AND m.account_id="
+            + SourceRules.sqlQuote(source.getString("account_id"))
+            + " AND m.talker="
+            + SourceRules.sqlQuote(source.getString("talker"))
+            + " AND m.created_at BETWEEN "
+            + Math.max(0, earliest - 30L * 60000L)
+            + " AND "
+            + (latest + 30L * 60000L)
+            + " AND NOT EXISTS(SELECT 1 FROM appstate.conversation_exclusions e WHERE"
+            + " e.account_id=m.account_id AND e.talker=m.talker) ORDER BY CASE WHEN m.created_at"
+            + " BETWEEN "
+            + earliest
+            + " AND "
+            + latest
+            + " THEN 0 ELSE 1 END,abs(m.created_at-"
+            + midpoint
+            + "),m.msg_id LIMIT 40;");
   }
 
   public void initialize() throws Exception {

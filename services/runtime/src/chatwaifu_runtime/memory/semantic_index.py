@@ -144,16 +144,6 @@ class SQLiteSemanticMemoryIndex(SemanticMemoryIndex):
             )
         return sorted(scored, key=lambda item: item.score, reverse=True)[:limit]
 
-    async def rebuild(self, records: Sequence[MemoryRecord]) -> int:
-        fingerprint = self._models.embedding_fingerprint()
-        count = 0
-        for record in records:
-            if record.state == "active":
-                await self.upsert(record)
-                count += 1
-        await self.purge_stale_embeddings(fingerprint)
-        return count
-
 
 def _cosine(left: Sequence[float], right: Sequence[float]) -> float:
     if len(left) != len(right) or not left:

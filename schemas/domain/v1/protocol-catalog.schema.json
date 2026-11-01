@@ -1,5 +1,205 @@
 {
   "$defs": {
+    "ActionProposal": {
+      "properties": {
+        "action_id": {
+          "format": "uuid",
+          "title": "Action Id",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "maxItems": 30,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "expected_target_revision": {
+          "minimum": 0,
+          "title": "Expected Target Revision",
+          "type": "integer"
+        },
+        "intent_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intent Id"
+        },
+        "intent_revision": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intent Revision"
+        },
+        "requested_changes": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "target_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Id"
+        },
+        "task_id": {
+          "format": "uuid",
+          "title": "Task Id",
+          "type": "string"
+        },
+        "verification_requirements": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Verification Requirements",
+          "type": "array"
+        },
+        "work_item_id": {
+          "title": "Work Item Id",
+          "type": "string"
+        },
+        "work_revision": {
+          "minimum": 1,
+          "title": "Work Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "action_id",
+        "task_id",
+        "work_item_id",
+        "work_revision",
+        "expected_target_revision",
+        "evidence",
+        "requested_changes",
+        "target",
+        "verification_requirements"
+      ],
+      "title": "ActionProposal",
+      "type": "object"
+    },
+    "ActivityEntry": {
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "delivery": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Delivery",
+          "type": "object"
+        },
+        "delivery_history": {
+          "items": {
+            "$ref": "#/$defs/JsonObject"
+          },
+          "title": "Delivery History",
+          "type": "array"
+        },
+        "details": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference": {
+          "title": "Reference",
+          "type": "string"
+        },
+        "sequence": {
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "state": {
+          "title": "State",
+          "type": "string"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sequence",
+        "kind",
+        "reference",
+        "state",
+        "summary",
+        "created_at"
+      ],
+      "title": "ActivityEntry",
+      "type": "object"
+    },
+    "ActivityReceipt": {
+      "properties": {
+        "device_id": {
+          "format": "uuid",
+          "title": "Device Id",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "accepted",
+            "presented",
+            "blocked",
+            "opened",
+            "unknown"
+          ],
+          "title": "State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "device_id",
+        "state"
+      ],
+      "title": "ActivityReceipt",
+      "type": "object"
+    },
     "AffectState": {
       "properties": {
         "arousal": {
@@ -199,6 +399,18 @@
           ],
           "default": null
         },
+        "character_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Character Id"
+        },
         "completion_criteria": {
           "items": {
             "type": "string"
@@ -300,6 +512,17 @@
           "title": "Updated At",
           "type": "string"
         },
+        "wait_condition": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WaitCondition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "wake_at": {
           "anyOf": [
             {
@@ -312,6 +535,18 @@
           ],
           "default": null,
           "title": "Wake At"
+        },
+        "work_item_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Work Item Id"
         }
       },
       "required": [
@@ -7501,6 +7736,212 @@
         }
       ]
     },
+    "EvidenceRef": {
+      "properties": {
+        "kind": {
+          "enum": [
+            "event",
+            "knowledge"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Reference",
+          "type": "string"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "reference"
+      ],
+      "title": "EvidenceRef",
+      "type": "object"
+    },
+    "ExecutionBudget": {
+      "properties": {
+        "max_active_seconds": {
+          "minimum": 0,
+          "title": "Max Active Seconds",
+          "type": "number"
+        },
+        "max_tool_calls": {
+          "minimum": 0,
+          "title": "Max Tool Calls",
+          "type": "integer"
+        },
+        "remaining_active_seconds": {
+          "minimum": 0,
+          "title": "Remaining Active Seconds",
+          "type": "number"
+        },
+        "remaining_tool_calls": {
+          "minimum": 0,
+          "title": "Remaining Tool Calls",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_tool_calls",
+        "remaining_tool_calls",
+        "max_active_seconds",
+        "remaining_active_seconds"
+      ],
+      "title": "ExecutionBudget",
+      "type": "object"
+    },
+    "ExecutionContext": {
+      "properties": {
+        "audience": {
+          "default": "owner",
+          "enum": [
+            "owner",
+            "shared"
+          ],
+          "title": "Audience",
+          "type": "string"
+        },
+        "authority_revision": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Authority Revision"
+        },
+        "budget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExecutionBudget"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "character_id": {
+          "title": "Character Id",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "maxItems": 30,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "execution_id": {
+          "format": "uuid",
+          "title": "Execution Id",
+          "type": "string"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "intent_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intent Id"
+        },
+        "intent_revision": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intent Revision"
+        },
+        "mode": {
+          "enum": [
+            "interactive",
+            "observe",
+            "act",
+            "consolidate"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "owner": {
+          "title": "Owner",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "task_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Task Id"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turn Id"
+        }
+      },
+      "required": [
+        "owner",
+        "character_id",
+        "mode",
+        "session_id"
+      ],
+      "title": "ExecutionContext",
+      "type": "object"
+    },
     "GenerationSnapshot": {
       "properties": {
         "backend_kind": {
@@ -8029,6 +8470,94 @@
       "title": "GroupDiscussionPolicy",
       "type": "object"
     },
+    "IntentAction": {
+      "properties": {
+        "action": {
+          "enum": [
+            "pause",
+            "resume",
+            "revoke",
+            "enable"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "expected_revision": {
+          "minimum": 1,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "operation_id": {
+          "format": "uuid",
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "expected_revision",
+        "action"
+      ],
+      "title": "IntentAction",
+      "type": "object"
+    },
+    "IntentSchedule": {
+      "properties": {
+        "first_wake_at": {
+          "format": "date-time",
+          "title": "First Wake At",
+          "type": "string"
+        },
+        "kind": {
+          "default": "run",
+          "enum": [
+            "run",
+            "remind"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "repeat": {
+          "default": "none",
+          "enum": [
+            "none",
+            "daily",
+            "weekly"
+          ],
+          "title": "Repeat",
+          "type": "string"
+        },
+        "timezone": {
+          "default": "Asia/Shanghai",
+          "title": "Timezone",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        }
+      },
+      "required": [
+        "first_wake_at"
+      ],
+      "title": "IntentSchedule",
+      "type": "object"
+    },
     "InteractionTraceDetail": {
       "properties": {
         "delivery_parts": {
@@ -8336,6 +8865,46 @@
           "type": "null"
         }
       ]
+    },
+    "KnowledgeExcerpt": {
+      "properties": {
+        "confirmed": {
+          "title": "Confirmed",
+          "type": "boolean"
+        },
+        "evidence": {
+          "$ref": "#/$defs/EvidenceRef"
+        },
+        "occurred_at": {
+          "title": "Occurred At",
+          "type": "integer"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject"
+        },
+        "text": {
+          "maxLength": 2400,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence",
+        "text",
+        "confirmed",
+        "occurred_at"
+      ],
+      "title": "KnowledgeExcerpt",
+      "type": "object"
     },
     "LearnedSticker": {
       "properties": {
@@ -9114,6 +9683,20 @@
     },
     "MemoryContextPacket": {
       "properties": {
+        "knowledge_epoch": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Knowledge Epoch",
+          "type": "integer"
+        },
+        "knowledge_evidence": {
+          "items": {
+            "$ref": "#/$defs/KnowledgeExcerpt"
+          },
+          "maxItems": 12,
+          "title": "Knowledge Evidence",
+          "type": "array"
+        },
         "open_commitments": {
           "items": {
             "$ref": "#/$defs/MemoryExcerpt"
@@ -9320,6 +9903,23 @@
           "default": null,
           "title": "Decided At"
         },
+        "decision_basis": {
+          "anyOf": [
+            {
+              "enum": [
+                "human",
+                "policy",
+                "explicit_command"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Decision Basis"
+        },
         "evidence_event_ids": {
           "items": {
             "format": "uuid",
@@ -9331,6 +9931,18 @@
         },
         "operation": {
           "$ref": "#/$defs/MemoryOperation"
+        },
+        "policy_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Policy Version"
         },
         "proposal_id": {
           "format": "uuid",
@@ -9993,6 +10605,76 @@
         "model"
       ],
       "title": "NonsecretModelRoute",
+      "type": "object"
+    },
+    "Observation": {
+      "properties": {
+        "attempts": {
+          "default": 0,
+          "title": "Attempts",
+          "type": "integer"
+        },
+        "evidence": {
+          "$ref": "#/$defs/EvidenceRef"
+        },
+        "ingestion_mode": {
+          "enum": [
+            "live",
+            "historical",
+            "delayed"
+          ],
+          "title": "Ingestion Mode",
+          "type": "string"
+        },
+        "observation_id": {
+          "format": "uuid",
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "occurred_at": {
+          "title": "Occurred At",
+          "type": "integer"
+        },
+        "owner": {
+          "title": "Owner",
+          "type": "string"
+        },
+        "policy_epoch": {
+          "title": "Policy Epoch",
+          "type": "integer"
+        },
+        "received_at": {
+          "title": "Received At",
+          "type": "integer"
+        },
+        "room_id": {
+          "title": "Room Id",
+          "type": "string"
+        },
+        "state": {
+          "default": "pending",
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed",
+            "superseded"
+          ],
+          "title": "State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "observation_id",
+        "owner",
+        "room_id",
+        "evidence",
+        "ingestion_mode",
+        "occurred_at",
+        "received_at",
+        "policy_epoch"
+      ],
+      "title": "Observation",
       "type": "object"
     },
     "ParticipantSnapshot": {
@@ -10768,6 +11450,79 @@
       "title": "PrivacyLevel",
       "type": "string"
     },
+    "ProcessingRequest": {
+      "properties": {
+        "action": {
+          "enum": [
+            "prepare",
+            "activate"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "completed_sources": {
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "maxItems": 10000,
+          "title": "Completed Sources",
+          "type": "array"
+        },
+        "device_id": {
+          "format": "uuid",
+          "title": "Device Id",
+          "type": "string"
+        },
+        "drained": {
+          "default": false,
+          "title": "Drained",
+          "type": "boolean"
+        },
+        "expected_epoch": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Expected Epoch",
+          "type": "integer"
+        },
+        "pending_reviews": {
+          "items": {
+            "$ref": "#/$defs/JsonObject"
+          },
+          "maxItems": 100,
+          "title": "Pending Reviews",
+          "type": "array"
+        },
+        "room_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "Room Ids",
+          "type": "array"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "watermarks": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Watermarks",
+          "type": "object"
+        }
+      },
+      "required": [
+        "session_id",
+        "device_id",
+        "room_ids",
+        "action"
+      ],
+      "title": "ProcessingRequest",
+      "type": "object"
+    },
     "PromptBudgetReport": {
       "properties": {
         "budget": {
@@ -11039,6 +11794,126 @@
         "updated_at"
       ],
       "title": "RelationshipState",
+      "type": "object"
+    },
+    "ReminderOccurrence": {
+      "properties": {
+        "accepted_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Accepted At"
+        },
+        "accepted_work_revision": {
+          "default": 0,
+          "title": "Accepted Work Revision",
+          "type": "integer"
+        },
+        "acknowledged_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Acknowledged At"
+        },
+        "content_fingerprint": {
+          "default": "",
+          "title": "Content Fingerprint",
+          "type": "string"
+        },
+        "occurrence_id": {
+          "format": "uuid",
+          "title": "Occurrence Id",
+          "type": "string"
+        },
+        "owner": {
+          "title": "Owner",
+          "type": "string"
+        },
+        "presented_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Presented At"
+        },
+        "primary_device_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Primary Device Id"
+        },
+        "scheduled_at": {
+          "format": "date-time",
+          "title": "Scheduled At",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "scheduled",
+            "waiting_device",
+            "accepted",
+            "presented",
+            "dismissed",
+            "snoozed",
+            "completed",
+            "cancelled",
+            "blocked",
+            "outcome_unknown"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "work_item_id": {
+          "title": "Work Item Id",
+          "type": "string"
+        },
+        "work_revision": {
+          "title": "Work Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "occurrence_id",
+        "owner",
+        "work_item_id",
+        "work_revision",
+        "scheduled_at",
+        "state",
+        "updated_at"
+      ],
+      "title": "ReminderOccurrence",
       "type": "object"
     },
     "ResponsePlan": {
@@ -11898,6 +12773,18 @@
           "title": "Enabled",
           "type": "boolean"
         },
+        "execution_modes": {
+          "items": {
+            "enum": [
+              "interactive",
+              "explicit_task",
+              "unattended"
+            ],
+            "type": "string"
+          },
+          "title": "Execution Modes",
+          "type": "array"
+        },
         "interruptible": {
           "default": true,
           "title": "Interruptible",
@@ -12273,6 +13160,447 @@
       "title": "SkillRunState",
       "type": "string"
     },
+    "StandingIntent": {
+      "properties": {
+        "allow_writes": {
+          "default": false,
+          "title": "Allow Writes",
+          "type": "boolean"
+        },
+        "allowed_operations": {
+          "items": {
+            "enum": [
+              "create",
+              "update",
+              "complete",
+              "cancel",
+              "delete"
+            ],
+            "type": "string"
+          },
+          "title": "Allowed Operations",
+          "type": "array"
+        },
+        "allowed_skill_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 1,
+          "title": "Allowed Skill Ids",
+          "type": "array"
+        },
+        "calendar_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Calendar Ids",
+          "type": "array"
+        },
+        "capability_fingerprints": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Capability Fingerprints",
+          "type": "object"
+        },
+        "character_id": {
+          "title": "Character Id",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "expires_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expires At"
+        },
+        "goal": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Goal",
+          "type": "string"
+        },
+        "intent_id": {
+          "format": "uuid",
+          "title": "Intent Id",
+          "type": "string"
+        },
+        "max_active_seconds": {
+          "default": 300,
+          "maximum": 1800,
+          "minimum": 30,
+          "title": "Max Active Seconds",
+          "type": "integer"
+        },
+        "max_tool_calls": {
+          "default": 20,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Max Tool Calls",
+          "type": "integer"
+        },
+        "observe_calendar": {
+          "default": false,
+          "title": "Observe Calendar",
+          "type": "boolean"
+        },
+        "owner": {
+          "title": "Owner",
+          "type": "string"
+        },
+        "resource_roots": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Resource Roots",
+          "type": "array"
+        },
+        "revision": {
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "room_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Room Ids",
+          "type": "array"
+        },
+        "schedule": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IntentSchedule"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "shadow": {
+          "default": true,
+          "title": "Shadow",
+          "type": "boolean"
+        },
+        "state": {
+          "default": "active",
+          "enum": [
+            "active",
+            "paused",
+            "revoked"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "tasklist_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Tasklist Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "session_id",
+        "goal",
+        "allowed_skill_ids",
+        "intent_id",
+        "owner",
+        "character_id",
+        "revision",
+        "created_at"
+      ],
+      "title": "StandingIntent",
+      "type": "object"
+    },
+    "StandingIntentInput": {
+      "properties": {
+        "allow_writes": {
+          "default": false,
+          "title": "Allow Writes",
+          "type": "boolean"
+        },
+        "allowed_operations": {
+          "items": {
+            "enum": [
+              "create",
+              "update",
+              "complete",
+              "cancel",
+              "delete"
+            ],
+            "type": "string"
+          },
+          "title": "Allowed Operations",
+          "type": "array"
+        },
+        "allowed_skill_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 1,
+          "title": "Allowed Skill Ids",
+          "type": "array"
+        },
+        "calendar_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Calendar Ids",
+          "type": "array"
+        },
+        "expires_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expires At"
+        },
+        "goal": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Goal",
+          "type": "string"
+        },
+        "max_active_seconds": {
+          "default": 300,
+          "maximum": 1800,
+          "minimum": 30,
+          "title": "Max Active Seconds",
+          "type": "integer"
+        },
+        "max_tool_calls": {
+          "default": 20,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Max Tool Calls",
+          "type": "integer"
+        },
+        "observe_calendar": {
+          "default": false,
+          "title": "Observe Calendar",
+          "type": "boolean"
+        },
+        "resource_roots": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Resource Roots",
+          "type": "array"
+        },
+        "room_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Room Ids",
+          "type": "array"
+        },
+        "schedule": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IntentSchedule"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "shadow": {
+          "default": true,
+          "title": "Shadow",
+          "type": "boolean"
+        },
+        "tasklist_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Tasklist Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "session_id",
+        "goal",
+        "allowed_skill_ids"
+      ],
+      "title": "StandingIntentInput",
+      "type": "object"
+    },
+    "StandingIntentUpdate": {
+      "properties": {
+        "allow_writes": {
+          "default": false,
+          "title": "Allow Writes",
+          "type": "boolean"
+        },
+        "allowed_operations": {
+          "items": {
+            "enum": [
+              "create",
+              "update",
+              "complete",
+              "cancel",
+              "delete"
+            ],
+            "type": "string"
+          },
+          "title": "Allowed Operations",
+          "type": "array"
+        },
+        "allowed_skill_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "minItems": 1,
+          "title": "Allowed Skill Ids",
+          "type": "array"
+        },
+        "calendar_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Calendar Ids",
+          "type": "array"
+        },
+        "expected_revision": {
+          "minimum": 1,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "expires_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expires At"
+        },
+        "goal": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Goal",
+          "type": "string"
+        },
+        "max_active_seconds": {
+          "default": 300,
+          "maximum": 1800,
+          "minimum": 30,
+          "title": "Max Active Seconds",
+          "type": "integer"
+        },
+        "max_tool_calls": {
+          "default": 20,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Max Tool Calls",
+          "type": "integer"
+        },
+        "observe_calendar": {
+          "default": false,
+          "title": "Observe Calendar",
+          "type": "boolean"
+        },
+        "resource_roots": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Resource Roots",
+          "type": "array"
+        },
+        "room_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Room Ids",
+          "type": "array"
+        },
+        "schedule": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IntentSchedule"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "shadow": {
+          "default": true,
+          "title": "Shadow",
+          "type": "boolean"
+        },
+        "tasklist_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Tasklist Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "session_id",
+        "goal",
+        "allowed_skill_ids",
+        "expected_revision"
+      ],
+      "title": "StandingIntentUpdate",
+      "type": "object"
+    },
     "StickerLibraryDeleteResult": {
       "properties": {
         "deleted": {
@@ -12582,10 +13910,43 @@
           "title": "Capability Fingerprints",
           "type": "object"
         },
+        "evidence_refs": {
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "maxItems": 30,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
         "expires_at": {
           "format": "date-time",
           "title": "Expires At",
           "type": "string"
+        },
+        "intent_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intent Id"
+        },
+        "intent_revision": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intent Revision"
         },
         "resource_roots": {
           "items": {
@@ -12594,6 +13955,19 @@
           "maxItems": 16,
           "title": "Resource Roots",
           "type": "array"
+        },
+        "scheduled_for": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scheduled For"
         },
         "schema_version": {
           "const": "1.0",
@@ -12606,6 +13980,29 @@
           "minLength": 1,
           "title": "Source Ref",
           "type": "string"
+        },
+        "source_room_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Source Room Ids",
+          "type": "array"
+        },
+        "tasklist_ids": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tasklist Ids"
         }
       },
       "required": [
@@ -13937,11 +15334,760 @@
       ],
       "title": "VideoFrameHeader",
       "type": "object"
+    },
+    "WaitCondition": {
+      "properties": {
+        "kind": {
+          "enum": [
+            "input",
+            "source",
+            "time",
+            "authorization",
+            "device",
+            "outcome",
+            "task"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reference"
+        },
+        "room_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Room Ids",
+          "type": "array"
+        },
+        "sender_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sender Id"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "WaitCondition",
+      "type": "object"
+    },
+    "WorkItem": {
+      "properties": {
+        "acceptance": {
+          "default": "pending",
+          "enum": [
+            "pending",
+            "human",
+            "policy"
+          ],
+          "title": "Acceptance",
+          "type": "string"
+        },
+        "action_scope": {
+          "default": "single",
+          "enum": [
+            "single",
+            "series",
+            "following"
+          ],
+          "title": "Action Scope",
+          "type": "string"
+        },
+        "bindings": {
+          "items": {
+            "$ref": "#/$defs/JsonObject"
+          },
+          "maxItems": 16,
+          "title": "Bindings",
+          "type": "array"
+        },
+        "clear_due": {
+          "default": false,
+          "title": "Clear Due",
+          "type": "boolean"
+        },
+        "details": {
+          "default": "",
+          "maxLength": 64000,
+          "title": "Details",
+          "type": "string"
+        },
+        "due_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Due At"
+        },
+        "due_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Due Date"
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Date"
+        },
+        "ends_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ends At"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "maxItems": 30,
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "expected_revision": {
+          "default": 0,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "ingestion_mode": {
+          "default": "historical",
+          "enum": [
+            "live",
+            "historical",
+            "delayed"
+          ],
+          "title": "Ingestion Mode",
+          "type": "string"
+        },
+        "involvement": {
+          "default": "unclear",
+          "enum": [
+            "self",
+            "other",
+            "unclear"
+          ],
+          "title": "Involvement",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "todo",
+            "event",
+            "memory",
+            "reference",
+            "decision"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "legacy_record_id": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Legacy Record Id"
+        },
+        "legacy_review": {
+          "default": false,
+          "title": "Legacy Review",
+          "type": "boolean"
+        },
+        "memory_identity": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "migration_target": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "operation": {
+          "default": "create",
+          "enum": [
+            "create",
+            "update",
+            "complete",
+            "cancel"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "owner": {
+          "default": "local",
+          "title": "Owner",
+          "type": "string"
+        },
+        "previous_ends_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Previous Ends At"
+        },
+        "previous_starts_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Previous Starts At"
+        },
+        "primary_device_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Primary Device Id"
+        },
+        "provider_updated_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Updated At"
+        },
+        "reconciled_task_revision": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reconciled Task Revision"
+        },
+        "remind_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Remind At"
+        },
+        "reminder_offset_seconds": {
+          "anyOf": [
+            {
+              "maximum": 2678400,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reminder Offset Seconds"
+        },
+        "reminder_rule": {
+          "default": "absolute",
+          "enum": [
+            "absolute",
+            "relative"
+          ],
+          "title": "Reminder Rule",
+          "type": "string"
+        },
+        "requested_fields": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 16,
+          "title": "Requested Fields",
+          "type": "array"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "room_id": {
+          "title": "Room Id",
+          "type": "string"
+        },
+        "source_room_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Source Room Ids",
+          "type": "array"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Date"
+        },
+        "starts_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Starts At"
+        },
+        "state": {
+          "enum": [
+            "proposed",
+            "open",
+            "waiting",
+            "blocked",
+            "completed",
+            "cancelled",
+            "rejected"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "target_applied_revision": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Applied Revision"
+        },
+        "target_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Id"
+        },
+        "task_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Task Id"
+        },
+        "temporal_reason": {
+          "default": "",
+          "maxLength": 200,
+          "title": "Temporal Reason",
+          "type": "string"
+        },
+        "temporal_status": {
+          "default": "current",
+          "enum": [
+            "current",
+            "historical",
+            "uncertain"
+          ],
+          "title": "Temporal Status",
+          "type": "string"
+        },
+        "timezone": {
+          "default": "Asia/Shanghai",
+          "title": "Timezone",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "waiting_reason": {
+          "anyOf": [
+            {
+              "maxLength": 1200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Waiting Reason"
+        },
+        "work_item_id": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Work Item Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "work_item_id",
+        "room_id",
+        "kind",
+        "title",
+        "state",
+        "evidence",
+        "updated_at"
+      ],
+      "title": "WorkItem",
+      "type": "object"
+    },
+    "WorkItemAction": {
+      "properties": {
+        "action": {
+          "enum": [
+            "confirm",
+            "reject",
+            "complete",
+            "cancel",
+            "snooze",
+            "edit",
+            "link"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "changes": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WorkItemEdit"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "expected_revision": {
+          "minimum": 1,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "expected_target_revision": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Target Revision"
+        },
+        "operation_id": {
+          "format": "uuid",
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "remind_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Remind At"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "target_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Id"
+        }
+      },
+      "required": [
+        "session_id",
+        "expected_revision",
+        "action"
+      ],
+      "title": "WorkItemAction",
+      "type": "object"
+    },
+    "WorkItemEdit": {
+      "properties": {
+        "details": {
+          "anyOf": [
+            {
+              "maxLength": 2400,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Details"
+        },
+        "due_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Due At"
+        },
+        "due_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Due Date"
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Date"
+        },
+        "ends_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ends At"
+        },
+        "involvement": {
+          "anyOf": [
+            {
+              "enum": [
+                "self",
+                "other",
+                "unclear"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Involvement"
+        },
+        "primary_device_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Primary Device Id"
+        },
+        "remind_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Remind At"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Date"
+        },
+        "starts_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Starts At"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        }
+      },
+      "title": "WorkItemEdit",
+      "type": "object"
     }
   },
   "$id": "https://chatwaifu.local/schemas/domain/v1/protocol-catalog.schema.json",
   "description": "Schema-only catalog used to generate a single conflict-free TypeScript module.",
   "properties": {
+    "action_proposal": {
+      "$ref": "#/$defs/ActionProposal"
+    },
+    "activity_entry": {
+      "$ref": "#/$defs/ActivityEntry"
+    },
+    "activity_receipt": {
+      "$ref": "#/$defs/ActivityReceipt"
+    },
     "agent_development_policy": {
       "$ref": "#/$defs/AgentDevelopmentPolicy"
     },
@@ -14187,6 +16333,12 @@
     "event": {
       "$ref": "#/$defs/EventModel"
     },
+    "evidence_ref": {
+      "$ref": "#/$defs/EvidenceRef"
+    },
+    "execution_context": {
+      "$ref": "#/$defs/ExecutionContext"
+    },
     "generation": {
       "$ref": "#/$defs/GenerationSnapshot"
     },
@@ -14199,11 +16351,17 @@
     "group_discussion_policy": {
       "$ref": "#/$defs/GroupDiscussionPolicy"
     },
+    "intent_action": {
+      "$ref": "#/$defs/IntentAction"
+    },
     "interaction_trace_detail": {
       "$ref": "#/$defs/InteractionTraceDetail"
     },
     "interaction_trace_page": {
       "$ref": "#/$defs/InteractionTracePage"
+    },
+    "knowledge_excerpt": {
+      "$ref": "#/$defs/KnowledgeExcerpt"
     },
     "learned_sticker": {
       "$ref": "#/$defs/LearnedSticker"
@@ -14235,6 +16393,9 @@
     "model": {
       "$ref": "#/$defs/ModelManifest"
     },
+    "observation": {
+      "$ref": "#/$defs/Observation"
+    },
     "participant": {
       "$ref": "#/$defs/ParticipantSnapshot"
     },
@@ -14265,11 +16426,17 @@
     "plugin_manifest": {
       "$ref": "#/$defs/PluginManifest"
     },
+    "processing_request": {
+      "$ref": "#/$defs/ProcessingRequest"
+    },
     "prompt_budget": {
       "$ref": "#/$defs/PromptBudgetReport"
     },
     "prompt_context_identity": {
       "$ref": "#/$defs/PromptContextIdentity"
+    },
+    "reminder_occurrence": {
+      "$ref": "#/$defs/ReminderOccurrence"
     },
     "response_plan": {
       "$ref": "#/$defs/ResponsePlan"
@@ -14297,6 +16464,15 @@
     },
     "skill_run": {
       "$ref": "#/$defs/SkillRunSnapshot"
+    },
+    "standing_intent": {
+      "$ref": "#/$defs/StandingIntent"
+    },
+    "standing_intent_input": {
+      "$ref": "#/$defs/StandingIntentInput"
+    },
+    "standing_intent_update": {
+      "$ref": "#/$defs/StandingIntentUpdate"
     },
     "sticker_library_delete_result": {
       "$ref": "#/$defs/StickerLibraryDeleteResult"
@@ -14336,9 +16512,30 @@
     },
     "video_frame": {
       "$ref": "#/$defs/VideoFrameHeader"
+    },
+    "work_item": {
+      "$ref": "#/$defs/WorkItem"
+    },
+    "work_item_action": {
+      "$ref": "#/$defs/WorkItemAction"
     }
   },
   "required": [
+    "evidence_ref",
+    "execution_context",
+    "knowledge_excerpt",
+    "standing_intent",
+    "standing_intent_input",
+    "standing_intent_update",
+    "intent_action",
+    "observation",
+    "processing_request",
+    "reminder_occurrence",
+    "work_item",
+    "work_item_action",
+    "action_proposal",
+    "activity_receipt",
+    "activity_entry",
     "agent_development_policy",
     "candidate_feature",
     "candidate_create",

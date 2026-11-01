@@ -9,6 +9,7 @@ from uuid import uuid4
 
 import pytest
 from chatwaifu_protocol.character import ModelContextBudget, PromptBudgetReport
+from chatwaifu_protocol.memory import MemoryContextPacket
 from chatwaifu_protocol.session import GenerationState
 from chatwaifu_runtime.conversation.models import (
     ConversationTurnOptions,
@@ -83,6 +84,9 @@ async def test_image_loaded_before_llm_and_request_has_images(
     )
     service._emit_generic = AsyncMock()
     service._emit_avatar = AsyncMock()
+    service._ensure_generation_context = ConversationService._ensure_generation_context.__get__(
+        service, ConversationService
+    )
     service._ensure_current = MagicMock()
     service._complete = AsyncMock()
     service._cancelled = AsyncMock()
@@ -113,12 +117,12 @@ async def test_image_loaded_before_llm_and_request_has_images(
         image_loader=image_loader,
     )
     accepted = _make_accepted()
-    character = MagicMock()
+    character = MagicMock(character_id="default")
     character.display_name = "Waifu"
-    character_context = MagicMock()
-    character_context.snapshot = MagicMock()
+    character_context = MagicMock(snapshot=MagicMock(user_scope="local"))
+    character_context.snapshot = MagicMock(user_scope="local")
     character_context.plan = MagicMock()
-    memory_context = MagicMock()
+    memory_context = MemoryContextPacket(token_budget_used=0)
 
     await service._run_generation(
         accepted,
@@ -158,6 +162,9 @@ async def test_cancelled_loader_no_stale_llm_or_output() -> None:
     service._prompt_compiler.compile = AsyncMock(return_value=_FakeCompilation())
     service._emit_generic = AsyncMock()
     service._emit_avatar = AsyncMock()
+    service._ensure_generation_context = ConversationService._ensure_generation_context.__get__(
+        service, ConversationService
+    )
     service._ensure_current = MagicMock()
     service._complete = AsyncMock()
     service._cancelled = AsyncMock()
@@ -176,9 +183,9 @@ async def test_cancelled_loader_no_stale_llm_or_output() -> None:
         image_loader=cancelling_loader,
     )
     accepted = _make_accepted()
-    character = MagicMock()
-    character_context = MagicMock()
-    memory_context = MagicMock()
+    character = MagicMock(character_id="default")
+    character_context = MagicMock(snapshot=MagicMock(user_scope="local"))
+    memory_context = MemoryContextPacket(token_budget_used=0)
 
     with pytest.raises(asyncio.CancelledError):
         await service._run_generation(
@@ -213,6 +220,9 @@ async def test_loader_failure_uses_existing_recovery_once() -> None:
     service._prompt_compiler.compile = AsyncMock(return_value=_FakeCompilation())
     service._emit_generic = AsyncMock()
     service._emit_avatar = AsyncMock()
+    service._ensure_generation_context = ConversationService._ensure_generation_context.__get__(
+        service, ConversationService
+    )
     service._ensure_current = MagicMock()
     service._complete = AsyncMock()
     service._cancelled = AsyncMock()
@@ -234,9 +244,9 @@ async def test_loader_failure_uses_existing_recovery_once() -> None:
         failure_recovery_text="抱歉，图片解析失败了，请稍后再试。",
     )
     accepted = _make_accepted()
-    character = MagicMock()
-    character_context = MagicMock()
-    memory_context = MagicMock()
+    character = MagicMock(character_id="default")
+    character_context = MagicMock(snapshot=MagicMock(user_scope="local"))
+    memory_context = MemoryContextPacket(token_budget_used=0)
 
     await service._run_generation(
         accepted,
@@ -286,6 +296,9 @@ async def test_bytes_not_in_persisted_events() -> None:
 
     service._emit_generic = fake_emit_generic
     service._emit_avatar = AsyncMock()
+    service._ensure_generation_context = ConversationService._ensure_generation_context.__get__(
+        service, ConversationService
+    )
     service._ensure_current = MagicMock()
     service._complete = AsyncMock()
     service._cancelled = AsyncMock()
@@ -310,9 +323,9 @@ async def test_bytes_not_in_persisted_events() -> None:
         image_loader=image_loader,
     )
     accepted = _make_accepted()
-    character = MagicMock()
-    character_context = MagicMock()
-    memory_context = MagicMock()
+    character = MagicMock(character_id="default")
+    character_context = MagicMock(snapshot=MagicMock(user_scope="local"))
+    memory_context = MemoryContextPacket(token_budget_used=0)
 
     await service._run_generation(
         accepted,
@@ -347,6 +360,9 @@ async def test_stale_before_loader_prevents_image_load() -> None:
     service._prompt_compiler.compile = AsyncMock(return_value=_FakeCompilation())
     service._emit_generic = AsyncMock()
     service._emit_avatar = AsyncMock()
+    service._ensure_generation_context = ConversationService._ensure_generation_context.__get__(
+        service, ConversationService
+    )
     service._ensure_current = MagicMock(
         side_effect=asyncio.CancelledError("generation is no longer active")
     )
@@ -371,9 +387,9 @@ async def test_stale_before_loader_prevents_image_load() -> None:
         image_loader=dummy_loader,
     )
     accepted = _make_accepted()
-    character = MagicMock()
-    character_context = MagicMock()
-    memory_context = MagicMock()
+    character = MagicMock(character_id="default")
+    character_context = MagicMock(snapshot=MagicMock(user_scope="local"))
+    memory_context = MemoryContextPacket(token_budget_used=0)
 
     with pytest.raises(asyncio.CancelledError):
         await service._run_generation(
@@ -414,6 +430,9 @@ async def test_stale_after_loader_prevents_llm_stream() -> None:
         if loader_called:
             raise asyncio.CancelledError("generation is no longer active")
 
+    service._ensure_generation_context = ConversationService._ensure_generation_context.__get__(
+        service, ConversationService
+    )
     service._ensure_current = MagicMock(side_effect=ensure_current)
     service._complete = AsyncMock()
     service._cancelled = AsyncMock()
@@ -436,9 +455,9 @@ async def test_stale_after_loader_prevents_llm_stream() -> None:
         image_loader=dummy_loader,
     )
     accepted = _make_accepted()
-    character = MagicMock()
-    character_context = MagicMock()
-    memory_context = MagicMock()
+    character = MagicMock(character_id="default")
+    character_context = MagicMock(snapshot=MagicMock(user_scope="local"))
+    memory_context = MemoryContextPacket(token_budget_used=0)
 
     with pytest.raises(asyncio.CancelledError):
         await service._run_generation(
@@ -474,6 +493,9 @@ async def test_non_image_turn_failure_uses_provider_error() -> None:
     service._prompt_compiler.compile = AsyncMock(return_value=_FakeCompilation())
     service._emit_generic = AsyncMock()
     service._emit_avatar = AsyncMock()
+    service._ensure_generation_context = ConversationService._ensure_generation_context.__get__(
+        service, ConversationService
+    )
     service._ensure_current = MagicMock()
     service._complete = AsyncMock()
     service._cancelled = AsyncMock()
@@ -497,9 +519,9 @@ async def test_non_image_turn_failure_uses_provider_error() -> None:
         failure_recovery_text="default recovery",
     )
     accepted = _make_accepted()
-    character = MagicMock()
-    character_context = MagicMock()
-    memory_context = MagicMock()
+    character = MagicMock(character_id="default")
+    character_context = MagicMock(snapshot=MagicMock(user_scope="local"))
+    memory_context = MemoryContextPacket(token_budget_used=0)
 
     await service._run_generation(
         accepted,

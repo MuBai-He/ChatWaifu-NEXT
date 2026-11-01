@@ -24,6 +24,7 @@ from chatwaifu_runtime.photo_memory.ports import (
     EmbeddingModality,
     PhotoEmbeddingInput,
 )
+from chatwaifu_runtime.providers.admission import ModelAdmission, work_class
 from chatwaifu_runtime.providers.context_budget import resolve_context_budget
 from chatwaifu_runtime.providers.contracts import (
     BehaviorDecisionProvider,
@@ -158,6 +159,7 @@ class ModelConfigurationService:
     def __init__(self, database: Database, settings: Settings) -> None:
         self._database = database
         self._settings = settings
+        self.admission = ModelAdmission()
         self._secrets = LocalModelSecretStore(settings.config_dir / "model-secrets.json")
         self._configs: dict[ModelRole, ModelRoleConfig] = {}
         self.chat = ConfigurableChatModel(self)
@@ -168,12 +170,13 @@ class ModelConfigurationService:
         async with self._database.transaction() as connection:
             for role, config in defaults.items():
                 await connection.execute(
-                    """
-                    INSERT OR IGNORE INTO model_role_configs(
-                        role, provider, model, base_url, timeout_seconds,
-                        context_window, enabled, updated_at, budget_json
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
+                    (
+                        "\n                    INSERT OR IGNORE INTO model_role_configs(\n   "
+                        "                     role, provider, model, base_url, "
+                        "timeout_seconds,\n                        context_window, enabled, "
+                        "updated_at, budget_json\n                    ) VALUES (?, ?, ?, ?, "
+                        "?, ?, ?, ?, ?)\n                    "
+                    ),
                     (
                         role,
                         config.provider,
@@ -190,11 +193,9 @@ class ModelConfigurationService:
 
     async def reload(self) -> None:
         rows = await self._database.fetchall(
-            """
-            SELECT role, provider, model, base_url, timeout_seconds,
-                   context_window, enabled, updated_at, budget_json
-            FROM model_role_configs ORDER BY role
-            """
+            "\n            SELECT role, provider, model, base_url, timeout_seconds,\n    "
+            "               context_window, enabled, updated_at, budget_json\n           "
+            " FROM model_role_configs ORDER BY role\n            "
         )
         configs: dict[ModelRole, ModelRoleConfig] = {}
         for row in rows:
@@ -238,21 +239,19 @@ class ModelConfigurationService:
         now = datetime.now(UTC)
         async with self._database.transaction() as connection:
             await connection.execute(
-                """
-                INSERT INTO model_role_configs(
-                    role, provider, model, base_url, timeout_seconds,
-                    context_window, enabled, updated_at, budget_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(role) DO UPDATE SET
-                    provider = excluded.provider,
-                    model = excluded.model,
-                    base_url = excluded.base_url,
-                    timeout_seconds = excluded.timeout_seconds,
-                    context_window = excluded.context_window,
-                    budget_json = excluded.budget_json,
-                    enabled = excluded.enabled,
-                    updated_at = excluded.updated_at
-                """,
+                (
+                    "\n                INSERT INTO model_role_configs(\n                    "
+                    "role, provider, model, base_url, timeout_seconds,\n                    "
+                    "context_window, enabled, updated_at, budget_json\n                ) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)\n                ON CONFLICT(role) "
+                    "DO UPDATE SET\n                    provider = excluded.provider,\n      "
+                    "              model = excluded.model,\n                    base_url = "
+                    "excluded.base_url,\n                    timeout_seconds = "
+                    "excluded.timeout_seconds,\n                    context_window = "
+                    "excluded.context_window,\n                    budget_json = "
+                    "excluded.budget_json,\n                    enabled = excluded.enabled,\n"
+                    "                    updated_at = excluded.updated_at\n                "
+                ),
                 (
                     config.role,
                     config.provider,
@@ -307,7 +306,13 @@ class ModelConfigurationService:
         headers = {"Content-Type": "application/json"}
         if key := self._secrets.get(role):
             headers["Authorization"] = f"Bearer {key}"
-        async with httpx2.AsyncClient(timeout=effective_config.timeout_seconds) as client:
+        async with (
+            self.admission.enter(
+                effective_config.base_url + "/" + effective_config.model,
+                "historical" if work_class.get() == "historical" else "background",
+            ),
+            httpx2.AsyncClient(timeout=effective_config.timeout_seconds) as client,
+        ):
             response = await client.post(
                 openai_compatible_endpoint(effective_config.base_url, "chat/completions"),
                 headers=headers,
@@ -499,11 +504,15 @@ class ModelConfigurationService:
             return DemoLlmProvider(self._settings.llm.demo_chunk_delay_ms)
         if config.provider == "demo":
             return DemoLlmProvider(self._settings.llm.demo_chunk_delay_ms)
-        return OpenAiCompatibleLlmProvider(
-            base_url=config.base_url,
-            model=config.model,
-            api_key=lambda: self._secrets.get(config.role),
-            timeout_seconds=config.timeout_seconds,
+        return _AdmittedProvider(
+            self.admission,
+            config.base_url + "/" + config.model,
+            OpenAiCompatibleLlmProvider(
+                base_url=config.base_url,
+                model=config.model,
+                api_key=lambda: self._secrets.get(config.role),
+                timeout_seconds=config.timeout_seconds,
+            ),
         )
 
     def chat_provider(self) -> LlmProvider:
@@ -580,6 +589,24 @@ class ModelConfigurationService:
                 updated_at=now,
             ),
         }
+
+
+class _AdmittedProvider:
+    def __init__(self, admission: ModelAdmission, route: str, provider: LlmProvider) -> None:
+        self._admission, self._route, self._provider = admission, route, provider
+
+    @property
+    def kind(self) -> str:
+        return self._provider.kind
+
+    @property
+    def supports_tool_calling(self) -> bool:
+        return self._provider.supports_tool_calling
+
+    async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
+        async with self._admission.enter(self._route):
+            async for event in self._provider.stream(request):
+                yield event
 
 
 class ConfigurableChatModel:

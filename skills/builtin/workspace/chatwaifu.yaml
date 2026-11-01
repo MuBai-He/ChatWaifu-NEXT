@@ -99,7 +99,8 @@
           },
         ],
       "interruptible": true,
-      "background_allowed": true,
+      "execution_modes": ["interactive","explicit_task","unattended"],
+    "background_allowed": true,
     },
   "adapter": { "kind": "builtin", "handler": "workspace_list" },
 }

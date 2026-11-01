@@ -20,10 +20,25 @@ import org.robolectric.annotation.Config;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 33, application = Application.class)
 public class AiReviewBatchTest {
+  @org.robolectric.annotation.Implements(className = "android.app.JobSchedulerImpl", isInAndroidSdk = false)
+  public static class ObservingJobs extends org.robolectric.shadows.ShadowJobScheduler.ShadowJobSchedulerImpl {
+    static MemoryStore owner;
+    static int immediate;
+    static boolean duringWrite;
+
+    @Override @org.robolectric.annotation.Implementation
+    public int schedule(android.app.job.JobInfo job) {
+      if (job.getId() == 8811 && owner != null) {
+        immediate++;
+        duringWrite |= owner.getWritableDatabase().inTransaction();
+      }
+      return super.schedule(job);
+    }
+  }
   private Context context;
   private MemoryStore memory;
   private String name;
-  private static final long NOW = 1791800000000L;
+  private static final long NOW = System.currentTimeMillis();
 
   @Before
   public void setup() {
@@ -121,6 +136,107 @@ public class AiReviewBatchTest {
     assertEquals("handled", state(memo));
     assertThrows(IllegalStateException.class, () -> AiReviewBatch.confirm(memory, preview, NOW));
     assertEquals(1, count("work_items"));
+  }
+
+  @Test
+  public void previewDoesNotWaitForTheWriterAndSiblingCloseKeepsTheDatabaseAlive() throws Exception {
+    JSONObject item = proposal("read-only-preview", "fact");
+    java.util.concurrent.ExecutorService threads = java.util.concurrent.Executors.newFixedThreadPool(2);
+    java.util.concurrent.CountDownLatch writing = new java.util.concurrent.CountDownLatch(1),
+        release = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.Future<?> writer = threads.submit(() -> {
+      try (MemoryStore sibling = new MemoryStore(context, name)) {
+        android.database.sqlite.SQLiteDatabase db = sibling.getWritableDatabase();
+        db.beginTransactionNonExclusive();
+        try {
+          writing.countDown();
+          release.await();
+          db.setTransactionSuccessful();
+        } finally { db.endTransaction(); }
+      } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+    });
+    try {
+      assertTrue(writing.await(5, java.util.concurrent.TimeUnit.SECONDS));
+      java.util.concurrent.Future<JSONArray> preview = threads.submit(() -> prepare(item));
+      assertEquals(1, preview.get(2, java.util.concurrent.TimeUnit.SECONDS).length());
+    } finally {
+      release.countDown();
+      writer.get(5, java.util.concurrent.TimeUnit.SECONDS);
+      threads.shutdownNow();
+    }
+    assertEquals(1, AiReviewBatch.confirm(memory, prepare(item), NOW));
+    assertEquals(1, count("memories"));
+    assertTrue(memory.getWritableDatabase().isOpen());
+  }
+
+  @Test
+  public void maximumPageSaveIsAtomicAcrossOneHundredItems() throws Exception {
+    JSONArray selected = new JSONArray();
+    for (int i = 0; i < 100; i++) selected.put(proposal("bulk-" + i, "fact"));
+    JSONArray prepared = AiReviewBatch.preview(memory, selected, "Asia/Shanghai");
+    memory.getWritableDatabase().execSQL("CREATE TRIGGER reject_last BEFORE INSERT ON memories "
+        + "WHEN NEW.title='合成建议 bulk-99' BEGIN SELECT RAISE(ABORT,'fixture_rollback'); END");
+    assertThrows(android.database.sqlite.SQLiteException.class,
+        () -> AiReviewBatch.confirm(memory, prepared, NOW));
+    assertEquals(0, count("memories"));
+    try (Cursor c = memory.getReadableDatabase().rawQuery(
+        "SELECT count(*) FROM ai_reviews WHERE state='pending'", null)) {
+      assertTrue(c.moveToFirst());
+      assertEquals(100, c.getInt(0));
+    }
+    memory.getWritableDatabase().execSQL("DROP TRIGGER reject_last");
+    long started = System.nanoTime();
+    assertEquals(100, AiReviewBatch.confirm(memory, prepared, NOW));
+    System.out.println("atomic_100_save_ms=" + (System.nanoTime() - started) / 1000000L);
+    assertEquals(100, count("memories"));
+    assertEquals(0, count("reminders"));
+    assertThrows(IllegalStateException.class, () -> AiReviewBatch.confirm(memory, prepared, NOW));
+    assertEquals(100, count("memories"));
+  }
+
+  @Test
+  public void storageContentionDoesNotConsumeModelFailureRetries() throws Exception {
+    JSONObject raw = new JSONObject(proposal("busy", "fact").getJSONObject("source").toString());
+    raw.remove("_memory_ref");
+    raw.remove("evidence");
+    raw.put("type", 1).put("is_send", 1);
+    OrganizerStore queue = new OrganizerStore(memory);
+    queue.enqueue(new JSONArray().put(raw));
+    JSONObject batch = queue.claim(NOW);
+    assertNotNull(batch);
+    queue.fail(batch.getString("id"), NOW + 1, true, "storage_busy");
+    assertEquals(1, queue.queueStats().optInt("pending"));
+    assertEquals(0, queue.queueStats().optInt("failed"));
+    try (Cursor c = memory.getReadableDatabase().rawQuery("SELECT retries FROM queued_sources", null)) {
+      assertTrue(c.moveToFirst());
+      assertEquals(0, c.getInt(0));
+    }
+    assertEquals("storage_busy", queue.queueStats().getString("last_failure_code"));
+  }
+
+  @Test
+  @Config(shadows = ObservingJobs.class)
+  public void bulkSaveNotifiesOnceOnlyAfterTheOuterCommit() throws Exception {
+    memory.close();
+    name = "information.db";
+    context.deleteDatabase(name);
+    memory = new MemoryStore(context);
+    context.getSharedPreferences("knowledge", Context.MODE_PRIVATE).edit().putBoolean("enabled", true).commit();
+    JSONArray selected = new JSONArray();
+    for (int i = 0; i < 100; i++) selected.put(proposal("notify-" + i, "fact"));
+    JSONArray prepared = AiReviewBatch.preview(memory, selected, "Asia/Shanghai");
+    ObservingJobs.owner = memory;
+    ObservingJobs.immediate = 0;
+    ObservingJobs.duringWrite = false;
+    try {
+      assertEquals(100, AiReviewBatch.confirm(memory, prepared, NOW));
+      assertEquals(1, ObservingJobs.immediate);
+      assertFalse(ObservingJobs.duringWrite);
+    } finally {
+      ObservingJobs.owner = null;
+      context.getSharedPreferences("knowledge", Context.MODE_PRIVATE).edit().putBoolean("enabled", false).commit();
+      context.getSystemService(android.app.job.JobScheduler.class).cancelAll();
+    }
   }
 
   @Test

@@ -3,10 +3,7 @@ package com.mubai.infoinbox;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.DatePickerDialog;
-import android.app.TimePickerDialog;
 import android.content.Intent;
-import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
@@ -16,10 +13,7 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.widget.*;
-import java.time.Instant;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.json.JSONArray;
@@ -74,7 +68,7 @@ public final class OrganizerActivity extends Activity {
     LinearLayout nav = new LinearLayout(this);
     nav.setPadding(dp(8), dp(6), dp(8), dp(6));
     nav.setBackgroundColor(0xFFFFFFFF);
-    String[] names = {"概览", "收件箱", "事项", "记忆", "设置"};
+    String[] names = NativeUi.NAV_LABELS;
     for (int i = 0; i < names.length; i++) {
       int index = i;
       TextView item = text(names[i], 14, i == 2 ? PURPLE : MUTED, i == 2);
@@ -163,13 +157,7 @@ public final class OrganizerActivity extends Activity {
   }
 
   private TextView text(String value, int size, int color, boolean bold) {
-    TextView v = new TextView(this);
-    v.setText(value);
-    v.setTextSize(size);
-    v.setTextColor(color);
-    v.setLineSpacing(dp(3), 1);
-    if (bold) v.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-    return v;
+    return NativeUi.text(this, value, size, color, bold);
   }
 
   private void gap(LinearLayout view, int size) {
@@ -258,18 +246,20 @@ public final class OrganizerActivity extends Activity {
     generation++;
     body.removeAllViews();
     LinearLayout controls = card();
-    controls.addView(text(closed ? "已结束的事项" : "安排与待办", 18, INK, true));
-    gap(controls, 6);
-    controls.addView(text("截止时间、日程和提醒分别保存；关闭提示不会完成任务。", 13, MUTED, false));
-    button(controls, "刷新", this::render);
-    button(
-        controls,
-        closed ? "查看当前事项" : "查看已完成和取消",
-        () -> {
-          closed = !closed;
-          render();
-        });
-    button(controls, "通知与提醒权限", this::permissions);
+    Button refresh = NativeUi.button(this, "刷新", this::render, false);
+    Button ended =
+        NativeUi.button(
+            this,
+            closed ? "查看当前事项" : "已完成和取消",
+            () -> {
+              closed = !closed;
+              render();
+            },
+            false);
+    NativeUi.actions(this, controls, refresh, ended);
+    LinearLayout more = NativeUi.disclosure(this, controls, "提醒与更多操作");
+    more.addView(text("截止时间、日程和提醒分别保存；关闭提示不会完成任务。", 13, MUTED, false));
+    button(more, "通知与提醒权限", this::permissions);
     async(
         () -> {
           JSONArray all = store.workItems(closed);
@@ -402,32 +392,7 @@ public final class OrganizerActivity extends Activity {
   }
 
   private void sourceViews(LinearLayout view, JSONObject source) throws Exception {
-    JSONArray evidence = source.optJSONArray("evidence");
-    if (evidence == null) evidence = new JSONArray().put(source);
-    for (int i = 0; i < evidence.length(); i++) {
-      JSONObject part = evidence.getJSONObject(i);
-      gap(view, 12);
-      view.addView(
-          text(
-              MessagePresentation.conversationTitle(part)
-                  + " · "
-                  + TimeRules.display(part.optLong("created_at"), new ApiSettings(this).timezone()),
-              12,
-              MUTED,
-              false));
-      if (part.has("segment"))
-        view.addView(text("原消息第 " + part.optInt("segment") + " 段", 12, MUTED, false));
-      if (!part.optString("_segment_prefix", "").isEmpty())
-        view.addView(text("分段前文：" + part.optString("_segment_prefix"), 12, MUTED, false));
-      String sender = MessagePresentation.senderName(part);
-      if (!sender.isEmpty()) {
-        gap(view, 5);
-        view.addView(text(sender, 13, MUTED, true));
-      }
-      TextView quote = text(MessagePresentation.body(part), 14, INK, false);
-      quote.setTextIsSelectable(true);
-      view.addView(quote);
-    }
+    NativeUi.sources(this, view, source);
   }
 
   private void detail(JSONObject item) {
@@ -544,242 +509,8 @@ public final class OrganizerActivity extends Activity {
         .show();
   }
 
-  private EditText field(LinearLayout view, String label, String value) {
-    gap(view, 10);
-    view.addView(text(label, 13, MUTED, false));
-    EditText edit = new EditText(this);
-    edit.setText(value);
-    edit.setSingleLine(true);
-    edit.setSelectAllOnFocus(true);
-    edit.setContentDescription(label);
-    view.addView(edit);
-    return edit;
-  }
-
-  private EditText timeField(LinearLayout view, String label, String value, String timezone) {
-    EditText edit = field(view, label, value);
-    edit.setHint("留空，或填写 2026-10-13 18:30");
-    button(
-        view,
-        "选择" + label,
-        () -> {
-          ZonedDateTime now =
-              Instant.ofEpochMilli(System.currentTimeMillis() + 3600000L)
-                  .atZone(ZoneId.of(timezone));
-          try {
-            Long parsed = TimeRules.parseLocal(edit.getText().toString(), timezone);
-            if (parsed != null) now = Instant.ofEpochMilli(parsed).atZone(ZoneId.of(timezone));
-          } catch (Exception ignored) {
-          }
-          final ZonedDateTime initial = now;
-          new DatePickerDialog(
-                  this,
-                  (picker, year, month, day) ->
-                      new TimePickerDialog(
-                              this,
-                              (time, hour, minute) ->
-                                  edit.setText(
-                                      String.format(
-                                          Locale.ROOT,
-                                          "%04d-%02d-%02d %02d:%02d",
-                                          year,
-                                          month + 1,
-                                          day,
-                                          hour,
-                                          minute)),
-                              initial.getHour(),
-                              initial.getMinute(),
-                              true)
-                          .show(),
-                  initial.getYear(),
-                  initial.getMonthValue() - 1,
-                  initial.getDayOfMonth())
-              .show();
-        });
-    return edit;
-  }
-
-  private Spinner choices(LinearLayout view, String label, String[] values, int selected) {
-    gap(view, 10);
-    view.addView(text(label, 13, MUTED, false));
-    Spinner spinner = new Spinner(this);
-    spinner.setAdapter(
-        new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, values));
-    spinner.setSelection(selected);
-    view.addView(spinner);
-    return spinner;
-  }
-
-  private Long proposedTime(JSONObject proposal, JSONObject old, String key) throws Exception {
-    if (proposal.has(key) && !proposal.isNull(key))
-      return TimeRules.parseIso(proposal.getString(key));
-    return old == null ? null : OrganizerStore.nullable(old, key);
-  }
-
   private void form(JSONObject proposal) {
-    try {
-      String operation = proposal.optString("operation", "create");
-      JSONObject old =
-          operation.equals("create") ? null : store.work(proposal.getString("target_id"));
-      String timezone =
-          old == null
-              ? proposal.optString("timezone", new ApiSettings(this).timezone())
-              : old.getString("timezone");
-      boolean event = proposal.getString("kind").equals("event"),
-          terminal = operation.matches("complete|cancel");
-      LinearLayout view = column();
-      view.setPadding(dp(20), dp(6), dp(20), dp(16));
-      view.addView(
-          text(terminal ? "核对对应事项与新消息，确认后更新状态。" : "核对负责人、时间和原消息。提醒时间留空时只保存事项。", 14, MUTED, false));
-      EditText title = field(view, "事项标题", proposal.getString("title"));
-      String involvement =
-          old == null ? proposal.optString("involvement", "unclear") : old.getString("involvement");
-      Spinner who =
-          choices(
-              view,
-              "涉及谁",
-              new String[] {"本人", "其他人", "尚不明确"},
-              involvement.equals("self") ? 0 : involvement.equals("other") ? 1 : 2);
-      String originalState =
-          old == null ? proposal.optString("state", "open") : old.optString("state", "open");
-      Spinner status =
-          choices(
-              view,
-              "当前状态",
-              new String[] {"待执行", "等待别人", "有阻塞"},
-              originalState.equals("waiting") ? 1 : originalState.equals("blocked") ? 2 : 0);
-      EditText location =
-          field(
-              view,
-              "地点（可留空）",
-              old == null ? proposal.optString("location", "") : old.optString("location", ""));
-      EditText details =
-          field(
-              view,
-              "备注或等待对象（可留空）",
-              old == null ? proposal.optString("details", "") : old.optString("details", ""));
-      view.addView(text("时区：" + timezone, 12, MUTED, false));
-      EditText first =
-          timeField(
-              view,
-              event ? "开始时间" : "截止时间",
-              TimeRules.display(
-                  proposedTime(proposal, old, event ? "starts_at" : "due_at"), timezone),
-              timezone);
-      EditText planned =
-          event
-              ? null
-              : timeField(
-                  view,
-                  "计划开始（可留空）",
-                  TimeRules.display(proposedTime(proposal, old, "starts_at"), timezone),
-                  timezone);
-      EditText last =
-          timeField(
-              view,
-              event ? "结束时间" : "计划结束（可留空）",
-              TimeRules.display(proposedTime(proposal, old, "ends_at"), timezone),
-              timezone);
-      JSONObject oldRule = old == null ? null : store.reminder(old.getString("id"));
-      String preset =
-          oldRule != null && oldRule.optString("state").equals("scheduled")
-              ? TimeRules.display(oldRule.getLong("due_at"), timezone)
-              : "";
-      EditText reminder = timeField(view, "提醒时间", preset, timezone);
-      if (terminal) {
-        title.setEnabled(false);
-        who.setEnabled(false);
-        status.setEnabled(false);
-        first.setEnabled(false);
-        reminder.setEnabled(false);
-        if (last != null) last.setEnabled(false);
-        if (planned != null) planned.setEnabled(false);
-      }
-      gap(view, 14);
-      view.addView(text("原消息", 16, INK, true));
-      sourceViews(view, proposal.getJSONObject("source"));
-      ScrollView scroll = new ScrollView(this);
-      scroll.addView(view);
-      AlertDialog dialog =
-          new AlertDialog.Builder(this)
-              .setTitle(terminal ? "确认" + operationLabel(operation) : event ? "确认日程" : "确认待办")
-              .setView(scroll)
-              .setNegativeButton("取消", null)
-              .setPositiveButton("确认保存", null)
-              .create();
-      dialog.setOnShowListener(
-          d ->
-              dialog
-                  .getButton(AlertDialog.BUTTON_POSITIVE)
-                  .setOnClickListener(
-                      v -> {
-                        try {
-                          Long at = TimeRules.parseLocal(first.getText().toString(), timezone),
-                              end =
-                                  last == null
-                                      ? null
-                                      : TimeRules.parseLocal(last.getText().toString(), timezone);
-                          Long begin =
-                              event
-                                  ? at
-                                  : TimeRules.parseLocal(planned.getText().toString(), timezone);
-                          TimeRules.validateRange(begin, end);
-                          JSONObject edited =
-                              new JSONObject()
-                                  .put("title", title.getText().toString())
-                                  .put("timezone", timezone)
-                                  .put(
-                                      "state",
-                                      new String[] {"open", "waiting", "blocked"}
-                                          [status.getSelectedItemPosition()])
-                                  .put(
-                                      "involvement",
-                                      new String[] {"self", "other", "unclear"}
-                                          [who.getSelectedItemPosition()])
-                                  .put("location", location.getText().toString())
-                                  .put("details", details.getText().toString())
-                                  .put("due_at", event || at == null ? JSONObject.NULL : at)
-                                  .put("starts_at", begin == null ? JSONObject.NULL : begin)
-                                  .put("ends_at", end == null ? JSONObject.NULL : end);
-                          Long remind =
-                              terminal
-                                  ? null
-                                  : TimeRules.parseLocal(reminder.getText().toString(), timezone);
-                          dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
-                          worker.execute(
-                              () -> {
-                                try {
-                                  ReminderScheduler.confirm(this, memory, proposal, edited, remind);
-                                  main.post(
-                                      () -> {
-                                        if (!isFinishing()) {
-                                          dialog.dismiss();
-                                          toast("已保存，消息出处与变更记录已保留");
-                                          render();
-                                        }
-                                      });
-                                } catch (Exception error) {
-                                  main.post(
-                                      () -> {
-                                        if (!isFinishing()) {
-                                          dialog
-                                              .getButton(AlertDialog.BUTTON_POSITIVE)
-                                              .setEnabled(true);
-                                          title.setError(error.getMessage());
-                                        }
-                                      });
-                                }
-                              });
-                        } catch (Exception error) {
-                          title.setError(
-                              "请核对输入，时间格式为 年-月-日 时:分；"
-                                  + (error.getMessage() == null ? "" : error.getMessage()));
-                        }
-                      }));
-      dialog.show();
-    } catch (Exception e) {
-      toast(e.getMessage() == null ? "建议无法打开，请刷新" : e.getMessage());
-    }
+    new SuggestionReview(this, memory, worker, this::render).showWork(proposal);
   }
 
   private void permissions() {

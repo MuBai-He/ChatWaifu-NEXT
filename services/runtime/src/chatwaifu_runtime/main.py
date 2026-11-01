@@ -18,6 +18,7 @@ from chatwaifu_runtime.api.channel_pairing_routes import router as channel_pairi
 from chatwaifu_runtime.api.channel_proactive_routes import router as channel_proactive_router
 from chatwaifu_runtime.api.channel_settings_routes import router as channel_settings_router
 from chatwaifu_runtime.api.guard import LocalClientGuardMiddleware
+from chatwaifu_runtime.api.harness_routes import router as harness_router
 from chatwaifu_runtime.api.information_routes import router as information_router
 from chatwaifu_runtime.api.interaction_diagnostics_routes import (
     router as interaction_diagnostics_router,
@@ -186,6 +187,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(interaction_diagnostics_router)
     app.include_router(personal_assistant_router)
     app.include_router(information_router)
+    app.include_router(harness_router)
     app.include_router(sync_router)
     app.include_router(knowledge_router)
     app.include_router(sticker_library_router)

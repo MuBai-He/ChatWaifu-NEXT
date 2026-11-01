@@ -11,27 +11,80 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 /** Confirmed memory snapshots live in app-private storage, separately from the raw archive. */
-public final class MemoryStore extends SQLiteOpenHelper {
+public final class MemoryStore implements AutoCloseable {
+  // Leases share Android's WAL connection pool and writer scheduling. Each owner
+  // closes only its lease; an Activity must not close a live background owner's DB.
+  private static final java.util.Map<String, SharedDatabase> OPEN = new java.util.HashMap<>();
+  private final SharedDatabase shared;
+  private final String path;
+  private boolean closed;
   private final Context application;
   private final boolean mainStore;
+
+  private static final class SharedDatabase extends SQLiteOpenHelper {
+    int owners;
+
+    SharedDatabase(Context context, String name) {
+      super(context, name, null, 6);
+      setWriteAheadLoggingEnabled(true);
+    }
+
+    @Override public void onCreate(SQLiteDatabase db) { createSchema(db); }
+    @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+      upgradeSchema(db, oldVersion);
+    }
+  }
 
   public MemoryStore(Context context) {
     this(context, "information.db");
   }
 
   MemoryStore(Context context, String name) {
-    super(context, name, null, 5);
     application = context.getApplicationContext();
     mainStore = name.equals("information.db");
-    setWriteAheadLoggingEnabled(true);
+    path = context.getDatabasePath(name).getAbsoluteFile().toPath().normalize().toString();
+    synchronized (OPEN) {
+      SharedDatabase existing = OPEN.get(path);
+      if (existing == null) {
+        Context storage = context.getDatabasePath(name).equals(application.getDatabasePath(name))
+            ? application : context;
+        existing = new SharedDatabase(storage, name);
+        OPEN.put(path, existing);
+      }
+      shared = existing;
+      shared.owners++;
+    }
+  }
+
+  public synchronized SQLiteDatabase getWritableDatabase() {
+    if (closed) throw new IllegalStateException("资料库已关闭");
+    return shared.getWritableDatabase();
+  }
+
+  public synchronized SQLiteDatabase getReadableDatabase() {
+    if (closed) throw new IllegalStateException("资料库已关闭");
+    return shared.getReadableDatabase();
+  }
+
+  @Override public synchronized void close() {
+    if (closed) return;
+    closed = true;
+    synchronized (OPEN) {
+      if (--shared.owners == 0) {
+        try { shared.close(); } finally { OPEN.remove(path); }
+      }
+    }
   }
 
   void scheduleKnowledge() {
-    if (mainStore) KnowledgeJob.enqueueNow(application);
+    // Nested domain saves defer notification to the outer commit. No Binder,
+    // foreground-service start or scheduler operation may extend that write lock.
+    if (getWritableDatabase().inTransaction()) return;
+    if (mainStore && !RuntimeMessageService.requestSync(application))
+      KnowledgeJob.enqueueNow(application);
   }
 
-  @Override
-  public void onCreate(SQLiteDatabase db) {
+  private static void createSchema(SQLiteDatabase db) {
     db.execSQL(
         "CREATE TABLE memories(ref TEXT PRIMARY KEY,title TEXT NOT NULL,kind TEXT NOT NULL,quote"
             + " TEXT NOT NULL,source_json TEXT NOT NULL,created_at INTEGER NOT NULL,updated_at"
@@ -41,17 +94,18 @@ public final class MemoryStore extends SQLiteOpenHelper {
     OrganizerStore.createTables(db);
     ConversationPolicy.createTable(db);
     KnowledgeStore.createTables(db);
+    RuntimeProcessing.createTables(db);
   }
 
-  @Override
-  public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+  private static void upgradeSchema(SQLiteDatabase db, int oldVersion) {
     if (oldVersion < 2) createAiTables(db);
     if (oldVersion < 3) OrganizerStore.createTables(db);
     if (oldVersion < 4) ConversationPolicy.createTable(db);
     if (oldVersion < 5) KnowledgeStore.createTables(db);
+    if (oldVersion < 6) RuntimeProcessing.createTables(db);
   }
 
-  private void createAiTables(SQLiteDatabase db) {
+  private static void createAiTables(SQLiteDatabase db) {
     db.execSQL(
         "CREATE TABLE ai_processed(account_id TEXT NOT NULL,msg_id INTEGER NOT NULL,PRIMARY"
             + " KEY(account_id,msg_id))");
@@ -64,6 +118,8 @@ public final class MemoryStore extends SQLiteOpenHelper {
   public static String reference(JSONObject source) throws Exception {
     String item = source.optString("_memory_ref", "");
     if (item.matches("ai:[0-9a-f]{64}")) return item;
+    if (!source.optString("_knowledge_id").isEmpty())
+      return "remote:" + AnalysisContract.hash(source.getString("_knowledge_id"));
     String segment = source.optString("_source_ref", "");
     if (segment.matches("wechat:[0-9a-f]{64}:[0-9a-f]{64}:[0-9]+")) return segment;
     String identity =
@@ -112,7 +168,7 @@ public final class MemoryStore extends SQLiteOpenHelper {
     String ref = reference(source);
     long now = System.currentTimeMillis();
     SQLiteDatabase db = getWritableDatabase();
-    db.beginTransaction();
+    db.beginTransactionNonExclusive();
     try {
       long created = now;
       try (Cursor c =
@@ -123,7 +179,7 @@ public final class MemoryStore extends SQLiteOpenHelper {
       v.put("ref", ref);
       v.put("title", title.trim());
       v.put("kind", kind);
-      v.put("quote", source.optString("content", ""));
+      v.put("quote", source.optString("_information_summary", source.optString("content", "")));
       v.put("source_json", source.toString());
       v.put("created_at", created);
       v.put("updated_at", now);
@@ -156,7 +212,12 @@ public final class MemoryStore extends SQLiteOpenHelper {
         item.put("title", c.getString(1));
         item.put("kind", c.getString(2));
         item.put("quote", c.getString(3));
-        item.put("source", new JSONObject(c.getString(4)));
+        JSONObject source = new JSONObject(c.getString(4));
+        if (source.has("_knowledge_id")) source.put("_information_summary", c.getString(3));
+        item.put("source", source);
+        item.put(
+            "summary",
+            source.has("_information_summary") || !source.has("content") ? c.getString(3) : "");
         item.put("verification_state", "user_confirmed");
         item.put("created_at", c.getLong(5));
         item.put("updated_at", c.getLong(6));
@@ -168,7 +229,7 @@ public final class MemoryStore extends SQLiteOpenHelper {
 
   public void remove(String ref) {
     SQLiteDatabase db = getWritableDatabase();
-    db.beginTransaction();
+    db.beginTransactionNonExclusive();
     try {
       db.delete("memories", "ref=?", new String[] {ref});
       db.delete("source_states", "ref=?", new String[] {ref});
@@ -196,9 +257,10 @@ public final class MemoryStore extends SQLiteOpenHelper {
                 "SELECT item_json FROM ai_reviews WHERE state='pending' ORDER BY CASE importance"
                     + " WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,created_at DESC",
                 null)) {
-      ConversationPolicy policy = new ConversationPolicy(this);
+      ConversationPolicy policy = new ConversationPolicy(this, true);
       while (c.moveToNext()) {
         JSONObject item = new JSONObject(c.getString(0));
+        ProposalRelevance.annotate(item, System.currentTimeMillis());
         if (policy.allowsProposal(item)) result.put(item);
       }
     }
@@ -217,7 +279,7 @@ public final class MemoryStore extends SQLiteOpenHelper {
     for (int i = 0; i < input.length(); i++)
       sources.put(reference(input.getJSONObject(i)), input.getJSONObject(i));
     SQLiteDatabase db = getWritableDatabase();
-    db.beginTransaction();
+    db.beginTransactionNonExclusive();
     try {
       JSONArray items = response.getJSONArray("items");
       for (int i = 0; i < items.length(); i++) {

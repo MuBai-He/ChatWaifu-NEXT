@@ -64,7 +64,35 @@ public final class AnalysisContract {
         if (source == null) throw new IllegalArgumentException("模型引用了输入之外的消息");
         if (seen.add(ref)) evidence.put(new JSONObject(source.toString()));
       }
-      JSONObject primary = new JSONObject(evidence.getJSONObject(0).toString());
+      JSONObject anchor = null;
+      String account = evidence.getJSONObject(0).getString("account_id");
+      String talker = evidence.getJSONObject(0).getString("talker");
+      for (int j = 0; j < evidence.length(); j++) {
+        JSONObject part = evidence.getJSONObject(j);
+        if (!account.equals(part.getString("account_id"))
+            || !talker.equals(part.getString("talker")))
+          throw new IllegalArgumentException("一条建议不能混合不同会话的上下文");
+        if (!part.optBoolean("_context_only") && anchor == null) anchor = part;
+      }
+      if (anchor == null) throw new IllegalArgumentException("建议必须引用本轮的新消息");
+      java.util.List<JSONObject> window = new java.util.ArrayList<>();
+      for (JSONObject part : allowed.values())
+        if (account.equals(part.optString("account_id")) && talker.equals(part.optString("talker")))
+          window.add(
+              new JSONObject(part.toString())
+                  .put("_supporting_evidence", seen.contains(MemoryStore.reference(part))));
+      window.sort(
+          (a, b) -> {
+            int time = Long.compare(a.optLong("created_at"), b.optLong("created_at"));
+            return time != 0 ? time : Long.compare(a.optLong("msg_id"), b.optLong("msg_id"));
+          });
+      evidence = new JSONArray();
+      JSONArray contextRefs = new JSONArray();
+      for (JSONObject part : window) {
+        evidence.put(part);
+        contextRefs.put(MemoryStore.reference(part));
+      }
+      JSONObject primary = new JSONObject(anchor.toString());
       String targetId = input.optString("target_id", "");
       int expectedRevision = 0;
       if (!operation.equals("create")) {
@@ -114,6 +142,7 @@ public final class AnalysisContract {
               .put("state", state)
               .put("timezone", timezone)
               .put("source_refs", refs)
+              .put("context_refs", contextRefs)
               .put("due_at", due == null ? JSONObject.NULL : TimeRules.iso(due))
               .put("starts_at", start == null ? JSONObject.NULL : TimeRules.iso(start))
               .put("ends_at", end == null ? JSONObject.NULL : TimeRules.iso(end))
@@ -122,6 +151,11 @@ public final class AnalysisContract {
                   input.isNull("due_text") ? JSONObject.NULL : input.optString("due_text", ""));
       item.put("location", input.has("location") ? string(input, "location", 200) : "");
       item.put("details", input.has("details") ? string(input, "details", 1200) : "");
+      for (String key : new String[] {"due_date", "start_date", "end_date"})
+        if (!input.isNull(key) && !input.optString(key).isEmpty())
+          item.put(key, java.time.LocalDate.parse(input.getString(key)).toString());
+      if (!item.optString("details").isEmpty() && !kind.matches("todo|event"))
+        primary.put("_information_summary", item.getString("details"));
       String id = "ai:" + hash(item.toString());
       primary.remove("_source_ref");
       primary
@@ -130,6 +164,9 @@ public final class AnalysisContract {
           .put("_information_involvement", involvement)
           .put("_information_kind", kind);
       item.put("source", primary).put("review_ref", id);
+      // Relevance is derived from evidence, never trusted from model output, and
+      // excluded from proposal identity so the same result cannot duplicate daily.
+      ProposalRelevance.annotate(item, System.currentTimeMillis());
       result.put(item);
     }
     return result;

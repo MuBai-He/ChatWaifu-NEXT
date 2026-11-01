@@ -27,6 +27,7 @@ public final class AnalysisJob extends JobService {
   }
 
   public static void enqueue(Context context, long delay) {
+    if (RuntimeProcessing.owns(context)) { KnowledgeJob.enqueueNow(context); return; }
     ApiSettings settings = new ApiSettings(context);
     if ((!settings.automatic() && !HistoryImport.requested(context))
         || !AnalysisRouting.ready(context)) return;
@@ -50,12 +51,12 @@ public final class AnalysisJob extends JobService {
     Thread task =
         new Thread(
             () -> {
-              boolean more = false;
+              boolean more = false, failed = false;
               try {
                 if (id == 8802) {
                   boolean full = HistoryImport.requested(this) && KnowledgeSync.wifi(this);
                   if (!new ApiSettings(this).automatic() && !full) return;
-                  AnalysisEngine.run(this, full);
+                  AnalysisEngine.runWave(this, full);
                   try (MemoryStore memory = new MemoryStore(this)) {
                     OrganizerStore organizer = new OrganizerStore(memory);
                     more = organizer.pendingWithinScope(full ? 0 : organizer.intakeFloor()) > 0;
@@ -73,6 +74,16 @@ public final class AnalysisJob extends JobService {
                 }
                 HistoryImport.maybeComplete(this);
               } catch (Exception ignored) {
+                failed = true;
+                if (id == 8802)
+                  try (MemoryStore memory = new MemoryStore(this)) {
+                    OrganizerStore store = new OrganizerStore(memory);
+                    more =
+                        store.pendingWithinScope(
+                                HistoryImport.requested(this) ? 0 : store.intakeFloor())
+                            > 0;
+                  } catch (Exception unavailable) {
+                  }
                 /* Input and redacted failure status remain durable. */
               } finally {
                 tasks.remove(id, Thread.currentThread());
@@ -81,7 +92,7 @@ public final class AnalysisJob extends JobService {
                   if (id != 8802) {
                     enqueue(this, 1000L);
                     if (more) enqueueIntake(this, 60000L);
-                  } else if (more) enqueue(this, 60000L);
+                  } else if (more) enqueue(this, failed ? 60000L : 1000L);
                 }
               }
             },

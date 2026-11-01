@@ -50,6 +50,7 @@ class ExtractedMemoryCandidate:
     rationale: str
     evidence_event_ids: tuple[UUID, ...] = ()
     auto_commit: bool = False
+    grounded: bool = False
     requires_review: bool = False
 
 
@@ -58,7 +59,10 @@ def is_first_person_statement(text: str) -> bool:
     if (
         len(
             re.findall(
-                r"我叫|是|喜欢|讨厌|\b(?:am|is|are|like|likes|love|loves|prefer|prefers|want|wants|have|has)\b",
+                (
+                    "我叫|是|喜欢|讨厌|\\b(?:am|is|are|like|likes|love|loves|prefer|prefers|wa"
+                    "nt|wants|have|has)\\b"
+                ),
                 text,
                 flags=re.IGNORECASE,
             )

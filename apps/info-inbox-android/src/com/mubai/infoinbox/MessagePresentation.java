@@ -4,6 +4,10 @@ import org.json.JSONObject;
 
 /** Human-facing labels only. The original message and reference identity remain unchanged. */
 public final class MessagePresentation {
+  private static final java.util.regex.Pattern SENDER_KEY =
+      java.util.regex.Pattern.compile("[A-Za-z0-9_@.\\-]+");
+  private static final java.util.regex.Pattern TECHNICAL_NAME =
+      java.util.regex.Pattern.compile("wxid_[A-Za-z0-9_]+");
   private MessagePresentation() {}
 
   public static String senderKey(JSONObject source) {
@@ -11,21 +15,26 @@ public final class MessagePresentation {
       return "";
     String content = source.optString("content", "");
     int delimiter = content.indexOf(":\n");
-    if (delimiter < 1 || delimiter > 128) return "";
+    if (delimiter < 1 || delimiter > 128) {
+      String stored = source.optString("_sender_key");
+      return SENDER_KEY.matcher(stored).matches() ? stored : "";
+    }
     String key = content.substring(0, delimiter);
-    return key.matches("[A-Za-z0-9_@.\\-]+") ? key : "";
+    return SENDER_KEY.matcher(key).matches() ? key : "";
   }
 
   public static String body(JSONObject source) {
     String content = source.optString("content", "");
     String sender = senderKey(source);
-    return sender.isEmpty() ? content : content.substring(sender.length() + 2);
+    return !sender.isEmpty() && content.startsWith(sender + ":\n")
+        ? content.substring(sender.length() + 2)
+        : content;
   }
 
   private static boolean technical(String value, String id) {
     return value.isEmpty()
         || value.equals(id)
-        || value.matches("wxid_[A-Za-z0-9_]+")
+        || TECHNICAL_NAME.matcher(value).matches()
         || value.endsWith("@chatroom");
   }
 

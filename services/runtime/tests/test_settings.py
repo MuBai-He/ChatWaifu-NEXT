@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from chatwaifu_runtime.config.settings import (
+    PersonalAssistantConfig,
     PublicWebConfig,
     SecurityConfig,
     Settings,
@@ -12,6 +13,34 @@ from chatwaifu_runtime.config.settings import (
     load_settings,
 )
 from pydantic import SecretStr
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://example.com:7890",
+        "socks5://127.0.0.1:7890",
+        "http://name:password@127.0.0.1:7890",
+        "http://127.0.0.1:7890/path",
+        "http://127.0.0.1:7890?target=external",
+        "http://127.0.0.1:7890#fragment",
+        "http://127.0.0.1:0",
+        "http://127.0.0.1:65536",
+        "http://[invalid",
+    ],
+)
+def test_google_proxy_rejects_nonlocal_or_ambiguous_origins(url: str) -> None:
+    with pytest.raises(ValueError, match="Google proxy"):
+        PersonalAssistantConfig(google_proxy_url=url)
+
+
+def test_google_proxy_is_explicit_environment_configuration(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("HTTPS_PROXY", "http://unrelated.example:9000")
+    assert Settings().personal_assistant.google_proxy_url is None
+    monkeypatch.setenv("CHATWAIFU_PERSONAL_ASSISTANT__GOOGLE_PROXY_URL", "http://127.0.0.1:7890")
+    assert Settings().personal_assistant.google_proxy_url == "http://127.0.0.1:7890"
 
 
 def test_environment_overrides_toml(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

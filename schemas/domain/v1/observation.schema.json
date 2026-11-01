@@ -1,0 +1,104 @@
+{
+  "$defs": {
+    "EvidenceRef": {
+      "properties": {
+        "kind": {
+          "enum": [
+            "event",
+            "knowledge"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Reference",
+          "type": "string"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "reference"
+      ],
+      "title": "EvidenceRef",
+      "type": "object"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/observation.schema.json",
+  "properties": {
+    "attempts": {
+      "default": 0,
+      "title": "Attempts",
+      "type": "integer"
+    },
+    "evidence": {
+      "$ref": "#/$defs/EvidenceRef"
+    },
+    "ingestion_mode": {
+      "enum": [
+        "live",
+        "historical",
+        "delayed"
+      ],
+      "title": "Ingestion Mode",
+      "type": "string"
+    },
+    "observation_id": {
+      "format": "uuid",
+      "title": "Observation Id",
+      "type": "string"
+    },
+    "occurred_at": {
+      "title": "Occurred At",
+      "type": "integer"
+    },
+    "owner": {
+      "title": "Owner",
+      "type": "string"
+    },
+    "policy_epoch": {
+      "title": "Policy Epoch",
+      "type": "integer"
+    },
+    "received_at": {
+      "title": "Received At",
+      "type": "integer"
+    },
+    "room_id": {
+      "title": "Room Id",
+      "type": "string"
+    },
+    "state": {
+      "default": "pending",
+      "enum": [
+        "pending",
+        "running",
+        "done",
+        "failed",
+        "superseded"
+      ],
+      "title": "State",
+      "type": "string"
+    }
+  },
+  "required": [
+    "observation_id",
+    "owner",
+    "room_id",
+    "evidence",
+    "ingestion_mode",
+    "occurred_at",
+    "received_at",
+    "policy_epoch"
+  ],
+  "title": "Observation",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

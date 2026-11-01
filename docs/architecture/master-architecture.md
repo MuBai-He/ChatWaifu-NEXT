@@ -2462,3 +2462,10 @@ Character:
 ```
 
 这套结构允许 ChatWaifu 在未来替换任意一颗模型、任意一个 TTS、任意一个角色渲染器，而不需要重新拆掉人格、记忆和技能系统。
+
+
+## Unified owner Agent harness
+
+[ADR 0085](../adr/0085-unified-owner-agent-harness.md) connects the existing AgentTurnOrchestrator, AgentTaskService, MemoryService and RuntimeSkillService through durable observations, shared context, standing authority, canonical work, action proposals and provider/device receipts. Runtime owns reasoning; Android owns collection, offline interaction and downloaded reminder execution. Observation/recheck cursors are not a second goal state machine. Accepted external facts retain real knowledge provenance and participate in the shared memory policy and recall boundary.
+
+The [implementation and release evidence](../operations/unified-agent-harness-validation-2026-10-31.md) separates source checks from live model, account, provider, handset and rollout acceptance.

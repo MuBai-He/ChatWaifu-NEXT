@@ -181,8 +181,8 @@ async def test_part_strict_sequence(tmp_path: Path) -> None:
         )
         claimed_p0 = await repo.claim_next_delivery_part(claim_p0, claimed_at=datetime.now(UTC))
         assert claimed_p0 is not None
-        assert claimed_p0.ordinal == 0
-        assert claimed_p0.status == ChannelDeliveryPartStatus.SENDING
+        assert claimed_p0.part.ordinal == 0
+        assert claimed_p0.part.status == ChannelDeliveryPartStatus.SENDING
 
         # While Part 0 is sending, general claim returns None (mutual exclusion)
         claim_another = ChannelDeliveryPartClaimRequest(
@@ -199,7 +199,7 @@ async def test_part_strict_sequence(tmp_path: Path) -> None:
         now = datetime.now(UTC)
         ack_p0 = ChannelDeliveryPartAcknowledgement(
             delivery_id=delivery_id,
-            part_id=claimed_p0.part_id,
+            part_id=claimed_p0.part.part_id,
             lease_id=lease_p0,
             status=ChannelDeliveryPartStatus.DELIVERED,
             acknowledged_at=now,
@@ -220,7 +220,7 @@ async def test_part_strict_sequence(tmp_path: Path) -> None:
             claim_p1_ok, claimed_at=datetime.now(UTC)
         )
         assert claimed_p1_ok is not None
-        assert claimed_p1_ok.ordinal == 1
+        assert claimed_p1_ok.part.ordinal == 1
     finally:
         await database.close()
 
@@ -246,7 +246,7 @@ async def test_invalid_lease_ack_rejected(tmp_path: Path) -> None:
         # 1. Wrong lease_id must raise ValueError
         wrong_lease_ack = ChannelDeliveryPartAcknowledgement(
             delivery_id=delivery_id,
-            part_id=claimed.part_id,
+            part_id=claimed.part.part_id,
             lease_id=uuid4(),  # wrong lease
             status=ChannelDeliveryPartStatus.DELIVERED,
             acknowledged_at=now,
@@ -260,7 +260,7 @@ async def test_invalid_lease_ack_rejected(tmp_path: Path) -> None:
         future_time = now + timedelta(seconds=60)
         expired_ack = ChannelDeliveryPartAcknowledgement(
             delivery_id=delivery_id,
-            part_id=claimed.part_id,
+            part_id=claimed.part.part_id,
             lease_id=lease_id,
             status=ChannelDeliveryPartStatus.DELIVERED,
             acknowledged_at=future_time,
@@ -301,13 +301,13 @@ async def test_expired_lease_reclaimable_with_stable_provider_client_id(tmp_path
         )
         p0_attempt1 = await repo.claim_next_delivery_part(claim_1, claimed_at=t0)
         assert p0_attempt1 is not None
-        assert p0_attempt1.attempt == 1
-        assert p0_attempt1.provider_client_id == expected_client_id
+        assert p0_attempt1.part.attempt == 1
+        assert p0_attempt1.part.provider_client_id == expected_client_id
 
         # Advance time by 20s and recover expired leases
         t1 = t0 + timedelta(seconds=20)
         recovered_count = await repo.recover_expired_delivery_part_leases(as_of=t1)
-        assert recovered_count == 1
+        assert recovered_count.count == 1
 
         plan_recovered = await repo.get_delivery_plan(delivery_id)
         assert plan_recovered is not None
@@ -324,9 +324,9 @@ async def test_expired_lease_reclaimable_with_stable_provider_client_id(tmp_path
         )
         p0_attempt2 = await repo.claim_next_delivery_part(claim_2, claimed_at=t1)
         assert p0_attempt2 is not None
-        assert p0_attempt2.attempt == 2
+        assert p0_attempt2.part.attempt == 2
         # Provider client ID must be 100% stable and unchanged
-        assert p0_attempt2.provider_client_id == expected_client_id
+        assert p0_attempt2.part.provider_client_id == expected_client_id
     finally:
         await database.close()
 
@@ -351,28 +351,28 @@ async def test_idempotent_repeated_delivered_ack(tmp_path: Path) -> None:
 
         ack = ChannelDeliveryPartAcknowledgement(
             delivery_id=delivery_id,
-            part_id=claimed.part_id,
+            part_id=claimed.part.part_id,
             lease_id=lease_id,
             status=ChannelDeliveryPartStatus.DELIVERED,
             acknowledged_at=now,
             provider_message_id="msg-id-123",
             error=None,
         )
-        plan, part = await repo.acknowledge_delivery_part(ack, updated_at=now)
+        acknowledged = await repo.acknowledge_delivery_part(ack, updated_at=now)
+        (plan, part) = acknowledged.plan, acknowledged.part
         assert plan.status == ChannelDeliveryStatus.DELIVERED
         assert part.status == ChannelDeliveryPartStatus.DELIVERED
 
         # Repeated ACK with same status must succeed idempotently
-        plan2, part2 = await repo.acknowledge_delivery_part(
-            ack, updated_at=now + timedelta(seconds=1)
-        )
+        repeated = await repo.acknowledge_delivery_part(ack, updated_at=now + timedelta(seconds=1))
+        (plan2, part2) = repeated.plan, repeated.part
         assert plan2.status == ChannelDeliveryStatus.DELIVERED
         assert part2.status == ChannelDeliveryPartStatus.DELIVERED
 
         # But attempting to downgrade DELIVERED to FAILED must raise ValueError
         bad_downgrade = ChannelDeliveryPartAcknowledgement(
             delivery_id=delivery_id,
-            part_id=claimed.part_id,
+            part_id=claimed.part.part_id,
             lease_id=lease_id,
             status=ChannelDeliveryPartStatus.FAILED,
             acknowledged_at=now,
@@ -414,10 +414,10 @@ async def test_plan_lifecycle_and_parent_status_derivation(tmp_path: Path) -> No
         assert plan_after_c0 is not None
         assert plan_after_c0.status == ChannelDeliveryStatus.SENDING
 
-        plan1, _ = await repo.acknowledge_delivery_part(
+        first_acknowledged = await repo.acknowledge_delivery_part(
             ChannelDeliveryPartAcknowledgement(
                 delivery_id=delivery_id,
-                part_id=c0.part_id,
+                part_id=c0.part.part_id,
                 lease_id=l0,
                 status=ChannelDeliveryPartStatus.DELIVERED,
                 acknowledged_at=now,
@@ -426,6 +426,7 @@ async def test_plan_lifecycle_and_parent_status_derivation(tmp_path: Path) -> No
             ),
             updated_at=now,
         )
+        (plan1, _) = first_acknowledged.plan, first_acknowledged.part
         assert plan1.status == ChannelDeliveryStatus.PENDING
         assert plan1.delivered_part_count == 1
 
@@ -437,11 +438,11 @@ async def test_plan_lifecycle_and_parent_status_derivation(tmp_path: Path) -> No
             ),
             claimed_at=now,
         )
-        assert c1 is not None and c1.ordinal == 1
-        plan2, _ = await repo.acknowledge_delivery_part(
+        assert c1 is not None and c1.part.ordinal == 1
+        second_acknowledged = await repo.acknowledge_delivery_part(
             ChannelDeliveryPartAcknowledgement(
                 delivery_id=delivery_id,
-                part_id=c1.part_id,
+                part_id=c1.part.part_id,
                 lease_id=l1,
                 status=ChannelDeliveryPartStatus.DELIVERED,
                 acknowledged_at=now,
@@ -450,6 +451,7 @@ async def test_plan_lifecycle_and_parent_status_derivation(tmp_path: Path) -> No
             ),
             updated_at=now,
         )
+        (plan2, _) = second_acknowledged.plan, second_acknowledged.part
         assert plan2.status == ChannelDeliveryStatus.PENDING
         assert plan2.delivered_part_count == 2
 
@@ -461,11 +463,11 @@ async def test_plan_lifecycle_and_parent_status_derivation(tmp_path: Path) -> No
             ),
             claimed_at=now,
         )
-        assert c2 is not None and c2.ordinal == 2
-        plan3, _ = await repo.acknowledge_delivery_part(
+        assert c2 is not None and c2.part.ordinal == 2
+        third_acknowledged = await repo.acknowledge_delivery_part(
             ChannelDeliveryPartAcknowledgement(
                 delivery_id=delivery_id,
-                part_id=c2.part_id,
+                part_id=c2.part.part_id,
                 lease_id=l2,
                 status=ChannelDeliveryPartStatus.DELIVERED,
                 acknowledged_at=now,
@@ -474,6 +476,7 @@ async def test_plan_lifecycle_and_parent_status_derivation(tmp_path: Path) -> No
             ),
             updated_at=now,
         )
+        (plan3, _) = third_acknowledged.plan, third_acknowledged.part
         assert plan3.status == ChannelDeliveryStatus.DELIVERED
         assert plan3.delivered_part_count == 3
         assert plan3.delivered_at is not None
@@ -500,7 +503,7 @@ async def test_intermediate_part_failed_parent_status(tmp_path: Path) -> None:
         await repo.acknowledge_delivery_part(
             ChannelDeliveryPartAcknowledgement(
                 delivery_id=delivery_id,
-                part_id=c0.part_id,
+                part_id=c0.part.part_id,
                 lease_id=l0,
                 status=ChannelDeliveryPartStatus.DELIVERED,
                 acknowledged_at=now,
@@ -525,10 +528,10 @@ async def test_intermediate_part_failed_parent_status(tmp_path: Path) -> None:
             retryable=True,
             component="external_channels",
         )
-        plan_failed, part_failed = await repo.acknowledge_delivery_part(
+        failed = await repo.acknowledge_delivery_part(
             ChannelDeliveryPartAcknowledgement(
                 delivery_id=delivery_id,
-                part_id=c1.part_id,
+                part_id=c1.part.part_id,
                 lease_id=l1,
                 status=ChannelDeliveryPartStatus.FAILED,
                 acknowledged_at=now,
@@ -537,6 +540,7 @@ async def test_intermediate_part_failed_parent_status(tmp_path: Path) -> None:
             ),
             updated_at=now,
         )
+        (plan_failed, part_failed) = failed.plan, failed.part
         assert plan_failed.status == ChannelDeliveryStatus.FAILED
         assert part_failed.status == ChannelDeliveryPartStatus.FAILED
         assert plan_failed.delivery.last_error is not None
@@ -575,7 +579,7 @@ async def test_tail_cancellation(tmp_path: Path) -> None:
         await repo.acknowledge_delivery_part(
             ChannelDeliveryPartAcknowledgement(
                 delivery_id=delivery_id,
-                part_id=c0.part_id,
+                part_id=c0.part.part_id,
                 lease_id=l0,
                 status=ChannelDeliveryPartStatus.DELIVERED,
                 acknowledged_at=now,
@@ -591,14 +595,14 @@ async def test_tail_cancellation(tmp_path: Path) -> None:
             requested_at=now,
         )
         cancelled_plan = await repo.cancel_remaining_delivery_parts(delivery_id, cancel_req)
-        assert cancelled_plan.status == ChannelDeliveryStatus.CANCELLED
-        assert cancelled_plan.cancel_requested_at is not None
+        assert cancelled_plan.plan.status == ChannelDeliveryStatus.CANCELLED
+        assert cancelled_plan.plan.cancel_requested_at is not None
 
         # Part 0 remains DELIVERED
-        assert cancelled_plan.parts[0].status == ChannelDeliveryPartStatus.DELIVERED
+        assert cancelled_plan.plan.parts[0].status == ChannelDeliveryPartStatus.DELIVERED
         # Part 1 and 2 are CANCELLED
-        assert cancelled_plan.parts[1].status == ChannelDeliveryPartStatus.CANCELLED
-        assert cancelled_plan.parts[2].status == ChannelDeliveryPartStatus.CANCELLED
+        assert cancelled_plan.plan.parts[1].status == ChannelDeliveryPartStatus.CANCELLED
+        assert cancelled_plan.plan.parts[2].status == ChannelDeliveryPartStatus.CANCELLED
 
         # Subsequent claims return None
         assert (
@@ -637,8 +641,8 @@ async def test_concurrent_claims_single_winner(tmp_path: Path) -> None:
         results = await asyncio.gather(*[_attempt_claim(i) for i in range(10)])
         winners = [r for r in results if r is not None]
         assert len(winners) == 1
-        assert winners[0].ordinal == 0
-        assert winners[0].status == ChannelDeliveryPartStatus.SENDING
+        assert winners[0].part.ordinal == 0
+        assert winners[0].part.status == ChannelDeliveryPartStatus.SENDING
     finally:
         await database.close()
 
@@ -664,7 +668,7 @@ async def test_crash_recovery_does_not_resend_delivered_part(tmp_path: Path) -> 
         await repo.acknowledge_delivery_part(
             ChannelDeliveryPartAcknowledgement(
                 delivery_id=delivery_id,
-                part_id=c0.part_id,
+                part_id=c0.part.part_id,
                 lease_id=l0,
                 status=ChannelDeliveryPartStatus.DELIVERED,
                 acknowledged_at=now,
@@ -690,8 +694,8 @@ async def test_crash_recovery_does_not_resend_delivered_part(tmp_path: Path) -> 
             claimed_at=now + timedelta(hours=1),
         )
         assert c1 is not None
-        assert c1.ordinal == 1
-        assert c1.payload.text == "Part 1 ok"
+        assert c1.part.ordinal == 1
+        assert c1.part.payload.text == "Part 1 ok"
     finally:
         await database.close()
 
@@ -837,17 +841,17 @@ async def test_create_delivery_plan_three_parts_stable_client_ids(tmp_path: Path
             parts=parts_draft,
             created_at=now,
         )
-        assert plan.part_count == 3
-        assert len(plan.parts) == 3
-        assert plan.status == ChannelDeliveryStatus.PENDING
+        assert plan.plan.part_count == 3
+        assert len(plan.plan.parts) == 3
+        assert plan.plan.status == ChannelDeliveryStatus.PENDING
 
         expected_prefix = f"chatwaifu-{delivery_id.hex}-"
-        assert plan.parts[0].provider_client_id == f"{expected_prefix}000"
-        assert plan.parts[1].provider_client_id == f"{expected_prefix}001"
-        assert plan.parts[2].provider_client_id == f"{expected_prefix}002"
+        assert plan.plan.parts[0].provider_client_id == f"{expected_prefix}000"
+        assert plan.plan.parts[1].provider_client_id == f"{expected_prefix}001"
+        assert plan.plan.parts[2].provider_client_id == f"{expected_prefix}002"
 
         # Unique provider client IDs
-        client_ids = {p.provider_client_id for p in plan.parts}
+        client_ids = {p.provider_client_id for p in plan.plan.parts}
         assert len(client_ids) == 3
     finally:
         await database.close()
@@ -874,7 +878,7 @@ async def test_sending_part_with_cancel_race(tmp_path: Path) -> None:
             claimed_at=now,
         )
         assert part_0 is not None
-        assert part_0.status == ChannelDeliveryPartStatus.SENDING
+        assert part_0.part.status == ChannelDeliveryPartStatus.SENDING
 
         # Cancel remaining while Part 0 is in-flight
         cancel_req = ChannelDeliveryPartsCancelRequest(
@@ -883,17 +887,17 @@ async def test_sending_part_with_cancel_race(tmp_path: Path) -> None:
         )
         plan_after_cancel = await repo.cancel_remaining_delivery_parts(delivery_id, cancel_req)
         # Part 0 is still sending (lease preserved)
-        assert plan_after_cancel.parts[0].status == ChannelDeliveryPartStatus.SENDING
+        assert plan_after_cancel.plan.parts[0].status == ChannelDeliveryPartStatus.SENDING
         # Part 1 is cancelled
-        assert plan_after_cancel.parts[1].status == ChannelDeliveryPartStatus.CANCELLED
+        assert plan_after_cancel.plan.parts[1].status == ChannelDeliveryPartStatus.CANCELLED
         # Plan records cancel_requested_at
-        assert plan_after_cancel.cancel_requested_at is not None
+        assert plan_after_cancel.plan.cancel_requested_at is not None
 
         # ACK for in-flight Part 0 arrives
-        updated_plan, updated_p0 = await repo.acknowledge_delivery_part(
+        acknowledged = await repo.acknowledge_delivery_part(
             ChannelDeliveryPartAcknowledgement(
                 delivery_id=delivery_id,
-                part_id=part_0.part_id,
+                part_id=part_0.part.part_id,
                 lease_id=lease_id,
                 status=ChannelDeliveryPartStatus.DELIVERED,
                 provider_message_id="prov-p0",
@@ -901,6 +905,7 @@ async def test_sending_part_with_cancel_race(tmp_path: Path) -> None:
             ),
             updated_at=now,
         )
+        (updated_plan, updated_p0) = acknowledged.plan, acknowledged.part
         assert updated_p0.status == ChannelDeliveryPartStatus.DELIVERED
         # With cancel requested and remaining parts cancelled,
         # parent plan status resolves to CANCELLED
@@ -945,8 +950,8 @@ async def test_crash_before_ack_reclaims_with_identical_client_id(tmp_path: Path
             claimed_at=now,
         )
         assert c1 is not None
-        initial_client_id = c1.provider_client_id
-        assert c1.attempt == 1
+        initial_client_id = c1.part.provider_client_id
+        assert c1.part.attempt == 1
 
         # 2. Simulate crash: lease expires after 30s
         after_crash = now + timedelta(seconds=60)
@@ -964,9 +969,9 @@ async def test_crash_before_ack_reclaims_with_identical_client_id(tmp_path: Path
             claimed_at=after_crash,
         )
         assert c2 is not None
-        assert c2.part_id == c1.part_id
-        assert c2.attempt == 2
+        assert c2.part.part_id == c1.part.part_id
+        assert c2.part.attempt == 2
         # Client ID MUST BE IDENTICAL to enable upstream deduplication
-        assert c2.provider_client_id == initial_client_id
+        assert c2.part.provider_client_id == initial_client_id
     finally:
         await database.close()

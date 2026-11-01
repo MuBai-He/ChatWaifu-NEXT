@@ -12,6 +12,30 @@ public final class AiReviewSelection {
   public static final int PAGE_SIZE = 100;
   private final Map<String, JSONObject> visible = new LinkedHashMap<>();
   private final Set<String> selected = new LinkedHashSet<>();
+  private final Map<String, String> fingerprints = new LinkedHashMap<>();
+
+  public interface Snapshot {
+    JSONArray copy() throws Exception;
+  }
+
+  public static final class Page {
+    private final Map<String, JSONObject> values = new LinkedHashMap<>();
+    private final Map<String, String> hashes = new LinkedHashMap<>();
+
+    private Page() {}
+  }
+
+  public static Page prepare(JSONArray items) throws Exception {
+    if (items.length() > PAGE_SIZE) throw new IllegalArgumentException("每页最多选择 100 条建议");
+    Page page = new Page();
+    for (int i = 0; i < items.length(); i++) {
+      JSONObject item = items.getJSONObject(i);
+      String ref = key(item), json = item.toString();
+      page.values.put(ref, new JSONObject(json));
+      page.hashes.put(ref, AnalysisContract.hash(json));
+    }
+    return page;
+  }
 
   public static String key(JSONObject item) {
     if (!(item.opt("review_ref") instanceof String))
@@ -22,18 +46,17 @@ public final class AiReviewSelection {
   }
 
   public void replaceVisible(JSONArray items) throws Exception {
-    if (items.length() > PAGE_SIZE) throw new IllegalArgumentException("每页最多选择 100 条建议");
-    Map<String, JSONObject> next = new LinkedHashMap<>();
-    for (int i = 0; i < items.length(); i++) {
-      JSONObject item = items.getJSONObject(i);
-      next.put(key(item), new JSONObject(item.toString()));
-    }
+    replaceVisible(prepare(items));
+  }
+
+  public void replaceVisible(Page page) {
     selected.removeIf(
         ref ->
-            !next.containsKey(ref)
-                || !next.get(ref).toString().equals(visible.get(ref).toString()));
+            !page.values.containsKey(ref) || !page.hashes.get(ref).equals(fingerprints.get(ref)));
     visible.clear();
-    visible.putAll(next);
+    visible.putAll(page.values);
+    fingerprints.clear();
+    fingerprints.putAll(page.hashes);
   }
 
   public void select(JSONObject item, boolean value) {
@@ -60,9 +83,17 @@ public final class AiReviewSelection {
     if (value) selected.addAll(visible.keySet());
   }
 
+  public Snapshot capture() {
+    java.util.List<JSONObject> rows = new java.util.ArrayList<>();
+    for (String ref : selected) rows.add(visible.get(ref));
+    return () -> {
+      JSONArray result = new JSONArray();
+      for (JSONObject row : rows) result.put(new JSONObject(row.toString()));
+      return result;
+    };
+  }
+
   public JSONArray snapshot() throws Exception {
-    JSONArray result = new JSONArray();
-    for (String ref : selected) result.put(new JSONObject(visible.get(ref).toString()));
-    return result;
+    return capture().copy();
   }
 }

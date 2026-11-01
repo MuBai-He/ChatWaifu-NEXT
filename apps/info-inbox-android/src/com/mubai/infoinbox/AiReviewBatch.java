@@ -28,12 +28,18 @@ public final class AiReviewBatch {
             .rawQuery(
                 "SELECT state,item_json FROM ai_reviews WHERE ref=?",
                 new String[] {AiReviewSelection.key(selected)})) {
-      if (!c.moveToFirst()
-          || !c.getString(0).equals("pending")
-          || !new JSONObject(c.getString(1)).toString().equals(selected.toString()))
+      if (!c.moveToFirst() || !c.getString(0).equals("pending"))
         throw new IllegalStateException("建议已变化或已处理，请刷新后重新选择");
       JSONObject proposal = new JSONObject(c.getString(1));
+      JSONObject actual = new JSONObject(proposal.toString()), chosen = new JSONObject(selected.toString());
+      for (String key : new String[] {"temporal_status", "temporal_reason"}) {
+        actual.remove(key);
+        chosen.remove(key);
+      }
+      if (!actual.toString().equals(chosen.toString()))
+        throw new IllegalStateException("建议已变化或已处理，请刷新后重新选择");
       new ConversationPolicy(memory).requireProposal(proposal);
+      ProposalRelevance.annotate(proposal, System.currentTimeMillis());
       return proposal;
     }
   }
@@ -42,7 +48,7 @@ public final class AiReviewBatch {
     validate(selected);
     synchronized (ConversationPolicy.SEND_LOCK) {
       SQLiteDatabase db = memory.getWritableDatabase();
-      db.beginTransaction();
+      db.beginTransactionNonExclusive();
       try {
         for (int i = 0; i < selected.length(); i++) {
           if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
@@ -85,75 +91,72 @@ public final class AiReviewBatch {
     JSONArray result = new JSONArray();
     Set<String> targets = new LinkedHashSet<>();
     OrganizerStore store = new OrganizerStore(memory);
-    SQLiteDatabase db = memory.getWritableDatabase();
-    db.beginTransaction();
-    try {
-      for (int i = 0; i < selected.length(); i++) {
-        JSONObject proposal = current(memory, selected.getJSONObject(i));
-        store.verifySourceRevisions(proposal.getJSONObject("source"));
-        JSONObject row = new JSONObject().put("proposal", proposal);
-        String kind = proposal.getString("kind");
-        if (kind.matches("todo|event")) {
-          String op = proposal.optString("operation", "create");
-          JSONObject old = op.equals("create") ? null : store.work(proposal.getString("target_id"));
-          if (!op.equals("create")) {
-            if (old == null || old.getInt("revision") != proposal.getInt("expected_revision"))
-              throw new IllegalStateException("事项已被修改，请先单独核对这条建议");
-            if (!targets.add(old.getString("id")))
-              throw new IllegalStateException("多条建议涉及同一事项，请分别核对保存");
-            row.put("previous_title", old.getString("title"));
-          }
-          JSONObject edited =
-              new JSONObject()
-                  .put("title", proposal.getString("title"))
-                  .put(
-                      "timezone",
-                      old == null
-                          ? proposal.optString("timezone", timezone)
-                          : old.getString("timezone"))
-                  .put(
-                      "state",
-                      old == null
-                          ? proposal.optString("state", "open")
-                          : old.optString("state", "open"))
-                  .put(
-                      "involvement",
-                      old == null
-                          ? proposal.optString("involvement", "unclear")
-                          : old.getString("involvement"))
-                  .put(
-                      "location",
-                      old == null
-                          ? proposal.optString("location", "")
-                          : old.optString("location", ""))
-                  .put(
-                      "details",
-                      old == null
-                          ? proposal.optString("details", "")
-                          : old.optString("details", ""));
-          time(edited, "due_at", kind.equals("event") ? null : proposed(proposal, old, "due_at"));
-          time(edited, "starts_at", proposed(proposal, old, "starts_at"));
-          time(edited, "ends_at", proposed(proposal, old, "ends_at"));
-          TimeRules.validateRange(
-              OrganizerStore.nullable(edited, "starts_at"),
-              OrganizerStore.nullable(edited, "ends_at"));
-          JSONObject reminder = old == null ? null : store.reminder(old.getString("id"));
-          row.put("edited", edited)
-              .put(
-                  "remind_at",
-                  !op.matches("complete|cancel")
-                          && reminder != null
-                          && reminder.optString("state").equals("scheduled")
-                      ? reminder.getLong("due_at")
-                      : JSONObject.NULL);
-        } else {
-          row.put("memory_kind", memoryKind(proposal));
+    // A preview does not reserve the writer. Every frozen row, source and target
+    // revision is checked again by confirm's atomic transaction before any write.
+    for (int i = 0; i < selected.length(); i++) {
+      JSONObject proposal = current(memory, selected.getJSONObject(i));
+      if (ProposalRelevance.needsHistoricalReview(proposal))
+        throw new IllegalStateException("历史事项请逐条核对，确认现在仍需处理后再保存。");
+      store.verifySourceRevisions(proposal.getJSONObject("source"));
+      JSONObject row = new JSONObject().put("proposal", proposal);
+      String kind = proposal.getString("kind");
+      if (kind.matches("todo|event")) {
+        String op = proposal.optString("operation", "create");
+        JSONObject old = op.equals("create") ? null : store.work(proposal.getString("target_id"));
+        if (!op.equals("create")) {
+          if (old == null || old.getInt("revision") != proposal.getInt("expected_revision"))
+            throw new IllegalStateException("事项已被修改，请先单独核对这条建议");
+          if (!targets.add(old.getString("id")))
+            throw new IllegalStateException("多条建议涉及同一事项，请分别核对保存");
+          row.put("previous_title", old.getString("title"));
         }
-        result.put(row);
+        JSONObject edited =
+            new JSONObject()
+                .put("title", proposal.getString("title"))
+                .put(
+                    "timezone",
+                    old == null
+                        ? proposal.optString("timezone", timezone)
+                        : old.getString("timezone"))
+                .put(
+                    "state",
+                    old == null
+                        ? proposal.optString("state", "open")
+                        : old.optString("state", "open"))
+                .put(
+                    "involvement",
+                    old == null
+                        ? proposal.optString("involvement", "unclear")
+                        : old.getString("involvement"))
+                .put(
+                    "location",
+                    old == null
+                        ? proposal.optString("location", "")
+                        : old.optString("location", ""))
+                .put(
+                    "details",
+                    old == null
+                        ? proposal.optString("details", "")
+                        : old.optString("details", ""));
+        time(edited, "due_at", kind.equals("event") ? null : proposed(proposal, old, "due_at"));
+        time(edited, "starts_at", proposed(proposal, old, "starts_at"));
+        time(edited, "ends_at", proposed(proposal, old, "ends_at"));
+        TimeRules.validateRange(
+            OrganizerStore.nullable(edited, "starts_at"),
+            OrganizerStore.nullable(edited, "ends_at"));
+        JSONObject reminder = old == null ? null : store.reminder(old.getString("id"));
+        row.put("edited", edited)
+            .put(
+                "remind_at",
+                !op.matches("complete|cancel")
+                        && reminder != null
+                        && reminder.optString("state").equals("scheduled")
+                    ? reminder.getLong("due_at")
+                    : JSONObject.NULL);
+      } else {
+        row.put("memory_kind", memoryKind(proposal));
       }
-      db.setTransactionSuccessful();
-    } finally {
-      db.endTransaction();
+      result.put(row);
     }
     return result;
   }
@@ -167,12 +170,14 @@ public final class AiReviewBatch {
       synchronized (ConversationPolicy.SEND_LOCK) {
         SQLiteDatabase db = memory.getWritableDatabase();
         OrganizerStore store = new OrganizerStore(memory);
-        db.beginTransaction();
+        db.beginTransactionNonExclusive();
         try {
           for (int i = 0; i < prepared.length(); i++) {
             if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
             JSONObject row = prepared.getJSONObject(i);
             JSONObject proposal = current(memory, row.getJSONObject("proposal"));
+            if (ProposalRelevance.needsHistoricalReview(proposal))
+              throw new IllegalStateException("历史事项请逐条核对，确认现在仍需处理后再保存。");
             if (proposal.getString("kind").matches("todo|event"))
               store.confirm(
                   proposal,

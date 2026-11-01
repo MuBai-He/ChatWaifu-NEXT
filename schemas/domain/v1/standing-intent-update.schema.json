@@ -1,0 +1,192 @@
+{
+  "$defs": {
+    "IntentSchedule": {
+      "properties": {
+        "first_wake_at": {
+          "format": "date-time",
+          "title": "First Wake At",
+          "type": "string"
+        },
+        "kind": {
+          "default": "run",
+          "enum": [
+            "run",
+            "remind"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "repeat": {
+          "default": "none",
+          "enum": [
+            "none",
+            "daily",
+            "weekly"
+          ],
+          "title": "Repeat",
+          "type": "string"
+        },
+        "timezone": {
+          "default": "Asia/Shanghai",
+          "title": "Timezone",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        }
+      },
+      "required": [
+        "first_wake_at"
+      ],
+      "title": "IntentSchedule",
+      "type": "object"
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/standing-intent-update.schema.json",
+  "properties": {
+    "allow_writes": {
+      "default": false,
+      "title": "Allow Writes",
+      "type": "boolean"
+    },
+    "allowed_operations": {
+      "items": {
+        "enum": [
+          "create",
+          "update",
+          "complete",
+          "cancel",
+          "delete"
+        ],
+        "type": "string"
+      },
+      "title": "Allowed Operations",
+      "type": "array"
+    },
+    "allowed_skill_ids": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 32,
+      "minItems": 1,
+      "title": "Allowed Skill Ids",
+      "type": "array"
+    },
+    "calendar_ids": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 32,
+      "title": "Calendar Ids",
+      "type": "array"
+    },
+    "expected_revision": {
+      "minimum": 1,
+      "title": "Expected Revision",
+      "type": "integer"
+    },
+    "expires_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Expires At"
+    },
+    "goal": {
+      "maxLength": 2000,
+      "minLength": 1,
+      "title": "Goal",
+      "type": "string"
+    },
+    "max_active_seconds": {
+      "default": 300,
+      "maximum": 1800,
+      "minimum": 30,
+      "title": "Max Active Seconds",
+      "type": "integer"
+    },
+    "max_tool_calls": {
+      "default": 20,
+      "maximum": 100,
+      "minimum": 1,
+      "title": "Max Tool Calls",
+      "type": "integer"
+    },
+    "observe_calendar": {
+      "default": false,
+      "title": "Observe Calendar",
+      "type": "boolean"
+    },
+    "resource_roots": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 16,
+      "title": "Resource Roots",
+      "type": "array"
+    },
+    "room_ids": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 32,
+      "title": "Room Ids",
+      "type": "array"
+    },
+    "schedule": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/IntentSchedule"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "session_id": {
+      "format": "uuid",
+      "title": "Session Id",
+      "type": "string"
+    },
+    "shadow": {
+      "default": true,
+      "title": "Shadow",
+      "type": "boolean"
+    },
+    "tasklist_ids": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 32,
+      "title": "Tasklist Ids",
+      "type": "array"
+    }
+  },
+  "required": [
+    "session_id",
+    "goal",
+    "allowed_skill_ids",
+    "expected_revision"
+  ],
+  "title": "StandingIntentUpdate",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

@@ -54,6 +54,8 @@ class _Task(_Wire):
     deleted: bool = False
 
     def domain(self) -> GoogleTask:
+        if self.deleted:
+            raise GoogleCalendarError("item_not_found")
         try:
             due = date.fromisoformat(self.due[:10]) if self.due else None
         except ValueError:
@@ -67,9 +69,15 @@ class _Page(_Wire):
 
 
 class GoogleTasksAdapter:
-    def __init__(self, *, transport: httpx.AsyncBaseTransport | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        transport: httpx.AsyncBaseTransport | None = None,
+        proxy_url: str | None = None,
+    ) -> None:
         self._client = httpx.AsyncClient(
             transport=transport,
+            proxy=proxy_url,
             timeout=15,
             follow_redirects=False,
             trust_env=False,
@@ -116,6 +124,13 @@ class GoogleTasksAdapter:
             return tuple(
                 task.domain() for raw in items if not (task := _Task.model_validate(raw)).deleted
             )
+        except ValidationError:
+            raise GoogleCalendarError("invalid_response") from None
+
+    async def get(self, token: str, list_id: str, task_id: str) -> GoogleTask:
+        raw = await self._request("GET", self._url(list_id, task_id), token)
+        try:
+            return _Task.model_validate(raw).domain()
         except ValidationError:
             raise GoogleCalendarError("invalid_response") from None
 

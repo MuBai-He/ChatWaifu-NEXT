@@ -8,9 +8,7 @@ public final class AnalysisRouting {
   private AnalysisRouting() {}
 
   public static boolean standalone(Context context) {
-    return context
-        .getSharedPreferences("analysis-route", Context.MODE_PRIVATE)
-        .getBoolean("standalone", false);
+    return false;
   }
 
   public static void standalone(Context context, boolean value) {

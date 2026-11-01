@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.graphics.Color;
-import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
@@ -49,6 +48,25 @@ public final class MainActivity extends Activity {
   private Button bulkAll, bulkExclude, bulkRestore;
   private Runnable redrawRooms, refreshRooms;
   private boolean aiPageVisible = false;
+  private String memorySearch = "", memoryKind = "全部";
+  private int memoryScrollY = 0;
+  private boolean aiUpdateNotice = false;
+  private Button aiRefreshAction, aiMultiSelectAction;
+  private boolean aiLoading = false, aiPolling = false, aiChangingChecks = false;
+  private volatile long aiReadSequence = 0;
+  private final java.util.List<View> aiSelectionOnlyViews = new java.util.ArrayList<>();
+
+  private static final class AiInboxData {
+    JSONArray all, items, visible;
+    JSONObject stats, progress;
+    AiReviewSelection.Page selection;
+    String fingerprint, progressLabel;
+    int page;
+    java.util.Map<String, AiInboxData> sectionPages;
+  }
+
+  private java.util.Map<String, AiInboxData> aiSectionPages = new java.util.LinkedHashMap<>();
+
   private JSONObject aiSourceFilter;
   private String aiPageFingerprint = "";
   private final AiReviewSelection aiSelection = new AiReviewSelection();
@@ -114,7 +132,7 @@ public final class MainActivity extends Activity {
     nav.setBackgroundColor(Color.WHITE);
     outer.addView(nav);
     setContentView(outer);
-    select(getIntent().getIntExtra("tab", 0));
+    select(getIntent().getIntExtra("tab", AnalysisRouting.ready(this) ? 1 : 0));
     AnalysisJob.schedule(this, new ApiSettings(this).automatic());
     AnalysisJob.enqueueIntake(this, 1000L);
   }
@@ -128,6 +146,7 @@ public final class MainActivity extends Activity {
       HistoryImport.pause(this, "系统暂未允许继续传输，请点击继续");
     }
     KnowledgeJob.enqueue(this);
+    RuntimeMessageService.ensureStarted(this);
     resumed = true;
     main.postDelayed(pulse, 15000);
   }
@@ -157,14 +176,8 @@ public final class MainActivity extends Activity {
     return l;
   }
 
-  private TextView text(String s, int size, int color, boolean bold) {
-    TextView v = new TextView(this);
-    v.setText(s);
-    v.setTextSize(size);
-    v.setTextColor(color);
-    v.setLineSpacing(dp(3), 1);
-    if (bold) v.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-    return v;
+  private TextView text(String value, int size, int color, boolean bold) {
+    return NativeUi.text(this, value, size, color, bold);
   }
 
   private GradientDrawable shape(int color, int radius) {
@@ -190,16 +203,7 @@ public final class MainActivity extends Activity {
   }
 
   private Button button(String title, Runnable action, boolean primary) {
-    Button b = new Button(this);
-    b.setText(title);
-    b.setTextSize(14);
-    b.setAllCaps(false);
-    b.setMinHeight(dp(48));
-    b.setTextColor(primary ? Color.WHITE : PURPLE);
-    b.setBackground(shape(primary ? PURPLE : 0xFFF0EDF8, 12));
-    NativeUi.action(b);
-    b.setOnClickListener(v -> action.run());
-    return b;
+    return NativeUi.button(this, title, action, primary);
   }
 
   private Button addButton(LinearLayout l, String title, Runnable action, boolean primary) {
@@ -230,10 +234,11 @@ public final class MainActivity extends Activity {
   public void onNewIntent(Intent intent) {
     super.onNewIntent(intent);
     setIntent(intent);
-    select(intent.getIntExtra("tab", 0));
+    select(intent.getIntExtra("tab", AnalysisRouting.ready(this) ? 1 : 0));
   }
 
   private void select(int index) {
+    if (tab == 3) memoryScrollY = ((ScrollView) body.getParent()).getScrollY();
     if (index == 1) {
       aiInbox();
       return;
@@ -255,7 +260,7 @@ public final class MainActivity extends Activity {
 
   private void renderNav() {
     nav.removeAllViews();
-    String[] names = {"概览", "AI建议", "事项", "记忆", "设置"};
+    String[] names = NativeUi.NAV_LABELS;
     for (int i = 0; i < names.length; i++) {
       final int next = i;
       TextView item = text(names[i], 14, i == tab ? PURPLE : MUTED, i == tab);
@@ -271,8 +276,15 @@ public final class MainActivity extends Activity {
   }
 
   private void page(String title, String hint) {
+    page(title, hint, false);
+  }
+
+  private void page(String title, String hint, boolean retainAi) {
     resetSelectionPage();
-    resetAiSelectionPage();
+    if (retainAi) clearAiSelectionViews();
+    else resetAiSelectionPage();
+    aiLoading = false;
+    aiReadSequence++;
     importStatus = null;
     importAction = null;
     generation++;
@@ -438,6 +450,7 @@ public final class MainActivity extends Activity {
               false);
           LinearLayout boot = card();
           Switch toggle = new Switch(this);
+          NativeUi.toggle(toggle);
           toggle.setText("开机恢复采集");
           toggle.setTextSize(16);
           toggle.setTextColor(INK);
@@ -554,6 +567,7 @@ public final class MainActivity extends Activity {
     }
     if (conversationMode) {
       EditText search = new EditText(this);
+      NativeUi.field(search);
       search.setSingleLine(true);
       search.setHint("搜索联系人或会话");
       search.setText(conversationSearch);
@@ -656,6 +670,7 @@ public final class MainActivity extends Activity {
         },
         false);
     EditText search = new EditText(this);
+    NativeUi.field(search);
     search.setSingleLine(true);
     search.setHint("搜索此会话消息");
     search.setText(searchValue);
@@ -832,10 +847,23 @@ public final class MainActivity extends Activity {
     view.setPadding(dp(20), dp(8), dp(20), 0);
     view.addView(text("填写你确认后的内容，原消息将作为引用保留。", 14, MUTED, false));
     EditText title = new EditText(this);
+    NativeUi.field(title);
     title.setHint("记忆标题");
     title.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
     title.setText(presetTitle.length() > 200 ? presetTitle.substring(0, 200) : presetTitle);
     view.addView(title);
+    EditText conclusion = null;
+    if (source.has("_information_summary")) {
+      conclusion = new EditText(this);
+      NativeUi.field(conclusion);
+      conclusion.setHint("完整结论");
+      conclusion.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+      conclusion.setMinLines(3);
+      conclusion.setMaxLines(6);
+      conclusion.setText(source.optString("_information_summary"));
+      view.addView(conclusion);
+    }
+    final EditText summaryField = conclusion;
     String[] kinds = {"记忆", "决定", "资料"};
     Spinner kind = new Spinner(this);
     kind.setAdapter(
@@ -856,9 +884,16 @@ public final class MainActivity extends Activity {
                 .setOnClickListener(
                     v -> {
                       try {
+                        JSONObject savedSource = new JSONObject(source.toString());
+                        if (summaryField != null) {
+                          String full = summaryField.getText().toString().trim();
+                          if (full.isEmpty() || full.length() > 1200)
+                            throw new IllegalArgumentException("请输入 1–1200 字的完整结论");
+                          savedSource.put("_information_summary", full);
+                        }
                         if (proposal == null)
                           memories.save(
-                              source,
+                              savedSource,
                               title.getText().toString(),
                               kind.getSelectedItem().toString());
                         else
@@ -878,37 +913,104 @@ public final class MainActivity extends Activity {
   }
 
   private void memoryPage() {
-    page("确认后的记忆", "由你确认，保留当时的原消息引用");
+    page("记忆与资料", "由你确认，随时回看消息出处");
     try {
       JSONArray list = memories.list();
-      LinearLayout overview = card();
-      overview.addView(text(list.length() + " 条确认记录", 18, INK, true));
-      addButton(overview, "导出确认记忆", () -> shareMemories(), false);
-      if (list.length() == 0) {
-        LinearLayout c = card();
-        c.addView(text("从一条重要消息开始", 18, INK, true));
-        gap(c, 8);
-        c.addView(text("在收件箱中点开消息，填写标题并确认保存。后续 ChatWaifu 可以依据这些确认记录和出处整理长期记忆。", 14, MUTED, false));
-      }
-      for (int i = 0; i < list.length(); i++) {
-        JSONObject item = list.getJSONObject(i), source = item.getJSONObject("source");
-        LinearLayout c = card();
-        c.addView(text(item.getString("kind") + " · 已确认", 12, PURPLE, true));
-        gap(c, 6);
-        c.addView(text(item.getString("title"), 17, INK, true));
-        gap(c, 8);
-        c.addView(
-            text(
-                MessagePresentation.conversationTitle(source)
-                    + " · "
-                    + date(source.optLong("created_at")),
-                12,
-                MUTED,
-                false));
-        c.setOnClickListener(v -> memoryDialog(item));
-      }
-    } catch (Exception e) {
-      error("读取确认记忆失败");
+      LinearLayout filters = card();
+      EditText search = new EditText(this);
+      NativeUi.field(search);
+      search.setSingleLine(true);
+      search.setHint("搜索标题、原文或会话");
+      search.setContentDescription("搜索确认资料");
+      search.setText(memorySearch);
+      filters.addView(search);
+      Spinner kinds = new Spinner(this);
+      String[] labels = {"全部", "记忆", "决定", "资料"};
+      kinds.setAdapter(
+          new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, labels));
+      for (int i = 0; i < labels.length; i++)
+        if (labels[i].equals(memoryKind)) kinds.setSelection(i);
+      filters.addView(kinds);
+      LinearLayout rows = column();
+      body.addView(rows);
+      Runnable draw =
+          () -> {
+            rows.removeAllViews();
+            int count = 0;
+            try {
+              String query = memorySearch.trim().toLowerCase(java.util.Locale.ROOT);
+              for (int i = 0; i < list.length(); i++) {
+                JSONObject item = list.getJSONObject(i), source = item.getJSONObject("source");
+                String content =
+                    item.optString("title")
+                        + " "
+                        + item.optString("quote")
+                        + " "
+                        + MessagePresentation.conversationTitle(source);
+                if (!content.toLowerCase(java.util.Locale.ROOT).contains(query)
+                    || (!memoryKind.equals("全部") && !memoryKind.equals(item.optString("kind"))))
+                  continue;
+                count++;
+                LinearLayout c = column();
+                c.setPadding(dp(16), dp(12), dp(16), dp(12));
+                c.setBackground(shape(Color.WHITE, 16));
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+                lp.setMargins(0, 0, 0, dp(10));
+                rows.addView(c, lp);
+                c.addView(text(item.optString("title"), 17, INK, true));
+                c.addView(text(item.optString("kind") + " · 已确认", 12, PURPLE, false));
+                if (!item.optString("summary").isEmpty()) {
+                  TextView summary = text(item.optString("summary"), 14, INK, false);
+                  summary.setMaxLines(2);
+                  summary.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                  c.addView(summary);
+                }
+                c.addView(
+                    text(
+                        MessagePresentation.conversationTitle(source)
+                            + " · "
+                            + date(source.optLong("created_at")),
+                        12,
+                        MUTED,
+                        false));
+                c.setOnClickListener(v -> memoryDialog(item));
+              }
+              if (count == 0)
+                rows.addView(
+                    text(
+                        list.length() == 0 ? "确认后的记忆和资料会出现在这里。" : "没有符合条件的资料，请调整搜索或类型。",
+                        15,
+                        MUTED,
+                        false));
+            } catch (Exception error) {
+              toast("读取资料失败，请重试");
+            }
+          };
+      search.addTextChangedListener(
+          new android.text.TextWatcher() {
+            public void beforeTextChanged(CharSequence value, int start, int count, int after) {}
+
+            public void onTextChanged(CharSequence value, int start, int before, int count) {
+              memorySearch = value.toString();
+              draw.run();
+            }
+
+            public void afterTextChanged(android.text.Editable value) {}
+          });
+      kinds.setOnItemSelectedListener(
+          new AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+              memoryKind = labels[position];
+              draw.run();
+            }
+
+            public void onNothingSelected(AdapterView<?> parent) {}
+          });
+      draw.run();
+      ScrollView scroll = (ScrollView) body.getParent();
+      scroll.post(() -> scroll.scrollTo(0, memoryScrollY));
+    } catch (Exception error) {
+      error("读取确认资料失败");
     }
   }
 
@@ -920,28 +1022,15 @@ public final class MainActivity extends Activity {
       view.addView(text("确认内容", 13, PURPLE, true));
       gap(view, 6);
       view.addView(text(item.getString("title"), 17, INK, true));
-      gap(view, 16);
-      view.addView(
-          text(
-              "原消息快照 · "
-                  + MessagePresentation.conversationTitle(source)
-                  + " · "
-                  + date(source.optLong("created_at")),
-              12,
-              MUTED,
-              false));
-      gap(view, 8);
-      String sender = MessagePresentation.senderName(source);
-      if (!sender.isEmpty()) view.addView(text(sender, 13, PURPLE, true));
-      TextView quote =
-          text(
-              MessagePresentation.body(
-                  new JSONObject(source.toString()).put("content", item.getString("quote"))),
-              15,
-              INK,
-              false);
-      quote.setTextIsSelectable(true);
-      view.addView(quote);
+      gap(view, 12);
+      if (!item.optString("summary").isEmpty()) {
+        view.addView(text("完整结论", 13, PURPLE, true));
+        TextView summary = text(item.getString("summary"), 15, INK, false);
+        summary.setTextIsSelectable(true);
+        view.addView(summary);
+        gap(view, 12);
+      }
+      NativeUi.sources(this, view, source);
       ScrollView scroll = new ScrollView(this);
       scroll.addView(view);
       new AlertDialog.Builder(this)
@@ -1265,6 +1354,7 @@ public final class MainActivity extends Activity {
     LinearLayout controls = card();
     addButton(controls, "返回设置", this::settings, false);
     EditText search = new EditText(this);
+    NativeUi.field(search);
     search.setSingleLine(true);
     search.setHint("搜索群名称、好友昵称或备注");
     controls.addView(search);
@@ -1373,11 +1463,13 @@ public final class MainActivity extends Activity {
     gap(connection, 8);
     connection.addView(text("使用宁宁后端现有的模型配置。手机只需连接服务器，无需填写模型名称或模型 API Key。", 14, MUTED, false));
     EditText server = new EditText(this);
+    NativeUi.field(server);
     server.setSingleLine(true);
     server.setHint("宁宁服务器根地址");
     server.setText(backend.base());
     connection.addView(server);
     EditText credential = new EditText(this);
+    NativeUi.field(credential);
     credential.setSingleLine(true);
     credential.setHint(backend.hasCredential() ? "连接凭据已保存；留空保留" : "宁宁后端连接凭据（与桌面连接相同）");
     credential.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
@@ -1410,6 +1502,7 @@ public final class MainActivity extends Activity {
     knowledge.addView(
         text("同步未排除的文字资料与已确认内容，可在网页查看关系、核对出处和编辑事项。图谱需要联网，本地采集和提醒照常工作。", 14, MUTED, false));
     Switch syncKnowledge = new Switch(this);
+    NativeUi.toggle(syncKnowledge);
     syncKnowledge.setText("启用知识库同步");
     syncKnowledge.setChecked(KnowledgeSync.enabled(this));
     syncKnowledge.setOnCheckedChangeListener(
@@ -1419,9 +1512,11 @@ public final class MainActivity extends Activity {
               .putBoolean("enabled", enabled)
               .commit();
           KnowledgeJob.enqueue(this);
+          if(enabled)RuntimeMessageService.ensureStarted(this);else stopService(new Intent(this,RuntimeMessageService.class));
         });
     knowledge.addView(syncKnowledge);
     Switch historyKnowledge = new Switch(this);
+    NativeUi.toggle(historyKnowledge);
     historyKnowledge.setText("Wi-Fi 下补齐 30 天以前的资料");
     historyKnowledge.setChecked(
         getSharedPreferences("knowledge", MODE_PRIVATE).getBoolean("history", true));
@@ -1458,6 +1553,7 @@ public final class MainActivity extends Activity {
     gap(process, 8);
     process.addView(text(AnalysisRouting.status(this), 14, PURPLE, true));
     Switch auto = new Switch(this);
+    NativeUi.toggle(auto);
     auto.setText("新消息自动整理");
     auto.setChecked(api.automatic());
     auto.setOnCheckedChangeListener(
@@ -1477,6 +1573,7 @@ public final class MainActivity extends Activity {
     addButton(process, "立即整理一批", this::analyze, false);
     historyControls(process);
     EditText timezone = new EditText(this);
+    NativeUi.field(timezone);
     timezone.setSingleLine(true);
     timezone.setText(api.timezone());
     process.addView(text("整理与日程时区", 13, MUTED, false));
@@ -1495,94 +1592,17 @@ public final class MainActivity extends Activity {
         false);
 
     LinearLayout advanced = card();
-    advanced.addView(text("高级选项", 18, INK, true));
-    Switch standalone = new Switch(this);
-    standalone.setText("使用独立模型接口");
-    standalone.setChecked(AnalysisRouting.standalone(this));
-    standalone.setOnCheckedChangeListener(
-        (view, on) -> {
-          AnalysisRouting.standalone(this, on);
-          settings();
-        });
-    advanced.addView(standalone);
-    advanced.addView(text("仅在希望手机自行调用模型时启用。连接宁宁时不需要此项。", 13, MUTED, false));
-    if (AnalysisRouting.standalone(this)) {
-      EditText base = new EditText(this);
-      base.setSingleLine(true);
-      base.setHint("独立接口 Base URL");
-      base.setText(api.base());
-      advanced.addView(base);
-      EditText model = new EditText(this);
-      model.setSingleLine(true);
-      model.setHint("模型 ID");
-      model.setText(api.model());
-      advanced.addView(model);
-      EditText key = new EditText(this);
-      key.setSingleLine(true);
-      key.setHint(api.hasKey() ? "模型 API Key 已保存，留空保留" : "模型 API Key（无鉴权服务可留空）");
-      key.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-      advanced.addView(key);
-      Switch json = new Switch(this);
-      json.setText("使用 JSON 模式");
-      json.setChecked(api.jsonMode());
-      advanced.addView(json);
-      addButton(
-          advanced,
-          "保存独立接口配置",
-          () -> {
-            try {
-              api.save(
-                  base.getText().toString(),
-                  model.getText().toString(),
-                  key.getText().toString(),
-                  json.isChecked());
-              key.setText("");
-              toast("独立接口配置已保存");
-            } catch (Exception error) {
-              toast(error.getMessage());
-            }
-          },
-          false);
-      addButton(
-          advanced,
-          "获取独立接口模型列表",
-          () -> {
-            try {
-              api.save(
-                  base.getText().toString(),
-                  model.getText().toString(),
-                  key.getText().toString(),
-                  json.isChecked());
-              key.setText("");
-            } catch (Exception error) {
-              toast(error.getMessage());
-              return;
-            }
-            async(
-                () -> api.client().models(),
-                result -> {
-                  JSONArray models = (JSONArray) result;
-                  String[] ids = new String[models.length()];
-                  for (int i = 0; i < ids.length; i++)
-                    ids[i] = models.getJSONObject(i).getString("id");
-                  new AlertDialog.Builder(this)
-                      .setTitle("独立接口模型")
-                      .setItems(
-                          ids,
-                          (d, index) -> {
-                            model.setText(ids[index]);
-                            try {
-                              api.save(base.getText().toString(), ids[index], "", json.isChecked());
-                            } catch (Exception error) {
-                              toast("模型保存失败");
-                            }
-                          })
-                      .setNegativeButton("关闭", null)
-                      .show();
-                });
-          },
-          false);
-    }
+    advanced.addView(text("宁宁持续协助",18,INK,true));
+    advanced.addView(text("由宁宁后端统一整理资料、使用工具和跟进。手机保留原文、离线编辑和提醒。",14,MUTED,false));
+    Switch timely=new Switch(this);NativeUi.toggle(timely);
+    timely.setText("保持消息连接，及时接收重要变化");
+    timely.setChecked(getSharedPreferences("runtime-processing",MODE_PRIVATE).getBoolean("message_connection",true));
+    timely.setOnCheckedChangeListener((view,enabled)->{
+      getSharedPreferences("runtime-processing",MODE_PRIVATE).edit().putBoolean("message_connection",enabled).apply();
+      if(enabled)RuntimeMessageService.ensureStarted(this);else stopService(new Intent(this,RuntimeMessageService.class));
+    });
+    advanced.addView(timely);
+    addButton(advanced,"查看委托、核对与行动记录",()->startActivity(new Intent(this,HarnessActivity.class)),true);
     LinearLayout local = card();
     local.addView(text("本机数据与来源", 18, INK, true));
     gap(local, 8);
@@ -1605,6 +1625,14 @@ public final class MainActivity extends Activity {
           else toast("请打开你的 Root 管理器");
         },
         false);
+    body.removeView(exclusions);
+    body.removeView(advanced);
+    body.removeView(local);
+    body.removeView(version);
+    body.addView(exclusions);
+    body.addView(advanced);
+    body.addView(local);
+    body.addView(version);
   }
 
   private void historyControls(LinearLayout parent) {
@@ -1612,6 +1640,17 @@ public final class MainActivity extends Activity {
     parent.addView(text("全量历史处理", 16, INK, true));
     parent.addView(
         text("一次启动，持续处理本机已采集、未排除的全部文字记录，生成 AI 建议并建立知识地图。使用 Wi-Fi，原文与进度保留。", 13, MUTED, false));
+    parent.addView(
+        text(
+            "同一会话按顺序整理，最多同时处理 " + OrganizerStore.MAX_CONCURRENCY + " 个会话；知识库独立同步。",
+            13,
+            MUTED,
+            false));
+    addButton(
+        parent,
+        HistoryImport.oldestFirst(this) ? "切回新消息优先" : "从最早历史接着整理",
+        () -> changeHistoryOrder(),
+        false);
     importStatus = text(HistoryImport.status(this), 13, PURPLE, false);
     parent.addView(importStatus);
     importAction =
@@ -1629,6 +1668,29 @@ public final class MainActivity extends Activity {
               }
             },
             true);
+  }
+
+  private void changeHistoryOrder() {
+    final boolean oldest = !HistoryImport.oldestFirst(this);
+    new AlertDialog.Builder(this)
+        .setTitle(oldest ? "从最早尚未整理的消息开始？" : "切回新消息优先？")
+        .setMessage(
+            oldest
+                ? "当前批次结束后，按各会话的历史顺序继续。已确认记忆和标明待核对的旧摘要帮助理解后续消息；已有进度与确认内容保留。"
+                : "当前批次结束后，先整理最近消息。已完成的历史进度保留，可随时切回历史顺序。")
+        .setNegativeButton("取消", null)
+        .setPositiveButton(
+            oldest ? "按历史顺序继续" : "新消息优先继续",
+            (dialog, which) -> {
+              try {
+                HistoryImportService.start(this, oldest);
+                if (tab == 4) settings();
+                else aiInbox(aiSourceFilter);
+              } catch (RuntimeException failure) {
+                toast("历史整理尚未开始，请检查连接后重试");
+              }
+            })
+        .show();
   }
 
   private void analyze() {
@@ -1664,40 +1726,160 @@ public final class MainActivity extends Activity {
   }
 
   private void aiInbox(JSONObject sourceFilter) {
+    aiSectionPages.clear();
     aiPageIndex = 0;
     renderAiInbox(sourceFilter, false);
   }
 
+  private AiInboxData readAiInboxSnapshot(JSONObject source) throws Exception {
+    OrganizerStore store = new OrganizerStore(memories);
+    AiInboxData data = new AiInboxData();
+    data.stats = store.queueStats();
+    data.all = source == null ? memories.suggestions() : store.suggestionsForSource(source);
+    data.progress = source == null ? new JSONObject() : store.sourceProgress(source);
+    data.progressLabel =
+        source == null
+            ? ""
+            : source.optInt("type", 1) != 1
+                ? "非文字消息，暂不进行 AI 整理"
+                : formatSourceProgress(data.progress);
+    data.fingerprint =
+        AnalysisContract.hash(
+            data.all.toString()
+                + "\0"
+                + data.stats.toString()
+                + "\0"
+                + data.progress.toString());
+    return data;
+  }
+
+  private AiInboxData prepareAiPage(AiInboxData snapshot, String section, int page) throws Exception {
+    AiInboxData data = new AiInboxData();
+    data.all = snapshot.all;
+    data.stats = snapshot.stats;
+    data.progress = snapshot.progress;
+    data.progressLabel = snapshot.progressLabel;
+    data.fingerprint = snapshot.fingerprint;
+    data.items = AiSuggestionTypes.filter(data.all, section);
+    data.page = Math.min(page, Math.max(0, (data.items.length() - 1) / AiReviewSelection.PAGE_SIZE));
+    data.visible = new JSONArray();
+    int first = data.page * AiReviewSelection.PAGE_SIZE;
+    for (int i = first; i < Math.min(first + AiReviewSelection.PAGE_SIZE, data.items.length()); i++)
+      data.visible.put(data.items.getJSONObject(i));
+    data.selection = AiReviewSelection.prepare(data.visible);
+    return data;
+  }
+
+  private AiInboxData loadAiInboxData(JSONObject source, String section, int page) throws Exception {
+    AiInboxData snapshot = readAiInboxSnapshot(source);
+    java.util.Map<String, AiInboxData> firstPages = new java.util.LinkedHashMap<>();
+    for (String name : AiSuggestionTypes.SECTIONS)
+      firstPages.put(name, prepareAiPage(snapshot, name, 0));
+    AiInboxData selected = page == 0 ? firstPages.get(section) : prepareAiPage(snapshot, section, page);
+    selected.sectionPages = firstPages;
+    return selected;
+  }
+
   private void renderAiInbox(JSONObject sourceFilter, boolean retainSelection) {
-    JSONArray previous = new JSONArray();
+    if (isFinishing() || isDestroyed()) return;
+    if (!aiPageVisible) {
+      tab = 1;
+      renderNav();
+      page("AI建议", "按原文时间核对；历史事项不代表现在仍需处理");
+      aiPageVisible = true;
+      progress("正在读取建议…");
+    }
+    aiSourceFilter = sourceFilter;
+    final long request = ++aiReadSequence;
+    final int token = generation, page = aiPageIndex;
+    final int scrollY = retainSelection ? ((ScrollView) body.getParent()).getScrollY() : 0;
+    final String section = aiSection;
+    aiLoading = true;
+    if (aiRefreshAction != null) {
+      aiRefreshAction.setText("正在读取…");
+      aiRefreshAction.setEnabled(false);
+    }
+    if (aiMultiSelectAction != null) aiMultiSelectAction.setEnabled(false);
+    updateAiBulkBar();
+    worker.execute(
+        () -> {
+          try {
+            // Skip superseded section/page reads before doing database and JSON work.
+            if (request != aiReadSequence) return;
+            AiInboxData data = loadAiInboxData(sourceFilter, section, page);
+            main.post(
+                () -> {
+                  if (request != aiReadSequence
+                      || token != generation
+                      || !aiPageVisible
+                      || isFinishing()
+                      || isDestroyed()) return;
+                  aiLoading = false;
+                  drawAiInbox(sourceFilter, retainSelection, data);
+                  final int drawn = generation;
+                  body.post(
+                      () -> {
+                        if (drawn == generation)
+                          ((ScrollView) body.getParent()).scrollTo(0, scrollY);
+                      });
+                });
+          } catch (Exception failure) {
+            main.post(
+                () -> {
+                  if (request != aiReadSequence
+                      || token != generation
+                      || !aiPageVisible
+                      || isFinishing()
+                      || isDestroyed()) return;
+                  aiLoading = false;
+                  if (aiRefreshAction == null) {
+                    body.removeAllViews();
+                    LinearLayout feedback = card();
+                    feedback.addView(text("建议暂时无法读取，请重试。", 15, MUTED, false));
+                    addButton(feedback, "重试读取建议", () -> renderAiInbox(sourceFilter, false), true);
+                  }
+                  if (aiRefreshAction != null) {
+                    aiRefreshAction.setText("重试读取建议");
+                    aiRefreshAction.setEnabled(true);
+                  }
+                  if (aiMultiSelectAction != null) aiMultiSelectAction.setEnabled(true);
+                  updateAiBulkBar();
+                  toast("读取建议未完成，请重试");
+                });
+          }
+        });
+  }
+
+  private void drawAiInbox(JSONObject sourceFilter, boolean retainSelection, AiInboxData data) {
     boolean selecting = retainSelection && aiMultiSelectMode;
-    if (selecting)
-      try {
-        previous = aiSelection.snapshot();
-      } catch (Exception ignored) {
-      }
     tab = 1;
     renderNav();
-    page("AI建议", "先看重要信息与识别时间，再核对来源和保存事项");
+    page("AI建议", "按内容类型查看建议；历史事项需重新核对是否仍需处理", true);
+    if (!retainSelection) aiSelection.all(false);
+    if (data.sectionPages != null) aiSectionPages = data.sectionPages;
     aiMultiSelectMode = selecting;
     aiPageVisible = true;
     aiSourceFilter = sourceFilter;
     LinearLayout sections = card();
-    sections.addView(text("建议分区", 16, INK, true));
-    gap(sections, 8);
-    LinearLayout controls = card();
-    controls.addView(text("新消息优先，历史资料逐步补齐", 14, PURPLE, true));
-    addButton(controls, "整理下一批", () -> analyze(), true);
-    addButton(controls, "刷新整理结果", () -> renderAiInbox(aiSourceFilter, true), false);
-    addButton(controls, selecting ? "取消多选" : "多选建议", this::toggleAiMultiSelect, false);
+    LinearLayout controls = column();
+    sections.addView(controls);
+    aiUpdateNotice = false;
+    LinearLayout toolbar = new LinearLayout(this);
+    aiRefreshAction = button("刷新整理结果", () -> renderAiInbox(aiSourceFilter, true), false);
+    addBulkAction(toolbar, aiRefreshAction);
+    aiMultiSelectAction = button(selecting ? "取消多选" : "多选建议", this::toggleAiMultiSelect, false);
+    addBulkAction(toolbar, aiMultiSelectAction);
+    controls.addView(toolbar);
+    LinearLayout processing = NativeUi.disclosure(this, controls, "处理状态与更多操作");
+    addButton(processing, "整理下一批", this::analyze, false);
     if (sourceFilter != null) addButton(controls, "查看全部整理建议", this::aiInbox, false);
-    addButton(controls, "原文与会话", () -> inbox(), false);
-    historyControls(controls);
+    addButton(processing, "原文与会话", () -> inbox(), false);
+    historyControls(processing);
     gap(controls, 12);
     try {
       OrganizerStore store = new OrganizerStore(memories);
-      JSONObject stats = store.queueStats();
-      controls.addView(
+      JSONObject stats = data.stats;
+      processing.addView(
           text(
               "等待整理 "
                   + stats.optInt("pending")
@@ -1718,43 +1900,65 @@ public final class MainActivity extends Activity {
                 13,
                 MUTED,
                 false));
-        controls.addView(text(sourceProgressLabel(sourceFilter), 14, PURPLE, false));
+        controls.addView(text(data.progressLabel, 14, PURPLE, false));
       }
-      JSONArray allItems =
-          sourceFilter == null ? memories.suggestions() : store.suggestionsForSource(sourceFilter);
+      if (stats.optInt("failed") > 0) {
+        controls.addView(text("有 " + stats.optInt("failed") + " 段资料处理失败，原文与已完成结果保留。", 13, 0xFF9A6130, true));
+        controls.addView(text("最近一次失败记录：" + AnalysisEngine.failureMessage(
+            stats.optString("last_failure_code")), 13, MUTED, false));
+        addButton(
+            processing,
+            "重试失败资料",
+            () ->
+                async(
+                    () -> {
+                      store.retryFailed();
+                      AnalysisJob.enqueue(this, 1000L);
+                      return null;
+                    },
+                    result -> renderAiInbox(aiSourceFilter, true)),
+            false);
+      }
+      JSONArray allItems = data.all, items = data.items, visible = data.visible;
       renderAiSections(sections, allItems);
-      JSONArray items = AiSuggestionTypes.filter(allItems, aiSection);
-      aiPageFingerprint = aiFingerprint(allItems, stats);
-      aiPageIndex =
-          Math.min(aiPageIndex, Math.max(0, (items.length() - 1) / AiReviewSelection.PAGE_SIZE));
-      JSONArray visible = new JSONArray();
+      if (aiSection.equals("history"))
+        controls.addView(text("历史核对：保留原文与当时的安排，未确认现在仍需处理；不会自动建立待办或提醒。", 14, MUTED, false));
+      aiPageFingerprint = data.fingerprint;
+      aiPageIndex = data.page;
       int first = aiPageIndex * AiReviewSelection.PAGE_SIZE;
-      for (int i = first; i < Math.min(first + AiReviewSelection.PAGE_SIZE, items.length()); i++)
-        visible.put(items.getJSONObject(i));
-      aiSelection.replaceVisible(visible);
-      for (int i = 0; i < previous.length(); i++) {
-        JSONObject old = previous.getJSONObject(i);
-        for (int j = 0; j < visible.length(); j++)
-          if (visible.getJSONObject(j).toString().equals(old.toString()))
-            aiSelection.select(old, true);
-      }
+      aiSelection.replaceVisible(data.selection);
       if (items.length() > 0) {
-        controls.addView(
+        LinearLayout pager = new LinearLayout(this);
+        pager.setGravity(Gravity.CENTER_VERTICAL);
+        pager.addView(
             text(
                 AiSuggestionTypes.sectionLabel(aiSection)
                     + "分区待确认 "
                     + items.length()
                     + " 条 · 第 "
                     + (aiPageIndex + 1)
-                    + " 页（每页最多 100 条）",
+                    + " 页",
                 13,
                 MUTED,
-                false));
-        if (first > 0) addButton(controls, "上一页建议", () -> changeAiPage(-1), false);
-        if (first + visible.length() < items.length())
-          addButton(controls, "下一页建议", () -> changeAiPage(1), false);
-        if (selecting)
-          controls.addView(text("多选期间暂缓自动刷新，避免打断勾选。全选仅选择本页，换页会清空勾选。", 13, MUTED, false));
+                false),
+            new LinearLayout.LayoutParams(0, -2, 1));
+        if (first > 0) {
+          LinearLayout.LayoutParams previousLayout = new LinearLayout.LayoutParams(-2, -2);
+          previousLayout.leftMargin = dp(8);
+          pager.addView(button("上一页建议", () -> changeAiPage(-1), false), previousLayout);
+        }
+        if (first + visible.length() < items.length()) {
+          LinearLayout.LayoutParams nextLayout = new LinearLayout.LayoutParams(-2, -2);
+          nextLayout.leftMargin = dp(8);
+          pager.addView(button("下一页建议", () -> changeAiPage(1), false), nextLayout);
+        }
+        LinearLayout.LayoutParams pagerLayout = new LinearLayout.LayoutParams(-1, -2);
+        pagerLayout.topMargin = dp(8);
+        controls.addView(pager, pagerLayout);
+        TextView selectionHint = text("全选仅当前页；换页会清空勾选。", 13, MUTED, false);
+        selectionHint.setVisibility(selecting ? View.VISIBLE : View.GONE);
+        aiSelectionOnlyViews.add(selectionHint);
+        controls.addView(selectionHint);
       }
       if (items.length() == 0) {
         LinearLayout c = card();
@@ -1770,8 +1974,8 @@ public final class MainActivity extends Activity {
         c.addView(
             text(
                 allItems.length() > 0
-                    ? "可切换其他分区查看。新整理结果会自动刷新。"
-                    : "结果会自动刷新。等待中的资料会继续分批处理；整理完成也可能没有需要确认的事项。",
+                    ? "可切换其他分区查看。新整理结果会提示刷新。"
+                    : "新结果会提示刷新。等待中的资料会继续分批处理；整理完成也可能没有需要确认的事项。",
                 14,
                 MUTED,
                 false));
@@ -1779,38 +1983,61 @@ public final class MainActivity extends Activity {
       for (int i = 0; i < visible.length(); i++) {
         JSONObject item = visible.getJSONObject(i);
         LinearLayout c = card();
-        addAiTypeBadge(c, item);
-        gap(c, 6);
+        android.graphics.drawable.StateListDrawable surface =
+            new android.graphics.drawable.StateListDrawable();
+        surface.addState(new int[] {android.R.attr.state_selected}, shape(0xFFF5F1FC, 18));
+        surface.addState(new int[] {}, shape(Color.WHITE, 18));
+        c.setBackground(surface);
+        c.setSelected(aiSelection.selected(item));
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.TOP);
+        row.setBaselineAligned(false);
+        TextView title = text(item.getString("title"), 18, INK, true);
+        title.setMaxLines(3);
+        title.setEllipsize(TextUtils.TruncateAt.END);
+        title.setLineSpacing(dp(2), 1);
+        LinearLayout headingContent = column();
+        headingContent.addView(title);
+        row.addView(headingContent, new LinearLayout.LayoutParams(0, -2, 1));
+        CheckBox selectionBox = new CheckBox(this);
+        selectionBox.setMinHeight(dp(48));
+        selectionBox.setMinWidth(dp(48));
+        selectionBox.setContentDescription("选择建议 " + item.getString("title"));
+        selectionBox.setChecked(aiSelection.selected(item));
+        // Keep the header geometry stable so selecting never reflows every title.
+        selectionBox.setVisibility(selecting ? View.VISIBLE : View.INVISIBLE);
+        selectionBox.setOnCheckedChangeListener(
+            (view, value) -> {
+              c.setSelected(value);
+              if (aiChangingChecks) return;
+              aiSelection.select(item, value);
+              updateAiBulkBar();
+            });
+        aiSelectionBoxes.put(AiReviewSelection.key(item), selectionBox);
+        row.addView(selectionBox, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        gap(headingContent, 8);
+        LinearLayout badges = new LinearLayout(this);
+        badges.setGravity(Gravity.CENTER_VERTICAL);
+        badges.setBaselineAligned(false);
+        addAiTypeBadge(badges, item);
         String level = item.getString("importance");
-        c.addView(
+        TextView priority =
             text(
-                (level.equals("high") ? "高优先级" : level.equals("medium") ? "中优先级" : "低优先级")
-                    + " · 待确认",
+                level.equals("high") ? "高优先级" : level.equals("medium") ? "中优先级" : "低优先级",
                 12,
-                PURPLE,
-                true));
-        gap(c, 6);
-        if (selecting) {
-          LinearLayout row = new LinearLayout(this);
-          row.setGravity(Gravity.CENTER_VERTICAL);
-          CheckBox check = new CheckBox(this);
-          check.setMinHeight(dp(48));
-          check.setMinWidth(dp(48));
-          check.setContentDescription("选择建议 " + item.getString("title"));
-          check.setChecked(aiSelection.selected(item));
-          check.setOnCheckedChangeListener(
-              (view, value) -> {
-                aiSelection.select(item, value);
-                updateAiBulkBar();
-              });
-          aiSelectionBoxes.put(AiReviewSelection.key(item), check);
-          row.addView(check, new LinearLayout.LayoutParams(dp(48), -2));
-          row.addView(
-              text(item.getString("title"), 17, INK, true),
-              new LinearLayout.LayoutParams(0, -2, 1));
-          c.addView(row);
-        } else c.addView(text(item.getString("title"), 17, INK, true));
-        gap(c, 8);
+                MUTED,
+                false);
+        LinearLayout.LayoutParams priorityLayout = new LinearLayout.LayoutParams(-2, -2);
+        priorityLayout.setMarginStart(dp(8));
+        badges.addView(priority, priorityLayout);
+        headingContent.addView(badges);
+        String times = ProposalTimes.describe(item);
+        if (!times.isEmpty()) {
+          gap(headingContent, 8);
+          headingContent.addView(text(times, 14, PURPLE, true));
+        }
+        c.addView(row);
+        gap(c, 10);
         String op = item.optString("operation", "create");
         if (!op.equals("create"))
           c.addView(
@@ -1821,25 +2048,43 @@ public final class MainActivity extends Activity {
                   13,
                   PURPLE,
                   false));
-        c.addView(text(item.getString("reason"), 14, MUTED, false));
-        String times = ProposalTimes.describe(item);
-        if (!times.isEmpty()) {
-          gap(c, 8);
-          c.addView(text(times, 14, PURPLE, true));
-        }
+        TextView reason = text(item.getString("reason"), 14, MUTED, false);
+        reason.setMaxLines(2);
+        reason.setEllipsize(TextUtils.TruncateAt.END);
+        c.addView(reason);
         JSONObject evidence = item.getJSONObject("source");
-        gap(c, 6);
-        c.addView(
-            text(
-                MessagePresentation.conversationTitle(evidence)
-                    + " · "
-                    + date(evidence.optLong("created_at")),
-                12,
-                MUTED,
-                false));
+        LinearLayout sourceFooter = new LinearLayout(this);
+        sourceFooter.setGravity(Gravity.CENTER_VERTICAL);
+        sourceFooter.setBaselineAligned(false);
+        LinearLayout metadata = column();
+        TextView conversation =
+            text(MessagePresentation.conversationTitle(evidence), 12, MUTED, false);
+        conversation.setSingleLine(true);
+        conversation.setEllipsize(TextUtils.TruncateAt.END);
+        metadata.addView(conversation);
+        TextView sourceTime = text("原文：" + date(evidence.optLong("created_at")), 12, MUTED, false);
+        sourceTime.setSingleLine(true);
+        sourceTime.setEllipsize(TextUtils.TruncateAt.END);
+        metadata.addView(sourceTime);
+        sourceFooter.addView(metadata, new LinearLayout.LayoutParams(0, -2, 1));
+        Button sourceAction =
+            button(
+                "查看出处",
+                () -> {
+                  if (!busy && !aiLoading) aiEvidenceDialog(item);
+                },
+                false);
+        sourceAction.setContentDescription(
+            "查看建议出处：" + MessagePresentation.conversationTitle(evidence));
+        LinearLayout.LayoutParams actionLayout = new LinearLayout.LayoutParams(-2, -2);
+        actionLayout.setMarginStart(dp(16));
+        sourceFooter.addView(sourceAction, actionLayout);
+        LinearLayout.LayoutParams footerLayout = new LinearLayout.LayoutParams(-1, -2);
+        footerLayout.topMargin = dp(12);
+        c.addView(sourceFooter, footerLayout);
         c.setOnClickListener(
             view -> {
-              if (busy) return;
+              if (busy || aiLoading) return;
               if (aiMultiSelectMode) {
                 CheckBox check = aiSelectionBoxes.get(AiReviewSelection.key(item));
                 if (check != null) check.setChecked(!check.isChecked());
@@ -1847,13 +2092,12 @@ public final class MainActivity extends Activity {
             });
         c.setOnLongClickListener(
             view -> {
-              if (busy) return true;
+              if (busy || aiLoading) return true;
               if (!aiMultiSelectMode) toggleAiMultiSelect();
               CheckBox check = aiSelectionBoxes.get(AiReviewSelection.key(item));
               if (check != null) check.setChecked(true);
               return true;
             });
-        if (selecting) addButton(c, "查看建议出处", () -> aiDialog(item, false), false);
       }
       if (selecting) createAiBulkBar();
     } catch (Exception e) {
@@ -1864,67 +2108,81 @@ public final class MainActivity extends Activity {
   private String sourceProgressLabel(JSONObject source) {
     if (source.optInt("type", 1) != 1) return "非文字消息，暂不进行 AI 整理";
     try {
-      JSONObject progress = new OrganizerStore(memories).sourceProgress(source);
-      String state = progress.getString("state");
-      if (state.equals("excluded")) return "已排除 AI 整理 · 原文保留";
-      if (state.equals("outside_scope")) return "未加入近期整理，可在设置加入历史资料";
-      if (state.equals("legacy_done")) return "已由旧版整理";
-      if (state.equals("not_enqueued")) return "原文已采集，等待加入整理队列";
-      if (state.equals("changed")) return "原文已变化，等待重新整理";
-      if (state.equals("processing")) return "正在整理";
-      if (state.equals("failed")) return "整理未完成，处理进度已保留";
-      if (state.equals("done"))
-        return progress.optInt("suggestions") > 0
-            ? "已整理，生成 " + progress.optInt("suggestions") + " 条建议"
-            : "已整理，未提取出需要确认的事项";
-      return "等待整理"
-          + (progress.optInt("done") > 0
-              ? "（已完成 " + progress.optInt("done") + "/" + progress.optInt("total") + " 段）"
-              : "");
-    } catch (Exception ignored) {
+      return formatSourceProgress(new OrganizerStore(memories).sourceProgress(source));
+    } catch (Exception failure) {
       return "整理状态暂不可用";
     }
   }
 
-  private String aiFingerprint(JSONArray items, JSONObject stats) throws Exception {
-    return AnalysisContract.hash(
-        items.toString()
-            + "\0"
-            + stats.toString()
-            + "\0"
-            + aiSection
-            + "\0"
-            + (aiSourceFilter == null
-                ? ""
-                : new OrganizerStore(memories).sourceProgress(aiSourceFilter).toString()));
+  private String formatSourceProgress(JSONObject progress) throws Exception {
+    String state = progress.getString("state");
+    if (state.equals("excluded")) return "已排除 AI 整理 · 原文保留";
+    if (state.equals("outside_scope")) return "未加入近期整理，可在设置加入历史资料";
+    if (state.equals("legacy_done")) return "已由旧版整理";
+    if (state.equals("not_enqueued")) return "原文已采集，等待加入整理队列";
+    if (state.equals("changed")) return "原文已变化，等待重新整理";
+    if (state.equals("processing")) return "正在整理";
+    if (state.equals("failed")) return "整理未完成，处理进度已保留";
+    if (state.equals("done"))
+      return progress.optInt("suggestions") > 0
+          ? "已整理，生成 " + progress.optInt("suggestions") + " 条建议"
+          : "已整理，未提取出需要确认的事项";
+    return "等待整理"
+        + (progress.optInt("done") > 0
+            ? "（已完成 " + progress.optInt("done") + "/" + progress.optInt("total") + " 段）"
+            : "");
   }
 
   private void refreshAiSuggestions() {
-    if (aiMultiSelectMode) return;
-    try {
-      OrganizerStore store = new OrganizerStore(memories);
-      JSONArray items =
-          aiSourceFilter == null
-              ? memories.suggestions()
-              : store.suggestionsForSource(aiSourceFilter);
-      if (aiFingerprint(items, store.queueStats()).equals(aiPageFingerprint)) return;
-      ScrollView scroll = (ScrollView) body.getParent();
-      int y = scroll.getScrollY();
-      renderAiInbox(aiSourceFilter, true);
-      scroll.post(() -> scroll.scrollTo(0, y));
-    } catch (Exception ignored) {
-      /* Existing result stays visible until the next refresh. */
-    }
+    if (aiMultiSelectMode || aiLoading || aiPolling) return;
+    aiPolling = true;
+    final int token = generation, page = aiPageIndex;
+    final String section = aiSection;
+    final JSONObject source = aiSourceFilter;
+    worker.execute(
+        () -> {
+          AiInboxData data = null;
+          try {
+            data = readAiInboxSnapshot(source);
+          } catch (Exception ignored) {
+          }
+          final AiInboxData result = data;
+          main.post(
+              () -> {
+                aiPolling = false;
+                if (token != generation
+                    || !aiPageVisible
+                    || aiMultiSelectMode
+                    || aiLoading
+                    || isFinishing()
+                    || isDestroyed()
+                    || result == null) return;
+                if (!result.fingerprint.equals(aiPageFingerprint) && !aiUpdateNotice) {
+                  aiUpdateNotice = true;
+                  if (aiRefreshAction != null) {
+                    aiRefreshAction.setText("有新结果 · 刷新");
+                    aiRefreshAction.setContentDescription("有新整理结果，刷新整理结果");
+                  }
+                }
+              });
+        });
   }
 
-  private void resetAiSelectionPage() {
-    aiMultiSelectMode = false;
-    aiSelection.all(false);
+  private void clearAiSelectionViews() {
     aiSelectionBoxes.clear();
+    aiSelectionOnlyViews.clear();
     if (aiBulkBar != null) outer.removeView(aiBulkBar);
     aiBulkBar = null;
     aiBulkCount = null;
     aiBulkAll = aiBulkIgnore = aiBulkSave = aiBulkCancel = null;
+    aiRefreshAction = aiMultiSelectAction = null;
+  }
+
+  private void resetAiSelectionPage() {
+    aiSectionPages.clear();
+    aiMultiSelectMode = false;
+    aiSelection.all(false);
+    clearAiSelectionViews();
     try {
       aiSelection.replaceVisible(new JSONArray());
     } catch (Exception impossible) {
@@ -1933,14 +2191,15 @@ public final class MainActivity extends Activity {
   }
 
   private void addAiTypeBadge(LinearLayout view, JSONObject item) {
-    TextView badge = text(AiSuggestionTypes.label(item), 14, AiSuggestionTypes.color(item), true);
-    badge.setPadding(dp(10), dp(5), dp(10), dp(5));
+    TextView badge = text(AiSuggestionTypes.label(item), 12, AiSuggestionTypes.color(item), false);
+    badge.setPadding(dp(8), dp(4), dp(8), dp(4));
     badge.setBackground(shape(AiSuggestionTypes.background(item), 8));
     badge.setContentDescription("建议类型：" + AiSuggestionTypes.label(item));
     view.addView(badge, new LinearLayout.LayoutParams(-2, -2));
   }
 
-  private void renderAiSections(LinearLayout view, JSONArray items) throws Exception {
+  private void renderAiSections(LinearLayout parent, JSONArray items) throws Exception {
+    LinearLayout view = column();
     LinearLayout row = new LinearLayout(this);
     for (String section : AiSuggestionTypes.SECTIONS) {
       Button choice =
@@ -1954,6 +2213,8 @@ public final class MainActivity extends Activity {
     }
     view.addView(row);
     gap(view, 8);
+    view.addView(text("记忆、资料可来自较早原文；事项只列当前有效建议。过去或有效性不明的任务在“历史”核对。", 13, MUTED, false));
+    gap(view, 8);
     view.addView(
         text(
             "记忆 "
@@ -1962,10 +2223,15 @@ public final class MainActivity extends Activity {
                 + AiSuggestionTypes.filter(items, "reference").length()
                 + " 条 · 事项 "
                 + AiSuggestionTypes.filter(items, "work").length()
+                + " 条 · 历史核对 "
+                + AiSuggestionTypes.filter(items, "history").length()
                 + " 条",
             13,
             MUTED,
             false));
+    LinearLayout.LayoutParams layout = new LinearLayout.LayoutParams(-1, -2);
+    layout.bottomMargin = dp(8);
+    parent.addView(view, 0, layout);
   }
 
   private void changeAiSection(String section) {
@@ -1973,20 +2239,43 @@ public final class MainActivity extends Activity {
     boolean hadSelection = aiSelection.count() > 0;
     aiSection = section;
     aiPageIndex = 0;
-    renderAiInbox(aiSourceFilter, false);
+    boolean newerResults = aiUpdateNotice;
+    AiInboxData cached = aiSectionPages.get(section);
+    if (cached != null) drawAiInbox(aiSourceFilter, false, cached);
+    else renderAiInbox(aiSourceFilter, false);
+    if (cached != null && newerResults && aiRefreshAction != null) {
+      aiUpdateNotice = true;
+      aiRefreshAction.setText("有新结果 · 刷新");
+    }
     ((ScrollView) body.getParent()).scrollTo(0, 0);
     if (hadSelection) toast("已切换分区，原来的勾选已清空");
   }
 
   private void toggleAiMultiSelect() {
-    if (busy) return;
+    if (busy || aiLoading) return;
     if (!aiMultiSelectMode && aiSelection.visibleCount() == 0) {
       toast("当前没有可选择的建议");
       return;
     }
     aiMultiSelectMode = !aiMultiSelectMode;
     aiSelection.all(false);
-    redrawAiSelection();
+    aiChangingChecks = true;
+    for (CheckBox box : aiSelectionBoxes.values()) {
+      box.setChecked(false);
+      box.setVisibility(aiMultiSelectMode ? View.VISIBLE : View.INVISIBLE);
+    }
+    aiChangingChecks = false;
+    for (View view : aiSelectionOnlyViews)
+      view.setVisibility(aiMultiSelectMode ? View.VISIBLE : View.GONE);
+    if (aiMultiSelectAction != null)
+      aiMultiSelectAction.setText(aiMultiSelectMode ? "取消多选" : "多选建议");
+    if (aiMultiSelectMode) createAiBulkBar();
+    else {
+      if (aiBulkBar != null) outer.removeView(aiBulkBar);
+      aiBulkBar = null;
+      aiBulkCount = null;
+      aiBulkAll = aiBulkIgnore = aiBulkSave = aiBulkCancel = null;
+    }
   }
 
   private void redrawAiSelection() {
@@ -2016,9 +2305,11 @@ public final class MainActivity extends Activity {
         button(
             "全选本页",
             () -> {
-              aiSelection.all(aiSelection.count() != aiSelection.visibleCount());
-              for (java.util.Map.Entry<String, CheckBox> entry : aiSelectionBoxes.entrySet())
-                entry.getValue().setChecked(aiSelection.count() > 0);
+              boolean select = aiSelection.count() != aiSelection.visibleCount();
+              aiSelection.all(select);
+              aiChangingChecks = true;
+              for (CheckBox box : aiSelectionBoxes.values()) box.setChecked(select);
+              aiChangingChecks = false;
               updateAiBulkBar();
             },
             false);
@@ -2028,7 +2319,7 @@ public final class MainActivity extends Activity {
     LinearLayout actions = new LinearLayout(this);
     aiBulkCancel = button("取消多选", this::toggleAiMultiSelect, false);
     aiBulkIgnore = button("批量忽略", this::confirmAiIgnore, false);
-    aiBulkSave = button("核对并保存", this::previewAiSave, true);
+    aiBulkSave = button("核对保存", this::previewAiSave, true);
     for (Button action : new Button[] {aiBulkCancel, aiBulkIgnore, aiBulkSave})
       addBulkAction(actions, action);
     aiBulkBar.addView(actions);
@@ -2045,25 +2336,26 @@ public final class MainActivity extends Activity {
             + " / 本页 "
             + aiSelection.visibleCount()
             + " 条");
-    for (CheckBox check : aiSelectionBoxes.values()) check.setEnabled(!busy);
+    for (CheckBox check : aiSelectionBoxes.values()) check.setEnabled(!busy && !aiLoading);
     aiBulkAll.setText(
         aiSelection.count() > 0 && aiSelection.count() == aiSelection.visibleCount()
             ? "取消全选"
             : "全选本页");
-    aiBulkAll.setEnabled(!busy && aiSelection.visibleCount() > 0);
-    aiBulkCancel.setEnabled(!busy);
+    aiBulkAll.setEnabled(!busy && !aiLoading && aiSelection.visibleCount() > 0);
+    aiBulkCancel.setEnabled(!busy && !aiLoading);
     for (Button action : new Button[] {aiBulkIgnore, aiBulkSave}) {
-      action.setEnabled(!busy && aiSelection.count() > 0);
+      action.setEnabled(!busy && !aiLoading && aiSelection.count() > 0);
       action.setAlpha(action.isEnabled() ? 1 : 0.45f);
     }
   }
 
   private void confirmAiIgnore() {
     try {
-      if (busy || aiSelection.count() == 0) return;
-      JSONArray selected = aiSelection.snapshot();
+      if (busy || aiLoading || aiSelection.count() == 0) return;
+      AiReviewSelection.Snapshot selected = aiSelection.capture();
+      int count = aiSelection.count();
       new AlertDialog.Builder(this)
-          .setTitle("忽略 " + selected.length() + " 条建议？")
+          .setTitle("忽略 " + count + " 条建议？")
           .setMessage("选中的建议会从待确认列表收起，原始消息和已确认的记忆、事项继续保留。")
           .setNegativeButton("返回选择", null)
           .setPositiveButton("确认忽略", (dialog, which) -> performAiBatch(selected, false))
@@ -2075,12 +2367,13 @@ public final class MainActivity extends Activity {
 
   private void previewAiSave() {
     try {
-      if (busy || aiSelection.count() == 0) return;
-      JSONArray selected = aiSelection.snapshot();
+      if (busy || aiLoading || aiSelection.count() == 0) return;
+      AiReviewSelection.Snapshot selected = aiSelection.capture();
       async(
           () -> {
             try {
-              return AiReviewBatch.preview(memories, selected, new ApiSettings(this).timezone());
+              return AiReviewBatch.preview(
+                  memories, selected.copy(), new ApiSettings(this).timezone());
             } catch (Exception failure) {
               return failure;
             }
@@ -2114,6 +2407,8 @@ public final class MainActivity extends Activity {
       if (row.has("previous_title"))
         content.addView(text("对应已有事项：" + row.getString("previous_title"), 13, MUTED, false));
       content.addView(text(proposal.optString("reason"), 13, MUTED, false));
+      if (!proposal.optString("details").isEmpty())
+        content.addView(text(proposal.getString("details"), 14, INK, false));
       if (row.has("edited")) {
         JSONObject edited = row.getJSONObject("edited");
         String zone = edited.getString("timezone");
@@ -2150,7 +2445,7 @@ public final class MainActivity extends Activity {
                 false));
         if (edited.isNull("due_at") && edited.isNull("starts_at") && edited.isNull("ends_at"))
           content.addView(text("尚未确认具体时间", 13, MUTED, false));
-        if (!proposal.optString("due_text", "").isEmpty())
+        if (!proposal.isNull("due_text") && !proposal.optString("due_text", "").isEmpty())
           content.addView(text("时间原文：" + proposal.optString("due_text"), 13, MUTED, false));
         if (!edited.optString("location").isEmpty())
           content.addView(text("地点：" + edited.getString("location"), 13, MUTED, false));
@@ -2169,7 +2464,7 @@ public final class MainActivity extends Activity {
               12,
               MUTED,
               false));
-      addButton(content, "查看建议出处", () -> aiDialog(proposal, false), false);
+      addButton(content, "查看建议出处", () -> aiEvidenceDialog(proposal), false);
     }
     ScrollView scroll = new ScrollView(this);
     scroll.addView(content);
@@ -2178,15 +2473,17 @@ public final class MainActivity extends Activity {
         .setView(scroll)
         .setNegativeButton("返回选择", null)
         .setPositiveButton(
-            "确认保存 " + prepared.length() + " 条", (dialog, which) -> performAiBatch(prepared, true))
+            "确认保存 " + prepared.length() + " 条",
+            (dialog, which) -> performAiBatch(() -> prepared, true))
         .show();
   }
 
-  private void performAiBatch(JSONArray batch, boolean save) {
+  private void performAiBatch(AiReviewSelection.Snapshot snapshot, boolean save) {
     if (busy) return;
     async(
         () -> {
           try {
+            JSONArray batch = snapshot.copy();
             int changed =
                 save
                     ? AiReviewBatch.confirm(memories, batch, System.currentTimeMillis())
@@ -2229,10 +2526,23 @@ public final class MainActivity extends Activity {
   }
 
   private void aiDialog(JSONObject item) {
-    aiDialog(item, true);
+    final int token = generation;
+    final int y = ((ScrollView) body.getParent()).getScrollY();
+    new SuggestionReview(
+            this,
+            memories,
+            worker,
+            () -> {
+              if (isFinishing() || isDestroyed() || generation != token) return;
+              renderAiInbox(aiSourceFilter, true);
+              ScrollView scroll = (ScrollView) body.getParent();
+              scroll.post(() -> scroll.scrollTo(0, y));
+              toast("已处理，继续核对下一条建议");
+            })
+        .show(item);
   }
 
-  private void aiDialog(JSONObject item, boolean editable) {
+  private void aiEvidenceDialog(JSONObject item) {
     try {
       JSONObject source = item.getJSONObject("source");
       JSONArray evidence = source.getJSONArray("evidence");
@@ -2243,6 +2553,8 @@ public final class MainActivity extends Activity {
       view.addView(text(item.getString("title"), 18, INK, true));
       gap(view, 8);
       view.addView(text(item.getString("reason"), 14, MUTED, false));
+      if (!item.optString("details").isEmpty())
+        view.addView(text(item.getString("details"), 14, INK, false));
       String times = ProposalTimes.describe(item);
       if (!times.isEmpty()) {
         gap(view, 8);
@@ -2278,27 +2590,11 @@ public final class MainActivity extends Activity {
       }
       ScrollView scroll = new ScrollView(this);
       scroll.addView(view);
-      String kind = item.optString("kind");
-      String label = AiReviewBatch.memoryKind(item);
       AlertDialog.Builder dialog =
           new AlertDialog.Builder(this)
               .setTitle(AiSuggestionTypes.label(item) + "建议与出处")
               .setView(scroll)
               .setNegativeButton("关闭", null);
-      if (editable)
-        dialog
-            .setPositiveButton(
-                "核对并保存",
-                (d, w) -> {
-                  if (kind.equals("todo") || kind.equals("event")) openProposal(item);
-                  else saveDialog(source, item.optString("title"), label, item);
-                })
-            .setNeutralButton(
-                "忽略",
-                (d, w) -> {
-                  memories.reviewState(item.optString("review_ref"), "ignored");
-                  aiInbox();
-                });
       dialog.show();
     } catch (Exception e) {
       toast("读取建议出处失败");

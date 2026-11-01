@@ -55,6 +55,7 @@ public final class KnowledgeJob extends JobService {
 
   @Override
   public boolean onStartJob(JobParameters params) {
+    android.util.Log.i("InboxKnowledge", "job_started id=" + params.getJobId());
     Thread task =
         new Thread(
             () -> {
@@ -64,11 +65,15 @@ public final class KnowledgeJob extends JobService {
                 HistoryImport.maybeComplete(this);
               } catch (Exception error) {
                 retry = true;
+                android.util.Log.w("InboxKnowledge", "job_failed id=" + params.getJobId()
+                    + " type=" + error.getClass().getSimpleName());
                 getSharedPreferences("knowledge", MODE_PRIVATE)
                     .edit()
                     .putString("error", "同步暂未完成，本地修改和进度已保留")
                     .apply();
               } finally {
+                android.util.Log.i("InboxKnowledge", "job_finished id=" + params.getJobId()
+                    + " retry=" + retry);
                 if (tasks.remove(params.getJobId(), Thread.currentThread()))
                   jobFinished(params, retry);
                 if (!Thread.currentThread().isInterrupted()
@@ -84,6 +89,8 @@ public final class KnowledgeJob extends JobService {
 
   @Override
   public boolean onStopJob(JobParameters params) {
+    android.util.Log.i("InboxKnowledge", "job_stopped id=" + params.getJobId()
+        + " reason=" + (android.os.Build.VERSION.SDK_INT >= 31 ? params.getStopReason() : -1));
     Thread task = tasks.remove(params.getJobId());
     if (task != null) task.interrupt();
     return true;

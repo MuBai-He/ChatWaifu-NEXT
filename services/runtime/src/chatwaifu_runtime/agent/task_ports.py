@@ -1,10 +1,14 @@
-"""Persistence boundary for durable goals and operation journals."""
+"""Persistence and context boundaries for durable goals and operation journals."""
 
 from typing import Protocol
 from uuid import UUID
 
 from chatwaifu_protocol.agent import AgentEvent, AgentTask, AgentTaskPage
 from chatwaifu_protocol.base import JsonObject
+
+
+class TaskContextChanged(RuntimeError):
+    """The current reasoning snapshot is stale; authority and effects need fresh checks."""
 
 
 class AgentTaskRepository(Protocol):

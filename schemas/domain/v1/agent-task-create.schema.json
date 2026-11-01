@@ -1,5 +1,35 @@
 {
   "$defs": {
+    "EvidenceRef": {
+      "properties": {
+        "kind": {
+          "enum": [
+            "event",
+            "knowledge"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "reference": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Reference",
+          "type": "string"
+        },
+        "revision": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "reference"
+      ],
+      "title": "EvidenceRef",
+      "type": "object"
+    },
     "TaskAuthorization": {
       "properties": {
         "allow_writes": {
@@ -30,10 +60,43 @@
           "title": "Capability Fingerprints",
           "type": "object"
         },
+        "evidence_refs": {
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "maxItems": 30,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
         "expires_at": {
           "format": "date-time",
           "title": "Expires At",
           "type": "string"
+        },
+        "intent_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intent Id"
+        },
+        "intent_revision": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intent Revision"
         },
         "resource_roots": {
           "items": {
@@ -42,6 +105,19 @@
           "maxItems": 16,
           "title": "Resource Roots",
           "type": "array"
+        },
+        "scheduled_for": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scheduled For"
         },
         "schema_version": {
           "const": "1.0",
@@ -54,6 +130,29 @@
           "minLength": 1,
           "title": "Source Ref",
           "type": "string"
+        },
+        "source_room_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Source Room Ids",
+          "type": "array"
+        },
+        "tasklist_ids": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tasklist Ids"
         }
       },
       "required": [
