@@ -16,8 +16,15 @@ import org.json.JSONObject;
 /** Native view of the same owner intents, review and activity shown by Web/desktop. */
 public final class HarnessActivity extends Activity {
   private final ExecutorService worker = Executors.newSingleThreadExecutor();
+  private final ExecutorService submissions = Executors.newSingleThreadExecutor();
+  private final java.util.Set<String> submitting = new java.util.HashSet<>();
+  private final java.util.Set<String> queuedPaths = new java.util.HashSet<>();
+  private JSONObject displayedSnapshot;
+  private boolean displayedOffline;
+  private String displayedIdentity = "";
   private LinearLayout content;
   private int generation;
+  private boolean refreshing, refreshAgain;
   private int workOffset;
   private long activityBefore;
   private final java.util.ArrayList<Long> activityPages=new java.util.ArrayList<>();
@@ -35,6 +42,11 @@ public final class HarnessActivity extends Activity {
     refresh();
   }
 
+  @Override public void onResume() {
+    super.onResume();
+    if(displayedSnapshot!=null)refresh();
+  }
+
   private void label(String value, int size) {
     TextView text = new TextView(this);
     text.setText(value);
@@ -43,20 +55,51 @@ public final class HarnessActivity extends Activity {
     content.addView(text);
   }
 
+  private String currentIdentity() {
+    BackendSettings settings=new BackendSettings(this);
+    return settings.base()+"\n"+settings.session();
+  }
+
+  private boolean current(int ticket,String identity) {
+    return !isFinishing()&&!isDestroyed()&&ticket==generation&&identity.equals(currentIdentity());
+  }
+
   private void refresh() {
     final int ticket = ++generation;
-    content.removeAllViews();
-    label("宁宁持续协助", 24);
-    label("正在读取委托、核对与行动记录…", 14);
+    final String requestedIdentity=currentIdentity();
+    if(!requestedIdentity.equals(connection)) {
+      connection=requestedIdentity;workOffset=0;activityBefore=0;activityPages.clear();
+    }
+    final int requestedOffset=workOffset;
+    final long requestedBefore=activityBefore;
+    if(displayedSnapshot==null||!displayedIdentity.equals(currentIdentity())) {
+      displayedSnapshot=null;
+      content.removeAllViews();
+      label("宁宁持续协助", 24);
+      label("正在读取委托、核对与行动记录…", 14);
+    }
+    if(refreshing){refreshAgain=true;return;}
+    refreshing=true;
     worker.execute(() -> {
       try (MemoryStore memory = new MemoryStore(this)) {
         BackendSettings backend = new BackendSettings(this);
         String identity=backend.base()+"\n"+backend.session();
-        if(!identity.equals(connection)){connection=identity;workOffset=0;activityBefore=0;activityPages.clear();}
+        if(!identity.equals(requestedIdentity))return;
         KnowledgeStore store = new KnowledgeStore(memory, backend.base());
         RuntimeBackendClient client = backend.client();
         JSONObject snapshot;
         boolean offline = false;
+        String cached=store.meta("harness_snapshot","");
+        if(!cached.isEmpty()&&!new JSONObject(cached).optString("_connection").equals(identity))cached="";
+        if(!cached.isEmpty()) {
+          JSONObject ready=new JSONObject(cached);
+          JSONArray drafts=RuntimeActions.list(store);
+          if(ready.optInt("work_offset")==requestedOffset&&ready.optLong("activity_before")==requestedBefore)
+            runOnUiThread(()->{
+              if(!current(ticket,identity))return;
+              try{render(ready,drafts,true);}catch(Exception invalid){/* Fresh state follows. */}
+            });
+        }
         try {
           RuntimeActions.flush(store, client, backend);
           long opened = getIntent().getLongExtra("activity_sequence", 0);
@@ -65,18 +108,19 @@ public final class HarnessActivity extends Activity {
             getIntent().removeExtra("activity_sequence");
           }
           String session = backend.session();
-          JSONObject workPage=client.request("/v1/personal-assistant/work-items?session_id="+session+"&limit=30&offset="+workOffset,null);
-          JSONObject activityPage=client.request("/v1/agent/activity?session_id="+session+(activityBefore>0?"&before="+activityBefore:""),null);
+          JSONObject workPage=client.request("/v1/personal-assistant/work-items?session_id="+session+"&limit=30&offset="+requestedOffset,null);
+          JSONObject activityPage=client.request("/v1/agent/activity?session_id="+session+(requestedBefore>0?"&before="+requestedBefore:""),null);
           snapshot = new JSONObject()
               .put("review", client.request("/v1/agent/review?session_id=" + session + "&include_failures=true", null).getJSONArray("items"))
               .put("intents", client.request("/v1/agent/intents?session_id=" + session, null).getJSONArray("items"))
-              .put("work",workPage.getJSONArray("items")).put("work_offset",workOffset)
+              .put("work",workPage.getJSONArray("items")).put("work_offset",requestedOffset)
               .put("work_next",workPage.opt("next_offset"))
-              .put("activity",activityPage.getJSONArray("items")).put("activity_before",activityBefore)
+              .put("activity",activityPage.getJSONArray("items")).put("activity_before",requestedBefore)
               .put("activity_next",activityPage.opt("next_before"));
+          if(!identity.equals(currentIdentity()))return;
+          snapshot.put("_connection",identity);
           store.putMeta("harness_snapshot", snapshot.toString());
         } catch (Exception unavailable) {
-          String cached = store.meta("harness_snapshot", "");
           if (cached.isEmpty()) throw unavailable;
           snapshot = new JSONObject(cached);
           offline = true;
@@ -85,40 +129,81 @@ public final class HarnessActivity extends Activity {
         boolean disconnected = offline;
         JSONArray queued = RuntimeActions.list(store);
         runOnUiThread(() -> {
-          if (isFinishing() || isDestroyed() || ticket != generation) return;
+          if (!current(ticket,identity)) return;
           try { render(view, queued, disconnected); }
           catch (Exception invalid) { label("记录格式已变化，请刷新后重试。", 14); }
         });
       } catch (Exception unavailable) {
         runOnUiThread(() -> {
-          if (isFinishing() || isDestroyed() || ticket != generation) return;
+          if (!current(ticket,requestedIdentity)) return;
           content.removeAllViews();
           label("暂时无法连接宁宁，本机资料和提醒仍可使用。", 16);
           content.addView(NativeUi.button(this, "重试", this::refresh, true));
+        });
+      } finally {
+        runOnUiThread(()->{
+          refreshing=false;
+          if(refreshAgain&&!isFinishing()&&!isDestroyed()) {
+            refreshAgain=false;
+            refresh();
+          }
         });
       }
     });
   }
 
   private void decideReview(JSONObject item,String decision){
-    worker.execute(()->{
-      try(MemoryStore memory=new MemoryStore(this)){
-        BackendSettings backend=new BackendSettings(this);KnowledgeStore store=new KnowledgeStore(memory,backend.base());
-        RuntimeActions.enqueue(store,"/v1/agent/review/"+item.getString("kind")+"/"+item.getString("reference"),new JSONObject().put("decision",decision).put("expected_revision",item.getInt("revision")).put("session_id",backend.session()),item.getString("title"));
-        try{RuntimeActions.flush(store,backend.client(),backend);}catch(Exception offline){/* Durable outbox retains the decision. */}
-        runOnUiThread(this::refresh);
-      }catch(Exception failure){runOnUiThread(()->Toast.makeText(this,"决定尚未保存，请重试。",Toast.LENGTH_LONG).show());}
+    try {
+      BackendSettings backend=new BackendSettings(this);
+      submit("/v1/agent/review/"+item.getString("kind")+"/"+item.getString("reference"),
+          new JSONObject().put("decision",decision).put("expected_revision",item.getInt("revision"))
+              .put("session_id",backend.session()),item.getString("title"));
+    }catch(Exception invalid){Toast.makeText(this,"决定尚未提交，请重试。",Toast.LENGTH_LONG).show();}
+  }
+
+  private void submit(String path,JSONObject body,String label) {
+    if(queuedPaths.contains(path)||!submitting.add(path))return;
+    final String identity=currentIdentity();
+    final String base=new BackendSettings(this).base();
+    submissions.execute(()->{
+      try(MemoryStore memory=new MemoryStore(getApplicationContext())) {
+        if(!identity.equals(currentIdentity()))throw new IllegalStateException("连接已变化");
+        KnowledgeStore store=new KnowledgeStore(memory,base);
+        RuntimeActions.enqueue(store,path,body,label);
+        JSONArray queued=RuntimeActions.list(store);
+        runOnUiThread(()->{
+          submitting.remove(path);
+          if(isFinishing()||isDestroyed()||!identity.equals(currentIdentity()))return;
+          Toast.makeText(this,"操作已保存在本机，等待宁宁接收并继续处理。",Toast.LENGTH_LONG).show();
+          try {
+            if(displayedSnapshot!=null&&displayedIdentity.equals(identity)
+                &&displayedSnapshot.optInt("work_offset",0)==workOffset
+                &&displayedSnapshot.optLong("activity_before",0)==activityBefore)
+              render(displayedSnapshot,queued,displayedOffline);
+          }catch(Exception invalid){/* The durable decision remains in the outbox. */}
+          refresh();
+        });
+      }catch(Exception invalid){runOnUiThread(()->{
+        submitting.remove(path);
+        if(!isFinishing()&&!isDestroyed())
+          Toast.makeText(this,"本机提交未完成，请重试。",Toast.LENGTH_LONG).show();
+      });}
     });
   }
 
   private void render(JSONObject snapshot, JSONArray queued, boolean offline) throws Exception {
+    displayedSnapshot=snapshot;
+    displayedOffline=offline;
+    displayedIdentity=currentIdentity();
+    queuedPaths.clear();
+    for(int i=0;i<queued.length();i++)queuedPaths.add(queued.getJSONObject(i).getString("path"));
     content.removeAllViews();
     label("宁宁持续协助", 24);
     content.addView(NativeUi.button(this, "刷新状态", this::refresh, false));
-    if (offline) label("当前显示本机缓存。离线修改将在联网后核对，暂停或撤销需送达宁宁后才生效。", 14);
+    if (offline) label("当前显示本机缓存，状态在后台更新。暂停或撤销需送达宁宁后才生效。", 14);
     for (int i = 0; i < queued.length(); i++) {
       JSONObject action = queued.getJSONObject(i);
-      label((action.getString("state").equals("conflict") ? "需重新核对：" : "待联网同步：") + action.getString("label"), 14);
+      label((action.getString("state").equals("conflict") ? "需重新核对：" : "已提交本机，等待宁宁接收：") + action.getString("label"), 14);
       content.addView(NativeUi.button(this, "查看本机修改", () -> showDraft(action), false));
     }
     label("持续委托", 20);
@@ -146,6 +231,8 @@ public final class HarnessActivity extends Activity {
     if(checks!=null)for(int i=0;i<checks.length();i++){
       JSONObject check=checks.getJSONObject(i);label(check.getString("title"),17);label(check.getString("text"),14);label(check.getString("reason"),14);if(check.has("current_text"))label("当前服务端："+check.getString("current_text"),14);
       JSONArray evidence=check.optJSONArray("evidence");if(evidence!=null)for(int j=0;j<evidence.length();j++)label(evidence.getJSONObject(j).optString("text"),14);
+      String reviewPath="/v1/agent/review/"+check.getString("kind")+"/"+check.getString("reference");
+      if(queuedPaths.contains(reviewPath)){label("决定已提交，等待后台更新。",14);continue;}
       boolean memory=check.getString("kind").equals("memory");
       boolean failed=check.getString("kind").equals("observation");
       if(failed)content.addView(NativeUi.button(this,"查看原文",()->showEvidence(check),false));
@@ -167,7 +254,10 @@ public final class HarnessActivity extends Activity {
       if (historical) label("历史核对：" + item.optString("temporal_reason"), 14);
       if(!item.isNull("start_date"))label("全天活动："+item.optString("start_date")+" 至 "+item.optString("end_date")+"（结束日期不包含在内）",14);
       content.addView(NativeUi.button(this, "查看依据", () -> showEvidence(item), false));
-      content.addView(NativeUi.button(this, "修改内容", () -> edit(item), false));
+      String pendingPath="/v1/personal-assistant/work-items/"+android.net.Uri.encode(item.getString("work_item_id"));
+      android.widget.Button editButton=NativeUi.button(this,"修改内容",()->edit(item),false);
+      editButton.setEnabled(!queuedPaths.contains(pendingPath)&&!submitting.contains(pendingPath));
+      content.addView(editButton);
       reviewButton(item, historical ? "确认仍需处理" : "确认", "confirm");
       reviewButton(item, "不保存", "reject");
     }
@@ -338,35 +428,32 @@ public final class HarnessActivity extends Activity {
   private void intentButton(JSONObject item, String label, String action) throws Exception {
     String path = "/v1/agent/intents/" + item.getString("intent_id");
     int revision = item.getInt("revision");
-    content.addView(NativeUi.button(this, label, () -> queue(path, revision, action, null, label), false));
+    android.widget.Button button=NativeUi.button(this,label,()->queue(path,revision,action,null,label),false);
+    button.setEnabled(!queuedPaths.contains(path)&&!submitting.contains(path));
+    content.addView(button);
   }
 
   private void reviewButton(JSONObject item, String label, String action) throws Exception {
     String path = "/v1/personal-assistant/work-items/" + android.net.Uri.encode(item.getString("work_item_id"));
     int revision = item.getInt("revision");
-    content.addView(NativeUi.button(this, label, () -> queue(path, revision, action, null, label), false));
+    android.widget.Button button=NativeUi.button(this,label,()->queue(path,revision,action,null,label),false);
+    button.setEnabled(!queuedPaths.contains(path)&&!submitting.contains(path));
+    content.addView(button);
   }
 
   private void queue(String path, int revision, String action, JSONObject changes, String label) {
-    worker.execute(() -> {
-      try (MemoryStore memory = new MemoryStore(this)) {
-        BackendSettings backend = new BackendSettings(this);
-        KnowledgeStore store = new KnowledgeStore(memory, backend.base());
-        JSONObject body = new JSONObject().put("session_id", backend.session()).put("expected_revision", revision).put("action", action);
-        if (changes != null) body.put("changes", changes);
-        RuntimeActions.enqueue(store, path, body, label);
-        try { RuntimeActions.flush(store, backend.client(), backend); }
-        catch (Exception unavailable) { runOnUiThread(() -> Toast.makeText(this, "修改已保存在本机，等待联网核对。", Toast.LENGTH_LONG).show()); }
-      } catch (Exception invalid) {
-        runOnUiThread(() -> Toast.makeText(this, "本机保存未完成，请重试。", Toast.LENGTH_LONG).show());
-      }
-      runOnUiThread(() -> { if (!isFinishing() && !isDestroyed()) refresh(); });
-    });
+    try {
+      BackendSettings backend=new BackendSettings(this);
+      JSONObject body=new JSONObject().put("session_id",backend.session()).put("expected_revision",revision).put("action",action);
+      if(changes!=null)body.put("changes",changes);
+      submit(path,body,label);
+    }catch(Exception invalid){Toast.makeText(this,"提交内容无效，请重新核对。",Toast.LENGTH_LONG).show();}
   }
 
   @Override public void onDestroy() {
     generation++;
     worker.shutdownNow();
+    submissions.shutdown(); // Already submitted local writes finish independently of the screen.
     super.onDestroy();
   }
 }

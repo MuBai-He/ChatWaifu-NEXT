@@ -3051,7 +3051,6 @@ class AgentHarnessService:
             target.owner,
             Mutation(operation_id=uuid5(action, "evidence"), expected_revision=0, record=command),
         )
-        task_id = uuid5(action, "task")
         proposal = base.model_copy(
             update={
                 **changes,
@@ -3067,7 +3066,7 @@ class AgentHarnessService:
                 "target_applied_revision": None,
                 "operation": operation,
                 "revision": 1,
-                "task_id": task_id,
+                "task_id": None,
                 "reconciled_task_revision": None,
                 "state": "waiting",
                 "acceptance": "human",
@@ -3076,7 +3075,7 @@ class AgentHarnessService:
                     base.evidence,
                 ),
                 "room_id": "owner:instructions",
-                "waiting_reason": "已收到操作，正在核对外部版本并执行。",
+                "waiting_reason": "已收到提交，等待后台核对并执行。",
                 "updated_at": datetime.now(UTC),
             }
         )
@@ -3085,7 +3084,9 @@ class AgentHarnessService:
             if previous is None:
                 raise ValueError("work_command_changed")
             proposal = previous
-        await self._start_work_command(proposal)
+        # Acknowledgement only persists the command; the existing durable consumer
+        # performs task admission and execution after this request returns.
+        self.notify()
         await self.repository.record(
             target.owner,
             "work",
@@ -3097,9 +3098,67 @@ class AgentHarnessService:
         )
         return proposal
 
+    async def _continue_work_commands(self) -> None:
+        for work in await self.repository.pending_commands("local"):
+            try:
+                if not await self.eligible(work.owner, work.evidence):
+                    raise PermissionError("work_evidence_changed")
+                await self._start_work_command(work)
+            except asyncio.CancelledError:
+                raise
+            except Exception as error:
+                busy = isinstance(error, ValueError) and str(error) == "task capacity reached"
+                blocked = isinstance(error, (ValueError, PermissionError)) and not busy
+                reason = (
+                    "执行队列繁忙，提交已保留，稍后自动继续。"
+                    if busy
+                    else "暂时无法创建执行任务，请核对来源、权限与能力后重新提交。"
+                    if blocked
+                    else "提交已保留，后台暂未就绪，稍后自动重试。"
+                )
+                current = await self.repository.work_item(work.work_item_id)
+                if current is None or current.revision != work.revision:
+                    continue
+                state = "blocked" if blocked else "waiting"
+                if current.state != state or current.waiting_reason != reason:
+                    changed = current.model_copy(
+                        update={
+                            "state": state,
+                            "waiting_reason": reason,
+                            "revision": current.revision + 1,
+                            "updated_at": datetime.now(UTC),
+                        }
+                    )
+                    if not await self.repository.save_work(changed, current.revision):
+                        continue
+                    await self.repository.record(
+                        work.owner,
+                        "waiting",
+                        work.work_item_id,
+                        state,
+                        reason,
+                        work.evidence,
+                        details={"error_code": type(error).__name__},
+                        dedup_key=f"command-admission:{work.work_item_id}:{state}:{type(error).__name__}",
+                    )
+
     async def _start_work_command(self, work: WorkItem) -> None:
-        if work.task_id is None:
-            return
+        submitted = None
+        planned_task_id: UUID | None = None
+        for ref in work.evidence:
+            if ref.kind == "knowledge" and ref.reference.startswith("work-command:"):
+                record = await self.knowledge.repository.get(
+                    work.owner, ref.reference, ref.revision
+                )
+                if record is not None and record.origin.get("source_type") == "owner_work_command":
+                    submitted = datetime.fromtimestamp(record.occurred_at / 1000, UTC)
+                    planned_task_id = uuid5(UUID(str(record.origin.get("operation_id"))), "task")
+                    break
+        if submitted is None or planned_task_id is None:
+            raise PermissionError("work_command_evidence_missing")
+        expires_at = submitted + timedelta(hours=24)
+        if expires_at <= datetime.now(UTC):
+            raise PermissionError("work_command_expired")
         calendars: list[str] = []
         tasklists: list[str] = []
         for binding in work.bindings:
@@ -3136,15 +3195,37 @@ class AgentHarnessService:
                     allow_writes=True,
                     source_ref="owner-work:" + work.work_item_id,
                     evidence_refs=work.evidence,
-                    expires_at=datetime.now(UTC) + timedelta(hours=24),
+                    expires_at=expires_at,
                 ),
                 max_tool_calls=20,
                 max_active_seconds=300,
             ),
-            task_id=work.task_id,
+            task_id=planned_task_id,
             work_item_id=work.work_item_id,
             initial_wait=WaitCondition(kind="authorization", reference="owner-work-ready"),
         )
+        current = await self.repository.work_item(work.work_item_id)
+        if current is None or current.state in {"completed", "cancelled", "rejected"}:
+            if task.state not in _TERMINAL:
+                await self.tasks.action(
+                    task.task_id,
+                    session,
+                    AgentTaskAction(action="cancel", expected_revision=task.revision),
+                )
+            return
+        if current.task_id is None:
+            attached = current.model_copy(
+                update={
+                    "task_id": task.task_id,
+                    "waiting_reason": "已进入后台任务，等待执行与核验。",
+                    "revision": current.revision + 1,
+                    "updated_at": datetime.now(UTC),
+                }
+            )
+            if not await self.repository.save_work(attached, current.revision):
+                return
+        elif current.task_id != task.task_id:
+            raise ValueError("work_task_identity_changed")
         if (
             task.state == AgentTaskState.WAITING_EVENT
             and task.wait_condition
@@ -3376,9 +3457,7 @@ class AgentHarnessService:
                     dedup_key=f"observation-failed:{failed.observation_id}:{failed.last_review_id}",
                 )
         await self._continue_owner_reviews()
-        for candidate in await self.repository.pending_commands("local"):
-            if await self.eligible(candidate.owner, candidate.evidence):
-                await self._start_work_command(candidate)
+        await self._continue_work_commands()
         await self.reconcile_schedules()
         for dependent in await self.repository.dependent_tasks("local"):
             reference = dependent.wait_condition.reference if dependent.wait_condition else None

@@ -1157,6 +1157,13 @@ unified_owner_agent_harness:
     contracts: "owner-only metrics 1.0 plus compatible observation completion timestamp"
     local_checks: "215 backend batch plus 77 final targeted, 140 Python protocol, 127 TypeScript protocol; Ruff/types pass, 622 Python files with zero errors"
     remaining: "Public HTTPS push receipt, deployed monitoring, device upgrade, full ownership migration and final acceptance"
+  asynchronous_confirmation:
+    date: "2026-11-04"
+    status: source_and_local_checks_only
+    android: "0.6.7 / code 28 / schema 8; phone unavailable"
+    behavior: "Persist native outbox separately from network reads, return command acceptance before task admission, retain pending work on capacity and original authorization expiry"
+    local_checks: "62 backend and 2 targeted recovery, 116 Android; owner Release/lint pass; 622 Python files with zero type errors"
+    production: "Full Runtime and phone handoff remain pending; no deployment or device pass"
   unconfirmed_review_expiry:
     date: "2026-11-04"
     status: source_and_local_checks_only
