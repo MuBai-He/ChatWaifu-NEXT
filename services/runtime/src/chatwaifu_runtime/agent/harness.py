@@ -42,7 +42,7 @@ from chatwaifu_protocol.harness import (
 from chatwaifu_protocol.skills import SkillInvocation
 
 from chatwaifu_runtime.agent.behavior import BehaviorDecisionService
-from chatwaifu_runtime.agent.harness_ports import HarnessRepository
+from chatwaifu_runtime.agent.harness_ports import HarnessMetricsRepository, HarnessRepository
 from chatwaifu_runtime.agent.tasks import AgentTaskService
 from chatwaifu_runtime.agent.verification import CompletionGate
 from chatwaifu_runtime.information.contracts import (
@@ -57,6 +57,7 @@ from chatwaifu_runtime.information.temporal import assess_work_relevance
 from chatwaifu_runtime.knowledge.contracts import Citation, Mutation, Record, RecordDraft
 from chatwaifu_runtime.knowledge.service import KnowledgeService
 from chatwaifu_runtime.providers.admission import work_class
+from chatwaifu_runtime.providers.metering import ModelTrace, model_scope, model_trace
 from chatwaifu_runtime.runtime_skills.execution_context import authorized_action, authorized_task
 from chatwaifu_runtime.sessions.service import SessionService
 
@@ -104,6 +105,7 @@ class AgentHarnessService:
         self.repository, self.knowledge, self.information = repository, knowledge, information
         self.tasks, self.sessions, self.behavior = tasks, sessions, behavior
         self.external_reconciler: Callable[[], Awaitable[None]] | None = None
+        self.metrics: HarnessMetricsRepository | None = None
         self.context_epoch: Callable[[], int] | None = None
         self.context_changed: Callable[[int, UUID | None], None] | None = None
         self.identify_memory: Callable[[UUID, str], Awaitable[JsonObject | None]] | None = None
@@ -114,6 +116,7 @@ class AgentHarnessService:
         ) = None
         self._worker: asyncio.Task[None] | None = None
         self._intent_changed = asyncio.Event()
+        self._external_changed = asyncio.Event()
         self._changed = asyncio.Event()
         self.activity_changed = asyncio.Event()
         self.activity_waiters = asyncio.Semaphore(8)
@@ -123,6 +126,18 @@ class AgentHarnessService:
         self._temporal_checked: dict[str, datetime] = {}
         self._owners: dict[str, UUID] = {}
         self._last_reconcile = datetime.min.replace(tzinfo=UTC)
+
+    def processor_health(self) -> JsonObject:
+        worker = self._worker
+        return {
+            "running": worker is not None and not worker.done(),
+            "last_reconcile_started_at": self._last_reconcile.isoformat()
+            if self._last_reconcile.year > 1
+            else None,
+        }
+
+    def notify_external_change(self) -> None:
+        self._external_changed.set()
 
     def notify(self) -> None:
         self._changed.set()
@@ -167,6 +182,7 @@ class AgentHarnessService:
         if not item.shadow:
             await self.repository.request_recheck(item)
         self.notify()
+        self.notify_external_change()
         return item
 
     async def _intent_scope(self, owner: str, body: StandingIntentInput) -> dict[str, str]:
@@ -258,6 +274,8 @@ class AgentHarnessService:
         await self.repository.record(
             owner, "intent", str(identifier), "paused", "委托范围已调整，等待恢复"
         )
+        self.notify()
+        self.notify_external_change()
         return changed
 
     async def act_intent(self, identifier: UUID, body: IntentAction) -> StandingIntent:
@@ -360,6 +378,7 @@ class AgentHarnessService:
             await self.repository.request_recheck(changed)
         await self.repository.record(owner, "intent", str(identifier), state, body.action)
         self.notify()
+        self.notify_external_change()
         return changed
 
     async def handoff(self, body: ProcessingRequest) -> dict[str, object]:
@@ -1149,6 +1168,7 @@ class AgentHarnessService:
 
     async def _watch_external(self) -> None:
         while True:
+            self._external_changed.clear()
             try:
                 if self.external_reconciler is not None:
                     await self.external_reconciler()
@@ -1156,7 +1176,11 @@ class AgentHarnessService:
                 raise
             except Exception as error:
                 logger.warning("agent.provider_reconciliation type=%s", type(error).__name__)
-            await asyncio.sleep(300)
+            try:
+                async with asyncio.timeout(300):
+                    await self._external_changed.wait()
+            except TimeoutError:
+                pass
 
     async def task_completed(self, task: AgentTask) -> None:
         self.notify()
@@ -1209,6 +1233,13 @@ class AgentHarnessService:
         token = work_class.set(
             "historical" if item.ingestion_mode == "historical" else "background"
         )
+        usage_token = model_trace.set(
+            ModelTrace(
+                item.owner,
+                observation_id=item.observation_id,
+                observation_ids=tuple(o.observation_id for o in batch),
+            )
+        )
         try:
             async with asyncio.timeout(300):
                 await self._process(item, batch)
@@ -1227,6 +1258,7 @@ class AgentHarnessService:
             for leased in batch:
                 await self.repository.settle(leased)
         finally:
+            model_trace.reset(usage_token)
             work_class.reset(token)
         return True
 
@@ -2208,6 +2240,24 @@ class AgentHarnessService:
         return changed
 
     async def _dispatch(
+        self, work: WorkItem, source: Record, session: UUID, *, only_intent: UUID | None = None
+    ) -> AgentTask | None:
+        previous = model_trace.get()
+        trace = ModelTrace(
+            work.owner,
+            task_id=work.task_id,
+            work_item_id=work.work_item_id,
+            observation_id=previous.observation_id
+            if previous is not None and previous.owner == work.owner
+            else None,
+            observation_ids=previous.observation_ids
+            if previous is not None and previous.owner == work.owner
+            else (),
+        )
+        with model_scope(trace):
+            return await self._dispatch_current(work, source, session, only_intent=only_intent)
+
+    async def _dispatch_current(
         self, work: WorkItem, source: Record, session: UUID, *, only_intent: UUID | None = None
     ) -> AgentTask | None:
         dispatched: AgentTask | None = None
@@ -3299,6 +3349,19 @@ class AgentHarnessService:
             self._temporal_checked[owner] = evaluated_at
 
     async def _reconcile(self) -> None:
+        if self.metrics is not None:
+            for key, active, version in await self.metrics.alert_changes("local"):
+                await self.repository.record(
+                    "local",
+                    "waiting" if active else "health",
+                    key,
+                    "processing_delayed" if active else "recovered",
+                    "当前资料处理已等待超过5分钟，请查看处理队列或服务连接。"
+                    if active
+                    else "资料处理积压已恢复。",
+                    dedup_key=f"health:{key}:{version}",
+                )
+                await self.metrics.acknowledge_alert("local", key, version)
         await self.refresh_temporal_work("local")
         for failed in await self.repository.failed_observations("local"):
             if await self.eligible(failed.owner, [failed.evidence]):

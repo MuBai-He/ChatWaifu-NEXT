@@ -130,6 +130,7 @@ class IntentAction(ProtocolModel):
 
 
 class Observation(ProtocolModel):
+    completed_at: int | None = Field(default=None, ge=0)
     revision: int = Field(default=1, ge=1)
     error_code: str | None = Field(default=None, max_length=64)
     last_review_id: UUID | None = None
@@ -322,3 +323,26 @@ class ActionProposal(ProtocolModel):
     requested_changes: JsonObject
     target: JsonObject
     verification_requirements: list[str]
+
+
+class HarnessMetricsSnapshot(ProtocolModel):
+    """Measured values only. Missing cost or source coverage remains explicitly unknown."""
+
+    schema_version: Literal["1.0"] = "1.0"
+    processor: JsonObject = Field(default_factory=dict)
+    generated_at: int = Field(ge=0)
+    work_item_id: str | None = None
+    scope: Literal["owner", "owner_and_selected_work"]
+    observation_states: dict[str, int]
+    processing_room_states: dict[str, int]
+    work_states: dict[str, int]
+    source_coverage: JsonObject
+    latency_seconds: JsonObject
+    action_event_states: dict[str, int]
+    review_decisions: dict[str, int]
+    task_cost: JsonObject
+    model_cost: JsonObject
+    shared_source_model_cost: JsonObject | None = None
+    active_alerts: dict[str, int]
+    duplicate_action_claims: None = None
+    wrong_target_writes: None = None

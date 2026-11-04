@@ -35,6 +35,7 @@ from chatwaifu_runtime.agent.tool_calling import AgentTurnOrchestrator
 from chatwaifu_runtime.agent.verification import CompletionGate, verify_completion
 from chatwaifu_runtime.providers.admission import work_class
 from chatwaifu_runtime.providers.contracts import LlmProvider, LlmRequest, LlmToolCallProtocolError
+from chatwaifu_runtime.providers.metering import ModelTrace, model_trace
 from chatwaifu_runtime.runtime_skills.agent_router import RuntimeSkillRouter
 from chatwaifu_runtime.runtime_skills.audit import checkpoint_payload
 from chatwaifu_runtime.runtime_skills.execution_context import operation_scope
@@ -807,10 +808,14 @@ class AgentTaskService:
     async def _run(self, task_id: UUID) -> None:
         started = time.monotonic()
         model_token = work_class.set("background")
+        usage_token = model_trace.set(None)
         gateway: _TaskGateway | None = None
         try:
             task = await self.update_checkpoint(
                 task_id, state=AgentTaskState.RUNNING, blocked_reason=None
+            )
+            model_trace.set(
+                ModelTrace(task.scope, task_id=task.task_id, work_item_id=task.work_item_id)
             )
             remaining = task.max_active_seconds - task.active_seconds
             calls_left = task.max_tool_calls - task.tool_calls
@@ -1129,6 +1134,7 @@ class AgentTaskService:
             self._context_tasks.pop(task_id, None)
             if self.context_release is not None:
                 self.context_release(task_id)
+            model_trace.reset(usage_token)
             work_class.reset(model_token)
             current = await self.repository.get(task_id)
             if current is not None:

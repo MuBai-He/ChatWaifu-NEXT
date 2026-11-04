@@ -266,12 +266,13 @@ class OpenAiCompatibleLlmProvider:
                             else:
                                 identity_incomplete = True
 
-                    if self._request_usage:
-                        raw_usage = payload_object.get("usage")
-                        if isinstance(raw_usage, dict):
-                            parsed = _parse_usage(cast(dict[str, object], raw_usage))
-                            if parsed is not None:
-                                captured_usage = parsed
+                    # Accept usage already present on a processed chunk. Only the explicit
+                    # opt-in below waits for a trailing footer after the finish signal.
+                    raw_usage = payload_object.get("usage")
+                    if isinstance(raw_usage, dict):
+                        parsed = parse_reported_usage(cast(dict[str, object], raw_usage))
+                        if parsed is not None:
+                            captured_usage = parsed
 
                     choices_value = payload_object.get("choices", [])
                     if not isinstance(choices_value, list) or not choices_value:
@@ -504,7 +505,7 @@ def _rejects_response_schema(status_code: int, body: bytes) -> bool:
     )
 
 
-def _parse_usage(raw: dict[str, object]) -> LlmUsage | None:
+def parse_reported_usage(raw: dict[str, object]) -> LlmUsage | None:
     raw_prompt = raw.get("prompt_tokens")
     prompt_tokens = raw_prompt if type(raw_prompt) is int and raw_prompt >= 0 else None
     if prompt_tokens is None:

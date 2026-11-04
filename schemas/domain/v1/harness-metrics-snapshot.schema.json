@@ -1,0 +1,171 @@
+{
+  "$defs": {
+    "JsonObject": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "type": "object"
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$id": "https://chatwaifu.local/schemas/domain/v1/harness-metrics-snapshot.schema.json",
+  "description": "Measured values only. Missing cost or source coverage remains explicitly unknown.",
+  "properties": {
+    "action_event_states": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Action Event States",
+      "type": "object"
+    },
+    "active_alerts": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Active Alerts",
+      "type": "object"
+    },
+    "duplicate_action_claims": {
+      "default": null,
+      "title": "Duplicate Action Claims",
+      "type": "null"
+    },
+    "generated_at": {
+      "minimum": 0,
+      "title": "Generated At",
+      "type": "integer"
+    },
+    "latency_seconds": {
+      "$ref": "#/$defs/JsonObject"
+    },
+    "model_cost": {
+      "$ref": "#/$defs/JsonObject"
+    },
+    "observation_states": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Observation States",
+      "type": "object"
+    },
+    "processing_room_states": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Processing Room States",
+      "type": "object"
+    },
+    "processor": {
+      "$ref": "#/$defs/JsonObject"
+    },
+    "review_decisions": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Review Decisions",
+      "type": "object"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "scope": {
+      "enum": [
+        "owner",
+        "owner_and_selected_work"
+      ],
+      "title": "Scope",
+      "type": "string"
+    },
+    "shared_source_model_cost": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JsonObject"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "source_coverage": {
+      "$ref": "#/$defs/JsonObject"
+    },
+    "task_cost": {
+      "$ref": "#/$defs/JsonObject"
+    },
+    "work_item_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Work Item Id"
+    },
+    "work_states": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Work States",
+      "type": "object"
+    },
+    "wrong_target_writes": {
+      "default": null,
+      "title": "Wrong Target Writes",
+      "type": "null"
+    }
+  },
+  "required": [
+    "generated_at",
+    "scope",
+    "observation_states",
+    "processing_room_states",
+    "work_states",
+    "source_coverage",
+    "latency_seconds",
+    "action_event_states",
+    "review_decisions",
+    "task_cost",
+    "model_cost",
+    "active_alerts"
+  ],
+  "title": "HarnessMetricsSnapshot",
+  "type": "object",
+  "x-schema-version": "1.0"
+}

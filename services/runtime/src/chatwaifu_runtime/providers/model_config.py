@@ -30,14 +30,17 @@ from chatwaifu_runtime.providers.contracts import (
     BehaviorDecisionProvider,
     LlmProvider,
     LlmRequest,
+    LlmResponseCompleted,
     LlmStreamEvent,
     LlmTextDelta,
 )
 from chatwaifu_runtime.providers.demo_llm import DemoLlmProvider
 from chatwaifu_runtime.providers.input_estimation import estimate_reference_input_tokens
+from chatwaifu_runtime.providers.metering import ModelMeter, UsageSink
 from chatwaifu_runtime.providers.openai_compatible import (
     OpenAiCompatibleLlmProvider,
     openai_compatible_endpoint,
+    parse_reported_usage,
 )
 from chatwaifu_runtime.providers.typesafe import TypeSafeBehaviorProvider
 
@@ -160,6 +163,7 @@ class ModelConfigurationService:
         self._database = database
         self._settings = settings
         self.admission = ModelAdmission()
+        self.usage_observer: UsageSink | None = None
         self._secrets = LocalModelSecretStore(settings.config_dir / "model-secrets.json")
         self._configs: dict[ModelRole, ModelRoleConfig] = {}
         self.chat = ConfigurableChatModel(self)
@@ -279,6 +283,23 @@ class ModelConfigurationService:
         *,
         config: ModelRoleConfig | None = None,
     ) -> str:
+        effective = config if config is not None else self.get(role)
+        if not effective.enabled or effective.provider == "disabled":
+            return ""
+        async with ModelMeter(
+            self.usage_observer, role, effective.model, synthetic=effective.provider == "demo"
+        ) as meter:
+            return await self._complete(role, system, user, config=effective, meter=meter)
+
+    async def _complete(
+        self,
+        role: Literal["memory_extraction", "memory_summary"],
+        system: str,
+        user: str,
+        *,
+        config: ModelRoleConfig | None = None,
+        meter: ModelMeter | None = None,
+    ) -> str:
         effective_config = config if config is not None else self.get(role)
         if not effective_config.enabled or effective_config.provider == "disabled":
             return ""
@@ -333,6 +354,10 @@ class ModelConfigurationService:
             )
             response.raise_for_status()
             payload = cast(object, response.json())
+        if meter is not None and isinstance(payload, dict):
+            usage = cast(dict[str, object], payload).get("usage")
+            if isinstance(usage, dict):
+                meter.usage = parse_reported_usage(cast(dict[str, object], usage))
         choices: list[object] = []
         if isinstance(payload, dict):
             raw_choices = cast(dict[str, object], payload).get("choices")
@@ -391,6 +416,15 @@ class ModelConfigurationService:
         )
 
     async def embed(self, inputs: Sequence[str | PhotoEmbeddingInput]) -> list[list[float]]:
+        config = self.get("embedding")
+        if not config.enabled or config.provider in {"disabled", "local_hash"}:
+            return await self._embed(inputs)
+        async with ModelMeter(self.usage_observer, "embedding", config.model) as meter:
+            return await self._embed(inputs, meter=meter)
+
+    async def _embed(
+        self, inputs: Sequence[str | PhotoEmbeddingInput], *, meter: ModelMeter | None = None
+    ) -> list[list[float]]:
         text_inputs: list[str] = []
         for inp in inputs:
             if isinstance(inp, PhotoEmbeddingInput):
@@ -423,6 +457,10 @@ class ModelConfigurationService:
             )
             response.raise_for_status()
             payload = cast(object, response.json())
+        if meter is not None and isinstance(payload, dict):
+            usage = cast(dict[str, object], payload).get("usage")
+            if isinstance(usage, dict):
+                meter.usage = parse_reported_usage(cast(dict[str, object], usage))
         raw_data: list[object] = []
         if isinstance(payload, dict):
             value = cast(dict[str, object], payload).get("data")
@@ -513,6 +551,9 @@ class ModelConfigurationService:
                 api_key=lambda: self._secrets.get(config.role),
                 timeout_seconds=config.timeout_seconds,
             ),
+            role=config.role,
+            model=config.model,
+            sink=self.usage_observer,
         )
 
     def chat_provider(self) -> LlmProvider:
@@ -534,6 +575,7 @@ class ModelConfigurationService:
             model=config.model,
             api_key=lambda: self._secrets.get("behavior_decision"),
             timeout_seconds=config.timeout_seconds,
+            usage_observer=self.usage_observer,
         )
 
     def _defaults(self, now: datetime) -> dict[ModelRole, ModelRoleConfig]:
@@ -592,8 +634,18 @@ class ModelConfigurationService:
 
 
 class _AdmittedProvider:
-    def __init__(self, admission: ModelAdmission, route: str, provider: LlmProvider) -> None:
+    def __init__(
+        self,
+        admission: ModelAdmission,
+        route: str,
+        provider: LlmProvider,
+        *,
+        role: str,
+        model: str,
+        sink: UsageSink | None = None,
+    ) -> None:
         self._admission, self._route, self._provider = admission, route, provider
+        self._role, self._model, self._sink = role, model, sink
 
     @property
     def kind(self) -> str:
@@ -604,8 +656,13 @@ class _AdmittedProvider:
         return self._provider.supports_tool_calling
 
     async def stream(self, request: LlmRequest) -> AsyncIterator[LlmStreamEvent]:
-        async with self._admission.enter(self._route):
+        async with (
+            ModelMeter(self._sink, self._role, self._model) as meter,
+            self._admission.enter(self._route),
+        ):
             async for event in self._provider.stream(request):
+                if isinstance(event, LlmResponseCompleted):
+                    meter.usage = event.usage
                 yield event
 
 

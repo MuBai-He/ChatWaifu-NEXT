@@ -1226,6 +1226,7 @@ class SQLiteHarnessRepository:
         state = "failed" if attempts >= 5 else "pending" if failed else "done"
         updated = item.model_copy(
             update={
+                "completed_at": None if failed else now_ms(),
                 "state": state,
                 "attempts": attempts,
                 "revision": item.revision + 1,

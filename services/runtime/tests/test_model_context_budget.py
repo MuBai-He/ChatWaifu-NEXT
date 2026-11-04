@@ -370,3 +370,105 @@ async def test_admitted_budget_survives_config_change_through_retrieval_and_send
     finally:
         release.set()
         await container.stop()
+
+
+@pytest.mark.asyncio
+async def test_measured_model_usage_is_coroutine_local_and_missing_usage_is_unknown(
+    runtime_settings: Settings,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from chatwaifu_runtime.persistence.sqlite_harness_metrics import SQLiteHarnessMetricsRepository
+    from chatwaifu_runtime.providers.metering import ModelTrace, model_scope, model_trace
+
+    db = Database(tmp_path / "usage.sqlite", runtime_settings.storage)
+    await db.open()
+    models = ModelConfigurationService(db, runtime_settings)
+    await models.start()
+    metrics = SQLiteHarnessMetricsRepository(db)
+    models.usage_observer = metrics.record_usage
+    original = httpx2.AsyncClient
+
+    async def send(request: httpx2.Request) -> httpx2.Response:
+        body = json.loads(request.content)
+        if body["messages"][-1]["content"] == "cancel":
+            raise asyncio.CancelledError()
+        if body.get("stream"):
+            return httpx2.Response(
+                200,
+                text="data: "
+                + json.dumps(
+                    {
+                        "choices": [{"delta": {"content": "ok"}, "finish_reason": "stop"}],
+                        "usage": {"prompt_tokens": 12, "completion_tokens": 3, "total_tokens": 15}
+                        if body["messages"][-1]["content"] == "stream-known"
+                        else None,
+                    }
+                )
+                + "\n\ndata: [DONE]\n\n",
+            )
+        return httpx2.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": "ok"}}],
+                "usage": {"prompt_tokens": 12, "completion_tokens": 3, "total_tokens": 15},
+            },
+        )
+
+    def client(*args: object, **kwargs: object) -> httpx2.AsyncClient:
+        return original(transport=httpx2.MockTransport(send))
+
+    monkeypatch.setattr(httpx2, "AsyncClient", client)
+    config = models.get("memory_summary").model_copy(
+        update={
+            "provider": "openai_compatible",
+            "enabled": True,
+            "model": "metered",
+            "base_url": "https://model.invalid/v1",
+        }
+    )
+
+    async def invoke(owner: str, work: str) -> None:
+        with model_scope(ModelTrace(owner, work_item_id=work)):
+            assert (
+                await models.complete(
+                    "memory_summary", "private secret prompt", "material", config=config
+                )
+                == "ok"
+            )
+        assert model_trace.get() is None
+
+    try:
+        await asyncio.gather(invoke("owner:a", "a"), invoke("owner:b", "b"))
+        with model_scope(ModelTrace("owner:a", work_item_id="a")):
+            provider = models.create_chat_provider(config.model_copy(update={"role": "chat"}))
+            assert [e async for e in provider.stream(LlmRequest(uuid4(), "stream", "system"))]
+            assert [e async for e in provider.stream(LlmRequest(uuid4(), "stream-known", "system"))]
+            with pytest.raises(asyncio.CancelledError):
+                await models.complete("memory_summary", "system", "cancel", config=config)
+        rows = await db.fetchall("SELECT * FROM harness_model_usage ORDER BY observed_at")
+        assert len(rows) == 5
+        assert {(row["owner"], row["work_item_id"]) for row in rows} == {
+            ("owner:a", "a"),
+            ("owner:b", "b"),
+        }
+        a = await metrics.snapshot("owner:a")
+        cost = cast(dict[str, object], a["model_cost"])
+        assert cost["invocations"] == 4 and cost["reported_total_tokens"] == 30
+        assert cost["invocations_without_total_tokens"] == 2 and cost["cancelled_invocations"] == 1
+        assert cost["amount"] is None and a["wrong_target_writes"] is None
+        assert "private secret prompt" not in str([tuple(row) for row in rows])
+        # Connectivity probes outside a Runtime trace have no invented owner attribution.
+        await models.complete("memory_summary", "probe", "material", config=config)
+        assert len(await db.fetchall("SELECT * FROM harness_model_usage")) == 5
+
+        async def broken_sink(sample: object) -> None:
+            raise OSError("private telemetry details")
+
+        models.usage_observer = broken_sink
+        with model_scope(ModelTrace("owner:a")):
+            assert (
+                await models.complete("memory_summary", "system", "material", config=config) == "ok"
+            )
+    finally:
+        await db.close()

@@ -21,6 +21,7 @@ from chatwaifu_runtime.personal_assistant.google_calendar import (
     WRITE_SCOPE,
     Calendar,
     CalendarEvent,
+    CalendarWatch,
     GoogleCalendarAdapter,
     GoogleCalendarError,
     OAuthTokens,
@@ -505,6 +506,38 @@ class GoogleAccountService:
     ) -> None:
         owner = await self._repository.session_owner(session_id)
         await self._repository.select(owner, account_id, calendar_id, selected)
+
+    async def watch_calendar(
+        self,
+        session_id: str,
+        account_id: str,
+        calendar_id: str,
+        channel_id: str,
+        channel_token: str,
+        address: str,
+    ) -> CalendarWatch:
+        owner = await self._repository.session_owner(session_id)
+        async with self._lock:
+            before = await self._repository.begin_sync(owner, account_id, calendar_id)
+            token = await self._access(account_id, READ_SCOPE)
+            result = await self._adapter.watch_events(
+                token, calendar_id, channel_id, channel_token, address
+            )
+            after = await self._repository.begin_sync(owner, account_id, calendar_id)
+            if (
+                before.account_revision != after.account_revision
+                or before.calendar_revision != after.calendar_revision
+            ):
+                raise AssistantAccessError("calendar_source_changed")
+            return result
+
+    async def stop_calendar_watch(
+        self, session_id: str, account_id: str, channel_id: str, resource_id: str
+    ) -> None:
+        await self._repository.session_owner(session_id)
+        async with self._lock:
+            token = await self._access(account_id, READ_SCOPE)
+            await self._adapter.stop_watch(token, channel_id, resource_id)
 
     async def sync(self, session_id: str, account_id: str, calendar_id: str) -> bool:
         owner = await self._repository.session_owner(session_id)

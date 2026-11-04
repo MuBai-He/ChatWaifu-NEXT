@@ -13,6 +13,8 @@ from chatwaifu_protocol.agent import DecisionRecord
 from chatwaifu_protocol.base import JsonObject
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from chatwaifu_runtime.providers.metering import ModelMeter, UsageSink
+
 logger = logging.getLogger(__name__)
 
 _ACTIONS = {
@@ -75,14 +77,22 @@ class TypeSafeBehaviorProvider:
         api_key: Callable[[], str | None],
         timeout_seconds: float = 10,
         transport: httpx2.AsyncBaseTransport | None = None,
+        usage_observer: UsageSink | None = None,
     ) -> None:
         self._endpoint = base_url.rstrip("/") + "/systemone"
         self._model = model
         self._api_key = api_key
         self._timeout = timeout_seconds
         self._transport = transport
+        self._usage_observer = usage_observer
 
     async def decide(
+        self, persona: str, situation: JsonObject, source_refs: frozenset[str]
+    ) -> DecisionRecord:
+        async with ModelMeter(self._usage_observer, "behavior_decision", self._model):
+            return await self._decide(persona, situation, source_refs)
+
+    async def _decide(
         self, persona: str, situation: JsonObject, source_refs: frozenset[str]
     ) -> DecisionRecord:
         # Source identifiers remain exact original evidence; the model chooses opaque

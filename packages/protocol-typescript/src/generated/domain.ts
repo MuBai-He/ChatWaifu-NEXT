@@ -1629,6 +1629,12 @@ export type SchemaVersion93 = '1.0'
 export type Timezone1 = string
 export type ExpectedRevision12 = number
 export type SchemaVersion94 = '1.0'
+export type DuplicateActionClaims = null
+export type GeneratedAt = number
+export type SchemaVersion95 = '1.0'
+export type Scope3 = 'owner' | 'owner_and_selected_work'
+export type WorkItemId2 = string | null
+export type WrongTargetWrites = null
 export type Action2 = 'pause' | 'resume' | 'revoke' | 'enable'
 export type ExpectedRevision13 = number
 export type OperationId1 = string
@@ -1639,19 +1645,19 @@ export type Kind12 = string
 export type Ordinal1 = number
 export type PartId3 = string
 export type Required1 = boolean
-export type SchemaVersion95 = '1.0'
+export type SchemaVersion96 = '1.0'
 export type Status3 = string
 export type DeliveryParts = DiagnosticDeliveryPart[]
 export type DeliveryStatus = string | null
 export type CurrentlyVisible = boolean | null
 export type MemoryId = string
-export type SchemaVersion96 = '1.0'
+export type SchemaVersion97 = '1.0'
 export type Score = number | null
 export type SelectedForPrompt = boolean | null
 export type MemoryCandidates = DiagnosticMemoryReference[]
 export type NextCursor6 = number | null
 export type PlayedPtsMs3 = number
-export type SchemaVersion97 = '1.0'
+export type SchemaVersion98 = '1.0'
 export type SegmentId4 = string
 export type SegmentIndex = number
 export type State3 = string
@@ -1661,23 +1667,23 @@ export type Expression = string | null
 export type Intent = string | null
 export type Motion = string | null
 export type ResponseLength = string | null
-export type SchemaVersion98 = '1.0'
-export type Tone = string | null
 export type SchemaVersion99 = '1.0'
+export type Tone = string | null
+export type SchemaVersion100 = '1.0'
 export type SelectedMemoryIds1 = string[] | null
 export type GenerationId28 = string | null
 export type GenerationState1 = string | null
 export type InteractionId1 = string
 export type OccurredAt19 = string
 export type Reason7 = string | null
-export type SchemaVersion100 = '1.0'
+export type SchemaVersion101 = '1.0'
 export type SessionId36 = string
 export type Trigger = 'user' | 'proactive' | 'ignored_voice' | 'proactive_deferred'
 export type TurnId25 = string | null
 export type EventType15 = string
 export type OccurredAt20 = string
 export type Reason8 = string | null
-export type SchemaVersion101 = '1.0'
+export type SchemaVersion102 = '1.0'
 export type Sequence18 = number
 export type Status4 = string | null
 /**
@@ -1686,7 +1692,7 @@ export type Status4 = string | null
 export type Timeline = DiagnosticTimelineItem[]
 export type DurationMs4 = number | null
 export type ErrorCode = string | null
-export type SchemaVersion102 = '1.0'
+export type SchemaVersion103 = '1.0'
 export type Status5 = string
 export type ToolCallId = string | null
 export type ToolCalls1 = DiagnosticToolCall[]
@@ -1697,7 +1703,7 @@ export type HasMore = boolean
  */
 export type Items7 = InteractionTraceSummary[]
 export type NextCursor7 = string | null
-export type SchemaVersion103 = '1.0'
+export type SchemaVersion104 = '1.0'
 export type Confirmed = boolean
 export type OccurredAt21 = number
 export type Subject = string | null
@@ -1708,7 +1714,7 @@ export type Expression1 = 'neutral' | 'happy' | 'sad' | 'angry' | 'surprised' | 
 export type Label = string
 export type LearnedAt = string
 export type MimeType3 = 'image/png'
-export type SchemaVersion104 = '1.0'
+export type SchemaVersion105 = '1.0'
 export type Sha2564 = string
 export type SourceConnectionId = string
 export type StickerId1 = string
@@ -1811,7 +1817,7 @@ export type ConversationLabel3 = string | null
 export type PrincipalScope5 = string
 export type ProviderId7 = string
 export type ReceivedAt1 = string
-export type SchemaVersion105 = '1.0'
+export type SchemaVersion106 = '1.0'
 export type SenderDisplayName3 = string | null
 export type SenderKey7 = string
 export type KnowledgeEpoch = number
@@ -1961,6 +1967,7 @@ export type EstimatedVramMb = number | null
 export type ExclusiveGpu = boolean
 export type StoresInput = boolean
 export type Attempts = number
+export type CompletedAt2 = number | null
 export type ErrorCode1 = string | null
 export type IngestionMode = 'live' | 'historical' | 'delayed'
 export type LastReviewId = string | null
@@ -1984,7 +1991,7 @@ export type GrantId = string
 export type Permission = string
 export type Principal = string
 export type RevokedAt = string | null
-export type Scope3 = 'once' | 'session' | 'always'
+export type Scope4 = 'once' | 'session' | 'always'
 export type SessionId38 = string | null
 export type SkillId1 = string
 export type Capability1 = string
@@ -1995,13 +2002,13 @@ export type RequestId2 = string
 export type RequestedAt2 = string
 export type Deleted = boolean
 export type Revision17 = number
-export type SchemaVersion106 = '1.0'
+export type SchemaVersion107 = '1.0'
 export type RetentionEnabled = boolean
 export type Revision18 = number
-export type SchemaVersion107 = '1.0'
+export type SchemaVersion108 = '1.0'
 export type ExpectedRevision14 = number
 export type RetentionEnabled1 = boolean
-export type SchemaVersion108 = '1.0'
+export type SchemaVersion109 = '1.0'
 export type Capacity = 200
 export type ByteSize1 = number
 export type Caption = string
@@ -2034,7 +2041,7 @@ export type OriginalWidth = number | null
 export type PhotoId = string
 export type ReceivedAt3 = string
 export type SavedAt = string
-export type SchemaVersion109 = '1.0'
+export type SchemaVersion110 = '1.0'
 export type Sha2565 = string
 export type SourceConnectionId1 = string
 export type SourceGenerationId = string
@@ -2045,7 +2052,7 @@ export type AnnotationId = string
 export type Kind14 = 'date' | 'event' | 'context'
 export type ObservedAt3 = string
 export type Quote = string
-export type SchemaVersion110 = '1.0'
+export type SchemaVersion111 = '1.0'
 export type SourceGenerationId1 = string
 export type Superseded = boolean
 /**
@@ -2057,7 +2064,7 @@ export type Width = number
  * @maxItems 200
  */
 export type Items8 = SavedPhoto[]
-export type SchemaVersion111 = '1.0'
+export type SchemaVersion112 = '1.0'
 export type TotalBytes = number
 export type Description8 = string
 export type Enabled10 = boolean
@@ -2075,7 +2082,7 @@ export type Version4 = string
 export type Description9 = string
 export type Name13 = string
 export type PluginId2 = string
-export type SchemaVersion112 = '1.0'
+export type SchemaVersion113 = '1.0'
 /**
  * @minItems 1
  * @maxItems 32
@@ -2133,7 +2140,7 @@ export type State5 =
   | 'blocked'
   | 'outcome_unknown'
 export type UpdatedAt19 = string
-export type WorkItemId2 = string
+export type WorkItemId3 = string
 export type WorkRevision1 = number
 export type Expression2 = 'neutral' | 'happy' | 'sad' | 'angry' | 'surprised' | 'shy' | 'curious'
 export type Intent1 = 'comfort' | 'answer' | 'celebrate' | 'reassure' | 'tease' | 'curious'
@@ -2201,7 +2208,7 @@ export type SpokenSummary = string | null
 export type Status7 = string
 export type UiCards = JsonObject[]
 export type Capability3 = string
-export type CompletedAt2 = string | null
+export type CompletedAt3 = string | null
 export type ConfirmationRequestId = string | null
 export type CreatedAt21 = string
 export type GenerationId29 = string | null
@@ -2483,19 +2490,19 @@ export type Shadow2 = boolean
 export type TasklistIds3 = string[]
 export type Deleted1 = boolean
 export type Revision21 = number
-export type SchemaVersion113 = '1.0'
+export type SchemaVersion114 = '1.0'
 export type LearningEnabled = boolean
 export type Revision22 = number
-export type SchemaVersion114 = '1.0'
+export type SchemaVersion115 = '1.0'
 export type ExpectedRevision16 = number
 export type LearningEnabled1 = boolean
-export type SchemaVersion115 = '1.0'
+export type SchemaVersion116 = '1.0'
 export type Capacity1 = 100
 /**
  * @maxItems 100
  */
 export type Items9 = LearnedSticker[]
-export type SchemaVersion116 = '1.0'
+export type SchemaVersion117 = '1.0'
 export type TotalBytes1 = number
 export type HasMore1 = boolean
 export type Attempt3 = number
@@ -2504,7 +2511,7 @@ export type DeliveredAt4 = string | null
 export type Label1 = string
 export type Origin1 = 'preset' | 'learned'
 export type PartId4 = string
-export type SchemaVersion117 = '1.0'
+export type SchemaVersion118 = '1.0'
 export type Status8 = 'pending' | 'sending' | 'delivered' | 'failed' | 'cancelled' | 'skipped'
 export type StickerId2 = string
 export type UpdatedAt22 = string
@@ -2513,20 +2520,20 @@ export type UpdatedAt22 = string
  */
 export type Items10 = StickerUsageRecord[]
 export type ScanLimit = 200
-export type SchemaVersion118 = '1.0'
-export type ExpectedRevision17 = number
 export type SchemaVersion119 = '1.0'
+export type ExpectedRevision17 = number
+export type SchemaVersion120 = '1.0'
 export type GenerationId30 = string
 export type Purpose = 'file' | 'result'
 export type RequestId3 = string
-export type SchemaVersion120 = '1.0'
+export type SchemaVersion121 = '1.0'
 export type SessionId45 = string
 export type TaskId5 = string
 export type TurnId28 = string
 export type EvidenceRef1 = string
 export type ExpectedRevision18 = number
 export type Outcome = 'accepted' | 'rejected'
-export type SchemaVersion121 = '1.0'
+export type SchemaVersion122 = '1.0'
 export type StepKey = string
 export type ActiveSkillIds = string[]
 export type CommittedAt = string | null
@@ -2768,7 +2775,7 @@ export type Timezone3 = string
 export type Title6 = string
 export type UpdatedAt23 = string
 export type WaitingReason = string | null
-export type WorkItemId3 = string
+export type WorkItemId4 = string
 export type Action4 = 'confirm' | 'reject' | 'complete' | 'cancel' | 'snooze' | 'edit' | 'link'
 export type Details1 = string | null
 export type DueAt1 = string | null
@@ -2880,6 +2887,7 @@ export interface ProtocolCatalog {
   group_autonomy_policy: GroupAutonomyPolicy
   group_autonomy_update: GroupAutonomyUpdate
   group_discussion_policy: GroupDiscussionPolicy
+  harness_metrics_snapshot: HarnessMetricsSnapshot
   intent_action: IntentAction
   interaction_trace_detail: InteractionTraceDetail
   interaction_trace_page: InteractionTracePage
@@ -4589,6 +4597,48 @@ export interface GroupAutonomyUpdate {
   schema_version?: SchemaVersion94
   [k: string]: unknown
 }
+/**
+ * Measured values only. Missing cost or source coverage remains explicitly unknown.
+ */
+export interface HarnessMetricsSnapshot {
+  action_event_states: ActionEventStates
+  active_alerts: ActiveAlerts
+  duplicate_action_claims?: DuplicateActionClaims
+  generated_at: GeneratedAt
+  latency_seconds: JsonObject
+  model_cost: JsonObject
+  observation_states: ObservationStates
+  processing_room_states: ProcessingRoomStates
+  processor?: JsonObject
+  review_decisions: ReviewDecisions
+  schema_version?: SchemaVersion95
+  scope: Scope3
+  shared_source_model_cost?: JsonObject | null
+  source_coverage: JsonObject
+  task_cost: JsonObject
+  work_item_id?: WorkItemId2
+  work_states: WorkStates
+  wrong_target_writes?: WrongTargetWrites
+  [k: string]: unknown
+}
+export interface ActionEventStates {
+  [k: string]: number
+}
+export interface ActiveAlerts {
+  [k: string]: number
+}
+export interface ObservationStates {
+  [k: string]: number
+}
+export interface ProcessingRoomStates {
+  [k: string]: number
+}
+export interface ReviewDecisions {
+  [k: string]: number
+}
+export interface WorkStates {
+  [k: string]: number
+}
 export interface IntentAction {
   action: Action2
   expected_revision: ExpectedRevision13
@@ -4605,7 +4655,7 @@ export interface InteractionTraceDetail {
   prompt_budget?: PromptBudgetReport | null
   prompt_identity?: PromptContextIdentity | null
   response_plan?: DiagnosticResponsePlan | null
-  schema_version?: SchemaVersion99
+  schema_version?: SchemaVersion100
   selected_memory_ids?: SelectedMemoryIds1
   summary: InteractionTraceSummary
   timeline?: Timeline
@@ -4620,21 +4670,21 @@ export interface DiagnosticDeliveryPart {
   ordinal: Ordinal1
   part_id: PartId3
   required: Required1
-  schema_version?: SchemaVersion95
+  schema_version?: SchemaVersion96
   status: Status3
   [k: string]: unknown
 }
 export interface DiagnosticMemoryReference {
   currently_visible?: CurrentlyVisible
   memory_id: MemoryId
-  schema_version?: SchemaVersion96
+  schema_version?: SchemaVersion97
   score?: Score
   selected_for_prompt?: SelectedForPrompt
   [k: string]: unknown
 }
 export interface DiagnosticPlaybackSegment {
   played_pts_ms: PlayedPtsMs3
-  schema_version?: SchemaVersion97
+  schema_version?: SchemaVersion98
   segment_id: SegmentId4
   segment_index: SegmentIndex
   state: State3
@@ -4646,7 +4696,7 @@ export interface DiagnosticResponsePlan {
   intent?: Intent
   motion?: Motion
   response_length?: ResponseLength
-  schema_version?: SchemaVersion98
+  schema_version?: SchemaVersion99
   tone?: Tone
   [k: string]: unknown
 }
@@ -4656,7 +4706,7 @@ export interface InteractionTraceSummary {
   interaction_id: InteractionId1
   occurred_at: OccurredAt19
   reason?: Reason7
-  schema_version?: SchemaVersion100
+  schema_version?: SchemaVersion101
   session_id: SessionId36
   trigger: Trigger
   turn_id?: TurnId25
@@ -4666,7 +4716,7 @@ export interface DiagnosticTimelineItem {
   event_type: EventType15
   occurred_at: OccurredAt20
   reason?: Reason8
-  schema_version?: SchemaVersion101
+  schema_version?: SchemaVersion102
   sequence: Sequence18
   status?: Status4
   [k: string]: unknown
@@ -4674,7 +4724,7 @@ export interface DiagnosticTimelineItem {
 export interface DiagnosticToolCall {
   duration_ms?: DurationMs4
   error_code?: ErrorCode
-  schema_version?: SchemaVersion102
+  schema_version?: SchemaVersion103
   status: Status5
   tool_call_id?: ToolCallId
   [k: string]: unknown
@@ -4683,7 +4733,7 @@ export interface InteractionTracePage {
   has_more?: HasMore
   items?: Items7
   next_cursor?: NextCursor7
-  schema_version?: SchemaVersion103
+  schema_version?: SchemaVersion104
   [k: string]: unknown
 }
 export interface KnowledgeExcerpt {
@@ -4701,7 +4751,7 @@ export interface LearnedSticker {
   label: Label
   learned_at: LearnedAt
   mime_type?: MimeType3
-  schema_version?: SchemaVersion104
+  schema_version?: SchemaVersion105
   sha256: Sha2564
   source_connection_id: SourceConnectionId
   sticker_id: StickerId1
@@ -4838,7 +4888,7 @@ export interface MemoryChannelAttribution {
   principal_scope: PrincipalScope5
   provider_id: ProviderId7
   received_at: ReceivedAt1
-  schema_version?: SchemaVersion105
+  schema_version?: SchemaVersion106
   sender_display_name?: SenderDisplayName3
   sender_key: SenderKey7
   [k: string]: unknown
@@ -4944,6 +4994,7 @@ export interface ModelResourceProfile {
 }
 export interface Observation {
   attempts?: Attempts
+  completed_at?: CompletedAt2
   error_code?: ErrorCode1
   evidence: EvidenceRef
   ingestion_mode: IngestionMode
@@ -4974,7 +5025,7 @@ export interface PermissionGrant {
   permission: Permission
   principal: Principal
   revoked_at?: RevokedAt
-  scope: Scope3
+  scope: Scope4
   session_id?: SessionId38
   skill_id: SkillId1
   [k: string]: unknown
@@ -4993,25 +5044,25 @@ export interface PermissionRequest {
 export interface PhotoMemoryDeleteResult {
   deleted: Deleted
   revision: Revision17
-  schema_version?: SchemaVersion106
+  schema_version?: SchemaVersion107
   [k: string]: unknown
 }
 export interface PhotoMemorySettings {
   retention_enabled?: RetentionEnabled
   revision?: Revision18
-  schema_version?: SchemaVersion107
+  schema_version?: SchemaVersion108
   [k: string]: unknown
 }
 export interface PhotoMemorySettingsUpdate {
   expected_revision: ExpectedRevision14
   retention_enabled: RetentionEnabled1
-  schema_version?: SchemaVersion108
+  schema_version?: SchemaVersion109
   [k: string]: unknown
 }
 export interface PhotoMemorySnapshot {
   capacity?: Capacity
   items?: Items8
-  schema_version?: SchemaVersion111
+  schema_version?: SchemaVersion112
   settings: PhotoMemorySettings
   total_bytes: TotalBytes
   [k: string]: unknown
@@ -5032,7 +5083,7 @@ export interface SavedPhoto {
   photo_id: PhotoId
   received_at: ReceivedAt3
   saved_at: SavedAt
-  schema_version?: SchemaVersion109
+  schema_version?: SchemaVersion110
   sha256: Sha2565
   source_connection_id: SourceConnectionId1
   source_generation_id: SourceGenerationId
@@ -5048,7 +5099,7 @@ export interface PhotoUserAnnotation {
   kind: Kind14
   observed_at: ObservedAt3
   quote: Quote
-  schema_version?: SchemaVersion110
+  schema_version?: SchemaVersion111
   source_generation_id: SourceGenerationId1
   superseded?: Superseded
   [k: string]: unknown
@@ -5073,7 +5124,7 @@ export interface PluginManifest {
   description: Description9
   name: Name13
   plugin_id: PluginId2
-  schema_version?: SchemaVersion112
+  schema_version?: SchemaVersion113
   skills: Skills
   transport: PluginTransport
   version: Version5
@@ -5123,7 +5174,7 @@ export interface ReminderOccurrence {
   scheduled_at: ScheduledAt
   state: State5
   updated_at: UpdatedAt19
-  work_item_id: WorkItemId2
+  work_item_id: WorkItemId3
   work_revision: WorkRevision1
   [k: string]: unknown
 }
@@ -5225,7 +5276,7 @@ export interface SkillResult {
 }
 export interface SkillRunSnapshot {
   capability: Capability3
-  completed_at?: CompletedAt2
+  completed_at?: CompletedAt3
   confirmation_request_id?: ConfirmationRequestId
   created_at: CreatedAt21
   error?: StructuredError | null
@@ -5325,25 +5376,25 @@ export interface StandingIntentUpdate {
 export interface StickerLibraryDeleteResult {
   deleted: Deleted1
   revision: Revision21
-  schema_version?: SchemaVersion113
+  schema_version?: SchemaVersion114
   [k: string]: unknown
 }
 export interface StickerLibrarySettings {
   learning_enabled?: LearningEnabled
   revision?: Revision22
-  schema_version?: SchemaVersion114
+  schema_version?: SchemaVersion115
   [k: string]: unknown
 }
 export interface StickerLibrarySettingsUpdate {
   expected_revision: ExpectedRevision16
   learning_enabled: LearningEnabled1
-  schema_version?: SchemaVersion115
+  schema_version?: SchemaVersion116
   [k: string]: unknown
 }
 export interface StickerLibrarySnapshot {
   capacity?: Capacity1
   items?: Items9
-  schema_version?: SchemaVersion116
+  schema_version?: SchemaVersion117
   settings: StickerLibrarySettings
   total_bytes: TotalBytes1
   [k: string]: unknown
@@ -5358,7 +5409,7 @@ export interface StickerUsageHistory {
   has_more?: HasMore1
   items?: Items10
   scan_limit?: ScanLimit
-  schema_version?: SchemaVersion118
+  schema_version?: SchemaVersion119
   [k: string]: unknown
 }
 /**
@@ -5371,7 +5422,7 @@ export interface StickerUsageRecord {
   label: Label1
   origin: Origin1
   part_id: PartId4
-  schema_version?: SchemaVersion117
+  schema_version?: SchemaVersion118
   status: Status8
   sticker_id: StickerId2
   updated_at: UpdatedAt22
@@ -5380,14 +5431,14 @@ export interface StickerUsageRecord {
 export interface TaskAuthorizationUpdate {
   authorization: TaskAuthorization
   expected_revision: ExpectedRevision17
-  schema_version?: SchemaVersion119
+  schema_version?: SchemaVersion120
 }
 export interface TaskDeliveryTarget {
   binding: TaskChannelBinding
   generation_id: GenerationId30
   purpose?: Purpose
   request_id: RequestId3
-  schema_version?: SchemaVersion120
+  schema_version?: SchemaVersion121
   session_id: SessionId45
   task_id: TaskId5
   turn_id: TurnId28
@@ -5397,7 +5448,7 @@ export interface TaskReconciliation {
   evidence_ref: EvidenceRef1
   expected_revision: ExpectedRevision18
   outcome: Outcome
-  schema_version?: SchemaVersion121
+  schema_version?: SchemaVersion122
   step_key: StepKey
 }
 export interface TurnSnapshot {
@@ -5468,7 +5519,7 @@ export interface WorkItem {
   title: Title6
   updated_at: UpdatedAt23
   waiting_reason?: WaitingReason
-  work_item_id: WorkItemId3
+  work_item_id: WorkItemId4
   [k: string]: unknown
 }
 export interface OwnerWorkDecision {

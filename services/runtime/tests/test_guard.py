@@ -522,3 +522,109 @@ def test_remote_client_configuration_and_audio_require_auth(guard_settings: Sett
             "ice_servers": [],
             "ice_transport_policy": "all",
         }
+
+
+def test_calendar_notification_requires_its_channel_secret_and_keeps_other_routes_private(
+    guard_settings: Settings,
+) -> None:
+    import hashlib
+
+    from chatwaifu_runtime.persistence.sqlite_calendar_push import SQLiteCalendarPushRepository
+    from chatwaifu_runtime.persistence.sqlite_personal_assistant import SQLiteAssistantRepository
+    from chatwaifu_runtime.personal_assistant.calendar_push import (
+        PUSH_PATH,
+        CalendarPushService,
+        now_ms,
+    )
+    from chatwaifu_runtime.personal_assistant.google_calendar import Calendar, CalendarWatch
+
+    class Accounts:
+        async def watch_calendar(
+            self,
+            session_id: str,
+            account_id: str,
+            calendar_id: str,
+            channel_id: str,
+            channel_token: str,
+            address: str,
+        ) -> CalendarWatch:
+            raise AssertionError("callback admission cannot subscribe or infer")
+
+        async def stop_calendar_watch(
+            self, session_id: str, account_id: str, channel_id: str, resource_id: str
+        ) -> None:
+            raise AssertionError("callback admission cannot modify a remote subscription")
+
+    app = create_app(guard_settings)
+    with TestClient(app) as client:
+        assert client.portal is not None
+        repository = SQLiteCalendarPushRepository(app.state.container.database)
+        accounts = SQLiteAssistantRepository(app.state.container.database)
+        client.portal.call(accounts.connect, "local", "account", "synthetic-reference")
+        client.portal.call(
+            accounts.add_calendar,
+            "local",
+            "account",
+            Calendar("calendar", "Synthetic", "UTC", "owner"),
+        )
+        client.portal.call(accounts.select, "local", "account", "calendar", True)
+        token = "synthetic-push-secret"
+        client.portal.call(
+            repository.reserve,
+            "local",
+            "account",
+            "calendar",
+            "channel-id",
+            hashlib.sha256(token.encode()).hexdigest(),
+            now_ms() + 60000,
+            "https://calendar.example" + PUSH_PATH,
+        )
+        observed = asyncio.Event()
+
+        async def read_provider() -> None:
+            observed.set()
+
+        app.state.container.harness.external_reconciler = read_provider
+        service = CalendarPushService(
+            Accounts(),
+            repository,
+            "https://calendar.example",
+            app.state.container.harness.notify_external_change,
+        )
+        app.state.container.calendar_push = service
+        headers = {
+            "X-Goog-Channel-ID": "channel-id",
+            "X-Goog-Channel-Token": token,
+            "X-Goog-Resource-ID": "resource-id",
+            "X-Goog-Message-Number": "1",
+            "X-Goog-Resource-State": "sync",
+        }
+        try:
+            assert (
+                client.post(
+                    PUSH_PATH, headers={**headers, "X-Goog-Channel-Token": "wrong"}
+                ).status_code
+                == 404
+            )
+            assert client.post(PUSH_PATH, headers=headers).status_code == 204
+
+            async def wait_readback() -> None:
+                async with asyncio.timeout(2):
+                    await observed.wait()
+
+            client.portal.call(wait_readback)
+            assert client.post(PUSH_PATH, headers=headers).status_code == 204
+            row = client.portal.call(repository.channel, "channel-id")
+            assert row is not None and row.dirty_revision == 1
+            assert client.get(PUSH_PATH).status_code == 401
+            assert client.get("/v1/agent/intents").status_code == 401
+            assert client.post(PUSH_PATH + "/other", headers=headers).status_code == 401
+            client.portal.call(accounts.select, "local", "account", "calendar", False)
+            assert (
+                client.post(
+                    PUSH_PATH, headers={**headers, "X-Goog-Message-Number": "2"}
+                ).status_code
+                == 404
+            )
+        finally:
+            client.portal.call(service.close)

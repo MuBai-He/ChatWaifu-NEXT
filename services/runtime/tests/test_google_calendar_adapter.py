@@ -531,3 +531,56 @@ async def test_all_day_creation_roundtrips_exclusive_dates_without_inventing_a_c
         )
     finally:
         await adapter.close()
+
+
+async def test_calendar_watch_uses_scoped_opaque_channel_and_stops_exact_resource() -> None:
+    import json
+
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        assert request.headers["Authorization"] == "Bearer synthetic-access"
+        if request.url.path.endswith("/events/watch"):
+            body = json.loads(request.content)
+            assert body == {
+                "id": "opaque-channel",
+                "token": "synthetic-channel-token",
+                "type": "web_hook",
+                "address": "https://calendar.example/notify",
+                "params": {"ttl": "86400"},
+            }
+            return httpx.Response(
+                200,
+                json={
+                    "id": "opaque-channel",
+                    "resourceId": "opaque-resource",
+                    "expiration": "2000000000000",
+                },
+            )
+        assert request.url.path.endswith("/channels/stop")
+        assert json.loads(request.content) == {
+            "id": "opaque-channel",
+            "resourceId": "opaque-resource",
+        }
+        return httpx.Response(204)
+
+    adapter = GoogleCalendarAdapter(transport=httpx.MockTransport(handler))
+    try:
+        result = await adapter.watch_events(
+            "synthetic-access",
+            "selected/calendar@example",
+            "opaque-channel",
+            "synthetic-channel-token",
+            "https://calendar.example/notify",
+        )
+        assert (
+            result.channel_id == "opaque-channel"
+            and result.resource_id == "opaque-resource"
+            and result.expires_at == 2000000000000
+        )
+        assert "selected%2Fcalendar" in str(requests[0].url)
+        await adapter.stop_watch("synthetic-access", result.channel_id, result.resource_id)
+        assert len(requests) == 2
+    finally:
+        await adapter.close()

@@ -587,3 +587,189 @@ async def test_query_discards_results_after_deselection(
             )
     finally:
         await adapter.close()
+
+
+@pytest.mark.parametrize("lost_reply", [False, True])
+async def test_calendar_push_early_sync_replay_restart_and_selection_fence(
+    store: tuple[Database, SQLiteAssistantRepository],
+    lost_reply: bool,
+) -> None:
+    from chatwaifu_runtime.persistence.sqlite_calendar_push import SQLiteCalendarPushRepository
+    from chatwaifu_runtime.personal_assistant.calendar_push import CalendarPushService, now_ms
+    from chatwaifu_runtime.personal_assistant.google_calendar import CalendarWatch
+
+    db, accounts_repo = store
+    repository = SQLiteCalendarPushRepository(db)
+    notices: list[int] = []
+    requests: list[tuple[str, str]] = []
+    stops: list[str] = []
+    push: CalendarPushService | None = None
+
+    class Accounts:
+        async def watch_calendar(
+            self,
+            session_id: str,
+            account_id: str,
+            calendar_id: str,
+            channel_id: str,
+            channel_token: str,
+            address: str,
+        ) -> CalendarWatch:
+            requests.append((channel_id, channel_token))
+            assert push is not None
+            assert await push.receive(channel_id, channel_token, "resource", "1", "sync")
+            if lost_reply:
+                raise TimeoutError()
+            return CalendarWatch(channel_id, "resource", now_ms() + 86400000)
+
+        async def stop_calendar_watch(
+            self, session_id: str, account_id: str, channel_id: str, resource_id: str
+        ) -> None:
+            stops.append(channel_id)
+
+    adapter = Accounts()
+    push = CalendarPushService(
+        adapter, repository, "https://calendar.example", lambda: notices.append(1)
+    )
+    try:
+        pending = push.observe("owner", {("account", "calendar")})
+        assert pending is not None
+        await pending
+        assert len(requests) == 1
+        identifier, token = requests[0]
+        row = await repository.channel(identifier)
+        assert row is not None and row.state == "active" and row.resource_id == "resource"
+        assert row.token_digest != token
+        original_dirty = row.dirty_revision
+        notice_count = len(notices)
+        assert await push.receive(identifier, token, "resource", "1", "exists")
+        assert len(notices) == notice_count
+        assert not await push.receive(identifier, "wrong-token", "resource", "2", "exists")
+        assert not await push.receive(identifier, token, "other-resource", "2", "exists")
+        assert await push.receive(identifier, token, "resource", "3", "exists")
+        assert await push.receive(identifier, token, "resource", "2", "exists")
+        updated = await repository.channel(identifier)
+        assert updated is not None and updated.dirty_revision == original_dirty + 1
+        await repository.consume(identifier, original_dirty)
+        assert (await push.dirty())[0].consumed_revision == original_dirty
+        await push.close()
+        push = CalendarPushService(
+            adapter, repository, "https://calendar.example", lambda: notices.append(1)
+        )
+        assert await push.receive(identifier, token, "resource", "4", "exists")
+        pending = push.observe("owner", {("account", "calendar")})
+        assert pending is not None
+        await pending
+        assert len(requests) == 1  # A lost watch response cannot create another fresh lease.
+        await accounts_repo.select("local", "account", "calendar", False)
+        assert not await push.receive(identifier, token, "resource", "5", "exists")
+        assert await push.dirty() == []
+        pending = push.observe("owner", set())
+        assert pending is not None
+        await pending
+        retired = await repository.channel(identifier)
+        assert retired is not None and retired.state == "retired" and stops == [identifier]
+    finally:
+        await push.close()
+
+
+async def test_calendar_push_rebinds_callback_origin_and_retires_old_token(
+    store: tuple[Database, SQLiteAssistantRepository],
+) -> None:
+    from chatwaifu_runtime.persistence.sqlite_calendar_push import SQLiteCalendarPushRepository
+    from chatwaifu_runtime.personal_assistant.calendar_push import (
+        PUSH_PATH,
+        CalendarPushService,
+        now_ms,
+    )
+    from chatwaifu_runtime.personal_assistant.google_calendar import CalendarWatch
+
+    db, _accounts = store
+    repo = SQLiteCalendarPushRepository(db)
+    old = await repo.reserve(
+        "local",
+        "account",
+        "calendar",
+        "old-channel",
+        hashlib.sha256(b"old-secret").hexdigest(),
+        now_ms() + 86400000,
+        "https://old.example" + PUSH_PATH,
+    )
+    assert await repo.activate(
+        old, CalendarWatch("old-channel", "old-resource", now_ms() + 86400000)
+    )
+    created: list[tuple[str, str]] = []
+    stopped: list[str] = []
+
+    class Accounts:
+        async def watch_calendar(
+            self,
+            session_id: str,
+            account_id: str,
+            calendar_id: str,
+            channel_id: str,
+            channel_token: str,
+            address: str,
+        ) -> CalendarWatch:
+            assert address == "https://new.example" + PUSH_PATH
+            created.append((channel_id, channel_token))
+            return CalendarWatch(channel_id, "new-resource", now_ms() + 86400000)
+
+        async def stop_calendar_watch(
+            self, session_id: str, account_id: str, channel_id: str, resource_id: str
+        ) -> None:
+            stopped.append(channel_id)
+
+    service = CalendarPushService(Accounts(), repo, "https://new.example/", lambda: None)
+    try:
+        assert not await service.receive("old-channel", "old-secret", "old-resource", "1", "sync")
+        pending = service.observe("owner", {("account", "calendar")})
+        assert pending is not None
+        await pending
+        assert len(created) == 1 and stopped == ["old-channel"]
+        identifier, token = created[0]
+        assert await service.receive(identifier, token, "new-resource", "1", "sync")
+        await db.execute(
+            "UPDATE calendar_push_channels SET expires_at=? WHERE channel_id=?",
+            (now_ms() - 1, identifier),
+        )
+        assert not await service.receive(identifier, token, "new-resource", "2", "exists")
+    finally:
+        await service.close()
+
+
+async def test_calendar_active_lease_survives_more_than_one_page_of_retired_history(
+    store: tuple[Database, SQLiteAssistantRepository],
+) -> None:
+    import hashlib
+
+    from chatwaifu_runtime.persistence.sqlite_calendar_push import SQLiteCalendarPushRepository
+    from chatwaifu_runtime.personal_assistant.calendar_push import now_ms
+    from chatwaifu_runtime.personal_assistant.google_calendar import CalendarWatch
+
+    db, _accounts = store
+    leases = SQLiteCalendarPushRepository(db)
+    channel = await leases.reserve(
+        "local",
+        "account",
+        "calendar",
+        "active",
+        hashlib.sha256(b"token").hexdigest(),
+        now_ms() + 86400000,
+        "https://example.test/notifications",
+    )
+    assert await leases.activate(channel, CalendarWatch("active", "resource", now_ms() + 86400000))
+    async with db.transaction() as connection:
+        await connection.executemany(
+            "INSERT INTO calendar_push_channels(channel_id,owner,account_id,calendar_id,"
+            "account_revision,calendar_revision,token_digest,callback_address,"
+            "state,expires_at,created_at) "
+            "VALUES(?,'local',?,'unused',1,1,'digest','https://example.test','retired',?,?)",
+            [
+                (f"old-{i}", "account", channel.expires_at, channel.created_at + i + 1)
+                for i in range(1100)
+            ],
+        )
+    current = await leases.channels("local")
+    assert len(current) == 2
+    assert any(c.channel_id == "active" and c.state == "active" for c in current)

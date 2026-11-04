@@ -64,3 +64,42 @@ HARNESS_MIGRATION = (
     "ent_rechecks(intent_id TEXT PRIMARY KEY,revision INTEGER NOT NULL"
     ",after_row INTEGER NOT NULL,through_row INTEGER NOT NULL);\n"
 )
+
+CALENDAR_PUSH_MIGRATION = """
+CREATE TABLE calendar_push_channels(
+ channel_id TEXT PRIMARY KEY,owner TEXT NOT NULL,account_id TEXT NOT NULL,calendar_id TEXT NOT NULL,
+ account_revision INTEGER NOT NULL,calendar_revision INTEGER NOT NULL,token_digest TEXT NOT NULL,
+ callback_address TEXT NOT NULL,
+ state TEXT NOT NULL CHECK(state IN ('preparing','active','retired')),expires_at INTEGER NOT NULL,
+ created_at INTEGER NOT NULL,resource_id TEXT,last_message INTEGER NOT NULL DEFAULT 0,
+ dirty_revision INTEGER NOT NULL DEFAULT 0,consumed_revision INTEGER NOT NULL DEFAULT 0,
+ retry_at INTEGER NOT NULL DEFAULT 0,error_code TEXT
+);
+CREATE INDEX calendar_push_scope
+ ON calendar_push_channels(owner,account_id,calendar_id,created_at DESC);
+CREATE INDEX calendar_push_dirty
+ ON calendar_push_channels(owner,state,dirty_revision,consumed_revision);
+"""
+
+HARNESS_METRICS_MIGRATION = """
+CREATE TABLE harness_model_usage(
+ request_id TEXT PRIMARY KEY,owner TEXT NOT NULL,task_id TEXT,work_item_id TEXT,observation_id TEXT,
+ role TEXT NOT NULL,model TEXT NOT NULL,duration_ms INTEGER NOT NULL,state TEXT NOT NULL,
+ prompt_tokens INTEGER,completion_tokens INTEGER,total_tokens INTEGER,reasoning_tokens INTEGER,
+ synthetic INTEGER NOT NULL,observed_at INTEGER NOT NULL
+);
+CREATE INDEX harness_usage_owner ON harness_model_usage(owner,observed_at);
+CREATE INDEX harness_usage_work ON harness_model_usage(owner,work_item_id,observed_at);
+CREATE INDEX harness_usage_task ON harness_model_usage(owner,task_id,observed_at);
+CREATE INDEX harness_usage_source ON harness_model_usage(owner,observation_id,observed_at);
+CREATE TABLE harness_model_usage_sources(
+ request_id TEXT NOT NULL REFERENCES harness_model_usage(request_id) ON DELETE CASCADE,
+ observation_id TEXT NOT NULL,PRIMARY KEY(request_id,observation_id)
+);
+CREATE INDEX harness_usage_sources_observation ON harness_model_usage_sources(observation_id);
+CREATE TABLE harness_metric_alerts(
+ owner TEXT NOT NULL,alert_key TEXT NOT NULL,active INTEGER NOT NULL,updated_at INTEGER NOT NULL,
+ notified INTEGER NOT NULL DEFAULT 0,
+ PRIMARY KEY(owner,alert_key)
+);
+"""

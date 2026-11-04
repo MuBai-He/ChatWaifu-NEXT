@@ -108,6 +108,7 @@ export {
 export {
   parseEvidenceRef,
   parseStandingIntent,
+  parseHarnessMetricsSnapshot,
   parseWorkItem,
   parseActivityEntry,
 } from "./parsers/harness";

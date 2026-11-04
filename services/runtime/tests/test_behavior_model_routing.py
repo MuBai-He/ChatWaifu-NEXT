@@ -11,6 +11,7 @@ from chatwaifu_runtime.config.settings import Settings
 from chatwaifu_runtime.persistence.database import Database
 from chatwaifu_runtime.persistence.migrations import MIGRATIONS
 from chatwaifu_runtime.providers import model_config
+from chatwaifu_runtime.providers.metering import UsageSink
 from chatwaifu_runtime.providers.model_config import (
     LocalModelSecretStore,
     ModelConfigurationService,
@@ -259,7 +260,12 @@ def test_api_jev_uses_native_adapter_and_only_the_decision_key(
         )
 
     def native(
-        *, base_url: str, model: str, api_key: Callable[[], str | None], timeout_seconds: float
+        *,
+        base_url: str,
+        model: str,
+        api_key: Callable[[], str | None],
+        timeout_seconds: float,
+        usage_observer: UsageSink | None = None,
     ) -> TypeSafeBehaviorProvider:
         return TypeSafeBehaviorProvider(
             base_url=base_url,
@@ -267,6 +273,7 @@ def test_api_jev_uses_native_adapter_and_only_the_decision_key(
             api_key=api_key,
             timeout_seconds=timeout_seconds,
             transport=httpx2.MockTransport(handle),
+            usage_observer=usage_observer,
         )
 
     monkeypatch.setattr(model_config, "TypeSafeBehaviorProvider", native)

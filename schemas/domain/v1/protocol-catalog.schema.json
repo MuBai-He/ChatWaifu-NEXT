@@ -8533,6 +8533,136 @@
       "title": "GroupDiscussionPolicy",
       "type": "object"
     },
+    "HarnessMetricsSnapshot": {
+      "description": "Measured values only. Missing cost or source coverage remains explicitly unknown.",
+      "properties": {
+        "action_event_states": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Action Event States",
+          "type": "object"
+        },
+        "active_alerts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Active Alerts",
+          "type": "object"
+        },
+        "duplicate_action_claims": {
+          "default": null,
+          "title": "Duplicate Action Claims",
+          "type": "null"
+        },
+        "generated_at": {
+          "minimum": 0,
+          "title": "Generated At",
+          "type": "integer"
+        },
+        "latency_seconds": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "model_cost": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "observation_states": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Observation States",
+          "type": "object"
+        },
+        "processing_room_states": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Processing Room States",
+          "type": "object"
+        },
+        "processor": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "review_decisions": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Review Decisions",
+          "type": "object"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "scope": {
+          "enum": [
+            "owner",
+            "owner_and_selected_work"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "shared_source_model_cost": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonObject"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source_coverage": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "task_cost": {
+          "$ref": "#/$defs/JsonObject"
+        },
+        "work_item_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Work Item Id"
+        },
+        "work_states": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Work States",
+          "type": "object"
+        },
+        "wrong_target_writes": {
+          "default": null,
+          "title": "Wrong Target Writes",
+          "type": "null"
+        }
+      },
+      "required": [
+        "generated_at",
+        "scope",
+        "observation_states",
+        "processing_room_states",
+        "work_states",
+        "source_coverage",
+        "latency_seconds",
+        "action_event_states",
+        "review_decisions",
+        "task_cost",
+        "model_cost",
+        "active_alerts"
+      ],
+      "title": "HarnessMetricsSnapshot",
+      "type": "object"
+    },
     "IntentAction": {
       "properties": {
         "action": {
@@ -10676,6 +10806,19 @@
           "default": 0,
           "title": "Attempts",
           "type": "integer"
+        },
+        "completed_at": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completed At"
         },
         "error_code": {
           "anyOf": [
@@ -16579,6 +16722,9 @@
     "group_discussion_policy": {
       "$ref": "#/$defs/GroupDiscussionPolicy"
     },
+    "harness_metrics_snapshot": {
+      "$ref": "#/$defs/HarnessMetricsSnapshot"
+    },
     "intent_action": {
       "$ref": "#/$defs/IntentAction"
     },
@@ -16760,6 +16906,7 @@
     "standing_intent_input",
     "standing_intent_update",
     "intent_action",
+    "harness_metrics_snapshot",
     "observation",
     "processing_request",
     "reminder_occurrence",
