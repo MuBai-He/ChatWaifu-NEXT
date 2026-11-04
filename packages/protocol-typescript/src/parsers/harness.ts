@@ -160,7 +160,7 @@ export const parseActivityEntry = (value: unknown): ActivityEntry =>
   activitySchema.parse(value);
 
 export const harnessMetricsSnapshotSchema = z.object({
-  processor:z.record(z.string(),z.json()).default({}),
+  processor: z.record(z.string(), z.json()).default({}),
   schema_version: z.literal("1.0"),
   generated_at: z.number().int().nonnegative(),
   work_item_id: z.string().nullable().default(null),
@@ -180,6 +180,8 @@ export const harnessMetricsSnapshotSchema = z.object({
   wrong_target_writes: z.null(),
 });
 
-export function parseHarnessMetricsSnapshot(value: unknown): import("../generated/domain").HarnessMetricsSnapshot {
+export function parseHarnessMetricsSnapshot(
+  value: unknown,
+): import("../generated/domain").HarnessMetricsSnapshot {
   return harnessMetricsSnapshotSchema.parse(value);
 }

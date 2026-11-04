@@ -416,15 +416,6 @@ class ModelConfigurationService:
         )
 
     async def embed(self, inputs: Sequence[str | PhotoEmbeddingInput]) -> list[list[float]]:
-        config = self.get("embedding")
-        if not config.enabled or config.provider in {"disabled", "local_hash"}:
-            return await self._embed(inputs)
-        async with ModelMeter(self.usage_observer, "embedding", config.model) as meter:
-            return await self._embed(inputs, meter=meter)
-
-    async def _embed(
-        self, inputs: Sequence[str | PhotoEmbeddingInput], *, meter: ModelMeter | None = None
-    ) -> list[list[float]]:
         text_inputs: list[str] = []
         for inp in inputs:
             if isinstance(inp, PhotoEmbeddingInput):
@@ -446,6 +437,12 @@ class ModelConfigurationService:
             return [_hash_embedding(text) for text in text_inputs]
         if config.provider != "openai_compatible":
             raise RuntimeError(f"unsupported embedding provider: {config.provider}")
+        async with ModelMeter(self.usage_observer, "embedding", config.model) as meter:
+            return await self._embed_remote(text_inputs, config, meter)
+
+    async def _embed_remote(
+        self, text_inputs: Sequence[str], config: ModelRoleConfig, meter: ModelMeter
+    ) -> list[list[float]]:
         headers = {"Content-Type": "application/json"}
         if key := self._secrets.get("embedding"):
             headers["Authorization"] = f"Bearer {key}"
@@ -457,7 +454,7 @@ class ModelConfigurationService:
             )
             response.raise_for_status()
             payload = cast(object, response.json())
-        if meter is not None and isinstance(payload, dict):
+        if isinstance(payload, dict):
             usage = cast(dict[str, object], payload).get("usage")
             if isinstance(usage, dict):
                 meter.usage = parse_reported_usage(cast(dict[str, object], usage))

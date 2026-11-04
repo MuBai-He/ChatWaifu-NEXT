@@ -84,6 +84,7 @@ class SQLiteHarnessMetricsRepository:
             "amount": None,
             "pricing": "not_configured",
             "unit": "runtime_model_invocation",
+            "coverage": "traced_harness_invocations_only",
             "http_attempts": None,
         }
 

@@ -337,7 +337,7 @@ export const parserRootRegistry: Record<
 > = {
   parseEvidenceRef: "EvidenceRef",
   parseStandingIntent: "StandingIntent",
-  parseHarnessMetricsSnapshot:"HarnessMetricsSnapshot",
+  parseHarnessMetricsSnapshot: "HarnessMetricsSnapshot",
   parseWorkItem: "WorkItem",
   parseActivityEntry: "ActivityEntry",
   parseCapabilityPage: "CapabilityPage",
