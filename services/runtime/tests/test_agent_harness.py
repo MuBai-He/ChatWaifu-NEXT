@@ -1304,19 +1304,59 @@ def test_bound_edit_is_a_persistent_proposal_not_an_unverified_local_change(
         "action": "edit",
         "changes": {"title": "新会议"},
     }
-    response = c.post("/v1/personal-assistant/work-items/work:bound", json=body)
+
+    async def no_inline_task(*args: Any, **kwargs: Any):
+        raise AssertionError("Submission must return before task preparation or external access")
+
+    with monkeypatch.context() as pending:
+        pending.setattr(r.agent_tasks, "create", no_inline_task)
+        response = c.post("/v1/personal-assistant/work-items/work:bound", json=body)
     assert response.status_code == 200, response.text
     proposal = response.json()
     assert proposal["target_id"] == work.work_item_id
     assert proposal["state"] == "waiting"
     canonical = c.portal.call(r.harness.repository.work_item, work.work_item_id)
     assert canonical is not None and canonical.title == "会议"
-    task = c.portal.call(r.agent_tasks.repository.get, UUID(proposal["task_id"]))
-    assert task is not None and task.authorization.intent_id is None
+    assert proposal["task_id"] is None
+
+    # Queue admission may be busy after acknowledgement; preserve the same operation.
+    async def at_capacity(*args: Any, **kwargs: Any):
+        raise ValueError("task capacity reached")
+
+    with monkeypatch.context() as full:
+        full.setattr(r.agent_tasks, "create", at_capacity)
+        c.portal.call(r.harness.reconcile)
+    waiting = c.portal.call(r.harness.repository.work_item, proposal["work_item_id"])
     assert (
-        c.post("/v1/personal-assistant/work-items/work:bound", json=body).json()["task_id"]
-        == proposal["task_id"]
+        waiting is not None
+        and waiting.state == "waiting"
+        and "繁忙" in (waiting.waiting_reason or "")
     )
+    assert waiting.task_id is None
+    # A restarted consumer finds the persisted proposal without the submitting screen.
+    c.portal.call(r.harness.reconcile)
+    prepared = c.portal.call(r.harness.repository.work_item, proposal["work_item_id"])
+    assert prepared is not None and prepared.task_id is not None
+    task = c.portal.call(r.agent_tasks.repository.get, prepared.task_id)
+    assert task is not None and task.authorization.intent_id is None
+    command = c.portal.call(
+        r.knowledge.repository.get, "local", proposal["evidence"][0]["reference"], 1
+    )
+    assert command is not None
+    assert task.authorization.expires_at == datetime.fromtimestamp(
+        command.occurred_at / 1000, UTC
+    ) + timedelta(hours=24)
+    assert c.post("/v1/personal-assistant/work-items/work:bound", json=body).json()[
+        "task_id"
+    ] == str(prepared.task_id)
+
+    # Simulate a crash between task persistence and work linkage. Admission reuses
+    # the original task and grant rather than allocating a second execution.
+    detached = prepared.model_copy(update={"task_id": None, "revision": prepared.revision + 1})
+    assert c.portal.call(r.harness.repository.save_work, detached, prepared.revision)
+    c.portal.call(r.harness.reconcile)
+    recovered = c.portal.call(r.harness.repository.work_item, prepared.work_item_id)
+    assert recovered is not None and recovered.task_id == task.task_id
 
     async def reject_target():
         with pytest.raises(PermissionError, match="work_external_binding_required"):
@@ -1809,7 +1849,12 @@ def test_native_bound_edit_becomes_review_and_a_verified_action_task(
     assert resolved.json()["external_pending"] is True
     original = c.portal.call(r.harness.repository.work_item, "work:external-sync")
     assert original is not None and original.title == "原待办"
-    assert resolved.json()["work_item"]["task_id"] is not None
+    assert resolved.json()["work_item"]["task_id"] is None
+    c.portal.call(r.harness.reconcile)
+    prepared = c.portal.call(
+        r.harness.repository.work_item, resolved.json()["work_item"]["work_item_id"]
+    )
+    assert prepared is not None and prepared.task_id is not None
     assert (
         c.post("/v1/agent/review/sync/" + receipt["conflict_id"], json=decision).json()["accepted"]
         is True

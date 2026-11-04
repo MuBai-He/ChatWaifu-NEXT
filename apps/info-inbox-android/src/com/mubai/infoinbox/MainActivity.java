@@ -29,6 +29,7 @@ public final class MainActivity extends Activity {
       GREEN = 0xFF23795D;
   private final Handler main = new Handler(Looper.getMainLooper());
   private final ExecutorService worker = Executors.newSingleThreadExecutor();
+  private final ExecutorService confirmations = Executors.newSingleThreadExecutor();
   private RootGateway root;
   private MemoryStore memories;
   private LinearLayout outer, body, nav;
@@ -171,6 +172,7 @@ public final class MainActivity extends Activity {
     generation++;
     main.removeCallbacksAndMessages(null);
     worker.shutdownNow();
+    confirmations.shutdown();
     super.onDestroy();
   }
 
@@ -899,20 +901,29 @@ public final class MainActivity extends Activity {
                             throw new IllegalArgumentException("请输入 1–1200 字的完整结论");
                           savedSource.put("_information_summary", full);
                         }
-                        if (proposal == null)
-                          memories.save(
-                              savedSource,
-                              title.getText().toString(),
-                              kind.getSelectedItem().toString());
-                        else
-                          new OrganizerStore(memories)
-                              .confirmMemory(
-                                  proposal,
-                                  title.getText().toString(),
-                                  kind.getSelectedItem().toString());
-                        dialog.dismiss();
-                        toast("已保存，并保留消息出处");
-                        select(3);
+                        final String confirmedTitle=title.getText().toString();
+                        final String confirmedKind=kind.getSelectedItem().toString();
+                        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+                        dialog.setCancelable(false);
+                        Runnable restore=NativeUi.freeze(view);
+                        confirmations.execute(()->{
+                          try(MemoryStore local=new MemoryStore(getApplicationContext())) {
+                            if(proposal==null)local.save(savedSource,confirmedTitle,confirmedKind);
+                            else new OrganizerStore(local).confirmMemory(proposal,confirmedTitle,confirmedKind);
+                            main.post(()->{
+                              if(isFinishing()||isDestroyed()||!dialog.isShowing())return;
+                              dialog.dismiss();
+                              toast("确认已保存，后续同步在后台进行");
+                              select(3);
+                            });
+                          }catch(Exception failure){main.post(()->{
+                            if(isFinishing()||isDestroyed()||!dialog.isShowing())return;
+                            restore.run();
+                            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                            dialog.setCancelable(true);
+                            title.setError(failure.getMessage());
+                          });}
+                        });
                       } catch (Exception e) {
                         title.setError(e.getMessage());
                       }

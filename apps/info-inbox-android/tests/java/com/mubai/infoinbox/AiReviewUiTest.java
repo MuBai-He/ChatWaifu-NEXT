@@ -570,4 +570,67 @@ public class AiReviewUiTest {
             .toString());
     ShadowAlertDialog.getLatestAlertDialog().dismiss();
   }
+  @Test
+  public void confirmationIsPersistedWhileNetworkWorkerIsHeld() throws Exception {
+    String base="https://queue.example.test",session=java.util.UUID.randomUUID().toString();
+    context.getSharedPreferences("backend",Context.MODE_PRIVATE).edit().clear()
+        .putString("base",base).putString("owner_session",session).commit();
+    ActivityController<HarnessActivity> screen=Robolectric.buildActivity(HarnessActivity.class);
+    HarnessActivity view=screen.get();
+    java.lang.reflect.Field networkField=HarnessActivity.class.getDeclaredField("worker");
+    networkField.setAccessible(true);
+    java.util.concurrent.ExecutorService network=(java.util.concurrent.ExecutorService)networkField.get(view);
+    java.util.concurrent.CountDownLatch held=new java.util.concurrent.CountDownLatch(1),release=new java.util.concurrent.CountDownLatch(1);
+    network.submit(()->{held.countDown();try{release.await();}catch(InterruptedException e){Thread.currentThread().interrupt();}});
+    assertTrue(held.await(5,java.util.concurrent.TimeUnit.SECONDS));
+    try {
+      screen.create().start().visible();
+      JSONObject work=new JSONObject().put("work_item_id","work:queued").put("revision",1)
+          .put("kind","todo").put("state","proposed").put("title","提交验收")
+          .put("details","无需等待网络处理");
+      JSONObject snapshot=new JSONObject().put("intents",new JSONArray()).put("review",new JSONArray())
+          .put("work",new JSONArray().put(work)).put("activity",new JSONArray());
+      java.lang.reflect.Method render=HarnessActivity.class.getDeclaredMethod("render",JSONObject.class,JSONArray.class,boolean.class);
+      render.setAccessible(true);render.invoke(view,snapshot,new JSONArray(),true);
+      List<View> elements=new ArrayList<>();collect(view.getWindow().getDecorView(),elements);
+      View confirm=elements.stream().filter(v->v instanceof TextView&&((TextView)v).getText().toString().equals("确认")).findFirst().get();
+      confirm.performClick();confirm.performClick();
+      java.lang.reflect.Field localField=HarnessActivity.class.getDeclaredField("submissions");
+      localField.setAccessible(true);
+      ((java.util.concurrent.ExecutorService)localField.get(view)).submit(()->{}).get(5,java.util.concurrent.TimeUnit.SECONDS);
+      org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+      JSONArray decisions=RuntimeActions.list(new KnowledgeStore(memory,base));
+      assertEquals(1,decisions.length());
+      assertEquals("confirm",decisions.getJSONObject(0).getJSONObject("payload").getString("action"));
+      elements.clear();collect(view.getWindow().getDecorView(),elements);
+      assertTrue(elements.stream().anyMatch(v->v instanceof TextView&&((TextView)v).getText().toString().contains("等待宁宁接收")));
+      View submitted=elements.stream().filter(v->v instanceof TextView&&((TextView)v).getText().toString().equals("确认")).findFirst().get();
+      assertFalse(submitted.isEnabled());
+    } finally {
+      screen.destroy();release.countDown();
+      context.getSharedPreferences("backend",Context.MODE_PRIVATE).edit().clear().commit();
+    }
+  }
+
+  @Test
+  public void manualMemoryConfirmationDoesNotWaitForTheReadWorker() throws Exception {
+    add(920);open();
+    JSONObject source=memory.suggestions().getJSONObject(0).getJSONObject("source");
+    java.util.concurrent.CountDownLatch entered=new java.util.concurrent.CountDownLatch(1),release=new java.util.concurrent.CountDownLatch(1);
+    worker().submit(()->{entered.countDown();try{release.await();}catch(InterruptedException e){Thread.currentThread().interrupt();}});
+    assertTrue(entered.await(5,java.util.concurrent.TimeUnit.SECONDS));
+    try {
+      java.lang.reflect.Method show=MainActivity.class.getDeclaredMethod("saveDialog",JSONObject.class);
+      show.setAccessible(true);show.invoke(activity,source);
+      org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+      android.app.AlertDialog dialog=ShadowAlertDialog.getLatestAlertDialog();
+      dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).performClick();
+      java.lang.reflect.Field field=MainActivity.class.getDeclaredField("confirmations");field.setAccessible(true);
+      ((java.util.concurrent.ExecutorService)field.get(activity)).submit(()->{}).get(5,java.util.concurrent.TimeUnit.SECONDS);
+      org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+      assertFalse(dialog.isShowing());
+      assertEquals(1,memory.list().length());
+    }finally{release.countDown();}
+  }
+
 }
