@@ -1337,6 +1337,7 @@ def test_bound_edit_is_a_persistent_proposal_not_an_unverified_local_change(
     c.portal.call(r.harness.reconcile)
     prepared = c.portal.call(r.harness.repository.work_item, proposal["work_item_id"])
     assert prepared is not None and prepared.task_id is not None
+    assert "繁忙" not in (prepared.waiting_reason or "")
     task = c.portal.call(r.agent_tasks.repository.get, prepared.task_id)
     assert task is not None and task.authorization.intent_id is None
     command = c.portal.call(

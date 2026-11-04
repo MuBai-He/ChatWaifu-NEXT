@@ -3217,6 +3217,7 @@ class AgentHarnessService:
             attached = current.model_copy(
                 update={
                     "task_id": task.task_id,
+                    "waiting_reason": "已进入后台任务，等待执行与核验。",
                     "revision": current.revision + 1,
                     "updated_at": datetime.now(UTC),
                 }
