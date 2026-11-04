@@ -396,6 +396,20 @@ def test_unbound_owner_confirmation_persists_continuation_without_expanding_auth
         assert task.authorization.allow_writes is False
         assert task.authorization.calendar_ids == []
         assert str(task.authorization.intent_id) == intent_id
+        definitions = r.runtime_skills.list()
+        with monkeypatch.context() as changed_mode:
+            changed_mode.setattr(
+                r.runtime_skills,
+                "list",
+                lambda: [
+                    definition.model_copy(
+                        update={"execution_modes": ["interactive", "explicit_task"]}
+                    )
+                    for definition in definitions
+                ],
+            )
+            with pytest.raises(PermissionError, match="capability_execution_mode_changed"):
+                c.portal.call(r.harness.validate_task, task)
         # Reproduce interruption after creating the durable task but before
         # attaching it to the reviewed work. Recovery must reuse that task.
         orphan = WorkItem.model_validate(saved)
@@ -489,7 +503,7 @@ def test_failed_understanding_has_versioned_review_and_bounded_recovery(
     async def fail(request: object, **kwargs: object) -> None:
         raise ValueError("synthetic invalid extraction")
 
-    monkeypatch.setattr(r.information, "analyze", fail)
+    monkeypatch.setattr(r.information, "understand", fail)
     for _ in range(5):
         c.portal.call(r.database.execute, "UPDATE harness_observations SET available_at=0", ())
         with pytest.raises(ValueError):
@@ -545,6 +559,257 @@ def test_cancelled_understanding_releases_lease_without_spending_retry_budget(
         assert item is not None and item.attempts == 0
         c.portal.call(r.harness.repository.release_observation, item)
     assert c.portal.call(r.harness.repository.failed_observations, "local") == []
+
+
+def test_default_reminders_preserve_explicit_choice_and_do_not_guess_date_only_times(
+    harness: tuple[TestClient, RuntimeContainer, str, str],
+) -> None:
+    from datetime import UTC, date, datetime, timedelta
+
+    from chatwaifu_protocol.harness import EvidenceRef, StandingIntent, WorkItem
+
+    c, r, session, device = harness
+    assert c.portal is not None
+    settings = {
+        "session_id": session,
+        "goal": "负责该来源的个人事项和提醒",
+        "room_ids": [ROOM],
+        "allowed_skill_ids": ["knowledge.search"],
+        "allow_writes": True,
+        "shadow": False,
+        "reminder_defaults": {
+            "event_offset_seconds": 300,
+            "todo_offset_seconds": 600,
+            "primary_device_id": device,
+        },
+    }
+    reply = c.post("/v1/agent/intents", json=settings)
+    assert reply.status_code == 201, reply.text
+    intent = StandingIntent.model_validate(reply.json())
+    start = datetime.now(UTC) + timedelta(days=1)
+    work = WorkItem(
+        work_item_id="work:default-reminder",
+        room_id=ROOM,
+        kind="event",
+        title="合成会议",
+        state="proposed",
+        evidence=[EvidenceRef(kind="knowledge", reference="source:seed", revision=1)],
+        involvement="self",
+        starts_at=start,
+        ends_at=start + timedelta(hours=1),
+        updated_at=datetime.now(UTC),
+    )
+    assert c.portal.call(r.harness.repository.save_work, work, 0)
+    assert (
+        c.portal.call(
+            r.harness._apply_reminder_defaults,
+            work,
+            intent.model_copy(update={"reminder_defaults": None}),
+        )
+        == work
+    )
+    declined = work.model_copy(update={"reminder_policy": "none"})
+    assert c.portal.call(r.harness._apply_reminder_defaults, declined, intent) == declined
+    explicit = work.model_copy(update={"remind_at": start - timedelta(seconds=900)})
+    assert c.portal.call(r.harness._apply_reminder_defaults, explicit, intent) == explicit
+    configured = c.portal.call(r.harness._apply_reminder_defaults, work, intent)
+    assert configured is not None
+    assert configured.remind_at == start - timedelta(seconds=300)
+    assert str(configured.primary_device_id) == device
+    changed = c.post(
+        "/v1/personal-assistant/work-items/" + work.work_item_id,
+        json={
+            "session_id": session,
+            "expected_revision": configured.revision,
+            "action": "edit",
+            "changes": {
+                "starts_at": (start + timedelta(hours=1)).isoformat(),
+                "ends_at": (start + timedelta(hours=2)).isoformat(),
+            },
+        },
+    )
+    assert changed.status_code == 200, changed.text
+    moved = WorkItem.model_validate(changed.json())
+    assert moved.remind_at == start + timedelta(hours=1) - timedelta(seconds=300)
+    cleared = c.post(
+        "/v1/personal-assistant/work-items/" + work.work_item_id,
+        json={
+            "session_id": session,
+            "expected_revision": moved.revision,
+            "action": "edit",
+            "changes": {"remind_at": None},
+        },
+    )
+    assert cleared.status_code == 200, cleared.text
+    disabled = WorkItem.model_validate(cleared.json())
+    assert disabled.reminder_policy == "none" and disabled.remind_at is None
+    assert c.portal.call(r.harness._apply_reminder_defaults, disabled, intent) == disabled
+    todo = work.model_copy(
+        update={
+            "work_item_id": "work:date-only-default",
+            "kind": "todo",
+            "starts_at": None,
+            "ends_at": None,
+            "due_date": date.today() + timedelta(days=1),
+        }
+    )
+    assert c.portal.call(r.harness.repository.save_work, todo, 0)
+    date_only = c.portal.call(r.harness._apply_reminder_defaults, todo, intent)
+    assert date_only is not None
+    assert (
+        date_only.reminder_rule == "relative"
+        and date_only.remind_at is None
+        and date_only.due_at is None
+    )
+    assert c.get("/v1/agent/tasks", params={"session_id": session}).json()["items"] == []
+
+
+def test_conflicting_reminder_defaults_wait_and_unknown_device_is_rejected(
+    harness: tuple[TestClient, RuntimeContainer, str, str],
+) -> None:
+    from datetime import UTC, datetime
+
+    from chatwaifu_protocol.harness import EvidenceRef, StandingIntent, WorkItem
+
+    c, r, session, device = harness
+    assert c.portal is not None
+    body: dict[str, Any] = {
+        "session_id": session,
+        "goal": "合成默认提醒",
+        "room_ids": [ROOM],
+        "allowed_skill_ids": ["knowledge.search"],
+        "allow_writes": True,
+        "shadow": False,
+        "reminder_defaults": {"event_offset_seconds": 300, "primary_device_id": str(uuid4())},
+    }
+    assert c.post("/v1/agent/intents", json=body).status_code == 409
+    body["reminder_defaults"]["primary_device_id"] = device
+    first = c.post("/v1/agent/intents", json=body)
+    assert first.status_code == 201, first.text
+    body["reminder_defaults"]["event_offset_seconds"] = 900
+    assert c.post("/v1/agent/intents", json=body).status_code == 201
+    work = WorkItem(
+        work_item_id="work:conflicting-defaults",
+        room_id=ROOM,
+        kind="event",
+        title="合成待核对会议",
+        state="proposed",
+        evidence=[EvidenceRef(kind="knowledge", reference="source:seed", revision=1)],
+        updated_at=datetime.now(UTC),
+    )
+    assert c.portal.call(r.harness.repository.save_work, work, 0)
+    assert (
+        c.portal.call(
+            r.harness._apply_reminder_defaults, work, StandingIntent.model_validate(first.json())
+        )
+        is None
+    )
+    blocked = c.portal.call(r.harness.repository.work_item, work.work_item_id)
+    assert blocked is not None and blocked.state == "blocked" and blocked.remind_at is None
+    assert "不同的默认提醒规则" in (blocked.waiting_reason or "")
+
+
+@pytest.mark.parametrize("revoke_context", [False, True])
+def test_missing_facts_use_bounded_shared_context_with_real_evidence(
+    harness: tuple[TestClient, RuntimeContainer, str, str],
+    monkeypatch: pytest.MonkeyPatch,
+    revoke_context: bool,
+) -> None:
+    c, r, session, device = harness
+    assert c.portal is not None
+    monkeypatch.setattr(r.knowledge, "enabled", True)
+    extra = source("source:wednesday", text="周三课表:课程资料见原文。")
+    extra["record"]["room_id"] = "e" * 64
+    assert push(c, session, device, extra).status_code == 200
+    activate(c, session, device, [{"kind": "knowledge", "reference": "source:seed", "revision": 1}])
+    assert (
+        push(
+            c,
+            session,
+            device,
+            source("source:seed", text="查一下周三课表资料", revision=1),
+            epoch=2,
+        ).status_code
+        == 200
+    )
+    calls: list[dict[str, Any]] = []
+
+    async def complete(role: str, system: str, user: str) -> str:
+        data = json.loads(user)
+        calls.append(data)
+        if not data.get("context"):
+            record = next(item for item in data["records"] if not item["context_only"])
+            return json.dumps(
+                {
+                    "items": [
+                        {
+                            "kind": "reference",
+                            "title": "周三课表待核对",
+                            "importance": "medium",
+                            "reason": "需要补充资料",
+                            "source_refs": [record["ref"]],
+                            "involvement": "self",
+                            "details": "需要查找周三课表资料。",
+                        }
+                    ],
+                    "queries": [{"question": "周三课表"}, {"question": "周三课表"}],
+                }
+            )
+        ref = next(
+            item["evidence"]
+            for item in data["context"]
+            if item["evidence"]["reference"] == "source:wednesday"
+        )
+        if revoke_context:
+            from chatwaifu_runtime.knowledge.contracts import Mutation
+
+            await r.knowledge.repository.apply_mutation(
+                "local",
+                Mutation.model_validate(
+                    {
+                        **extra,
+                        "operation_id": str(uuid4()),
+                        "action": "forget",
+                        "expected_revision": 1,
+                    }
+                ),
+            )
+        record = next(item for item in data["records"] if not item["context_only"])
+        return json.dumps(
+            {
+                "items": [
+                    {
+                        "kind": "reference",
+                        "title": "周三课表资料",
+                        "importance": "medium",
+                        "reason": "已找到原文",
+                        "source_refs": [record["ref"]],
+                        "involvement": "self",
+                        "details": "课程资料见原文。",
+                        "context_refs": [ref],
+                    }
+                ],
+                "queries": [],
+            },
+            ensure_ascii=False,
+        )
+
+    monkeypatch.setattr(r.model_configurations, "complete", complete)
+    c.portal.call(r.database.execute, "UPDATE harness_observations SET available_at=0", ())
+    if revoke_context:
+        with pytest.raises(ValueError, match="understanding_context_changed"):
+            c.portal.call(r.harness.run_once)
+        assert len(calls) == 2
+        assert c.portal.call(r.harness.repository.work_items, "local") == []
+        return
+    assert c.portal.call(r.harness.run_once)
+    assert len(calls) == 2
+    work = c.portal.call(r.harness.repository.work_items, "local")[0]
+    assert any(ref.reference == "source:wednesday" and ref.revision == 1 for ref in work.evidence)
+    assert work.task_id is None and work.bindings == []
+    entries = c.get("/v1/agent/activity", params={"session_id": session}).json()["items"]
+    lookup = next(item for item in entries if item["kind"] == "understanding.lookup")
+    assert lookup["details"]["queries"] == 1 and lookup["details"]["model_passes"] == 2
 
 
 def test_activity_survives_ordinary_updates_and_hides_only_revoked_sources(

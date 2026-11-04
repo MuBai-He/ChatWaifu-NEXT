@@ -326,11 +326,14 @@ public final class RootGateway {
             + confirmed
             + " THEN 0 WHEN "
             + recent
-            + " THEN 1 ELSE 2 END,m.created_at DESC LIMIT 10) SELECT "
+            + " THEN 1 ELSE 2 END,m.created_at DESC,m.account_id,m.msg_id DESC LIMIT 100),packed AS (SELECT q.*,"
+            + "row_number() OVER (ORDER BY q.priority,m.created_at DESC,m.account_id,m.msg_id DESC) AS position,"
+            + "sum(length(coalesce(m.content,''))) OVER (ORDER BY q.priority,m.created_at DESC,m.account_id,m.msg_id DESC) AS chars"
+            + " FROM chosen q JOIN messages m ON m.account_id=q.account_id AND m.msg_id=q.msg_id) SELECT "
             + fullFields
-            + " FROM chosen q JOIN messages m ON m.account_id=q.account_id AND m.msg_id=q.msg_id"
+            + " FROM packed q JOIN messages m ON m.account_id=q.account_id AND m.msg_id=q.msg_id"
             + " LEFT JOIN contacts c ON c.account_id=m.account_id AND c.username=m.talker"
-            + " ORDER BY q.priority,m.created_at DESC;");
+            + " WHERE q.chars<=200000 OR q.position=1 ORDER BY q.priority,m.created_at DESC,m.account_id,m.msg_id DESC;");
   }
 
   /** Include known contacts without archived messages, so they can be excluded before intake. */

@@ -98,6 +98,7 @@ from chatwaifu_runtime.external_channels.stickers import PresetStickerCatalog
 from chatwaifu_runtime.external_channels.voice import ChannelVoiceSkill
 from chatwaifu_runtime.index_orchestration.service import IndexRebuildService
 from chatwaifu_runtime.information.service import PersonalInformationService
+from chatwaifu_runtime.knowledge.contracts import Citation, QueryRequest
 from chatwaifu_runtime.knowledge.memory_graph import KnowledgeMemoryGraph
 from chatwaifu_runtime.knowledge.retrieval import KnowledgeRetrieval
 from chatwaifu_runtime.knowledge.service import KnowledgeService
@@ -561,6 +562,7 @@ class RuntimeContainer:
         self.harness.grade_memory = self.grade_external_memory
         self.harness_review = HarnessReviewService(self.harness, self.memory)
         self.harness.resources = self.harness_sources
+        self.harness.lookup_context = self._understanding_context
         self.agent_tasks.operation_identity = self.harness.action_identity
         self.agent_tasks.operation_observer = self.harness.operation_completed
         self.agent_tasks.completion_observer = self.harness.task_completed
@@ -1390,6 +1392,75 @@ class RuntimeContainer:
             str(row["room_id"]) in rooms and row["state"] == "runtime"
             for row in await self.harness.repository.processing("local")
         )
+
+    async def _understanding_context(
+        self, session_id: UUID, query: str, budget: int
+    ) -> list[KnowledgeExcerpt]:
+        """Read-only shared knowledge lookup; keeps original source identities and versions."""
+        if not self.knowledge.enabled or self.knowledge.retrieval is None or budget <= 0:
+            return []
+        owner = await self.knowledge.owner(session_id)
+        try:
+            async with asyncio.timeout(2):
+                result = await self.knowledge.retrieval.query(
+                    owner, QueryRequest(session_id=session_id, question=query, hops=1, answer=False)
+                )
+        except TimeoutError:
+            result = {
+                "sources": [
+                    record.model_dump(mode="json")
+                    for record in await self.knowledge.repository.records(
+                        owner, query=query, limit=12
+                    )
+                ]
+            }
+        excerpts: list[KnowledgeExcerpt] = []
+        rows = result.get("sources", [])
+        for value in rows if isinstance(rows, list) else []:
+            if not isinstance(value, dict):
+                continue
+            identifier, revision = value.get("record_id"), value.get("revision")
+            if (
+                not isinstance(identifier, str)
+                or not isinstance(revision, int)
+                or isinstance(revision, bool)
+            ):
+                continue
+            record = await self.knowledge.repository.get(owner, identifier, revision)
+            if record is None or not await self.knowledge.repository.eligible(
+                owner, Citation(record_id=identifier, revision=revision)
+            ):
+                continue
+            text = json.dumps(
+                {
+                    "kind": record.kind,
+                    "title": record.title,
+                    "text": record.text,
+                    "sent_by_owner": record.sent_by_owner,
+                    "sender": record.sender_name,
+                    "occurred_at": record.occurred_at,
+                    "starts_at": record.starts_at,
+                    "ends_at": record.ends_at,
+                    "due_at": record.due_at,
+                    "timezone": record.timezone,
+                },
+                ensure_ascii=False,
+            )
+            if len(text) > min(2400, budget):
+                continue
+            excerpts.append(
+                KnowledgeExcerpt(
+                    evidence=EvidenceRef(kind="knowledge", reference=identifier, revision=revision),
+                    text=text,
+                    confirmed=record.confirmed,
+                    subject=str(record.origin.get("subject_policy") or "reported_source"),
+                    occurred_at=record.occurred_at,
+                )
+            )
+            budget -= len(text)
+            if budget <= 0:
+                break
+        return excerpts
 
     async def _knowledge_context(
         self, session_id: UUID, query: str, budget: int

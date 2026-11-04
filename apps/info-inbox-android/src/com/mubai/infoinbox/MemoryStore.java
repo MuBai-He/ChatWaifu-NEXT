@@ -25,7 +25,7 @@ public final class MemoryStore implements AutoCloseable {
     int owners;
 
     SharedDatabase(Context context, String name) {
-      super(context, name, null, 7);
+      super(context, name, null, 8);
       setWriteAheadLoggingEnabled(true);
     }
 
@@ -106,6 +106,7 @@ public final class MemoryStore implements AutoCloseable {
     if (oldVersion < 5) KnowledgeStore.createTables(db);
     if (oldVersion < 6) RuntimeProcessing.createTables(db);
     if (oldVersion < 7) OrganizerStore.ensureQueuePriority(db);
+    if (oldVersion < 8) OrganizerStore.ensureQueueScopeIndex(db);
   }
 
   private static void createAiTables(SQLiteDatabase db) {

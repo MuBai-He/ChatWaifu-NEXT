@@ -28,6 +28,7 @@ from chatwaifu_protocol.harness import (
     ConfirmedWorkReview,
     EvidenceRef,
     IntentAction,
+    KnowledgeExcerpt,
     Observation,
     OwnerWorkDecision,
     ProcessingRequest,
@@ -48,6 +49,7 @@ from chatwaifu_runtime.information.contracts import (
     AnalyzeInformationRequest,
     InformationMessage,
     PriorKnowledge,
+    RuntimeUnderstandingResult,
     WorkSnapshot,
 )
 from chatwaifu_runtime.information.service import PersonalInformationService
@@ -55,7 +57,7 @@ from chatwaifu_runtime.information.temporal import assess_work_relevance
 from chatwaifu_runtime.knowledge.contracts import Citation, Mutation, Record, RecordDraft
 from chatwaifu_runtime.knowledge.service import KnowledgeService
 from chatwaifu_runtime.providers.admission import work_class
-from chatwaifu_runtime.runtime_skills.execution_context import authorized_action
+from chatwaifu_runtime.runtime_skills.execution_context import authorized_action, authorized_task
 from chatwaifu_runtime.sessions.service import SessionService
 
 logger = logging.getLogger(__name__)
@@ -107,6 +109,9 @@ class AgentHarnessService:
         self.identify_memory: Callable[[UUID, str], Awaitable[JsonObject | None]] | None = None
         self.grade_memory: Callable[[UUID, str], Awaitable[JsonObject | None]] | None = None
         self.resources: Callable[[UUID], Awaitable[JsonObject]] | None = None
+        self.lookup_context: (
+            Callable[[UUID, str, int], Awaitable[list[KnowledgeExcerpt]]] | None
+        ) = None
         self._worker: asyncio.Task[None] | None = None
         self._intent_changed = asyncio.Event()
         self._changed = asyncio.Event()
@@ -180,6 +185,14 @@ class AgentHarnessService:
             for root in body.resource_roots
         ):
             raise ValueError("standing_workspace_scope_invalid")
+        if body.reminder_defaults is not None:
+            if not body.allow_writes:
+                raise PermissionError("reminder_defaults_need_write_scope")
+            devices = await self.repository.devices(owner)
+            if not any(
+                row["device_id"] == str(body.reminder_defaults.primary_device_id) for row in devices
+            ):
+                raise ValueError("reminder_device_not_registered")
         fingerprints: dict[str, str] = {}
         enabled = {s.skill_id: s for s in self.tasks.skills.list() if s.enabled}
         if not set(body.allowed_skill_ids) <= enabled.keys() or any(
@@ -459,6 +472,13 @@ class AgentHarnessService:
 
     async def validate_task(self, task: AgentTask) -> None:
         grant = task.authorization
+        mode = "unattended" if grant.intent_id is not None else "explicit_task"
+        enabled = {item.skill_id: item for item in self.tasks.skills.list() if item.enabled}
+        if any(
+            name not in enabled or mode not in enabled[name].execution_modes
+            for name in grant.allowed_skill_ids
+        ):
+            raise PermissionError("capability_execution_mode_changed")
         if task.work_item_id:
             work = await self.repository.work_item(task.work_item_id)
             if (
@@ -961,6 +981,8 @@ class AgentHarnessService:
         return CompletionGate("Read back the current work item's exact target and requested change")
 
     async def _device_gate(self, task: AgentTask, work: WorkItem) -> CompletionGate | None:
+        if work.reminder_policy == "none":
+            return None
         if work.reminder_rule == "relative" and work.remind_at is None:
             return CompletionGate(
                 "提醒规则缺少具体基准时间，请补充后继续。",
@@ -1192,6 +1214,84 @@ class AgentHarnessService:
             work_class.reset(token)
         return True
 
+    async def _understand(
+        self, body: AnalyzeInformationRequest, *, source_evidence: list[EvidenceRef]
+    ) -> RuntimeUnderstandingResult:
+        async with asyncio.timeout(300):
+            first = await self.information.understand(body)
+            if not first.queries or self.lookup_context is None:
+                return first
+            owner = await self.owner(body.session_id)
+            context: list[KnowledgeExcerpt] = []
+            seen: set[tuple[str, str, int]] = set()
+            questions: set[str] = set()
+            budget = 6000
+            evidence_limit = min(
+                10, 30 - len({(ref.kind, ref.reference, ref.revision) for ref in source_evidence})
+            )
+            for query in first.queries[:3]:
+                question = query.question.strip()
+                if (
+                    not question
+                    or question.casefold() in questions
+                    or budget <= 0
+                    or len(context) >= evidence_limit
+                ):
+                    continue
+                questions.add(question.casefold())
+                if not await self.eligible(owner, source_evidence):
+                    raise ValueError("source_batch_changed")
+                found = await self.lookup_context(body.session_id, question, min(budget, 2400))
+                for item in found:
+                    ref = item.evidence
+                    key = (ref.kind, ref.reference, ref.revision)
+                    if (
+                        key in seen
+                        or _SENSITIVE.search(item.text)
+                        or len(item.text) > budget
+                        or len(context) >= evidence_limit
+                    ):
+                        continue
+                    if not await self.eligible(owner, [ref]):
+                        continue
+                    seen.add(key)
+                    context.append(item)
+                    budget -= len(item.text)
+            if not context:
+                await self.repository.record(
+                    owner,
+                    "understanding.lookup",
+                    str(body.request_id),
+                    "needs_context",
+                    "尚未找到所需资料，已保留待核对事项。",
+                    source_evidence,
+                    details={"queries": len(questions), "context_records": 0, "model_passes": 1},
+                    dedup_key="understanding-lookup:" + str(body.request_id),
+                )
+                return first
+            if not await self.eligible(
+                owner, source_evidence + [item.evidence for item in context]
+            ):
+                raise ValueError("understanding_context_changed")
+            result = await self.information.understand(body, context, allow_queries=False)
+            if not await self.eligible(owner, [item.evidence for item in context]):
+                raise ValueError("understanding_context_changed")
+            await self.repository.record(
+                owner,
+                "understanding.lookup",
+                str(body.request_id),
+                "completed",
+                "已按缺失事实补查相关资料。",
+                [item.evidence for item in context],
+                details={
+                    "queries": len(questions),
+                    "context_records": len(context),
+                    "model_passes": 2,
+                },
+                dedup_key="understanding-lookup:" + str(body.request_id),
+            )
+            return result
+
     async def _process(
         self,
         observation: Observation,
@@ -1411,7 +1511,7 @@ class AgentHarnessService:
             for ref in prior.evidence:
                 inherited[ref.reference] = ref
             background_budget += len(prior.details.encode("utf-16-le")) // 2
-        result = await self.information.analyze(
+        result = await self._understand(
             AnalyzeInformationRequest(
                 schema_version="1.2",
                 session_id=session,
@@ -1422,7 +1522,10 @@ class AgentHarnessService:
                 prior_knowledge=background,
                 context_incomplete=parts is not None or len(records) > len(messages),
             ),
-            runtime_owned=True,
+            source_evidence=merge_evidence(
+                [candidate.evidence for candidate in batch or [observation]],
+                list(inherited.values()),
+            ),
         )
         for candidate in batch or [observation]:
             if not await self.eligible(candidate.owner, [candidate.evidence]):
@@ -1445,6 +1548,7 @@ class AgentHarnessService:
                 for r in suggestion.source_refs
             ]
             evidence = merge_evidence(evidence, list(inherited.values()))
+            evidence = merge_evidence(evidence, suggestion.context_refs)
             if not await self.eligible(observation.owner, evidence):
                 raise ValueError("source_batch_changed")
             existing = (
@@ -1545,6 +1649,16 @@ class AgentHarnessService:
             if existing is not None:
                 evidence = merge_evidence(evidence, existing.evidence)
             state = "open" if low_risk else "proposed"
+            reminder_policy = (
+                "none"
+                if suggestion.reminder_policy == "none"
+                else "inherit"
+                if suggestion.remind_at is not None
+                or suggestion.reminder_offset_seconds is not None
+                else existing.reminder_policy
+                if existing
+                else "inherit"
+            )
             reminder = (
                 suggestion.remind_at
                 if suggestion.remind_at is not None
@@ -1552,9 +1666,12 @@ class AgentHarnessService:
                 if existing
                 else None
             )
+            if reminder_policy == "none":
+                reminder = None
             anchor = suggestion.starts_at or suggestion.due_at
             if (
-                suggestion.remind_at is None
+                reminder_policy != "none"
+                and suggestion.remind_at is None
                 and existing
                 and existing.reminder_rule == "relative"
                 and existing.reminder_offset_seconds is not None
@@ -1628,12 +1745,17 @@ class AgentHarnessService:
                 )
                 or (existing.due_date if existing and not suggestion.clear_due else None),
                 clear_due=suggestion.clear_due,
-                reminder_rule="relative"
+                reminder_policy=reminder_policy,
+                reminder_rule="absolute"
+                if reminder_policy == "none"
+                else "relative"
                 if suggestion.reminder_offset_seconds is not None
                 else existing.reminder_rule
                 if existing and suggestion.remind_at is None
                 else "absolute",
-                reminder_offset_seconds=suggestion.reminder_offset_seconds
+                reminder_offset_seconds=None
+                if reminder_policy == "none"
+                else suggestion.reminder_offset_seconds
                 if suggestion.reminder_offset_seconds is not None
                 else existing.reminder_offset_seconds
                 if existing and suggestion.remind_at is None
@@ -1850,6 +1972,7 @@ class AgentHarnessService:
             ends_at=int(work.ends_at.timestamp() * 1000) if work.ends_at else None,
             remind_at=int(work.remind_at.timestamp() * 1000)
             if work.remind_at
+            and work.reminder_policy != "none"
             and work.target_id is None
             and work.state not in {"completed", "cancelled"}
             else None,
@@ -1881,6 +2004,7 @@ class AgentHarnessService:
                 "work_item_id": work.work_item_id,
                 "work_revision": work.revision,
                 "reminder_occurrence": reminder,
+                "reminder_policy": work.reminder_policy,
             },
         )
         receipt = await self.knowledge.repository.apply_mutation(
@@ -1968,6 +2092,104 @@ class AgentHarnessService:
         if len(rendered) > 6000:
             raise ValueError("work_context_requires_narrower_evidence")
         return rendered
+
+    async def _apply_reminder_defaults(
+        self, work: WorkItem, intent: StandingIntent
+    ) -> WorkItem | None:
+        defaults = intent.reminder_defaults
+        if (
+            defaults is None
+            or not intent.allow_writes
+            or intent.shadow
+            or work.reminder_policy == "none"
+            or work.kind not in {"todo", "event"}
+            or work.operation != "create"
+            or work.bindings
+            or work.remind_at is not None
+            or work.reminder_offset_seconds is not None
+        ):
+            return work
+        offset = (
+            defaults.event_offset_seconds if work.kind == "event" else defaults.todo_offset_seconds
+        )
+        if offset is None:
+            return work
+        policies: set[tuple[int, str]] = set()
+        for candidate in await self.repository.intents(work.owner):
+            policy = candidate.reminder_defaults
+            if (
+                policy is None
+                or candidate.state != "active"
+                or candidate.shadow
+                or not candidate.allow_writes
+                or work.room_id not in candidate.room_ids
+                or (candidate.expires_at is not None and candidate.expires_at <= datetime.now(UTC))
+            ):
+                continue
+            value = (
+                policy.event_offset_seconds if work.kind == "event" else policy.todo_offset_seconds
+            )
+            if value is not None:
+                policies.add((value, str(policy.primary_device_id)))
+        reason = None
+        if len(policies) > 1:
+            reason = "同一来源存在不同的默认提醒规则，请为此事项指定提醒时间和设备。"
+        elif not any(
+            row["device_id"] == str(defaults.primary_device_id)
+            for row in await self.repository.devices(work.owner)
+        ):
+            reason = "主提醒设备已不可用，请重新选择提醒设备。"
+        if reason is not None:
+            changed = work.model_copy(
+                update={
+                    "state": "blocked",
+                    "waiting_reason": reason,
+                    "revision": work.revision + 1,
+                    "updated_at": datetime.now(UTC),
+                }
+            )
+            if await self.repository.save_work(changed, work.revision):
+                await self.repository.record(
+                    work.owner,
+                    "waiting",
+                    work.work_item_id,
+                    "reminder_rule_conflict",
+                    reason,
+                    work.evidence,
+                    dedup_key="reminder-rule-conflict:"
+                    + work.work_item_id
+                    + ":"
+                    + str(work.revision),
+                )
+            return None
+        anchor = work.starts_at if work.kind == "event" else work.due_at
+        changed = work.model_copy(
+            update={
+                "reminder_rule": "relative",
+                "reminder_offset_seconds": offset,
+                "remind_at": anchor - timedelta(seconds=offset) if anchor else None,
+                "primary_device_id": defaults.primary_device_id,
+                "revision": work.revision + 1,
+                "updated_at": datetime.now(UTC),
+            }
+        )
+        if not await self.repository.save_work(changed, work.revision):
+            raise ValueError("work_revision_conflict")
+        await self.repository.record(
+            work.owner,
+            "reminder.rule",
+            work.work_item_id,
+            "configured",
+            "已沿用主人配置的默认提醒规则。",
+            work.evidence,
+            details={
+                "intent_id": str(intent.intent_id),
+                "intent_revision": intent.revision,
+                "offset_seconds": offset,
+                "device_id": str(defaults.primary_device_id),
+            },
+        )
+        return changed
 
     async def _dispatch(
         self, work: WorkItem, source: Record, session: UUID, *, only_intent: UUID | None = None
@@ -2131,6 +2353,10 @@ class AgentHarnessService:
             )
             if intent.shadow or decision.action not in {"task", "clarify", "defer"}:
                 continue
+            defaulted = await self._apply_reminder_defaults(work, intent)
+            if defaulted is None:
+                continue
+            work = defaulted
             identifier = await self.repository.reserve_dispatch(intent.intent_id, work)
             task = await self.tasks.repository.get(identifier)
             if task is not None:
@@ -2555,6 +2781,39 @@ class AgentHarnessService:
                 else changes.get("remind_at", item.remind_at),
             }
         )
+        explicit_reminder = "remind_at" in body.model_fields_set or (
+            body.changes is not None and "remind_at" in body.changes.model_fields_set
+        )
+        if explicit_reminder:
+            task_id = authorized_task.get()
+            task = await self.tasks.repository.get(task_id) if task_id is not None else None
+            if (
+                item.reminder_policy == "none"
+                and changed.remind_at is not None
+                and task is not None
+                and task.authorization.intent_id is not None
+            ):
+                raise PermissionError("reminder_explicitly_declined")
+            changed = changed.model_copy(
+                update={
+                    "reminder_policy": "none" if changed.remind_at is None else "inherit",
+                    "reminder_rule": "absolute",
+                    "reminder_offset_seconds": None,
+                }
+            )
+        elif (
+            body.action == "edit"
+            and changed.reminder_rule == "relative"
+            and changed.reminder_offset_seconds is not None
+        ):
+            anchor = changed.starts_at if changed.kind == "event" else changed.due_at
+            changed = changed.model_copy(
+                update={
+                    "remind_at": anchor - timedelta(seconds=changed.reminder_offset_seconds)
+                    if anchor
+                    else None
+                }
+            )
         if (
             body.action == "edit"
             and item.kind == "memory"
@@ -2940,6 +3199,8 @@ class AgentHarnessService:
                 or current.state in {"completed", "cancelled", "rejected"}
             ):
                 continue
+            if dispatched is None and current.revision != work.revision and current.waiting_reason:
+                reason = current.waiting_reason
             changed = current.model_copy(
                 update={
                     "owner_decision": current.owner_decision.model_copy(update={"pending": False}),

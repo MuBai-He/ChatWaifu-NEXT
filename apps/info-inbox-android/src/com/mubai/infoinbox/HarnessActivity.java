@@ -128,6 +128,12 @@ public final class HarnessActivity extends Activity {
       JSONObject item = intents.getJSONObject(i);
       String state = item.getString("state");
       label(item.getString("goal"), 17);
+      JSONObject defaults=item.optJSONObject("reminder_defaults");
+      if(defaults!=null) {
+        if(!defaults.isNull("event_offset_seconds"))label("新日程默认提醒："+reminderOffset(defaults.getLong("event_offset_seconds")),14);
+        if(!defaults.isNull("todo_offset_seconds"))label("新待办默认提醒："+reminderOffset(defaults.getLong("todo_offset_seconds")),14);
+        label("仅沿用于之后的新事项；原文指定的提醒优先。",14);
+      }
       label(state.equals("paused") ? "已暂停" : state.equals("revoked") ? "已撤销" : item.getBoolean("shadow") ? "观察中" : "自动执行已开启", 14);
       if (!state.equals("revoked")) {
         if (item.getBoolean("shadow")) intentButton(item, "开启自动执行", "enable");
@@ -156,6 +162,7 @@ public final class HarnessActivity extends Activity {
       pending++;
       label(item.getString("title"), 17);
       label(item.getString("details"), 14);
+      if(item.optString("reminder_policy").equals("none"))label("本事项不提醒。",14);
       boolean historical = !item.optString("temporal_status", "current").equals("current");
       if (historical) label("历史核对：" + item.optString("temporal_reason"), 14);
       if(!item.isNull("start_date"))label("全天活动："+item.optString("start_date")+" 至 "+item.optString("end_date")+"（结束日期不包含在内）",14);
@@ -322,6 +329,10 @@ public final class HarnessActivity extends Activity {
       catch(Exception unavailable){runOnUiThread(()->Toast.makeText(this,"撤回未完成，本机修改仍保留。",Toast.LENGTH_LONG).show());}
       runOnUiThread(this::refresh);
     });
+  }
+
+  private String reminderOffset(long seconds) {
+    return seconds==0?"到时提醒":"提前 "+(seconds%60==0?seconds/60+" 分钟":seconds+" 秒");
   }
 
   private void intentButton(JSONObject item, String label, String action) throws Exception {

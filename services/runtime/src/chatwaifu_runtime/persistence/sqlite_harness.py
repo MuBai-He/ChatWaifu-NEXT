@@ -219,6 +219,13 @@ async def project_work_in(
         primary_device_id=primary,
         due_date=record.due_date,
         reminder_rule=current.reminder_rule if current else "absolute",
+        reminder_policy="inherit"
+        if record.remind_at is not None
+        else current.reminder_policy
+        if current
+        else "none"
+        if record.origin.get("reminder_policy") == "none"
+        else "inherit",
         reminder_offset_seconds=current.reminder_offset_seconds if current else None,
         start_date=current.start_date if current else None,
         end_date=current.end_date if current else None,

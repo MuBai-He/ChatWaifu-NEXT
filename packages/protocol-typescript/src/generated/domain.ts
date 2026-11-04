@@ -2109,6 +2109,9 @@ export type PendingReviews = JsonObject[]
  */
 export type RoomIds1 = [string, ...string[]]
 export type SessionId39 = string
+export type EventOffsetSeconds = number | null
+export type PrimaryDeviceId = string
+export type TodoOffsetSeconds = number | null
 export type AcceptedAt1 = string | null
 export type AcceptedWorkRevision = number
 export type AcknowledgedAt3 = string | null
@@ -2116,7 +2119,7 @@ export type ContentFingerprint = string
 export type OccurrenceId = string
 export type Owner2 = string
 export type PresentedAt = string | null
-export type PrimaryDeviceId = string | null
+export type PrimaryDeviceId1 = string | null
 export type ScheduledAt = string
 export type State5 =
   | 'scheduled'
@@ -2686,11 +2689,12 @@ export type ReceivedAt4 = string
 export type RequestHash = string
 export type PreviousEndsAt = string | null
 export type PreviousStartsAt = string | null
-export type PrimaryDeviceId1 = string | null
+export type PrimaryDeviceId2 = string | null
 export type ProviderUpdatedAt = string | null
 export type ReconciledTaskRevision = number | null
 export type RemindAt = string | null
 export type ReminderOffsetSeconds = number | null
+export type ReminderPolicy = 'inherit' | 'none'
 export type ReminderRule = 'absolute' | 'relative'
 /**
  * @maxItems 16
@@ -2772,7 +2776,7 @@ export type DueDate1 = string | null
 export type EndDate1 = string | null
 export type EndsAt1 = string | null
 export type Involvement1 = ('self' | 'other' | 'unclear') | null
-export type PrimaryDeviceId2 = string | null
+export type PrimaryDeviceId3 = string | null
 export type RemindAt1 = string | null
 export type StartDate1 = string | null
 export type StartsAt1 = string | null
@@ -2904,6 +2908,7 @@ export interface ProtocolCatalog {
   processing_request: ProcessingRequest
   prompt_budget: PromptBudgetReport
   prompt_context_identity: PromptContextIdentity
+  reminder_defaults: ReminderDefaults
   reminder_occurrence: ReminderOccurrence
   response_plan: ResponsePlan
   route: RouteDecision
@@ -5097,6 +5102,15 @@ export interface ProcessingRequest {
 export interface Watermarks {
   [k: string]: number
 }
+/**
+ * Owner-selected rules for future work in this intent's scope.
+ */
+export interface ReminderDefaults {
+  event_offset_seconds?: EventOffsetSeconds
+  primary_device_id: PrimaryDeviceId
+  todo_offset_seconds?: TodoOffsetSeconds
+  [k: string]: unknown
+}
 export interface ReminderOccurrence {
   accepted_at?: AcceptedAt1
   accepted_work_revision?: AcceptedWorkRevision
@@ -5105,7 +5119,7 @@ export interface ReminderOccurrence {
   occurrence_id: OccurrenceId
   owner: Owner2
   presented_at?: PresentedAt
-  primary_device_id?: PrimaryDeviceId
+  primary_device_id?: PrimaryDeviceId1
   scheduled_at: ScheduledAt
   state: State5
   updated_at: UpdatedAt19
@@ -5247,6 +5261,7 @@ export interface StandingIntent {
   max_tool_calls?: MaxToolCalls3
   observe_calendar?: ObserveCalendar
   owner: Owner3
+  reminder_defaults?: ReminderDefaults | null
   resource_roots?: ResourceRoots1
   revision: Revision20
   room_ids?: RoomIds2
@@ -5278,6 +5293,7 @@ export interface StandingIntentInput {
   max_active_seconds?: MaxActiveSeconds4
   max_tool_calls?: MaxToolCalls4
   observe_calendar?: ObserveCalendar1
+  reminder_defaults?: ReminderDefaults | null
   resource_roots?: ResourceRoots2
   room_ids?: RoomIds3
   schedule?: IntentSchedule | null
@@ -5297,6 +5313,7 @@ export interface StandingIntentUpdate {
   max_active_seconds?: MaxActiveSeconds5
   max_tool_calls?: MaxToolCalls5
   observe_calendar?: ObserveCalendar2
+  reminder_defaults?: ReminderDefaults | null
   resource_roots?: ResourceRoots3
   room_ids?: RoomIds4
   schedule?: IntentSchedule | null
@@ -5428,11 +5445,12 @@ export interface WorkItem {
   owner_decision?: OwnerWorkDecision | null
   previous_ends_at?: PreviousEndsAt
   previous_starts_at?: PreviousStartsAt
-  primary_device_id?: PrimaryDeviceId1
+  primary_device_id?: PrimaryDeviceId2
   provider_updated_at?: ProviderUpdatedAt
   reconciled_task_revision?: ReconciledTaskRevision
   remind_at?: RemindAt
   reminder_offset_seconds?: ReminderOffsetSeconds
+  reminder_policy?: ReminderPolicy
   reminder_rule?: ReminderRule
   requested_fields?: RequestedFields
   revision?: Revision23
@@ -5478,7 +5496,7 @@ export interface WorkItemEdit {
   end_date?: EndDate1
   ends_at?: EndsAt1
   involvement?: Involvement1
-  primary_device_id?: PrimaryDeviceId2
+  primary_device_id?: PrimaryDeviceId3
   remind_at?: RemindAt1
   start_date?: StartDate1
   starts_at?: StartsAt1

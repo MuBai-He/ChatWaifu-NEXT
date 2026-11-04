@@ -12,6 +12,26 @@ export const evidenceRefSchema = z.object({
   revision: z.number().int().positive(),
 });
 export const intentSchema = z.object({
+  reminder_defaults: z
+    .object({
+      event_offset_seconds: z
+        .number()
+        .int()
+        .min(0)
+        .max(2678400)
+        .nullable()
+        .default(null),
+      todo_offset_seconds: z
+        .number()
+        .int()
+        .min(0)
+        .max(2678400)
+        .nullable()
+        .default(null),
+      primary_device_id: z.string().uuid(),
+    })
+    .nullable()
+    .default(null),
   intent_id: z.string().uuid(),
   owner: z.string(),
   character_id: z.string(),
@@ -71,6 +91,7 @@ export const workSchema = z.object({
   clear_due: z.boolean().default(false),
   primary_device_id: z.string().uuid().nullable().optional(),
   reminder_rule: z.enum(["absolute", "relative"]).default("absolute"),
+  reminder_policy: z.enum(["inherit", "none"]).default("inherit"),
   reminder_offset_seconds: z.number().int().nonnegative().nullable().optional(),
   previous_starts_at: z.string().nullable().optional(),
   previous_ends_at: z.string().nullable().optional(),

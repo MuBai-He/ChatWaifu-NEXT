@@ -1120,7 +1120,7 @@ unified_owner_agent_harness:
   proposal: "docs/plans/unified-agent-harness-proposal-2026-10-31.md"
   evidence: "docs/operations/unified-agent-harness-validation-2026-10-31.md"
   storage_migration: 49
-  android_schema: 7
+  android_schema: 8
   runtime_owns_extraction: true
   production_runtime_owns_extraction: false
   open_delivery_gaps:
@@ -1141,6 +1141,14 @@ unified_owner_agent_harness:
     android: "0.6.4 / code 25 / schema 7; not installed"
     local_checks: "86 backend, 127 TypeScript protocol, 5 Web review and 111 Android tests; types and Android build/lint pass"
     note: "No delegation, no production switch and no new real-resource authorization. Original 30 delivery gates are not marked closed from source tests."
+  gap_closure_batch_2:
+    status: source_and_local_checks_only
+    merged_batch_1: "66d5210ee30473c42c76956b90aed7394ff044aa"
+    scope: "C11 scoped reminder defaults, C13 bounded read-only context, C04/C05 indexed exact-source handoff"
+    android: "0.6.5 / code 26 / schema 8; not installed"
+    local_checks: "113 backend, 140 Python protocol, 127 TypeScript protocol, 6 Web and 112 Android tests; types/build/lint pass"
+    data_copy: "113605 queue rows preserved; 137 eligible rooms, 69085 whole completed current messages, 799 indexed pages"
+    remaining: "C12 direct provider wake, O01 monitoring, actual rollout/migration and full acceptance"
   default_standing_intent_shadow: true
   task_state_machine: existing_AgentTaskService
   temporal_review_fix:

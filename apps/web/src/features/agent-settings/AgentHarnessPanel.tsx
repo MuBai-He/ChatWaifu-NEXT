@@ -21,6 +21,18 @@ import {
   linkHarnessWork,
 } from "../chat/runtime-client/harnessClient";
 
+function harnessError(error: Error) {
+  const messages: Record<string, string> = {
+    reminder_device_not_registered:
+      "主提醒设备已失效，请刷新设备列表并重新选择。",
+    reminder_defaults_need_write_scope:
+      "请先允许宁宁在指定范围内处理事项，再保存默认提醒。",
+    reminder_explicitly_declined:
+      "此事项已选择不提醒；需要恢复时，请直接修改事项的提醒设置。",
+  };
+  return messages[error.message] ?? error.message;
+}
+
 export function AgentHarnessPanel({ sessionId }: { sessionId: string }) {
   const [intents, setIntents] = useState<StandingIntent[]>([]);
   const [work, setWork] = useState<WorkItem[]>([]);
@@ -60,6 +72,11 @@ export function AgentHarnessPanel({ sessionId }: { sessionId: string }) {
   const [rooms, setRooms] = useState<string[]>([]);
   const [skills, setSkills] = useState<string[]>([]);
   const [writes, setWrites] = useState(false);
+  const [eventReminderMinutes, setEventReminderMinutes] = useState("");
+  const [todoReminderMinutes, setTodoReminderMinutes] = useState("");
+  const [defaultReminderDevice, setDefaultReminderDevice] = useState("");
+  const hasReminderDefaults =
+    eventReminderMinutes !== "" || todoReminderMinutes !== "";
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<string | null>(null);
@@ -107,7 +124,7 @@ export function AgentHarnessPanel({ sessionId }: { sessionId: string }) {
     const update = () =>
       void refresh().catch((e) => {
         if (active.current)
-          setError(e instanceof Error ? e.message : "连接未完成，请重试");
+          setError(e instanceof Error ? harnessError(e) : "连接未完成，请重试");
       });
     update();
     const timer = window.setInterval(() => {
@@ -130,7 +147,7 @@ export function AgentHarnessPanel({ sessionId }: { sessionId: string }) {
       if (active.current)
         setError(
           e instanceof Error
-            ? `${e.message}；请刷新后核对来源、账户与当前版本。`
+            ? `${harnessError(e)}；请刷新后核对来源、账户与当前版本。`
             : "操作未完成，请刷新后重试",
         );
     } finally {
@@ -200,6 +217,19 @@ export function AgentHarnessPanel({ sessionId }: { sessionId: string }) {
                 ],
                 max_tool_calls: editingIntent?.max_tool_calls ?? 20,
                 max_active_seconds: editingIntent?.max_active_seconds ?? 300,
+                reminder_defaults: hasReminderDefaults
+                  ? {
+                      event_offset_seconds:
+                        eventReminderMinutes === ""
+                          ? null
+                          : Number(eventReminderMinutes) * 60,
+                      todo_offset_seconds:
+                        todoReminderMinutes === ""
+                          ? null
+                          : Number(todoReminderMinutes) * 60,
+                      primary_device_id: defaultReminderDevice,
+                    }
+                  : null,
                 allow_writes: writes,
                 shadow: true,
               } as StandingIntentInput;
@@ -212,6 +242,9 @@ export function AgentHarnessPanel({ sessionId }: { sessionId: string }) {
               if (active.current) {
                 setGoal("");
                 setEditingIntent(null);
+                setEventReminderMinutes("");
+                setTodoReminderMinutes("");
+                setDefaultReminderDevice("");
               }
             });
           }}
@@ -313,6 +346,52 @@ export function AgentHarnessPanel({ sessionId }: { sessionId: string }) {
             />
             允许在所选日历和待办列表中创建、修改、完成或取消个人事项
           </label>
+          <fieldset disabled={busy}>
+            <legend>新事项的默认提醒（可不设置）</legend>
+            <label>
+              新日程提前多少分钟
+              <input
+                type="number"
+                min="0"
+                max="44640"
+                step="1"
+                value={eventReminderMinutes}
+                onChange={(event) =>
+                  setEventReminderMinutes(event.target.value)
+                }
+              />
+            </label>
+            <label>
+              新待办提前多少分钟
+              <input
+                type="number"
+                min="0"
+                max="44640"
+                step="1"
+                value={todoReminderMinutes}
+                onChange={(event) => setTodoReminderMinutes(event.target.value)}
+              />
+            </label>
+            <label>
+              主提醒设备
+              <select
+                value={defaultReminderDevice}
+                onChange={(event) =>
+                  setDefaultReminderDevice(event.target.value)
+                }
+              >
+                <option value="">请选择设备</option>
+                {sources.devices.map((device) => (
+                  <option key={device.device_id} value={device.device_id}>
+                    {device.label || "已连接设备"}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p>
+              只影响之后的新事项；原文指定的提醒优先，明确拒绝提醒时不会沿用。只有截止日期的待办仍需指定具体提醒时刻。
+            </p>
+          </fieldset>
           <p>先观察决策和依据，核对后可开启自动执行。可随时暂停或撤销。</p>
           <button
             disabled={
@@ -320,6 +399,7 @@ export function AgentHarnessPanel({ sessionId }: { sessionId: string }) {
               !goal.trim() ||
               (!rooms.length && !destinations.length && !scheduleAt) ||
               !skills.length ||
+              (hasReminderDefaults && (!writes || !defaultReminderDevice)) ||
               (writes &&
                 skills.includes("agenda.manage") &&
                 !destinations.length)
@@ -333,6 +413,9 @@ export function AgentHarnessPanel({ sessionId }: { sessionId: string }) {
               onClick={() => {
                 setEditingIntent(null);
                 setGoal("");
+                setEventReminderMinutes("");
+                setTodoReminderMinutes("");
+                setDefaultReminderDevice("");
               }}
             >
               取消调整
@@ -392,6 +475,23 @@ export function AgentHarnessPanel({ sessionId }: { sessionId: string }) {
                     setRooms(item.room_ids ?? []);
                     setSkills(item.allowed_skill_ids);
                     setWrites(item.allow_writes ?? false);
+                    setEventReminderMinutes(
+                      item.reminder_defaults?.event_offset_seconds == null
+                        ? ""
+                        : String(
+                            item.reminder_defaults.event_offset_seconds / 60,
+                          ),
+                    );
+                    setTodoReminderMinutes(
+                      item.reminder_defaults?.todo_offset_seconds == null
+                        ? ""
+                        : String(
+                            item.reminder_defaults.todo_offset_seconds / 60,
+                          ),
+                    );
+                    setDefaultReminderDevice(
+                      item.reminder_defaults?.primary_device_id ?? "",
+                    );
                     setDestinations([
                       ...(item.calendar_ids ?? []),
                       ...(item.tasklist_ids ?? []),
