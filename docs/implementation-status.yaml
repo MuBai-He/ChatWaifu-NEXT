@@ -1149,6 +1149,12 @@ unified_owner_agent_harness:
     local_checks: "113 backend, 140 Python protocol, 127 TypeScript protocol, 6 Web and 112 Android tests; types/build/lint pass"
     data_copy: "113605 queue rows preserved; 137 eligible rooms, 69085 whole completed current messages, 799 indexed pages"
     remaining: "C12 direct provider wake, O01 monitoring, actual rollout/migration and full acceptance"
+  unconfirmed_review_expiry:
+    date: "2026-11-04"
+    status: source_and_local_checks_only
+    android: "0.6.6 / code 27 / schema 8; owner-signed package prepared, phone unavailable"
+    behavior: "Explicit elapsed deadlines move unconfirmed work to historical review; cached partitions refresh from time, confirmed overdue and facts are preserved"
+    validation: "114 backend and 114 Android tests; controlled midnight/public API/cached selection cases; no physical-device pass"
   default_standing_intent_shadow: true
   task_state_machine: existing_AgentTaskService
   temporal_review_fix:

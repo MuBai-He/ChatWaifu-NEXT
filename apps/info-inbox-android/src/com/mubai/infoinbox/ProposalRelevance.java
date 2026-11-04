@@ -27,7 +27,7 @@ public final class ProposalRelevance {
       }
       if (latest <= 0 || latest > now + 300000L) return "uncertain";
       boolean recent = latest >= now - RECENT;
-      if (recent && !item.optString("operation", "create").equals("create")) return "current";
+      if (recent && item.optString("operation", "create").matches("complete|cancel")) return "current";
       ZoneId zone = ZoneId.of(item.optString("timezone", "Asia/Shanghai"));
       LocalDate today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate();
       Long due = time(item, "due_at"), start = time(item, "starts_at"), end = time(item, "ends_at");
@@ -39,6 +39,9 @@ public final class ProposalRelevance {
               || (endDay == null && startDay != null && startDay.isBefore(today))
               || (end == null && start != null
                   && Instant.ofEpochMilli(start).atZone(zone).toLocalDate().isBefore(today))))
+        return "historical";
+      if (item.optString("kind").equals("todo")
+          && ((due != null && due <= now) || (dueDay != null && dueDay.isBefore(today))))
         return "historical";
       if (recent) return "current";
       if ((due != null && due >= now) || (start != null && start >= now) || (end != null && end >= now)
@@ -52,6 +55,43 @@ public final class ProposalRelevance {
     } catch (org.json.JSONException failure) {
       return "uncertain";
     }
+  }
+
+  public static long nextAssessmentAt(JSONObject item, long now) {
+    if (!item.optString("kind").matches("todo|event")) return Long.MAX_VALUE;
+    long next=Long.MAX_VALUE;
+    try {
+      JSONObject source=item.optJSONObject("source");
+      long latest=source==null||source.optBoolean("_context_only")?0:source.optLong("created_at");
+      JSONArray evidence=source==null?null:source.optJSONArray("evidence");
+      for(int i=0;evidence!=null&&i<evidence.length();i++) {
+        JSONObject part=evidence.getJSONObject(i);
+        if(!part.optBoolean("_context_only")&&part.optBoolean("_supporting_evidence",true))latest=Math.max(latest,part.optLong("created_at"));
+      }
+      if(latest>0&&latest<=Long.MAX_VALUE-RECENT-1&&latest+RECENT+1>now)next=latest+RECENT+1;
+      if(latest>now+300000L)next=Math.min(next,latest-300000L);
+      ZoneId zone=ZoneId.of(item.optString("timezone","Asia/Shanghai"));
+      for(String key:new String[]{"due_at","ends_at"}) {
+        Long value=time(item,key);
+        if(value!=null&&value>now)next=Math.min(next,value);
+      }
+      for(String key:new String[]{"due_date","start_date","end_date"}) {
+        LocalDate value=day(item,key);
+        if(value==null)continue;
+        long boundary=(key.equals("end_date")?value:value.plusDays(1)).atStartOfDay(zone).toInstant().toEpochMilli();
+        if(boundary>now)next=Math.min(next,boundary);
+      }
+      if(item.optString("kind").equals("event")&&item.isNull("ends_at")) {
+        Long start=time(item,"starts_at");
+        if(start!=null) {
+          long boundary=Instant.ofEpochMilli(start).atZone(zone).toLocalDate().plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli();
+          if(boundary>now)next=Math.min(next,boundary);
+        }
+      }
+    } catch(RuntimeException|org.json.JSONException invalid) {
+      return Long.MAX_VALUE;
+    }
+    return next;
   }
 
   private static Long time(JSONObject item, String key) {

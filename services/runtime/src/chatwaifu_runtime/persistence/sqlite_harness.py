@@ -1313,6 +1313,26 @@ class SQLiteHarnessRepository:
                 (str(operation), owner, digest, "review:" + str(identifier)),
             )
 
+    async def temporal_work(self, owner: str, after: int = 0) -> list[tuple[int, WorkItem, int]]:
+        rows = await self.db.fetchall(
+            "SELECT w.rowid,w.payload,coalesce(("
+            "SELECT max(json_extract(v.payload,'$.occurred_at')) "
+            "FROM json_each(w.payload,'$.evidence') e "
+            "JOIN knowledge_versions v ON v.owner=w.owner "
+            "AND v.record_id=json_extract(e.value,'$.reference') "
+            "AND v.revision=json_extract(e.value,'$.revision') "
+            "WHERE json_extract(e.value,'$.kind')='knowledge' "
+            "AND json_extract(v.payload,'$.kind')='source' "
+            "AND json_extract(v.payload,'$.room_id')=json_extract(w.payload,'$.room_id')),0) "
+            "FROM harness_work_items w WHERE w.owner=? AND w.rowid>? "
+            "AND json_extract(w.payload,'$.acceptance')='pending' "
+            "AND json_extract(w.payload,'$.state') IN ('proposed','open','waiting','blocked') "
+            "AND json_extract(w.payload,'$.kind') IN ('todo','event') "
+            "ORDER BY w.rowid LIMIT 100",
+            (owner, after),
+        )
+        return [(int(row[0]), WorkItem.model_validate_json(row[1]), int(row[2])) for row in rows]
+
     async def work_items(
         self, owner: str, limit: int = 100, offset: int = 0, room: str | None = None
     ) -> list[WorkItem]:

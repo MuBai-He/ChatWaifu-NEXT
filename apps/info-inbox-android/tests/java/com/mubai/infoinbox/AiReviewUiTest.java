@@ -84,6 +84,34 @@ public class AiReviewUiTest {
     memory.getWritableDatabase().insertOrThrow("ai_reviews", null, values);
   }
 
+  @Test
+  public void unconfirmedDeadlineMovesFromCachedCurrentToHistoryWhenTimePasses() throws Exception {
+    long before=System.currentTimeMillis(),deadline=before+60000;
+    add(501,"todo",before);
+    try(android.database.Cursor row=memory.getReadableDatabase().rawQuery("SELECT ref,item_json FROM ai_reviews",null)) {
+      assertTrue(row.moveToFirst());JSONObject item=new JSONObject(row.getString(1));
+      item.put("due_at",java.time.Instant.ofEpochMilli(deadline).toString());
+      ContentValues update=new ContentValues();update.put("item_json",item.toString());
+      memory.getWritableDatabase().update("ai_reviews",update,"ref=?",new String[]{row.getString(0)});
+    }
+    add(502,"fact",before);
+    open();assertNotNull(control("合成建议 501"));
+    control("多选建议").performClick();control("全选本页").performClick();assertEquals(2,selected());
+    java.lang.reflect.Method refresh=MainActivity.class.getDeclaredMethod("refreshAiSuggestions",long.class);
+    refresh.setAccessible(true);refresh.invoke(activity,deadline+60000);settle();
+    assertEquals(1,selected());assertNotNull(control("合成建议 502"));
+    assertFalse(views().stream().anyMatch(v->v instanceof TextView&&((TextView)v).getText().toString().equals("合成建议 501")));
+    java.lang.reflect.Field pagesField=MainActivity.class.getDeclaredField("aiSectionPages");pagesField.setAccessible(true);
+    java.util.Map<?,?> pages=(java.util.Map<?,?>)pagesField.get(activity);
+    Object history=pages.get("history");assertNotNull(history);
+    java.lang.reflect.Field itemsField=history.getClass().getDeclaredField("items");itemsField.setAccessible(true);
+    JSONArray archived=(JSONArray)itemsField.get(history);assertEquals(1,archived.length());
+    assertEquals("合成建议 501",archived.getJSONObject(0).getString("title"));
+    try(android.database.Cursor row=memory.getReadableDatabase().rawQuery("SELECT state FROM ai_reviews",null)) {
+      assertTrue(row.moveToFirst());assertEquals("pending",row.getString(0));
+    }
+  }
+
   private void open() throws Exception {
     controller =
         Robolectric.buildActivity(

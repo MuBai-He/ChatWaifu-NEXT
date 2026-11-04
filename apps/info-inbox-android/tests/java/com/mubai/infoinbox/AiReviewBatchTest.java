@@ -123,7 +123,7 @@ public class AiReviewBatchTest {
   @Test
   public void mixedConfirmationSavesWorkAndMemoryOnceWithoutNewReminders() throws Exception {
     JSONObject memo = proposal("memory", "decision"), todo = proposal("todo", "todo");
-    todo.put("due_at", "2026-10-20T10:00:00+08:00");
+    todo.put("due_at", java.time.Instant.ofEpochMilli(NOW+86400000L).toString());
     insert(todo);
     JSONArray preview = prepare(memo, todo);
     assertEquals(0, count("memories"));

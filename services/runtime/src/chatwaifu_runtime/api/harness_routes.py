@@ -175,6 +175,7 @@ async def work_items(
 ):
     app = service(request)
     scope = await owner(app, session_id)
+    await app.refresh_temporal_work(scope)
     rows = await app.repository.work_items(scope, limit, offset)
     return {"items": rows, "next_offset": offset + len(rows) if len(rows) == limit else None}
 
@@ -191,6 +192,7 @@ async def review_confirmed_work(request: Request, body: ConfirmedWorkReview):
 async def get_work_item(request: Request, work_item_id: str, session_id: UUID):
     app = service(request)
     scope = await owner(app, session_id)
+    await app.refresh_temporal_work(scope)
     item = await app.repository.work_item(work_item_id)
     if item is None or item.owner != scope:
         raise HTTPException(404, "work_not_visible")

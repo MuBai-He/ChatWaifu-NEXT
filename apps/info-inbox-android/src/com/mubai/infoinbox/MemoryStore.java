@@ -254,6 +254,10 @@ public final class MemoryStore implements AutoCloseable {
   }
 
   public JSONArray suggestions() throws Exception {
+    return suggestions(System.currentTimeMillis());
+  }
+
+  public JSONArray suggestions(long now) throws Exception {
     JSONArray result = new JSONArray();
     try (Cursor c =
         getReadableDatabase()
@@ -264,7 +268,7 @@ public final class MemoryStore implements AutoCloseable {
       ConversationPolicy policy = new ConversationPolicy(this, true);
       while (c.moveToNext()) {
         JSONObject item = new JSONObject(c.getString(0));
-        ProposalRelevance.annotate(item, System.currentTimeMillis());
+        ProposalRelevance.annotate(item, now);
         if (policy.allowsProposal(item)) result.put(item);
       }
     }
