@@ -1,5 +1,6 @@
 import {
   evidenceRefSchema,
+  harnessMetricsSnapshotSchema,
   intentSchema,
   workSchema,
   activitySchema,
@@ -212,6 +213,7 @@ export {
  */
 export const protocolModelSchemas = {
   EvidenceRef: evidenceRefSchema,
+  HarnessMetricsSnapshot: harnessMetricsSnapshotSchema,
   StandingIntent: intentSchema,
   WorkItem: workSchema,
   ActivityEntry: activitySchema,
@@ -335,6 +337,7 @@ export const parserRootRegistry: Record<
 > = {
   parseEvidenceRef: "EvidenceRef",
   parseStandingIntent: "StandingIntent",
+  parseHarnessMetricsSnapshot: "HarnessMetricsSnapshot",
   parseWorkItem: "WorkItem",
   parseActivityEntry: "ActivityEntry",
   parseCapabilityPage: "CapabilityPage",

@@ -398,6 +398,14 @@ class LocalClientGuardMiddleware:
                 await self.app(scope, receive, send)
                 return
 
+            if (
+                path == "/v1/personal-assistant/google/calendar/notifications"
+                and scope.get("method") == "POST"
+            ):
+                # This exact route requires its opaque channel token and live account fence.
+                await self.app(scope, receive, send)
+                return
+
             if path == "/v1/runtime/password/login" and scope.get("method") == "POST":
                 await self.app(scope, receive, send)
                 return

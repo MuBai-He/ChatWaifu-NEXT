@@ -11,15 +11,19 @@ from chatwaifu_protocol.base import JsonObject
 from chatwaifu_protocol.harness import EvidenceRef, WorkItem
 
 from chatwaifu_runtime.agent.harness import AgentHarnessService
+from chatwaifu_runtime.personal_assistant.calendar_push import CalendarPushService
 from chatwaifu_runtime.personal_assistant.google_calendar import CalendarEvent, GoogleCalendarError
 from chatwaifu_runtime.personal_assistant.integration import PersonalAssistantIntegration
 
 
 class CalendarObserver:
     def __init__(
-        self, harness: AgentHarnessService, integration: PersonalAssistantIntegration
+        self,
+        harness: AgentHarnessService,
+        integration: PersonalAssistantIntegration,
+        push: CalendarPushService | None = None,
     ) -> None:
-        self.harness, self.integration = harness, integration
+        self.harness, self.integration, self.push = harness, integration, push
         self._limit = asyncio.Semaphore(4)
 
     async def reconcile(self) -> None:
@@ -38,6 +42,26 @@ class CalendarObserver:
                 if "/" in scope:
                     account, collection = scope.split("/", 1)
                     targets.add((account, collection))
+        cursor = 0
+        while True:
+            bound = await self.harness.repository.bound_work("local", cursor)
+            if not bound:
+                break
+            for _row, work in bound:
+                if work.kind != "event":
+                    continue
+                for binding in work.bindings:
+                    account, calendar = binding.get("account_id"), binding.get("collection_id")
+                    if (
+                        binding.get("provider") == "google"
+                        and isinstance(account, str)
+                        and isinstance(calendar, str)
+                    ):
+                        targets.add((account, calendar))
+            cursor = bound[-1][0]
+        hints = await self.push.dirty() if self.push else []
+        if self.push:
+            self.push.observe(str(session), targets)
         for account, calendar in targets:
             try:
                 await self.integration.accounts.sync(str(session), account, calendar)
@@ -52,6 +76,10 @@ class CalendarObserver:
                 await self.harness.repository.provider_watermark(
                     "local", f"{account}/{calendar}", True
                 )
+                if self.push:
+                    for hint in hints:
+                        if (hint.account_id, hint.calendar_id) == (account, calendar):
+                            await self.push.repository.consume(hint.channel_id, hint.dirty_revision)
             except asyncio.CancelledError:
                 raise
             except Exception:

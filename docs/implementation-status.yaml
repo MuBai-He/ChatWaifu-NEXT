@@ -1119,7 +1119,7 @@ unified_owner_agent_harness:
   adr: "0085"
   proposal: "docs/plans/unified-agent-harness-proposal-2026-10-31.md"
   evidence: "docs/operations/unified-agent-harness-validation-2026-10-31.md"
-  storage_migration: 49
+  storage_migration: 51
   android_schema: 8
   runtime_owns_extraction: true
   production_runtime_owns_extraction: false
@@ -1149,6 +1149,14 @@ unified_owner_agent_harness:
     local_checks: "113 backend, 140 Python protocol, 127 TypeScript protocol, 6 Web and 112 Android tests; types/build/lint pass"
     data_copy: "113605 queue rows preserved; 137 eligible rooms, 69085 whole completed current messages, 799 indexed pages"
     remaining: "C12 direct provider wake, O01 monitoring, actual rollout/migration and full acceptance"
+  gap_closure_batch_3:
+    date: "2026-11-04"
+    status: source_and_local_checks_only
+    scope: "C12 authenticated provider wake; O01 measured usage, queue health and recoverable delay alerts"
+    storage: "additive migrations 50/51; existing migrations preserved"
+    contracts: "owner-only metrics 1.0 plus compatible observation completion timestamp"
+    local_checks: "215 backend batch plus 77 final targeted, 140 Python protocol, 127 TypeScript protocol; Ruff/types pass, 622 Python files with zero errors"
+    remaining: "Public HTTPS push receipt, deployed monitoring, device upgrade, full ownership migration and final acceptance"
   unconfirmed_review_expiry:
     date: "2026-11-04"
     status: source_and_local_checks_only

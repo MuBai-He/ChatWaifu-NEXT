@@ -158,3 +158,30 @@ export const parseWorkItem = (value: unknown): WorkItem =>
   workSchema.parse(value) as WorkItem;
 export const parseActivityEntry = (value: unknown): ActivityEntry =>
   activitySchema.parse(value);
+
+export const harnessMetricsSnapshotSchema = z.object({
+  processor: z.record(z.string(), z.json()).default({}),
+  schema_version: z.literal("1.0"),
+  generated_at: z.number().int().nonnegative(),
+  work_item_id: z.string().nullable().default(null),
+  scope: z.enum(["owner", "owner_and_selected_work"]),
+  observation_states: z.record(z.string(), z.number().int().nonnegative()),
+  processing_room_states: z.record(z.string(), z.number().int().nonnegative()),
+  work_states: z.record(z.string(), z.number().int().nonnegative()),
+  source_coverage: z.record(z.string(), z.json()),
+  latency_seconds: z.record(z.string(), z.json()),
+  action_event_states: z.record(z.string(), z.number().int().nonnegative()),
+  review_decisions: z.record(z.string(), z.number().int().nonnegative()),
+  task_cost: z.record(z.string(), z.json()),
+  model_cost: z.record(z.string(), z.json()),
+  shared_source_model_cost: z.record(z.string(), z.json()).nullable(),
+  active_alerts: z.record(z.string(), z.number().int().min(0).max(1)),
+  duplicate_action_claims: z.null(),
+  wrong_target_writes: z.null(),
+});
+
+export function parseHarnessMetricsSnapshot(
+  value: unknown,
+): import("../generated/domain").HarnessMetricsSnapshot {
+  return harnessMetricsSnapshotSchema.parse(value);
+}

@@ -38,6 +38,19 @@
       "title": "Attempts",
       "type": "integer"
     },
+    "completed_at": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Completed At"
+    },
     "error_code": {
       "anyOf": [
         {

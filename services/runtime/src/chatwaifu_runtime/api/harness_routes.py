@@ -10,6 +10,7 @@ from chatwaifu_protocol.harness import (
     ActivityReceipt,
     ActivityValidationRequest,
     ConfirmedWorkReview,
+    HarnessMetricsSnapshot,
     IntentAction,
     ProcessingRequest,
     StandingIntentInput,
@@ -89,6 +90,25 @@ async def intent_action(request: Request, intent_id: UUID, body: IntentAction):
         return await service(request).act_intent(intent_id, body)
     except (PermissionError, ValueError, KeyError) as error:
         raise failure(error) from None
+
+
+@router.get("/v1/agent/metrics", response_model=HarnessMetricsSnapshot)
+async def metrics(
+    request: Request,
+    session_id: UUID,
+    work_item_id: str | None = Query(default=None, max_length=256),
+):
+    app = service(request)
+    scope = await owner(app, session_id)
+    if work_item_id:
+        work = await app.repository.work_item(work_item_id)
+        if work is None or work.owner != scope:
+            raise HTTPException(404, "work_item_not_visible")
+    if app.metrics is None:
+        raise HTTPException(503, "harness_metrics_unavailable")
+    data = await app.metrics.snapshot(scope, work_item_id)
+    data["processor"] = app.processor_health()
+    return data
 
 
 @router.get("/v1/agent/activity")

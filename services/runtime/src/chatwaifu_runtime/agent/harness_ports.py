@@ -14,6 +14,15 @@ from chatwaifu_protocol.harness import (
     WorkItem,
 )
 
+from chatwaifu_runtime.providers.metering import ModelUsageSample
+
+
+class HarnessMetricsRepository(Protocol):
+    async def record_usage(self, sample: "ModelUsageSample") -> None: ...
+    async def snapshot(self, owner: str, work_item_id: str | None = None) -> JsonObject: ...
+    async def alert_changes(self, owner: str) -> list[tuple[str, bool, int]]: ...
+    async def acknowledge_alert(self, owner: str, key: str, version: int) -> None: ...
+
 
 class HarnessRepository(Protocol):
     async def temporal_work(

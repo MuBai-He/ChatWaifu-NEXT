@@ -8,7 +8,7 @@ from urllib.parse import urlsplit
 from uuid import UUID
 
 from chatwaifu_protocol.base import JsonObject
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, SecretStr, model_validator
 
 from chatwaifu_runtime.bootstrap.container import RuntimeContainer
@@ -20,6 +20,24 @@ from chatwaifu_runtime.personal_assistant.repository import AssistantAccessError
 from chatwaifu_runtime.personal_assistant.tasks import AppleOperation, TaskInput, TaskService
 
 router = APIRouter(prefix="/v1/personal-assistant", tags=["personal-assistant"])
+
+
+@router.post("/google/calendar/notifications", status_code=204)
+async def calendar_notification(request: Request) -> Response:
+    service = request.app.state.container.calendar_push
+    if service is None:
+        raise HTTPException(404, "calendar_channel_not_active")
+    headers = request.headers
+    accepted = await service.receive(
+        headers.get("X-Goog-Channel-ID", ""),
+        headers.get("X-Goog-Channel-Token", ""),
+        headers.get("X-Goog-Resource-ID", ""),
+        headers.get("X-Goog-Message-Number", ""),
+        headers.get("X-Goog-Resource-State", ""),
+    )
+    if not accepted:
+        raise HTTPException(404, "calendar_channel_not_active")
+    return Response(status_code=204)
 
 
 class AssistantStatusResponse(BaseModel):

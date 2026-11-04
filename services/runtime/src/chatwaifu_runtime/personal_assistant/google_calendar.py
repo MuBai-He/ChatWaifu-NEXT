@@ -56,6 +56,13 @@ class Calendar:
 
 
 @dataclass(frozen=True, slots=True)
+class CalendarWatch:
+    channel_id: str
+    resource_id: str
+    expires_at: int | None
+
+
+@dataclass(frozen=True, slots=True)
 class EventTime:
     day: date | None
     timestamp: datetime | None
@@ -192,6 +199,54 @@ class GoogleCalendarAdapter:
 
     async def close(self) -> None:
         await self._client.aclose()
+
+    async def watch_events(
+        self, token: str, calendar_id: str, channel_id: str, channel_token: str, address: str
+    ) -> CalendarWatch:
+        data = await self._request(
+            "POST",
+            f"{API}/calendars/{quote(calendar_id, safe='')}/events/watch",
+            token=token,
+            json_body={
+                "id": channel_id,
+                "type": "web_hook",
+                "token": channel_token,
+                "address": address,
+                "params": {"ttl": "86400"},
+            },
+        )
+        identifier, resource, expiration = (
+            data.get("id"),
+            data.get("resourceId"),
+            data.get("expiration"),
+        )
+        if (
+            identifier != channel_id
+            or not isinstance(resource, str)
+            or not resource
+            or len(resource) > 1024
+        ):
+            raise GoogleCalendarError("invalid_watch_response")
+        if expiration is not None:
+            if (
+                isinstance(expiration, bool)
+                or not isinstance(expiration, (str, int))
+                or not str(expiration).isdigit()
+            ):
+                raise GoogleCalendarError("invalid_watch_response")
+            expiration = int(expiration)
+            if not 0 < expiration <= 2**63 - 1:
+                raise GoogleCalendarError("invalid_watch_response")
+        return CalendarWatch(channel_id, resource, expiration)
+
+    async def stop_watch(self, token: str, channel_id: str, resource_id: str) -> None:
+        await self._request(
+            "POST",
+            f"{API}/channels/stop",
+            token=token,
+            json_body={"id": channel_id, "resourceId": resource_id},
+            empty=True,
+        )
 
     async def exchange_code(
         self,

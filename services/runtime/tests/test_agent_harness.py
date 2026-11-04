@@ -2132,3 +2132,139 @@ def test_enable_and_resume_recheck_only_unhandled_live_work(
             await asyncio.gather(worker, return_exceptions=True)
 
     c.portal.call(exercise)
+
+
+def test_metrics_latency_alert_recovery_and_owner_only_http(
+    harness: tuple[TestClient, RuntimeContainer, str, str],
+) -> None:
+    from chatwaifu_protocol.harness import EvidenceRef, Observation, WorkItem
+    from chatwaifu_runtime.persistence.sqlite_harness_metrics import SQLiteHarnessMetricsRepository
+    from chatwaifu_runtime.providers.contracts import LlmUsage
+    from chatwaifu_runtime.providers.metering import ModelTrace, ModelUsageSample
+
+    c, r, s, d = harness
+    assert c.portal is not None
+    activate(c, s, d, [{"kind": "knowledge", "reference": "source:seed", "revision": 1}])
+    stamp = int(time.time() * 1000)
+
+    async def exercise() -> None:
+        metrics = SQLiteHarnessMetricsRepository(r.database)
+        observation = Observation(
+            observation_id=uuid4(),
+            owner="local",
+            room_id=ROOM,
+            evidence=EvidenceRef(kind="knowledge", reference="source:delayed", revision=1),
+            ingestion_mode="delayed",
+            occurred_at=stamp - 700000,
+            received_at=stamp - 600000,
+            policy_epoch=0,
+        )
+        async with r.database.transaction() as db:
+            await db.execute(
+                "INSERT INTO harness_observations VALUES(?,?,?,?,?,?,?,?,?)",
+                (
+                    str(observation.observation_id),
+                    "local",
+                    ROOM,
+                    "source:delayed",
+                    1,
+                    "pending",
+                    stamp,
+                    0,
+                    observation.model_dump_json(),
+                ),
+            )
+        alerts = await metrics.alert_changes("local")
+        assert len(alerts) == 1 and alerts[0][:2] == ("current_processing_delayed", True)
+        # Crash before publishing/acknowledging the alert is replayable with the same key.
+        assert await metrics.alert_changes("local") == alerts
+        await metrics.acknowledge_alert("local", alerts[0][0], alerts[0][2])
+        assert await metrics.alert_changes("local") == []
+        completed = observation.model_copy(update={"state": "done", "completed_at": stamp})
+        async with r.database.transaction() as db:
+            await db.execute(
+                "UPDATE harness_observations SET state='done',payload=? WHERE observation_id=?",
+                (completed.model_dump_json(), str(observation.observation_id)),
+            )
+        recovered = await metrics.alert_changes("local")
+        assert len(recovered) == 1 and recovered[0][:2] == ("current_processing_delayed", False)
+        await metrics.acknowledge_alert("local", recovered[0][0], recovered[0][2])
+        neighbor = completed.model_copy(
+            update={
+                "observation_id": uuid4(),
+                "evidence": EvidenceRef(kind="knowledge", reference="source:neighbor", revision=1),
+            }
+        )
+        async with r.database.transaction() as db:
+            await db.execute(
+                "INSERT INTO harness_observations VALUES(?,?,?,?,?,?,?,?,?)",
+                (
+                    str(neighbor.observation_id),
+                    "local",
+                    ROOM,
+                    "source:neighbor",
+                    1,
+                    "done",
+                    stamp,
+                    0,
+                    neighbor.model_dump_json(),
+                ),
+            )
+        sample = ModelUsageSample(
+            uuid4(),
+            ModelTrace(
+                "local",
+                observation_id=observation.observation_id,
+                observation_ids=(observation.observation_id, neighbor.observation_id),
+            ),
+            "memory_extraction",
+            "test",
+            120,
+            "completed",
+            LlmUsage(20, 5, 25),
+            False,
+            stamp,
+        )
+        await metrics.record_usage(sample)
+        await metrics.record_usage(sample)  # Same invocation receipt cannot double the owner cost.
+        from datetime import UTC, datetime
+
+        work = WorkItem(
+            work_item_id="work:cost",
+            owner="local",
+            room_id=ROOM,
+            kind="todo",
+            title="用量关联",
+            state="proposed",
+            evidence=[neighbor.evidence],
+            updated_at=datetime.now(UTC),
+        )
+        assert await r.harness.repository.save_work(work, 0)
+
+    c.portal.call(exercise)
+    response = c.get("/v1/agent/metrics", params={"session_id": s})
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["schema_version"] == "1.0"
+    assert data["processor"]["running"] is False
+    assert data["latency_seconds"]["completed_current_p95"] == 600
+    assert data["latency_seconds"]["oldest_current_pending"] is None
+    assert data["model_cost"]["reported_total_tokens"] == 25
+    assert data["model_cost"]["invocations"] == 1
+    assert data["source_coverage"]["uncollected_messages"] is None
+    selected = c.get("/v1/agent/metrics", params={"session_id": s, "work_item_id": "work:cost"})
+    assert selected.status_code == 200, selected.text
+    assert selected.json()["model_cost"]["invocations"] == 0
+    assert selected.json()["shared_source_model_cost"]["reported_total_tokens"] == 25
+    assert (
+        c.get("/v1/agent/metrics", params={"session_id": s, "work_item_id": "missing"}).status_code
+        == 404
+    )
+
+    async def make_shared() -> str:
+        participant = await r.sessions.create_participant("测试成员")
+        scene = await r.sessions.create_scene("测试共享", ["local", participant.participant_id])
+        return str((await r.sessions.create_session("default", scene_id=scene.scene_id)).session_id)
+
+    shared = c.portal.call(make_shared)
+    assert c.get("/v1/agent/metrics", params={"session_id": shared}).status_code == 403

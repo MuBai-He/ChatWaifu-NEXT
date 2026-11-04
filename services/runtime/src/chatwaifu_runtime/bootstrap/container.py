@@ -113,6 +113,7 @@ from chatwaifu_runtime.persistence.sqlite_agent_behavior import SQLiteBehaviorRe
 from chatwaifu_runtime.persistence.sqlite_agent_development import SQLiteDevelopmentRepository
 from chatwaifu_runtime.persistence.sqlite_agent_tasks import SQLiteAgentTaskRepository
 from chatwaifu_runtime.persistence.sqlite_assistant_tasks import SQLiteTaskRepository
+from chatwaifu_runtime.persistence.sqlite_calendar_push import SQLiteCalendarPushRepository
 from chatwaifu_runtime.persistence.sqlite_channel_groups import SQLiteChannelGroupRepository
 from chatwaifu_runtime.persistence.sqlite_channel_proactive import SQLiteChannelProactiveRepository
 from chatwaifu_runtime.persistence.sqlite_channel_settings import SQLiteChannelSettingsRepository
@@ -122,6 +123,7 @@ from chatwaifu_runtime.persistence.sqlite_external_channels import (
     SQLiteExternalChannelRepository,
 )
 from chatwaifu_runtime.persistence.sqlite_harness import SQLiteHarnessRepository
+from chatwaifu_runtime.persistence.sqlite_harness_metrics import SQLiteHarnessMetricsRepository
 from chatwaifu_runtime.persistence.sqlite_interaction_diagnostics import (
     SQLiteInteractionDiagnosticsReader,
 )
@@ -140,6 +142,7 @@ from chatwaifu_runtime.personal_assistant.agenda_skill import (
     AgendaManageSkill,
     GoogleTasksReadSkill,
 )
+from chatwaifu_runtime.personal_assistant.calendar_push import CalendarPushService
 from chatwaifu_runtime.personal_assistant.google_calendar import CalendarEvent
 from chatwaifu_runtime.personal_assistant.integration import PersonalAssistantIntegration
 from chatwaifu_runtime.personal_assistant.organizer_skill import OrganizerSkill
@@ -553,6 +556,8 @@ class RuntimeContainer:
         cast(
             SQLiteHarnessRepository, self.harness.repository
         ).on_record = self.harness.activity_changed.set
+        self.harness.metrics = SQLiteHarnessMetricsRepository(self.database)
+        self.model_configurations.usage_observer = self.harness.metrics.record_usage
         self.harness.context_epoch = lambda: self.memory.knowledge_epoch
         self.harness.context_changed = self._harness_context_changed
         self.memory.knowledge_forget = self.forget_external_memory
@@ -570,7 +575,19 @@ class RuntimeContainer:
         self.agent_tasks.operation_validator = self.harness.validate_operation
         self.agent_tasks.operation_preparer = self.harness.prepare_operation
         self.agent_tasks.completion_validator = self.harness.validate_completion
-        calendar_observer = CalendarObserver(self.harness, self.personal_assistant)
+        self.calendar_push = (
+            CalendarPushService(
+                self.personal_assistant.accounts,
+                SQLiteCalendarPushRepository(self.database),
+                settings.personal_assistant.google_oauth_https_origin,
+                self.harness.notify_external_change,
+            )
+            if self.personal_assistant.accounts is not None
+            else None
+        )
+        calendar_observer = CalendarObserver(
+            self.harness, self.personal_assistant, self.calendar_push
+        )
         self.harness.external_reconciler = calendar_observer.reconcile
         if self.personal_assistant.accounts is not None:
             self.personal_assistant.accounts.on_synced = calendar_observer.synced
@@ -1657,7 +1674,10 @@ class RuntimeContainer:
                 _raise_lifecycle_group("Runtime shutdown failed", None, errors)
 
     def _shutdown_steps(self) -> list[_CleanupStep]:
-        steps = [
+        steps: list[_CleanupStep] = []
+        if self.calendar_push is not None:
+            steps.append(_CleanupStep("calendar_push", self.calendar_push.close))
+        steps += [
             _CleanupStep("personal_assistant", lambda: self.personal_assistant.close()),
             _CleanupStep("ambient", lambda: self.ambient.stop()),
             _CleanupStep("agent_harness", lambda: self.harness.stop()),
