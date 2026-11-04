@@ -119,6 +119,8 @@ class AgentHarnessService:
         self.activity_waiters = asyncio.Semaphore(8)
         self._reconcile_lock = asyncio.Lock()
         self._command_lock = asyncio.Lock()
+        self._temporal_lock = asyncio.Lock()
+        self._temporal_checked: dict[str, datetime] = {}
         self._owners: dict[str, UUID] = {}
         self._last_reconcile = datetime.min.replace(tzinfo=UTC)
 
@@ -595,6 +597,20 @@ class AgentHarnessService:
         if task.authorization.intent_id is not None and intent is None:
             raise PermissionError("intent_not_current")
         action = arguments.get("action")
+        if (
+            task.authorization.intent_id is not None
+            and task.work_item_id
+            and arguments.get("kind") in {"calendar", "reminder"}
+            and action in {"create", "update"}
+        ):
+            await self.refresh_temporal_work(task.scope, force=True)
+            work = await self.repository.work_item(task.work_item_id)
+            if (
+                work is not None
+                and work.acceptance == "pending"
+                and work.temporal_status != "current"
+            ):
+                raise PermissionError("unconfirmed_work_expired")
         if isinstance(arguments.get("kind"), str) and arguments.get("kind") in {
             "calendar",
             "reminder",
@@ -3228,7 +3244,62 @@ class AgentHarnessService:
                     dedup_key="owner-review:" + str(decision.operation_id),
                 )
 
+    async def refresh_temporal_work(
+        self, owner: str, *, now: datetime | None = None, force: bool = False
+    ) -> None:
+        evaluated_at = now or datetime.now(UTC)
+        async with self._temporal_lock:
+            previous = self._temporal_checked.get(owner)
+            if (
+                not force
+                and previous is not None
+                and timedelta(0) <= evaluated_at - previous < timedelta(seconds=30)
+            ):
+                return
+            cursor = 0
+            while True:
+                rows = await self.repository.temporal_work(owner, cursor)
+                if not rows:
+                    break
+                for _row, item, source_time in rows:
+                    status, reason = assess_work_relevance(
+                        item.kind,
+                        item.operation,
+                        [source_time],
+                        item.timezone,
+                        evaluated_at,
+                        due_at=item.due_at,
+                        starts_at=item.starts_at,
+                        ends_at=item.ends_at,
+                        due_date=item.due_date,
+                        start_date=item.start_date,
+                        end_date=item.end_date,
+                    )
+                    if item.temporal_status == status and item.temporal_reason == reason:
+                        continue
+                    changed = item.model_copy(
+                        update={
+                            "temporal_status": status,
+                            "temporal_reason": reason,
+                            "revision": item.revision + 1,
+                            "updated_at": evaluated_at,
+                        }
+                    )
+                    if await self.repository.save_work(changed, item.revision):
+                        await self.repository.record(
+                            owner,
+                            "review.temporal",
+                            item.work_item_id,
+                            status,
+                            "待确认事项的时效已更新，保留原文与核对状态。",
+                            item.evidence,
+                            details={"previous": item.temporal_status, "current": status},
+                        )
+                cursor = rows[-1][0]
+            self._temporal_checked[owner] = evaluated_at
+
     async def _reconcile(self) -> None:
+        await self.refresh_temporal_work("local")
         for failed in await self.repository.failed_observations("local"):
             if await self.eligible(failed.owner, [failed.evidence]):
                 await self.repository.record(

@@ -885,6 +885,10 @@ public final class OrganizerStore {
   }
 
   public JSONArray suggestionsForSource(JSONObject source) throws Exception {
+    return suggestionsForSource(source,System.currentTimeMillis());
+  }
+
+  public JSONArray suggestionsForSource(JSONObject source,long now) throws Exception {
     if (new ConversationPolicy(store).excluded(source)) return new JSONArray();
     if (sourceProgress(source).getString("state").equals("changed")) return new JSONArray();
     String base = MemoryStore.reference(source), revision = null;
@@ -896,7 +900,7 @@ public final class OrganizerStore {
       if (c.moveToFirst()) revision = c.getString(0);
     }
     JSONArray result = new JSONArray();
-    JSONArray pending = store.suggestions();
+    JSONArray pending = store.suggestions(now);
     for (int i = 0; i < pending.length(); i++) {
       JSONObject item = pending.getJSONObject(i);
       JSONArray evidence = item.optJSONArray("source_refs");

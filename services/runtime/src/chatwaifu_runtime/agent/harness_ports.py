@@ -16,6 +16,9 @@ from chatwaifu_protocol.harness import (
 
 
 class HarnessRepository(Protocol):
+    async def temporal_work(
+        self, owner: str, after: int = 0
+    ) -> list[tuple[int, WorkItem, int]]: ...
     async def activity_by_ids(self, owner: str, identifiers: list[int]) -> list[ActivityEntry]: ...
     async def failed_observations(self, owner: str) -> list[Observation]: ...
     async def review_observation(

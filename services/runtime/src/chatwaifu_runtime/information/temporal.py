@@ -12,7 +12,7 @@ TEMPORAL_PROMPT = (
     "消息中的相对日期始终以各自 message_local_time/message_time_ms 为准。"
     "历史上有人提出任务，不等于现在仍未完成。已过去的日程、旧的临时请求与"
     "没有近期证据的历史承诺，保留当时事实及不确定性，不宣称现在仍待执行。"
-    "明确未来安排可以保留;已确认的逾期待办不能被推断为完成或取消。"
+    "未确认且截止时间已过的待办移至历史核对。明确未来安排可以保留;已确认的逾期待办不能被推断为完成或取消。"
 )
 
 
@@ -41,7 +41,7 @@ def assess_work_relevance(
     if latest <= 0 or latest > int((now + timedelta(minutes=5)).timestamp() * 1000):
         return "uncertain", "原文时间缺失或异常，需要核对是否仍需处理。"
     recent = latest >= int((now - timedelta(days=RECENT_EVIDENCE_DAYS)).timestamp() * 1000)
-    if recent and operation != "create":
+    if recent and operation in {"complete", "cancel"}:
         return "current", ""
     today = now.astimezone(ZoneInfo(timezone)).date()
     if kind == "event":
@@ -58,8 +58,11 @@ def assess_work_relevance(
         )
         if past:
             return "historical", "日程时间已过去，保留历史记录，不推断现在仍需执行。"
+    if kind == "todo" and (
+        (due_at is not None and due_at <= now) or (due_date is not None and due_date < today)
+    ):
+        return "historical", "未确认待办已超过截止时间，移至历史核对是否仍需处理。"
     if recent:
-        # A recently mentioned overdue todo may still need doing.
         return "current", ""
     future = (
         any(value is not None and value >= now for value in (due_at, starts_at, ends_at))

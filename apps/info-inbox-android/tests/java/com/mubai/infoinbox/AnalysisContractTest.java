@@ -79,7 +79,7 @@ public class AnalysisContractTest {
   }
 
   @Test
-  public void oldCommitmentsNeedReviewButFuturePlansAndRecentOverdueWorkSurvive() throws Exception {
+  public void oldCommitmentsNeedReviewAndOnlyUnconfirmedExpiredWorkMovesToHistory() throws Exception {
     long now = java.time.Instant.parse("2026-11-01T01:00:00Z").toEpochMilli();
     JSONObject item = proposal().put("source", source().put("created_at", 1717570800000L));
     assertEquals("uncertain", ProposalRelevance.assess(item, now));
@@ -91,11 +91,30 @@ public class AnalysisContractTest {
     item.remove("due_date");
     item.put("due_at", "2026-10-29T17:00:00+08:00");
     item.getJSONObject("source").put("created_at", now - 86400000L);
-    assertEquals("current", ProposalRelevance.assess(item, now));
+    assertEquals("historical", ProposalRelevance.assess(item, now));
     item.put("kind", "event").put("starts_at", "2026-10-30T09:00:00+08:00");
+    assertEquals("historical", ProposalRelevance.assess(item, now));
+    item.put("operation", "update");
     assertEquals("historical", ProposalRelevance.assess(item, now));
     item.put("operation", "cancel");
     assertEquals("current", ProposalRelevance.assess(item, now));
+  }
+
+  @Test
+  public void unconfirmedDateOnlyDeadlineExpiresAtItsLocalMidnight() throws Exception {
+    long before=java.time.Instant.parse("2026-11-03T15:59:00Z").toEpochMilli();
+    long midnight=java.time.Instant.parse("2026-11-03T16:00:00Z").toEpochMilli();
+    JSONObject item=proposal().put("timezone","Asia/Shanghai").put("due_date","2026-11-03")
+        .put("source",source().put("created_at",before));
+    ProposalRelevance.annotate(item,before);
+    assertEquals("current",item.getString("temporal_status"));
+    assertEquals(midnight,ProposalRelevance.nextAssessmentAt(item,before));
+    ProposalRelevance.annotate(item,midnight);
+    assertEquals("historical",item.getString("temporal_status"));
+    assertEquals(before,item.getJSONObject("source").getLong("created_at"));
+    item.put("kind","memory");ProposalRelevance.annotate(item,midnight);
+    assertEquals("current",item.getString("temporal_status"));
+    assertEquals(Long.MAX_VALUE,ProposalRelevance.nextAssessmentAt(item,midnight));
   }
 
   @Test

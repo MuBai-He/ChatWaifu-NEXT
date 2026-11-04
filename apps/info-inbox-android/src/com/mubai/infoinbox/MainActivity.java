@@ -61,6 +61,7 @@ public final class MainActivity extends Activity {
     JSONObject stats, progress;
     AiReviewSelection.Page selection;
     String fingerprint, progressLabel;
+    long temporalCheckedAt,temporalRefreshAt;
     int page;
     java.util.Map<String, AiInboxData> sectionPages;
   }
@@ -148,7 +149,14 @@ public final class MainActivity extends Activity {
     KnowledgeJob.enqueue(this);
     RuntimeMessageService.ensureStarted(this);
     resumed = true;
+    if(aiPageVisible&&!busy&&hasWindowFocus())refreshAiSuggestions();
     main.postDelayed(pulse, 15000);
+  }
+
+  @Override
+  public void onWindowFocusChanged(boolean focused) {
+    super.onWindowFocusChanged(focused);
+    if(focused&&resumed&&aiPageVisible&&!busy)refreshAiSuggestions();
   }
 
   @Override
@@ -1731,11 +1739,13 @@ public final class MainActivity extends Activity {
     renderAiInbox(sourceFilter, false);
   }
 
-  private AiInboxData readAiInboxSnapshot(JSONObject source) throws Exception {
+  private AiInboxData readAiInboxSnapshot(JSONObject source,long now) throws Exception {
     OrganizerStore store = new OrganizerStore(memories);
     AiInboxData data = new AiInboxData();
     data.stats = store.queueStats();
-    data.all = source == null ? memories.suggestions() : store.suggestionsForSource(source);
+    data.all = source == null ? memories.suggestions(now) : store.suggestionsForSource(source,now);
+    data.temporalCheckedAt=now;data.temporalRefreshAt=Long.MAX_VALUE;
+    for(int i=0;i<data.all.length();i++)data.temporalRefreshAt=Math.min(data.temporalRefreshAt,ProposalRelevance.nextAssessmentAt(data.all.getJSONObject(i),now));
     data.progress = source == null ? new JSONObject() : store.sourceProgress(source);
     data.progressLabel =
         source == null
@@ -1760,6 +1770,7 @@ public final class MainActivity extends Activity {
     data.progress = snapshot.progress;
     data.progressLabel = snapshot.progressLabel;
     data.fingerprint = snapshot.fingerprint;
+    data.temporalCheckedAt=snapshot.temporalCheckedAt;data.temporalRefreshAt=snapshot.temporalRefreshAt;
     data.items = AiSuggestionTypes.filter(data.all, section);
     data.page = Math.min(page, Math.max(0, (data.items.length() - 1) / AiReviewSelection.PAGE_SIZE));
     data.visible = new JSONArray();
@@ -1771,7 +1782,11 @@ public final class MainActivity extends Activity {
   }
 
   private AiInboxData loadAiInboxData(JSONObject source, String section, int page) throws Exception {
-    AiInboxData snapshot = readAiInboxSnapshot(source);
+    return loadAiInboxData(source,section,page,System.currentTimeMillis());
+  }
+
+  private AiInboxData loadAiInboxData(JSONObject source,String section,int page,long now) throws Exception {
+    AiInboxData snapshot = readAiInboxSnapshot(source,now);
     java.util.Map<String, AiInboxData> firstPages = new java.util.LinkedHashMap<>();
     for (String name : AiSuggestionTypes.SECTIONS)
       firstPages.put(name, prepareAiPage(snapshot, name, 0));
@@ -2134,16 +2149,23 @@ public final class MainActivity extends Activity {
   }
 
   private void refreshAiSuggestions() {
-    if (aiMultiSelectMode || aiLoading || aiPolling) return;
-    aiPolling = true;
+    refreshAiSuggestions(System.currentTimeMillis());
+  }
+
+  private void refreshAiSuggestions(long now) {
+    if (aiLoading || aiPolling) return;
     final int token = generation, page = aiPageIndex;
     final String section = aiSection;
     final JSONObject source = aiSourceFilter;
+    AiInboxData shown=aiSectionPages.get(section);
+    final boolean renewTemporal=shown!=null&&(now>=shown.temporalRefreshAt||now<shown.temporalCheckedAt);
+    if(aiMultiSelectMode&&!renewTemporal)return;
+    aiPolling=true;
     worker.execute(
         () -> {
           AiInboxData data = null;
           try {
-            data = readAiInboxSnapshot(source);
+            data = renewTemporal?loadAiInboxData(source,section,page,now):readAiInboxSnapshot(source,now);
           } catch (Exception ignored) {
           }
           final AiInboxData result = data;
@@ -2152,11 +2174,17 @@ public final class MainActivity extends Activity {
                 aiPolling = false;
                 if (token != generation
                     || !aiPageVisible
-                    || aiMultiSelectMode
+                    || (aiMultiSelectMode&&!renewTemporal)
                     || aiLoading
                     || isFinishing()
                     || isDestroyed()
                     || result == null) return;
+                if(renewTemporal) {
+                  ScrollView scroll=(ScrollView)body.getParent();int y=scroll.getScrollY();
+                  drawAiInbox(source,true,result);
+                  scroll.post(()->scroll.scrollTo(0,y));
+                  return;
+                }
                 if (!result.fingerprint.equals(aiPageFingerprint) && !aiUpdateNotice) {
                   aiUpdateNotice = true;
                   if (aiRefreshAction != null) {
@@ -2241,6 +2269,7 @@ public final class MainActivity extends Activity {
     aiPageIndex = 0;
     boolean newerResults = aiUpdateNotice;
     AiInboxData cached = aiSectionPages.get(section);
+    if(cached!=null&&(System.currentTimeMillis()>=cached.temporalRefreshAt||System.currentTimeMillis()<cached.temporalCheckedAt))cached=null;
     if (cached != null) drawAiInbox(aiSourceFilter, false, cached);
     else renderAiInbox(aiSourceFilter, false);
     if (cached != null && newerResults && aiRefreshAction != null) {
@@ -2276,6 +2305,7 @@ public final class MainActivity extends Activity {
       aiBulkCount = null;
       aiBulkAll = aiBulkIgnore = aiBulkSave = aiBulkCancel = null;
     }
+    if(!aiMultiSelectMode)refreshAiSuggestions();
   }
 
   private void redrawAiSelection() {

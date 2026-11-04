@@ -561,6 +561,101 @@ def test_cancelled_understanding_releases_lease_without_spending_retry_budget(
     assert c.portal.call(r.harness.repository.failed_observations, "local") == []
 
 
+def test_unconfirmed_work_ages_without_a_new_message_and_confirmed_overdue_is_preserved(
+    harness: tuple[TestClient, RuntimeContainer, str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from datetime import UTC, date, datetime, timedelta
+
+    from chatwaifu_protocol.harness import EvidenceRef, WorkItem
+
+    c, r, session, device = harness
+    assert c.portal is not None
+    before = datetime(2026, 11, 3, 15, 59, tzinfo=UTC)
+    original = source("source:time-boundary", text="今天提交合成资料")
+    original["record"]["occurred_at"] = int(before.timestamp() * 1000)
+    assert push(c, session, device, original).status_code == 200
+    work = WorkItem(
+        work_item_id="work:unconfirmed-deadline",
+        room_id=ROOM,
+        kind="todo",
+        title="今日截止的未确认事项",
+        details="保留原有总结",
+        state="proposed",
+        due_date=date(2026, 11, 3),
+        updated_at=before,
+        evidence=[EvidenceRef(kind="knowledge", reference="source:time-boundary", revision=1)],
+    )
+    waiting = work.model_copy(
+        update={"work_item_id": "work:unconfirmed-waiting", "state": "waiting"}
+    )
+    confirmed = work.model_copy(
+        update={"work_item_id": "work:confirmed-overdue", "state": "open", "acceptance": "human"}
+    )
+    future = work.model_copy(
+        update={"work_item_id": "work:future-arrangement", "due_date": date(2026, 11, 10)}
+    )
+    memory = work.model_copy(
+        update={"work_item_id": "work:stable-memory", "kind": "memory", "due_date": None}
+    )
+    for item in [work, waiting, confirmed, future, memory]:
+        assert c.portal.call(r.harness.repository.save_work, item, 0)
+
+    async def no_model(*args: Any, **kwargs: Any) -> str:
+        raise AssertionError("clock changes must not invoke a model")
+
+    monkeypatch.setattr(r.model_configurations, "complete", no_model)
+    from functools import partial
+
+    c.portal.call(partial(r.harness.refresh_temporal_work, "local", now=before, force=True))
+    initial = c.portal.call(r.harness.repository.work_item, work.work_item_id)
+    assert initial is not None and initial.temporal_status == "current"
+    from chatwaifu_runtime.agent import harness as harness_module
+
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz: Any = None) -> datetime:
+            value = before + timedelta(minutes=2)
+            return value if tz is None else value.astimezone(tz)
+
+    monkeypatch.setattr(harness_module, "datetime", Clock)
+    page = c.get("/v1/personal-assistant/work-items", params={"session_id": session})
+    assert page.status_code == 200, page.text
+    assert (
+        next(item for item in page.json()["items"] if item["work_item_id"] == work.work_item_id)[
+            "temporal_status"
+        ]
+        == "historical"
+    )
+    expired = c.portal.call(r.harness.repository.work_item, work.work_item_id)
+    assert expired is not None and expired.temporal_status == "historical"
+    assert (
+        expired.state == "proposed"
+        and expired.acceptance == "pending"
+        and expired.details == "保留原有总结"
+    )
+    pending_wait = c.portal.call(r.harness.repository.work_item, waiting.work_item_id)
+    assert (
+        pending_wait is not None
+        and pending_wait.temporal_status == "historical"
+        and pending_wait.state == "waiting"
+    )
+    revision = expired.revision
+    c.portal.call(
+        partial(
+            r.harness.refresh_temporal_work, "local", now=before + timedelta(minutes=4), force=True
+        )
+    )
+    unchanged = c.portal.call(r.harness.repository.work_item, work.work_item_id)
+    assert unchanged is not None and unchanged.revision == revision
+    for item in [confirmed, future, memory]:
+        saved = c.portal.call(r.harness.repository.work_item, item.work_item_id)
+        assert (
+            saved is not None and saved.temporal_status == "current" and saved.state == item.state
+        )
+        assert saved.revision == item.revision
+
+
 def test_default_reminders_preserve_explicit_choice_and_do_not_guess_date_only_times(
     harness: tuple[TestClient, RuntimeContainer, str, str],
 ) -> None:

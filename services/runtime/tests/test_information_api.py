@@ -97,7 +97,7 @@ def test_status_has_no_provider_credentials(information_client: InformationClien
         (800, {"due_at": "2024-06-05T17:00:00+08:00"}, "historical"),
         (800, {}, "uncertain"),
         (800, {"due_date": "2026-11-10"}, "current"),
-        (1, {"due_at": "2026-10-29T17:00:00+08:00"}, "current"),
+        (1, {"due_at": "2026-10-29T17:00:00+08:00"}, "historical"),
         (800, {"kind": "memory"}, "current"),
         (1, {"kind": "event", "starts_at": "2026-10-30T09:00:00+08:00"}, "historical"),
         (1, {"kind": "event", "starts_at": "2026-11-02T09:00:00+08:00"}, "current"),
