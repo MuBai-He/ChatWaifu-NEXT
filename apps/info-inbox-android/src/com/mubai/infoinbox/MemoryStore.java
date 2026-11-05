@@ -211,24 +211,55 @@ public final class MemoryStore implements AutoCloseable {
                     + " BY updated_at DESC",
                 null)) {
       while (c.moveToNext()) {
-        JSONObject item = new JSONObject();
-        item.put("ref", c.getString(0));
-        item.put("title", c.getString(1));
-        item.put("kind", c.getString(2));
-        item.put("quote", c.getString(3));
-        JSONObject source = new JSONObject(c.getString(4));
-        if (source.has("_knowledge_id")) source.put("_information_summary", c.getString(3));
-        item.put("source", source);
-        item.put(
-            "summary",
-            source.has("_information_summary") || !source.has("content") ? c.getString(3) : "");
-        item.put("verification_state", "user_confirmed");
-        item.put("created_at", c.getLong(5));
-        item.put("updated_at", c.getLong(6));
-        result.put(item);
+        result.put(memoryRow(c));
       }
     }
     return result;
+  }
+
+  private static JSONObject memoryRow(Cursor c) throws Exception {
+    JSONObject item = new JSONObject();
+    item.put("ref", c.getString(0));
+    item.put("title", c.getString(1));
+    item.put("kind", c.getString(2));
+    item.put("quote", c.getString(3));
+    JSONObject source = new JSONObject(c.getString(4));
+    if (source.has("_knowledge_id")) source.put("_information_summary", c.getString(3));
+    item.put("source", source);
+    item.put(
+        "summary",
+        source.has("_information_summary") || !source.has("content") ? c.getString(3) : "");
+    item.put("verification_state", "user_confirmed");
+    item.put("created_at", c.getLong(5));
+    item.put("updated_at", c.getLong(6));
+    return item;
+  }
+
+  public JSONObject memoryPage(String search, String kind, int page, int size) throws Exception {
+    size = Math.max(1, Math.min(50, size));
+    String where = "1=1";
+    java.util.List<String> args = new java.util.ArrayList<>();
+    if (!kind.equals("全部")) { where += " AND kind=?"; args.add(kind); }
+    String query = search.trim();
+    if (!query.isEmpty()) {
+      where += " AND (instr(lower(title),?)>0 OR instr(lower(quote),?)>0 OR instr(lower(source_json),?)>0)";
+      String needle = query.toLowerCase(java.util.Locale.ROOT);
+      for (int i = 0; i < 3; i++) args.add(needle);
+    }
+    String[] bindings = args.toArray(new String[0]);
+    SQLiteDatabase db = getReadableDatabase();
+    int total;
+    try (Cursor c = db.rawQuery("SELECT count(*) FROM memories WHERE " + where, bindings)) {
+      c.moveToFirst(); total = c.getInt(0);
+    }
+    page = Math.max(0, Math.min(page, Math.max(0, (total - 1) / size)));
+    JSONArray items = new JSONArray();
+    try (Cursor c = db.rawQuery(
+        "SELECT ref,title,kind,quote,source_json,created_at,updated_at FROM memories WHERE "
+            + where + " ORDER BY updated_at DESC,ref LIMIT " + size + " OFFSET " + (page * size), bindings)) {
+      while (c.moveToNext()) items.put(memoryRow(c));
+    }
+    return new JSONObject().put("items", items).put("total", total).put("page", page);
   }
 
   public void remove(String ref) {

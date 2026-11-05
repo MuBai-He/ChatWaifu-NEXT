@@ -1166,6 +1166,14 @@ unified_owner_agent_harness:
     behavior: "Persist native outbox separately from network reads, return command acceptance before task admission, retain pending work on capacity and original authorization expiry"
     local_checks: "62 backend and 2 targeted recovery, 116 Android; owner Release/lint pass; 622 Python files with zero type errors"
     production: "Full Runtime and source handoff remain pending; device installation and controlled checks pass, real channel/provider acceptance remains open"
+  native_interaction_latency:
+    date: "2026-11-05"
+    status: source_and_device_validated
+    android: "0.6.8 / code 29 / schema 8; owner Release installed on Xiaomi 14 Pro / Android 17"
+    behavior: "Background memory pagination and local review reads; independent confirmation saves; lazy paged evidence; work items shown before statistics"
+    validation: "118 Android tests; Release/lint pass; same-device 295-memory snapshot synchronous UI median 533 to 24 ms, evidence views 142 to 9"
+    preservation: "295 memories, 21 work items, 1098 reviews unchanged; 23 of 25 tables exact, 2 operational tables recover interrupted analysis; 324 of 325 files exact, collector status alone changed"
+    limits: "Timing uses isolated read-only snapshot; whole-dialog 48 to 45 ms, no blanket latency claim; production Runtime deployment remains separate"
   unconfirmed_review_expiry:
     date: "2026-11-04"
     status: source_and_local_checks_only

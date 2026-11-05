@@ -87,15 +87,22 @@ public final class NativeUi {
   }
 
   public static LinearLayout disclosure(Context context, LinearLayout parent, String label) {
+    return disclosure(context, parent, label, details -> {});
+  }
+
+  private static LinearLayout disclosure(Context context, LinearLayout parent, String label,
+      java.util.function.Consumer<LinearLayout> initialize) {
     LinearLayout details = column(context);
+    boolean[] loaded = {false};
     details.setVisibility(View.GONE);
     Button toggle =
         button(
             context,
             label,
-            () ->
-                details.setVisibility(
-                    details.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE),
+            () -> {
+              if (!loaded[0]) { initialize.accept(details); loaded[0] = true; }
+              details.setVisibility(details.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
+            },
             false);
     toggle.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
     toggle.setBackground(shape(context, 0x00000000, 12));
@@ -111,19 +118,14 @@ public final class NativeUi {
     parent.addView(text(context, "来源与对话上下文", 14, 0xFF6152A5, true));
     JSONArray background = source.optJSONArray("_prior_knowledge");
     if (background != null && background.length() > 0) {
-      LinearLayout prior = disclosure(context, parent, "整理时参考的历史背景（" + background.length() + "）");
-      for (int i = 0; i < background.length(); i++) {
-        JSONObject item = background.getJSONObject(i);
-        prior.addView(
-            text(
-                context,
-                (item.optString("state").equals("confirmed") ? "已确认记忆" : "待核对历史摘要")
-                    + " · "
-                    + item.optString("summary"),
-                13,
-                0xFF6B6A7F,
-                false));
-      }
+      disclosure(context, parent, "整理时参考的历史背景（" + background.length() + "）", prior -> {
+        for (int i = 0; i < background.length(); i++) {
+          JSONObject item = background.optJSONObject(i);
+          if (item != null) addLongQuote(context, prior,
+              (item.optString("state").equals("confirmed") ? "已确认记忆" : "待核对历史摘要")
+                  + " · " + item.optString("summary"));
+        }
+      });
     }
     JSONArray localEvidence = source.optJSONArray("evidence");
     boolean hasText = !source.optString("content").isEmpty();
@@ -163,18 +165,29 @@ public final class NativeUi {
     TextView preview =
         text(
             context,
-            excerpt.length() > 0 ? excerpt.toString() : MessagePresentation.body(source),
+            excerpt(excerpt.length() > 0 ? excerpt.toString() : MessagePresentation.body(source)),
             14,
             0xFF242338,
             false);
     preview.setMaxLines(3);
     preview.setEllipsize(android.text.TextUtils.TruncateAt.END);
     parent.addView(preview);
-    LinearLayout details = disclosure(context, parent, "展开完整原文");
     JSONArray evidence = source.optJSONArray("evidence");
-    if (evidence == null) evidence = new JSONArray().put(source);
-    for (int i = 0; i < evidence.length(); i++) {
-      JSONObject part = evidence.getJSONObject(i);
+    final JSONArray parts = evidence == null ? new JSONArray().put(source) : evidence;
+    disclosure(context, parent, "展开完整原文", details -> sourcePage(context, details, parts, 0));
+  }
+
+  static String excerpt(String value) {
+    if (value.length() <= 600) return value;
+    int end = Character.isHighSurrogate(value.charAt(599)) ? 599 : 600;
+    return value.substring(0, end) + "…";
+  }
+
+  private static void sourcePage(Context context, LinearLayout details, JSONArray evidence, int offset) {
+    details.removeAllViews();
+    for (int i = offset; i < Math.min(offset + 5, evidence.length()); i++) {
+      JSONObject part = evidence.optJSONObject(i);
+      if (part == null) continue;
       if (part.has("_supporting_evidence"))
         details.addView(
             text(
@@ -204,18 +217,34 @@ public final class NativeUi {
         details.addView(
             text(context, "分段前文：" + part.optString("_segment_prefix"), 12, 0xFF6B6A7F, false));
       String body = MessagePresentation.body(part);
-      TextView quote =
-          text(
-              context,
-              body.isEmpty() && part.optBoolean("_historical_knowledge")
-                  ? "历史背景的原文请在个人资料页核对引用版本。"
-                  : body,
-              15,
-              0xFF242338,
-              false);
-      quote.setTextIsSelectable(true);
-      details.addView(quote);
+      addLongQuote(context, details, body.isEmpty() && part.optBoolean("_historical_knowledge")
+          ? "历史背景的原文请在个人资料页核对引用版本。" : body);
     }
+    if (evidence.length() > 5) {
+      details.addView(text(context, "原文 " + (offset + 1) + "–"
+          + Math.min(offset + 5, evidence.length()) + " / " + evidence.length(), 12, 0xFF6B6A7F, false));
+      Button previous = button(context, "上一组原文", () -> sourcePage(context, details, evidence, offset - 5), false);
+      Button next = button(context, "下一组原文", () -> sourcePage(context, details, evidence, offset + 5), false);
+      previous.setEnabled(offset > 0); next.setEnabled(offset + 5 < evidence.length());
+      actions(context, details, previous, next);
+    }
+  }
+
+  private static void addLongQuote(Context context, LinearLayout parent, String value) {
+    int[] offset = {0};
+    Button more = button(context, "继续展开这段原文", () -> {}, false);
+    Runnable append = () -> {
+      int end = Math.min(value.length(), offset[0] + 4000);
+      if (end < value.length() && Character.isHighSurrogate(value.charAt(end - 1))) end--;
+      TextView quote = text(context, value.substring(offset[0], end), 15, 0xFF242338, false);
+      quote.setTextIsSelectable(true);
+      parent.addView(quote, parent.indexOfChild(more));
+      offset[0] = end;
+      more.setVisibility(end == value.length() ? View.GONE : View.VISIBLE);
+    };
+    more.setOnClickListener(v -> append.run());
+    parent.addView(more);
+    append.run();
   }
 
   public static Runnable freeze(View view) {

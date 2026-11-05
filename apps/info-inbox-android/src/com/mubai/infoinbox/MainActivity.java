@@ -50,7 +50,9 @@ public final class MainActivity extends Activity {
   private Runnable redrawRooms, refreshRooms;
   private boolean aiPageVisible = false;
   private String memorySearch = "", memoryKind = "全部";
-  private int memoryScrollY = 0;
+  private int memoryScrollY = 0, memoryPageIndex = 0;
+  private volatile int memoryReadSequence = 0;
+  private final ExecutorService memoryReads = Executors.newSingleThreadExecutor();
   private boolean aiUpdateNotice = false;
   private Button aiRefreshAction, aiMultiSelectAction;
   private boolean aiLoading = false, aiPolling = false, aiChangingChecks = false;
@@ -173,6 +175,7 @@ public final class MainActivity extends Activity {
     main.removeCallbacksAndMessages(null);
     worker.shutdownNow();
     confirmations.shutdown();
+    memoryReads.shutdownNow();
     super.onDestroy();
   }
 
@@ -933,43 +936,53 @@ public final class MainActivity extends Activity {
 
   private void memoryPage() {
     page("记忆与资料", "由你确认，随时回看消息出处");
-    try {
-      JSONArray list = memories.list();
-      LinearLayout filters = card();
-      EditText search = new EditText(this);
-      NativeUi.field(search);
-      search.setSingleLine(true);
-      search.setHint("搜索标题、原文或会话");
-      search.setContentDescription("搜索确认资料");
-      search.setText(memorySearch);
-      filters.addView(search);
-      Spinner kinds = new Spinner(this);
-      String[] labels = {"全部", "记忆", "决定", "资料"};
-      kinds.setAdapter(
-          new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, labels));
-      for (int i = 0; i < labels.length; i++)
-        if (labels[i].equals(memoryKind)) kinds.setSelection(i);
-      filters.addView(kinds);
-      LinearLayout rows = column();
-      body.addView(rows);
-      Runnable draw =
-          () -> {
-            rows.removeAllViews();
-            int count = 0;
+    final int token = generation;
+    LinearLayout filters = card();
+    EditText search = new EditText(this);
+    NativeUi.field(search);
+    search.setSingleLine(true);
+    search.setHint("搜索标题、原文或会话");
+    search.setContentDescription("搜索确认资料");
+    search.setText(memorySearch);
+    filters.addView(search);
+    Spinner kinds = new Spinner(this);
+    String[] labels = {"全部", "记忆", "决定", "资料"};
+    kinds.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, labels));
+    for (int i = 0; i < labels.length; i++) if (labels[i].equals(memoryKind)) kinds.setSelection(i);
+    filters.addView(kinds);
+    TextView status = text("正在读取资料…", 13, MUTED, false);
+    filters.addView(status);
+    LinearLayout rows = column();
+    body.addView(rows);
+    Runnable[] load = new Runnable[1];
+    Button previous = NativeUi.button(this, "上一页资料", () -> {
+      memoryPageIndex--; memoryScrollY = 0; load[0].run();
+    }, false);
+    Button next = NativeUi.button(this, "下一页资料", () -> {
+      memoryPageIndex++; memoryScrollY = 0; load[0].run();
+    }, false);
+    Button retry = NativeUi.button(this, "重试读取资料", () -> load[0].run(), false);
+    retry.setVisibility(View.GONE);
+    NativeUi.actions(this, body, previous, next, retry);
+    load[0] = () -> {
+      if (token != generation || isFinishing() || isDestroyed()) return;
+      final int request = ++memoryReadSequence, requestedPage = memoryPageIndex;
+      final String query = memorySearch, kind = memoryKind;
+      previous.setEnabled(false); next.setEnabled(false); retry.setVisibility(View.GONE);
+      status.setText("正在读取资料…");
+      memoryReads.execute(() -> {
+        if (request != memoryReadSequence) return;
+        try (MemoryStore reader = new MemoryStore(this)) {
+          JSONObject data = reader.memoryPage(query, kind, requestedPage, 30);
+          main.post(() -> {
+            if (token != generation || request != memoryReadSequence || isFinishing() || isDestroyed()) return;
             try {
-              String query = memorySearch.trim().toLowerCase(java.util.Locale.ROOT);
-              for (int i = 0; i < list.length(); i++) {
-                JSONObject item = list.getJSONObject(i), source = item.getJSONObject("source");
-                String content =
-                    item.optString("title")
-                        + " "
-                        + item.optString("quote")
-                        + " "
-                        + MessagePresentation.conversationTitle(source);
-                if (!content.toLowerCase(java.util.Locale.ROOT).contains(query)
-                    || (!memoryKind.equals("全部") && !memoryKind.equals(item.optString("kind"))))
-                  continue;
-                count++;
+              JSONArray items = data.getJSONArray("items");
+              int total = data.getInt("total");
+              memoryPageIndex = data.getInt("page");
+              rows.removeAllViews();
+              for (int i = 0; i < items.length(); i++) {
+                JSONObject item = items.getJSONObject(i), source = item.getJSONObject("source");
                 LinearLayout c = column();
                 c.setPadding(dp(16), dp(12), dp(16), dp(12));
                 c.setBackground(shape(Color.WHITE, 16));
@@ -979,58 +992,53 @@ public final class MainActivity extends Activity {
                 c.addView(text(item.optString("title"), 17, INK, true));
                 c.addView(text(item.optString("kind") + " · 已确认", 12, PURPLE, false));
                 if (!item.optString("summary").isEmpty()) {
-                  TextView summary = text(item.optString("summary"), 14, INK, false);
+                  TextView summary = text(NativeUi.excerpt(item.optString("summary")), 14, INK, false);
                   summary.setMaxLines(2);
                   summary.setEllipsize(android.text.TextUtils.TruncateAt.END);
                   c.addView(summary);
                 }
-                c.addView(
-                    text(
-                        MessagePresentation.conversationTitle(source)
-                            + " · "
-                            + date(source.optLong("created_at")),
-                        12,
-                        MUTED,
-                        false));
+                c.addView(text(MessagePresentation.conversationTitle(source) + " · "
+                    + date(source.optLong("created_at")), 12, MUTED, false));
                 c.setOnClickListener(v -> memoryDialog(item));
               }
-              if (count == 0)
-                rows.addView(
-                    text(
-                        list.length() == 0 ? "确认后的记忆和资料会出现在这里。" : "没有符合条件的资料，请调整搜索或类型。",
-                        15,
-                        MUTED,
-                        false));
-            } catch (Exception error) {
-              toast("读取资料失败，请重试");
+              if (total == 0) rows.addView(text("没有符合条件的资料，请调整搜索或类型。", 15, MUTED, false));
+              status.setText(total + " 条资料 · 第 " + (memoryPageIndex + 1) + "/"
+                  + Math.max(1, (total + 29) / 30) + " 页");
+              previous.setEnabled(memoryPageIndex > 0);
+              next.setEnabled((memoryPageIndex + 1) * 30 < total);
+              ScrollView scroll = (ScrollView) body.getParent();
+              scroll.post(() -> { if (token == generation && request == memoryReadSequence)
+                scroll.scrollTo(0, memoryScrollY); });
+            } catch (Exception failure) {
+              status.setText("读取资料失败，请重试。"); retry.setVisibility(View.VISIBLE);
             }
-          };
-      search.addTextChangedListener(
-          new android.text.TextWatcher() {
-            public void beforeTextChanged(CharSequence value, int start, int count, int after) {}
-
-            public void onTextChanged(CharSequence value, int start, int before, int count) {
-              memorySearch = value.toString();
-              draw.run();
-            }
-
-            public void afterTextChanged(android.text.Editable value) {}
           });
-      kinds.setOnItemSelectedListener(
-          new AdapterView.OnItemSelectedListener() {
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-              memoryKind = labels[position];
-              draw.run();
-            }
-
-            public void onNothingSelected(AdapterView<?> parent) {}
+        } catch (Exception failure) {
+          main.post(() -> {
+            if (token != generation || request != memoryReadSequence || isFinishing() || isDestroyed()) return;
+            status.setText("读取资料失败，请重试。"); retry.setVisibility(View.VISIBLE);
           });
-      draw.run();
-      ScrollView scroll = (ScrollView) body.getParent();
-      scroll.post(() -> scroll.scrollTo(0, memoryScrollY));
-    } catch (Exception error) {
-      error("读取确认资料失败");
-    }
+        }
+      });
+    };
+    search.addTextChangedListener(new android.text.TextWatcher() {
+      public void beforeTextChanged(CharSequence value, int start, int count, int after) {}
+      public void onTextChanged(CharSequence value, int start, int before, int count) {
+        memorySearch = value.toString(); memoryPageIndex = 0; memoryScrollY = 0;
+        memoryReadSequence++;
+        main.removeCallbacks(load[0]); main.postDelayed(load[0], 150);
+      }
+      public void afterTextChanged(android.text.Editable value) {}
+    });
+    kinds.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+      public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+        if (memoryKind.equals(labels[position])) return;
+        memoryKind = labels[position]; memoryPageIndex = 0; memoryScrollY = 0;
+        main.removeCallbacks(load[0]); load[0].run();
+      }
+      public void onNothingSelected(AdapterView<?> parent) {}
+    });
+    load[0].run();
   }
 
   private void memoryDialog(JSONObject item) {
@@ -1827,7 +1835,7 @@ public final class MainActivity extends Activity {
     }
     if (aiMultiSelectAction != null) aiMultiSelectAction.setEnabled(false);
     updateAiBulkBar();
-    worker.execute(
+    memoryReads.execute(
         () -> {
           try {
             // Skip superseded section/page reads before doing database and JSON work.
@@ -2172,7 +2180,7 @@ public final class MainActivity extends Activity {
     final boolean renewTemporal=shown!=null&&(now>=shown.temporalRefreshAt||now<shown.temporalCheckedAt);
     if(aiMultiSelectMode&&!renewTemporal)return;
     aiPolling=true;
-    worker.execute(
+    memoryReads.execute(
         () -> {
           AiInboxData data = null;
           try {
@@ -2572,7 +2580,7 @@ public final class MainActivity extends Activity {
     new SuggestionReview(
             this,
             memories,
-            worker,
+            confirmations,
             () -> {
               if (isFinishing() || isDestroyed() || generation != token) return;
               renderAiInbox(aiSourceFilter, true);
