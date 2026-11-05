@@ -9,6 +9,9 @@ import android.content.Intent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.List;
@@ -112,6 +115,75 @@ public class AiReviewUiTest {
     }
   }
 
+  @Test
+  public void largeMemoryPagesReadOffUiAndKeepNewestSearchAndPagination() throws Exception {
+    for (int i = 0; i < 295; i++) {
+      JSONObject source = new JSONObject().put("account_id", "fixture-owner").put("talker", "fixture-room")
+          .put("msg_id", i).put("created_at", 1000).put("content", "原文 " + "长".repeat(16000));
+      ContentValues value = new ContentValues();
+      value.put("ref", "memory-" + i); value.put("title", "确认资料 " + i);
+      value.put("kind", i % 2 == 0 ? "记忆" : "资料"); value.put("quote", "原文");
+      value.put("source_json", source.toString()); value.put("created_at", i); value.put("updated_at", i);
+      memory.getWritableDatabase().insertOrThrow("memories", null, value);
+    }
+    open();
+    java.lang.reflect.Field readerField = MainActivity.class.getDeclaredField("memoryReads");
+    readerField.setAccessible(true);
+    java.util.concurrent.ExecutorService reader = (java.util.concurrent.ExecutorService) readerField.get(activity);
+    java.util.concurrent.CountDownLatch entered = new java.util.concurrent.CountDownLatch(1), release = new java.util.concurrent.CountDownLatch(1);
+    reader.submit(() -> { entered.countDown(); try { release.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); } });
+    assertTrue(entered.await(2, java.util.concurrent.TimeUnit.SECONDS));
+    try {
+      java.lang.reflect.Method select = MainActivity.class.getDeclaredMethod("select", int.class); select.setAccessible(true); select.invoke(activity, 3);
+      assertNotNull(control("正在读取资料…"));
+      assertFalse(views().stream().anyMatch(v -> v instanceof TextView && ((TextView)v).getText().toString().equals("确认资料 294")));
+    } finally { release.countDown(); }
+    reader.submit(() -> {}).get(10, java.util.concurrent.TimeUnit.SECONDS);
+    org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+    assertNotNull(control("295 条资料 · 第 1/10 页"));
+    assertEquals(30, views().stream().filter(v -> v instanceof TextView && ((TextView)v).getText().toString().matches("确认资料 \\d+")).count());
+    control("下一页资料").performClick();
+    reader.submit(() -> {}).get(10, java.util.concurrent.TimeUnit.SECONDS);
+    org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+    assertNotNull(control("295 条资料 · 第 2/10 页"));
+    EditText search = (EditText) views().stream().filter(v -> "搜索确认资料".contentEquals(v.getContentDescription() == null ? "" : v.getContentDescription())).findFirst().get();
+    search.setText("不存在"); search.setText("确认资料 294");
+    org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(151));
+    reader.submit(() -> {}).get(10, java.util.concurrent.TimeUnit.SECONDS);
+    org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+    assertNotNull(control("1 条资料 · 第 1/1 页"));
+    assertNotNull(control("确认资料 294"));
+    assertFalse(control("下一页资料").isEnabled());
+    assertEquals(0, memory.memoryPage("%", "全部", 0, 30).getInt("total"));
+    assertEquals(148, memory.memoryPage("", "记忆", 99, 30).getInt("total"));
+  }
+
+  @Test
+  public void dialogEvidenceIsLazyPagedAndLongQuotesRemainComplete() throws Exception {
+    open();
+    JSONObject source = new JSONObject().put("content", "合成原文").put("created_at", 1000);
+    JSONArray parts = new JSONArray();
+    for (int i = 0; i < 30; i++) parts.put(new JSONObject().put("content", i == 0 ? "长".repeat(9000) + "末尾证据" : "原文编号 " + i).put("created_at", 1000));
+    source.put("evidence", parts);
+    LinearLayout root = new LinearLayout(activity); NativeUi.sources(activity, root, source);
+    java.util.List<View> all = new java.util.ArrayList<>(); collect(root, all);
+    assertTrue(all.size() < 10);
+    Button expand = (Button)all.stream().filter(v -> v instanceof Button && ((Button)v).getText().toString().equals("展开完整原文")).findFirst().get();
+    expand.performClick();
+    all.clear(); collect(root, all);
+    assertFalse(all.stream().anyMatch(v -> v instanceof TextView && ((TextView)v).getText().toString().equals("原文编号 5")));
+    Button more = (Button)all.stream().filter(v -> v instanceof Button && v.getVisibility() == View.VISIBLE && ((Button)v).getText().toString().equals("继续展开这段原文")).findFirst().get();
+    more.performClick(); more.performClick();
+    all.clear(); collect(root, all);
+    StringBuilder reconstructed = new StringBuilder();
+    for(View v : all) if(v instanceof TextView && ((TextView)v).isTextSelectable()) reconstructed.append(((TextView)v).getText());
+    assertTrue(reconstructed.toString().startsWith(parts.getJSONObject(0).getString("content")));
+    Button next = (Button)all.stream().filter(v -> v instanceof Button && ((Button)v).getText().toString().equals("下一组原文")).findFirst().get();
+    next.performClick(); all.clear(); collect(root, all);
+    assertTrue(all.stream().anyMatch(v -> v instanceof TextView && ((TextView)v).getText().toString().equals("原文编号 5")));
+    assertEquals(600, NativeUi.excerpt("长".repeat(599) + "😀长").length());
+  }
+
   private void open() throws Exception {
     controller =
         Robolectric.buildActivity(
@@ -131,6 +203,9 @@ public class AiReviewUiTest {
 
   private void settle() throws Exception {
     for (int i = 0; i < 2; i++) {
+      java.lang.reflect.Field writer = MainActivity.class.getDeclaredField("confirmations");
+      writer.setAccessible(true);
+      ((java.util.concurrent.ExecutorService)writer.get(activity)).submit(() -> {}).get(10, java.util.concurrent.TimeUnit.SECONDS);
       worker().submit(() -> {}).get(10, java.util.concurrent.TimeUnit.SECONDS);
       org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
     }
@@ -630,6 +705,16 @@ public class AiReviewUiTest {
       org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
       assertFalse(dialog.isShowing());
       assertEquals(1,memory.list().length());
+      JSONObject proposal = memory.suggestions().getJSONObject(0);
+      java.lang.reflect.Method review = MainActivity.class.getDeclaredMethod("aiDialog", JSONObject.class);
+      review.setAccessible(true); review.invoke(activity, proposal);
+      org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+      android.app.AlertDialog suggestion = ShadowAlertDialog.getLatestAlertDialog();
+      suggestion.getButton(android.app.AlertDialog.BUTTON_POSITIVE).performClick();
+      ((java.util.concurrent.ExecutorService)field.get(activity)).submit(() -> {}).get(5,java.util.concurrent.TimeUnit.SECONDS);
+      org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+      assertFalse(suggestion.isShowing());
+      assertEquals(proposal.getString("title"), memory.list().getJSONObject(0).getString("title"));
     }finally{release.countDown();}
   }
 

@@ -113,6 +113,7 @@ public final class SuggestionReview {
                       final String confirmedSummary = summary.getText().toString();
                       final String confirmedKind = kind.getSelectedItem().toString();
                       dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+                      dialog.getButton(AlertDialog.BUTTON_POSITIVE).setText("正在保存…");
                       dialog.setCancelable(false);
                       Runnable restore = NativeUi.freeze(view);
                       worker.execute(
@@ -140,6 +141,7 @@ public final class SuggestionReview {
                                           .getButton(AlertDialog.BUTTON_POSITIVE)
                                           .setEnabled(true);
                                       dialog.setCancelable(true);
+                                      dialog.getButton(AlertDialog.BUTTON_POSITIVE).setText("确认保存");
                                       title.setError(error.getMessage());
                                     }
                                   });
@@ -416,6 +418,7 @@ public final class SuggestionReview {
                                   ? null
                                   : TimeRules.parseLocal(reminder.getText().toString(), timezone);
                           dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+                          dialog.getButton(AlertDialog.BUTTON_POSITIVE).setText("正在保存…");
                           dialog.setCancelable(false);
                           Runnable restore = NativeUi.freeze(view);
                           worker.execute(
@@ -444,6 +447,7 @@ public final class SuggestionReview {
                                               .setEnabled(true);
                                           restore.run();
                                           dialog.setCancelable(true);
+                                          dialog.getButton(AlertDialog.BUTTON_POSITIVE).setText(historical ? "确认仍需处理" : "确认保存");
                                           title.setError(error.getMessage());
                                         }
                                       });
