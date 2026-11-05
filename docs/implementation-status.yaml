@@ -1160,10 +1160,12 @@ unified_owner_agent_harness:
   asynchronous_confirmation:
     date: "2026-11-04"
     status: source_and_local_checks_only
-    android: "0.6.7 / code 28 / schema 8; phone unavailable"
+    android: "0.6.7 / code 28 / schema 8; owner Release installed on Xiaomi 14 Pro / Android 17"
+    device_validation: "25 original tables unchanged; controlled 55 ms submission, restart replay, midnight relevance and 34 offline reminder assertions under matching battery exemption"
+    device_limits: "Initial temporary-app reminder timeout retained; controlled backend and synthetic data only, not the real WeChat/Google chain"
     behavior: "Persist native outbox separately from network reads, return command acceptance before task admission, retain pending work on capacity and original authorization expiry"
     local_checks: "62 backend and 2 targeted recovery, 116 Android; owner Release/lint pass; 622 Python files with zero type errors"
-    production: "Full Runtime and phone handoff remain pending; no deployment or device pass"
+    production: "Full Runtime and source handoff remain pending; device installation and controlled checks pass, real channel/provider acceptance remains open"
   unconfirmed_review_expiry:
     date: "2026-11-04"
     status: source_and_local_checks_only
