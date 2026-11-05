@@ -134,11 +134,13 @@ public final class RootGateway {
 
   public void ensureCaptureMetadata() throws Exception {
     if (exec("grep -q 'CREATE TABLE IF NOT EXISTS message_capture' " + BASE
+        + "/collector.sh && grep -q '^process_command()' " + BASE
         + "/collector.sh && echo yes || echo no").equals("yes")) return;
+    // Upgrade before asking the old status implementation to read an exited procfs target.
+    installCollectorScript();
     boolean running = status().optBoolean("running");
     if (running) control("stop");
     try {
-      installCollectorScript();
       control("once");
     } finally { if (running) control("start"); }
   }

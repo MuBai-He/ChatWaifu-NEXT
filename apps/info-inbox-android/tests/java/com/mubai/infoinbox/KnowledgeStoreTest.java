@@ -298,9 +298,55 @@ public class KnowledgeStoreTest {
     memory.close();
     memory = new MemoryStore(context, name);
     store = new KnowledgeStore(memory, "https://fixture.invalid");
-    assertEquals(8, memory.getReadableDatabase().getVersion());
+    assertEquals(9, memory.getReadableDatabase().getVersion());
     assertEquals("已有的长期记忆", memory.list().getJSONObject(0).getString("title"));
     assertEquals(0, store.mutations().length());
+  }
+
+  @Test
+  public void cancelledKnowledgeCycleDoesNotResumeSyncAfterJobStop() throws Exception {
+    readyRuntimeConnection(false);
+    java.util.concurrent.atomic.AtomicReference<Throwable> failure = new java.util.concurrent.atomic.AtomicReference<>();
+    Thread task = new Thread(() -> {
+      Thread.currentThread().interrupt();
+      try { KnowledgeSync.runCycle(context, false); }
+      catch (Throwable interrupted) { failure.set(interrupted); }
+    });
+    task.start(); task.join(2000);
+    assertFalse(task.isAlive());
+    assertTrue(failure.get() instanceof InterruptedException);
+    assertEquals("0", store.meta("last_sync", "0"));
+  }
+
+  @Test
+  public void schemaEightUpgradeKeepsConfirmedDataAndIndexesCrossSpaceForgetChecks() throws Exception {
+    JSONObject original = source("保留原文");
+    memory.save(original, "用户已确认", "fact");
+    memory.getWritableDatabase().execSQL("DROP INDEX knowledge_shadow_source");
+    memory.getWritableDatabase().execSQL("DROP INDEX knowledge_outbox_source");
+    memory.getWritableDatabase().setVersion(8);
+    memory.close();
+    memory = new MemoryStore(context, name);
+    store = new KnowledgeStore(memory, "https://fixture.invalid");
+    assertEquals(9, memory.getReadableDatabase().getVersion());
+    assertEquals("用户已确认", memory.list().getJSONObject(0).getString("title"));
+    String base = MemoryStore.reference(original);
+    memory.getWritableDatabase().execSQL(
+        "INSERT INTO knowledge_shadow(space,id,payload) VALUES(?,?,?)",
+        new Object[] {"another-server", base + ":part:12", "{\"deleted\":true}"});
+    assertFalse(new ConversationPolicy(memory).allowsAiSource(original));
+    assertTrue(new ConversationPolicy(memory).allowsAiSource(source("其他消息").put("msg_id", 999)));
+    memory.getWritableDatabase().delete("knowledge_shadow", null, null);
+    memory.getWritableDatabase().execSQL(
+        "INSERT INTO knowledge_outbox(space,id,action) VALUES(?,?,?)",
+        new Object[] {"another-server", base + ":part:2", "forget"});
+    assertFalse(new ConversationPolicy(memory).allowsAiSource(original));
+    try (Cursor plan = memory.getReadableDatabase().rawQuery(
+        "EXPLAIN QUERY PLAN SELECT payload FROM knowledge_shadow WHERE id>=? AND id<?",
+        new String[] {base + ":part:", base + ":part;"})) {
+      assertTrue(plan.moveToFirst());
+      assertTrue(plan.getString(3).contains("knowledge_shadow_source"));
+    }
   }
 
   @Test

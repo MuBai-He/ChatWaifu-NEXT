@@ -1174,6 +1174,14 @@ unified_owner_agent_harness:
     validation: "118 Android tests; Release/lint pass; same-device 295-memory snapshot synchronous UI median 533 to 24 ms, evidence views 142 to 9"
     preservation: "295 memories, 21 work items, 1098 reviews unchanged; 23 of 25 tables exact, 2 operational tables recover interrupted analysis; 324 of 325 files exact, collector status alone changed"
     limits: "Timing uses isolated read-only snapshot; whole-dialog 48 to 45 ms, no blanket latency claim; production Runtime deployment remains separate"
+  native_suggestion_power:
+    date: "2026-11-05"
+    status: source_validated_device_interrupted
+    android: "0.6.9 / code 30 / schema 9 prepared; formal handset still 0.6.8"
+    behavior: "Indexed source-policy ranges; ordered queue claims; interruptible sync admission; bounded collector procfs reads"
+    validation: "120 Android tests, 5 collector SQL tests, owner Release/lint pass; saved 203194-row database baseline and live thread evidence"
+    device: "Runaway cmdline reader terminated; collector script patched and exited-target probe passed; full history paused with progress retained"
+    limits: "ADB/NetBird disconnected during isolated profile; formal APK install, post-fix CPU/reading comparison and collector restart remain pending"
   unconfirmed_review_expiry:
     date: "2026-11-04"
     status: source_and_local_checks_only

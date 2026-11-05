@@ -62,17 +62,19 @@ public final class ConversationPolicy {
             .put("talker", source.getString("talker"))
             .put("msg_id", source.getLong("msg_id"))
             .put("_knowledge_id", source.optString("_knowledge_id", ""));
-    String prefix = MemoryStore.reference(base) + ":part:%";
+    String reference = MemoryStore.reference(base);
+    // Canonical source IDs are ASCII; this half-open prefix range uses the BINARY id index.
+    String[] range = new String[] {reference + ":part:", reference + ":part;"};
     SQLiteDatabase db = memory.getReadableDatabase();
     try (Cursor c =
         db.rawQuery(
-            "SELECT 1 FROM knowledge_outbox WHERE id LIKE ? AND action='forget' LIMIT 1",
-            new String[] {prefix})) {
+            "SELECT 1 FROM knowledge_outbox WHERE id>=? AND id<? AND action='forget' LIMIT 1",
+            range)) {
       if (c.moveToFirst()) return false;
     }
     try (Cursor c =
         db.rawQuery(
-            "SELECT payload FROM knowledge_shadow WHERE id LIKE ?", new String[] {prefix})) {
+            "SELECT payload FROM knowledge_shadow WHERE id>=? AND id<?", range)) {
       while (c.moveToNext()) if (new JSONObject(c.getString(0)).optBoolean("deleted")) return false;
     }
     return true;

@@ -25,7 +25,7 @@ public final class MemoryStore implements AutoCloseable {
     int owners;
 
     SharedDatabase(Context context, String name) {
-      super(context, name, null, 8);
+      super(context, name, null, 9);
       setWriteAheadLoggingEnabled(true);
     }
 
@@ -97,6 +97,7 @@ public final class MemoryStore implements AutoCloseable {
     ConversationPolicy.createTable(db);
     KnowledgeStore.createTables(db);
     RuntimeProcessing.createTables(db);
+    ensureReadIndexes(db);
   }
 
   private static void upgradeSchema(SQLiteDatabase db, int oldVersion) {
@@ -107,6 +108,13 @@ public final class MemoryStore implements AutoCloseable {
     if (oldVersion < 6) RuntimeProcessing.createTables(db);
     if (oldVersion < 7) OrganizerStore.ensureQueuePriority(db);
     if (oldVersion < 8) OrganizerStore.ensureQueueScopeIndex(db);
+    if (oldVersion < 9) ensureReadIndexes(db);
+  }
+
+  private static void ensureReadIndexes(SQLiteDatabase db) {
+    // Policy reads have no server-space filter: the composite (space,id) key cannot serve them.
+    db.execSQL("CREATE INDEX IF NOT EXISTS knowledge_shadow_source ON knowledge_shadow(id)");
+    db.execSQL("CREATE INDEX IF NOT EXISTS knowledge_outbox_source ON knowledge_outbox(id,action)");
   }
 
   private static void createAiTables(SQLiteDatabase db) {

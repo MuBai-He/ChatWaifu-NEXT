@@ -64,6 +64,7 @@ public final class KnowledgeJob extends JobService {
                 KnowledgeSync.run(this, HistoryImport.requested(this) && KnowledgeSync.wifi(this));
                 HistoryImport.maybeComplete(this);
               } catch (Exception error) {
+                if (error instanceof InterruptedException) Thread.currentThread().interrupt();
                 retry = true;
                 android.util.Log.w("InboxKnowledge", "job_failed id=" + params.getJobId()
                     + " type=" + error.getClass().getSimpleName());

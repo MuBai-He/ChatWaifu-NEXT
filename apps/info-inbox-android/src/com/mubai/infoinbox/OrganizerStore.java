@@ -212,6 +212,15 @@ public final class OrganizerStore {
               new String[] {Long.toString(now)})) {
         if (c.moveToFirst() && c.getInt(0) >= MAX_CONCURRENCY) return null;
       }
+      boolean earlierBlocked = false;
+      if (oldestFirst) {
+        try (Cursor blocked = db.rawQuery(
+            "SELECT 1 FROM queued_sources WHERE state='failed' UNION ALL SELECT 1 FROM"
+                + " queued_sources WHERE state='pending' AND next_attempt>? LIMIT 1",
+            new String[] {Long.toString(now)})) {
+          earlierBlocked = blocked.moveToFirst();
+        }
+      }
       JSONArray sources = new JSONArray();
       int size = 0;
       String selectedAccount = null, selectedRoom = null;
@@ -219,7 +228,7 @@ public final class OrganizerStore {
       long latest = 0;
       try (Cursor c =
           db.rawQuery(
-              "SELECT q.source_json,q.priority FROM queued_sources q JOIN source_snapshots s ON"
+              "SELECT q.source_json,q.priority FROM queued_sources q INDEXED BY queue_priority_ready JOIN source_snapshots s ON"
                   + " s.base_ref=q.base_ref AND s.revision=q.revision WHERE q.state='pending' AND"
                   + " NOT EXISTS(SELECT 1 FROM conversation_exclusions e WHERE"
                   + " e.account_id=s.account_id AND e.talker=s.talker) AND q.next_attempt<=? AND"
@@ -228,7 +237,7 @@ public final class OrganizerStore {
                   + " AND (s.account_id,s.talker) NOT IN (SELECT"
                   + " a.account_id,a.talker FROM queued_sources active JOIN source_snapshots a ON"
                   + " a.base_ref=active.base_ref WHERE active.state='leased') "
-                  + (oldestFirst
+                  + (earlierBlocked
                       ? "AND (q.priority<2 OR NOT EXISTS(SELECT 1 FROM (SELECT base_ref,created_at,segment FROM"
                           + " queued_sources WHERE state='failed' UNION ALL SELECT"
                           + " base_ref,created_at,segment FROM queued_sources WHERE"
