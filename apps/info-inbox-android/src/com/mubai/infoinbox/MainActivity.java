@@ -1835,7 +1835,7 @@ public final class MainActivity extends Activity {
     }
     if (aiMultiSelectAction != null) aiMultiSelectAction.setEnabled(false);
     updateAiBulkBar();
-    worker.execute(
+    memoryReads.execute(
         () -> {
           try {
             // Skip superseded section/page reads before doing database and JSON work.
@@ -2180,7 +2180,7 @@ public final class MainActivity extends Activity {
     final boolean renewTemporal=shown!=null&&(now>=shown.temporalRefreshAt||now<shown.temporalCheckedAt);
     if(aiMultiSelectMode&&!renewTemporal)return;
     aiPolling=true;
-    worker.execute(
+    memoryReads.execute(
         () -> {
           AiInboxData data = null;
           try {

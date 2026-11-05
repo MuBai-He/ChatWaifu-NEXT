@@ -207,6 +207,9 @@ public class AiReviewUiTest {
       writer.setAccessible(true);
       ((java.util.concurrent.ExecutorService)writer.get(activity)).submit(() -> {}).get(10, java.util.concurrent.TimeUnit.SECONDS);
       worker().submit(() -> {}).get(10, java.util.concurrent.TimeUnit.SECONDS);
+      java.lang.reflect.Field reads = MainActivity.class.getDeclaredField("memoryReads");
+      reads.setAccessible(true);
+      ((java.util.concurrent.ExecutorService)reads.get(activity)).submit(() -> {}).get(10, java.util.concurrent.TimeUnit.SECONDS);
       org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
     }
   }
@@ -715,6 +718,11 @@ public class AiReviewUiTest {
       org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
       assertFalse(suggestion.isShowing());
       assertEquals(proposal.getString("title"), memory.list().getJSONObject(0).getString("title"));
+      java.lang.reflect.Field reads = MainActivity.class.getDeclaredField("memoryReads"); reads.setAccessible(true);
+      ((java.util.concurrent.ExecutorService)reads.get(activity)).submit(() -> {}).get(5, java.util.concurrent.TimeUnit.SECONDS);
+      org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+      java.lang.reflect.Field loading = MainActivity.class.getDeclaredField("aiLoading"); loading.setAccessible(true);
+      assertFalse(loading.getBoolean(activity));
     }finally{release.countDown();}
   }
 
