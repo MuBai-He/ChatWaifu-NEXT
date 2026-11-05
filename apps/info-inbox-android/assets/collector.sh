@@ -12,12 +12,18 @@ die() { printf '%s\n' "$1" >&2; exit 1; }
 mkdir -p "$BASE"
 chmod 700 "$BASE"
 
+# Bound procfs reads before text conversion. On this Android build, tr can spin at
+# EOF when its direct /proc/PID/cmdline target exits during a collector stop.
+process_command() {
+    dd if="/proc/$1/cmdline" bs=4096 count=1 2>/dev/null | tr '\000' ' '
+}
+
 running() {
     [ -f "$BASE/watch.pid" ] || return 1
     PID=$(cat "$BASE/watch.pid")
     case "$PID" in ''|*[!0-9]*) return 1 ;; esac
     [ -r "/proc/$PID/cmdline" ] || return 1
-    tr '\000' ' ' < "/proc/$PID/cmdline" | grep -Fq "$SELF watch"
+    process_command "$PID" | grep -Fq "$SELF watch"
 }
 
 acquire_lock() {
@@ -30,7 +36,7 @@ acquire_lock() {
         case "$OWNER" in
             ''|*[!0-9]*) ;;
             *)
-                if [ -r "/proc/$OWNER/cmdline" ] && tr '\000' ' ' < "/proc/$OWNER/cmdline" | grep -Fq "$SELF "; then
+                if [ -r "/proc/$OWNER/cmdline" ] && process_command "$OWNER" | grep -Fq "$SELF "; then
                     die 'Another collector command is in progress.'
                 fi
                 ;;

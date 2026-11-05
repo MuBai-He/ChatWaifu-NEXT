@@ -8,7 +8,8 @@ import org.json.JSONObject;
 
 /** One bounded sync cycle. The durable cursor only advances after local application succeeds. */
 public final class KnowledgeSync {
-  private static final Object LOCK = new Object();
+  private static final java.util.concurrent.locks.ReentrantLock LOCK =
+      new java.util.concurrent.locks.ReentrantLock();
 
   private KnowledgeSync() {}
 
@@ -34,7 +35,8 @@ public final class KnowledgeSync {
 
   /** True means a bounded cycle committed progress and still has work to drain. */
   static boolean runCycle(Context context, boolean fullHistory) throws Exception {
-    synchronized (LOCK) {
+    LOCK.lockInterruptibly();
+    try {
       BackendSettings backend = new BackendSettings(context);
       if (!enabled(context) || !backend.ready()) return false;
       try (MemoryStore memory = new MemoryStore(context)) {
@@ -96,6 +98,8 @@ public final class KnowledgeSync {
             .apply();
         return more || store.mutations(history).length() > 0;
       }
+    } finally {
+      LOCK.unlock();
     }
   }
 
